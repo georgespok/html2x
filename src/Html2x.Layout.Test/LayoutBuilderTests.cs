@@ -1,22 +1,27 @@
 using Html2x.Core.Layout;
+using Shouldly;
 
-namespace Html2x.Layout.Test
+namespace Html2x.Layout.Test;
+
+public class LayoutBuilderTests
 {
-    public class LayoutBuilderTests
+    [Fact]
+    public async Task Build_ShouldReturnLayout()
     {
-        [Fact]
-        public void Build_ShouldReturnLayout()
-        {
-            // Arrange
-            var builder = new LayoutBuilder();
-            var html = "<p>Hello, world!</p>";
+        // Arrange
+        var builder = new LayoutBuilder();
+        const string html = "<p>Hello, world!</p>";
 
-            // Act
-            var layout = builder.Build(html);
+        // Act
+        var layout = await builder.BuildAsync(html);
 
-            // Assert
-            Assert.NotNull(layout);
-            Assert.IsType<HtmlLayout>(layout);
-        }
+        // Assert
+        Assert.NotNull(layout);
+        Assert.IsType<HtmlLayout>(layout);
+        layout.Pages[0].Children[0].ShouldBeOfType<BlockFragment>();
+        var block = (BlockFragment)layout.Pages[0].Children[0];
+        block.Children[0].ShouldBeOfType<LineBoxFragment>();
+        var lineBox = (LineBoxFragment)block.Children[0];
+        lineBox.Runs[0].Text.ShouldBe("Hello, world!");
     }
 }
