@@ -2,4 +2,5 @@
 
 public class PdfOptions
 {
+    public string ForntPath { get; set; }
 }

@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.Layout", "Html2x.Lay
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.Layout.Test", "Html2x.Layout.Test\Html2x.Layout.Test.csproj", "{8A8CF5EC-E3C2-F72F-AD61-8D7E0A840F87}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.Pdf.TestConsole", "Html2x.Pdf.TestConsole\Html2x.Pdf.TestConsole.csproj", "{A1F528A8-DA62-45F4-AF05-415D30DA33C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "html2x.IntegrationTest", "html2x.IntegrationTest\html2x.IntegrationTest.csproj", "{CFE56333-4BE0-45CA-9F5A-37AC5480C85B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +43,14 @@ Global
 		{8A8CF5EC-E3C2-F72F-AD61-8D7E0A840F87}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A8CF5EC-E3C2-F72F-AD61-8D7E0A840F87}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A8CF5EC-E3C2-F72F-AD61-8D7E0A840F87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1F528A8-DA62-45F4-AF05-415D30DA33C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1F528A8-DA62-45F4-AF05-415D30DA33C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1F528A8-DA62-45F4-AF05-415D30DA33C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1F528A8-DA62-45F4-AF05-415D30DA33C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFE56333-4BE0-45CA-9F5A-37AC5480C85B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFE56333-4BE0-45CA-9F5A-37AC5480C85B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFE56333-4BE0-45CA-9F5A-37AC5480C85B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFE56333-4BE0-45CA-9F5A-37AC5480C85B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

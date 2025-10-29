@@ -1,8 +1,7 @@
-﻿namespace Html2x.Core.Layout
+﻿namespace Html2x.Core.Layout;
+
+public class HtmlLayout
 {
-    public class HtmlLayout
-    {
-        public IReadOnlyList<LayoutPage> Pages { get; }
-        public LayoutMetadata Metadata { get; }
-    }
+    public IList<LayoutPage> Pages { get; } = new List<LayoutPage>();
+    public LayoutMetadata Metadata { get; } = new();
 }
