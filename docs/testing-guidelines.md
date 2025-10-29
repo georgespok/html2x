@@ -8,6 +8,10 @@ This document outlines testing standards for Html2x.
 - Tests MUST exercise observable behavior (e.g., rendered output, pagination results) and MUST NOT rely on reflection-based contract checks of internal types.
 - Reflection APIs (e.g., `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are explicitly prohibited in test code.
 
+### Test Strategy and Coverage Discipline
+Tests are first-class and focus on observable behavior, not implementation details. Code MUST follow incremental TDD: introduce one failing test, implement the minimal passing code, then refactor before the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt. Tests MUST exercise outcomes such as rendered output, pagination results, logging, or API responses and MUST NOT rely on reflection-based contract checks. Reflection APIs (e.g., Activator.CreateInstance, Type.GetType, MethodInfo.Invoke) are prohibited in test code. Prioritize tests for business logic and complex flows, use parameterized tests for multi-scenario logic, and keep tests independent and readable. Each layer/module MUST be testable in isolation.
+Rationale: Guarantees quality, documents behavior, and enables safe refactoring.
+
 ## Test Organization
 
 **Tests MUST be treated with the same quality standards as production code.**

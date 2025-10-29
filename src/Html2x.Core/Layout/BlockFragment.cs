@@ -3,5 +3,5 @@
 // Container/block-level box (flow or table cells can reuse this)
 public sealed class BlockFragment : Fragment
 {
-    public IReadOnlyList<Fragment> Children { get; init; } = [];
+    public IList<Fragment> Children { get; init; } = [];
 }
