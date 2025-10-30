@@ -1,12 +1,15 @@
 using System.Text;
-using Html2x.Layout;
+using html2x.IntegrationTest;
 using Html2x.Pdf;
 using Xunit.Abstractions;
 
-namespace html2x.IntegrationTest;
+namespace Html2x.Test;
 
-public class IntegrationTests(ITestOutputHelper output) : IntegrationTestBase(output)
+public class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    private readonly HtmlConverter _htmlConverter = new();
+    private readonly PdfOptions _options = new() { FontPath = Path.Combine("Fonts", "Inter-Regular.ttf") };
+
     [Fact]
     public async Task ConvertSimpleHtmlToPdf_ShouldGenerateValidPdf()
     {
@@ -17,29 +20,23 @@ public class IntegrationTests(ITestOutputHelper output) : IntegrationTestBase(ou
                 <meta charset=""utf-8"" />
                 <style>
                   body {
-                    font-family: ""Arial"";
+                    font-family: 'Arial';
                     font-size: 12pt;
-                    margin: 24pt;
+                    margin: 24pt
                   }
-                  h1 {
-                    font-size: 18pt;
-                    margin-bottom: 8pt;
-                  }
+                  
                 </style>
               </head>
-              <body>
+              <body >
                 <h1>Integration Test</h1>
                 <p>Hello, Html2x!</p>
+                <div>DIV</div>
               </body>
             </html>";
 
-        var options = new PdfOptions { ForntPath = Path.Combine("Fonts", "Inter-Regular.ttf") };
-        var layoutBuilder = new LayoutBuilder();
-        var pdfRenderer = new PdfRenderer();
-
         // Act
-        var layout = await layoutBuilder.BuildAsync(htmlContent);
-        var pdfBytes = await pdfRenderer.RenderAsync(layout, options);
+        var pdfBytes = await _htmlConverter.ToPdfAsync(htmlContent, _options);
+
         await SavePdfForInspectionAsync(pdfBytes);
 
         // Assert

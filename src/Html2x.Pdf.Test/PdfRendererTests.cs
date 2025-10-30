@@ -1,4 +1,5 @@
 using System.Drawing;
+using Html2x.Core;
 using Html2x.Core.Layout;
 using Shouldly;
 
@@ -11,7 +12,7 @@ public class PdfRendererTests
     {
         // Arrange
         var layout = CreateSimpleLayout();
-        var options = new PdfOptions { ForntPath = string.Empty };
+        var options = new PdfOptions { FontPath = string.Empty };
         var renderer = new PdfRenderer();
 
         // Act
@@ -32,13 +33,10 @@ public class PdfRendererTests
 
     private static HtmlLayout CreateSimpleLayout()
     {
-        const float A4_WIDTH = 595;
-        const float A4_HEIGHT = 842;
-
         var layout = new HtmlLayout();
 
         var page = new LayoutPage(
-            new SizeF(A4_WIDTH, A4_HEIGHT),
+            new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
             new Margins(72, 72, 72, 72),
             CreateSimpleContent(),
             1,
@@ -70,7 +68,7 @@ public class PdfRendererTests
             Style = new VisualStyle(),
             BaselineY = 15f,
             LineHeight = 20f,
-            Runs = new[] { textRun }
+            Runs = [textRun]
         };
 
         fragments.Add(lineBox);

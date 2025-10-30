@@ -91,12 +91,14 @@ public sealed class DisplayTreeBuilder
 
         return name switch
         {
-            "table" => DisplayRole.Table,
-            "tr" => DisplayRole.TableRow,
-            "td" or "th" => DisplayRole.TableCell,
-            "img" when el.ClassList.Contains("hero") => DisplayRole.Float,
-            "span" => DisplayRole.Inline,
-            "p" or "h1" or "body" => DisplayRole.Block,
+            HtmlCssConstants.HtmlTags.Table => DisplayRole.Table,
+            HtmlCssConstants.HtmlTags.Tr => DisplayRole.TableRow,
+            HtmlCssConstants.HtmlTags.Td or HtmlCssConstants.HtmlTags.Th => DisplayRole.TableCell,
+            HtmlCssConstants.HtmlTags.Img when el.ClassList.Contains(HtmlCssConstants.CssClasses.Hero) => DisplayRole
+                .Float,
+            HtmlCssConstants.HtmlTags.Span => DisplayRole.Inline,
+            HtmlCssConstants.HtmlTags.Div or HtmlCssConstants.HtmlTags.P or HtmlCssConstants.HtmlTags.H1 or HtmlCssConstants.HtmlTags.Body => DisplayRole
+                .Block,
             _ => DisplayRole.Inline
         };
     }
@@ -104,9 +106,9 @@ public sealed class DisplayTreeBuilder
     private static string ResolveFloatDirection(StyleNode node)
     {
         // In future — derive from CSS property
-        return node.Element.ClassList.Contains("hero")
-            ? "right"
-            : "left";
+        return node.Element.ClassList.Contains(HtmlCssConstants.CssClasses.Hero)
+            ? HtmlCssConstants.CssValues.Right
+            : HtmlCssConstants.CssValues.Left;
     }
 
     private static void AppendTextRuns(IElement element, DisplayNode box)

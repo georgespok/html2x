@@ -21,7 +21,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
                 switch (tag)
                 {
-                    case "hr":
+                    case HtmlCssConstants.HtmlTags.Hr:
                     {
                         var rule = new RuleFragment
                         {
@@ -31,12 +31,12 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
                         blockFrag.Children.Add(rule);
                         break;
                     }
-                    case "img":
+                    case HtmlCssConstants.HtmlTags.Img:
                     {
                         var img = new ImageFragment
                         {
                             Rect = new RectangleF(block.X, block.Y, 100, 80),
-                            Image = new ImageRef(child.Element?.GetAttribute("src") ?? ""),
+                            Image = new ImageRef(child.Element?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? ""),
                             ObjectFit = ObjectFit.Contain,
                             Align = Alignment.Center,
                             Style = StyleConverter.FromComputed(child.Style)

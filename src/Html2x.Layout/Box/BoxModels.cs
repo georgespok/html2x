@@ -47,7 +47,7 @@ public sealed class BlockBox : DisplayNode
     public float Width { get; set; }
     public float Height { get; set; }
     public Spacing Margin { get; set; } = new();
-    public string TextAlign { get; set; } = "left";
+    public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
 }
 
 public sealed class InlineBox : DisplayNode
@@ -57,7 +57,7 @@ public sealed class InlineBox : DisplayNode
 
 public sealed class FloatBox : DisplayNode
 {
-    public string FloatDirection { get; init; } = "none";
+    public string FloatDirection { get; init; } = HtmlCssConstants.Defaults.FloatDirection;
 }
 
 public sealed class TableBox : DisplayNode
