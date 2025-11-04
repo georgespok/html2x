@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Html2x.Core.Layout;
 using Html2x.Layout.Box;
 
@@ -6,25 +6,43 @@ namespace Html2x.Layout.Fragment;
 
 public sealed class TextRunFactory
 {
-    private readonly FontMetricsProvider _metrics = new();
+    private readonly IFontMetricsProvider _metrics;
+    private readonly ITextWidthEstimator _widthEstimator;
+
+    public TextRunFactory()
+        : this(new FontMetricsProvider(), null)
+    {
+    }
+
+    public TextRunFactory(IFontMetricsProvider metrics)
+        : this(metrics, null)
+    {
+    }
+
+    public TextRunFactory(IFontMetricsProvider metrics, ITextWidthEstimator? widthEstimator)
+    {
+        _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _widthEstimator = widthEstimator ?? new DefaultTextWidthEstimator(_metrics);
+    }
 
     public TextRun Create(InlineBox inline)
     {
-        var font = new FontKey(inline.Style.FontFamily, FontWeight.W400, FontStyle.Normal);
-        var size = inline.Style.FontSizePt;
+        if (inline is null)
+        {
+            throw new ArgumentNullException(nameof(inline));
+        }
+
+        var font = _metrics.GetFontKey(inline.Style);
+        var size = _metrics.GetFontSize(inline.Style);
         var text = inline.TextContent ?? string.Empty;
-        var width = text.Length * size * 0.5f; // simplistic width estimate
 
-        var (ascent, descent) = _metrics.Get(font, size);
+        var (ascent, descent) = _metrics.GetMetrics(font, size);
+        var width = _widthEstimator.MeasureWidth(font, size, text);
 
-        return new TextRun(
-            text,
-            font,
-            size,
-            new PointF(inline.Parent is BlockBox b ? b.X : 0, inline.Parent is BlockBox bb ? bb.Y : 0),
-            width,
-            ascent,
-            descent
-        );
+        var origin = inline.Parent is BlockBox block
+            ? new PointF(block.X, block.Y)
+            : PointF.Empty;
+
+        return new TextRun(text, font, size, origin, width, ascent, descent);
     }
 }

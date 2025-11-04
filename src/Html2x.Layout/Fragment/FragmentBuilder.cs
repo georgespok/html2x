@@ -13,15 +13,27 @@ public sealed class FragmentBuilder : IFragmentBuilder
         new ZOrderStage()
     ];
 
+    private readonly IReadOnlyList<IFragmentBuildObserver> _observers;
+
+    public FragmentBuilder()
+        : this(Array.Empty<IFragmentBuildObserver>())
+    {
+    }
+
+    public FragmentBuilder(IEnumerable<IFragmentBuildObserver> observers)
+    {
+        _observers = observers?.ToArray() ?? Array.Empty<IFragmentBuildObserver>();
+    }
+
     public FragmentTree Build(BoxTree boxes)
     {
-        var context = new FragmentBuildContext(boxes);
+        var state = new FragmentBuildState(boxes).WithObservers(_observers);
 
         foreach (var stage in _stages)
         {
-            stage.Execute(context);
+            state = stage.Execute(state);
         }
 
-        return context.Result;
+        return state.Fragments;
     }
 }

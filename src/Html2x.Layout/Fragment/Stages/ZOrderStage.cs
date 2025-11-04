@@ -1,18 +1,32 @@
-﻿using Html2x.Core.Layout;
+using System.Collections.Generic;
+using System.Linq;
+using Html2x.Core.Layout;
 
 namespace Html2x.Layout.Fragment.Stages;
 
 public sealed class ZOrderStage : IFragmentBuildStage
 {
-    public void Execute(FragmentBuildContext context)
+    public FragmentBuildState Execute(FragmentBuildState state)
     {
-        var all = context.Result.Blocks
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
+
+        var all = state.Fragments.Blocks
             .SelectMany(Flatten)
             .OrderBy(f => f.ZOrder)
             .ToList();
 
-        context.Result.All.Clear();
-        context.Result.All.AddRange(all);
+        state.Fragments.All.Clear();
+        state.Fragments.All.AddRange(all);
+
+        foreach (var observer in state.Observers)
+        {
+            observer.OnZOrderCompleted(all);
+        }
+
+        return state;
     }
 
     private static IEnumerable<Core.Layout.Fragment> Flatten(Core.Layout.Fragment fragment)

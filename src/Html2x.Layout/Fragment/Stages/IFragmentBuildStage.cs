@@ -2,5 +2,5 @@
 
 public interface IFragmentBuildStage
 {
-    void Execute(FragmentBuildContext context);
+    FragmentBuildState Execute(FragmentBuildState state);
 }

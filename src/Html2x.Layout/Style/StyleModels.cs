@@ -25,12 +25,12 @@ public sealed class PageStyle
 
 public sealed class ComputedStyle
 {
-    public string FontFamily { get; set; } = "Arial";
+    public string FontFamily { get; set; } = HtmlCssConstants.Defaults.FontFamily;
     public float FontSizePt { get; set; } = 12;
     public bool Bold { get; set; }
     public bool Italic { get; set; }
-    public string TextAlign { get; set; } = "left";
-    public string Color { get; set; } = "#000000";
+    public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
+    public string Color { get; set; } = HtmlCssConstants.Defaults.Color;
     public float MarginTopPt { get; set; }
     public float MarginRightPt { get; set; }
     public float MarginBottomPt { get; set; }

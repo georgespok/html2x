@@ -2,7 +2,7 @@
 
 namespace Html2x.Layout.Box;
 
-internal class BoxTreeBuilder : IBoxTreeBuilder
+public class BoxTreeBuilder : IBoxTreeBuilder
 {
     public BoxTree Build(StyleTree styles)
     {
@@ -16,10 +16,10 @@ internal class BoxTreeBuilder : IBoxTreeBuilder
 
         var page = new PageBox
         {
-            MarginTopPt = 24,
-            MarginRightPt = 24,
-            MarginBottomPt = 24,
-            MarginLeftPt = 24
+            MarginTopPt = styles.Page.MarginTopPt,
+            MarginRightPt = styles.Page.MarginRightPt,
+            MarginBottomPt = styles.Page.MarginBottomPt,
+            MarginLeftPt = styles.Page.MarginLeftPt
         };
 
         return blockEngine.Layout(displayRoot, page);
