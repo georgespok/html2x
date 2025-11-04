@@ -102,7 +102,24 @@ Focused subset for reports; anything outside is ignored.
 * **Images:** plug `IImageProvider` (disk, HTTP, base64, cache)
 * **Units:** swap `IUnitConverter` for DPI/calibration
 * **Renderer:** implement `IRenderer` (e.g., `Html2x.Svg`, `Html2x.Canvas`) using fragments
-* **Diagnostics:** inject `ILogger` (layout traces, box/fragment dumps)
+* **Diagnostics:** inject `ILoggerFactory` to surface layout/renderer traces
+
+## Diagnostics Logging
+
+The pipeline now exposes structured diagnostics across the layout and rendering layers.
+
+* **Factory wiring:** Pass an `ILoggerFactory` into `HtmlConverter` (or directly into `LayoutBuilderFactory` / `PdfRenderer`) to light up logging. When omitted, the system falls back to `NullLogger` to avoid noisy output.
+* **Severity bands:**
+  * `Information` — layout start/end, renderer layout summaries
+  * `Debug` — per-page renderer metrics, layout stage completion
+  * `Trace` (treat as Verbose) — fragment traversal details in both the renderer dispatcher and nested block rendering
+  * `Warning` — unsupported fragments such as images or unknown block children
+  * `Error` — unhandled exceptions captured in `PdfRenderer.RenderAsync`
+* **Correlation data:** Renderer logs include the fragment type, absolute coordinates, and a hash of the active `PdfOptions` so multi-run comparisons stay lightweight.
+* **Performance:** Logging is pay-for-play; `LoggerMessage.Define` avoids allocations when levels are disabled. Verbose/Trace calls guard `IsEnabled` checks so high-volume traces stay dormant until explicitly enabled.
+* **Future hooks:** Layout logging touches only the façade (`LayoutBuilder`). Additional stages (style resolution, pagination heuristics) can extend `LayoutLog.StageComplete` or add new events without constructor churn.
+
+With these hooks you can capture a full breadcrumb trail from HTML ingestion through PDF emission during troubleshooting, then turn it off cleanly for regular runs.
 
 ## Testing Strategy
 
