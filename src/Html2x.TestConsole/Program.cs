@@ -1,4 +1,5 @@
-﻿using Html2x.Pdf;
+using Html2x.Pdf;
+using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;
 
@@ -15,28 +16,23 @@ internal class Program
         var inputFile = args[0];
         var outputFile = args.Length > 1 ? args[1] : "output.pdf";
 
-        // Validate input file
         if (!File.Exists(inputFile))
         {
             Console.WriteLine($"Error: Input file '{inputFile}' not found.");
             return;
         }
 
-        // Determine output path
         string outputPath;
         if (Path.IsPathRooted(outputFile))
         {
-            // Absolute path provided
             outputPath = outputFile;
         }
         else
         {
-            // Relative path - create in temp folder
             var tempDir = Path.GetTempPath();
             outputPath = Path.Combine(tempDir, outputFile);
         }
 
-        // Ensure output directory exists
         var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
         {
@@ -45,29 +41,36 @@ internal class Program
 
         var options = new PdfOptions { FontPath = "\\fonts\\Inter-Regular.ttf" };
 
-        Console.WriteLine("Converting HTML to PDF...");
-        Console.WriteLine($"Input file: {Path.GetFullPath(inputFile)}");
+        using var loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddSimpleConsole(opts =>
+            {
+                opts.SingleLine = true;
+                opts.TimestampFormat = "HH:mm:ss ";
+            });
+            builder.SetMinimumLevel(LogLevel.Trace);
+        });
 
+        var logger = loggerFactory.CreateLogger<Program>();
+        logger.LogInformation("Converting HTML to PDF");
+        logger.LogInformation("Input file: {Input}", Path.GetFullPath(inputFile));
 
         try
         {
             var htmlContent = await File.ReadAllTextAsync(inputFile);
 
-            var pdfBytes = await new HtmlConverter().ToPdfAsync(htmlContent, options);
+            var converter = new HtmlConverter(loggerFactory: loggerFactory);
+            var pdfBytes = await converter.ToPdfAsync(htmlContent, options);
 
             await File.WriteAllBytesAsync(outputPath, pdfBytes);
 
-            Console.WriteLine($"Output file: {Path.GetFullPath(outputPath)}");
-            Console.WriteLine();
-
-            Console.WriteLine("✅ PDF created successfully!");
-            Console.WriteLine($"📄 File size: {pdfBytes.Length:N0} bytes");
-            Console.WriteLine();
+            logger.LogInformation("Output file: {Output}", Path.GetFullPath(outputPath));
+            logger.LogInformation("PDF created successfully. Size {FileSize:N0} bytes", pdfBytes.Length);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error creating PDF: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            logger.LogError(ex, "Error creating PDF");
         }
     }
 
