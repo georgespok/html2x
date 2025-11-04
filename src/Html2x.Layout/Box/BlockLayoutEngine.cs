@@ -82,7 +82,7 @@ public sealed class BlockLayoutEngine(
             Width = width,
             Height = height,
             Margin = margin,
-            TextAlign = s.TextAlign ?? "left"
+            TextAlign = s.TextAlign ?? HtmlCssConstants.Defaults.TextAlign
         };
 
         return block;

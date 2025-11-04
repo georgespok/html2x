@@ -1,3 +1,5 @@
+namespace Html2x.Pdf.Test;
+
 public class PdfValidator
 {
     public static bool Validate(byte[] pdfBytes)
@@ -7,15 +9,10 @@ public class PdfValidator
             return false;
         }
 
-        if (pdfBytes[0] != PdfHeader.Percent ||
-            pdfBytes[1] != PdfHeader.P ||
-            pdfBytes[2] != PdfHeader.D ||
-            pdfBytes[3] != PdfHeader.F)
-        {
-            return false;
-        }
-
-        return true;
+        return pdfBytes[0] == PdfHeader.Percent &&
+               pdfBytes[1] == PdfHeader.P &&
+               pdfBytes[2] == PdfHeader.D &&
+               pdfBytes[3] == PdfHeader.F;
     }
 
     private static class PdfHeader

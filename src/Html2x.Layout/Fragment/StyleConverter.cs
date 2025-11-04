@@ -7,15 +7,7 @@ public static class StyleConverter
 {
     public static VisualStyle FromComputed(ComputedStyle s)
     {
-        return new VisualStyle(
-            null, // no background in MVP
-            null,
-            null,
-            null,
-            null,
-            null,
-            1f,
-            false
+        return new VisualStyle(// no background in MVP
         );
     }
 

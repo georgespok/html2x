@@ -1,6 +1,6 @@
-﻿using Html2x.Layout;
+﻿using Html2x.Pdf;
 
-namespace Html2x.Pdf.TestConsole;
+namespace Html2x.TestConsole;
 
 internal class Program
 {
@@ -43,7 +43,7 @@ internal class Program
             Directory.CreateDirectory(outputDir);
         }
 
-        var options = new PdfOptions { ForntPath = "\\fonts\\Inter-Regular.ttf" };
+        var options = new PdfOptions { FontPath = "\\fonts\\Inter-Regular.ttf" };
 
         Console.WriteLine("Converting HTML to PDF...");
         Console.WriteLine($"Input file: {Path.GetFullPath(inputFile)}");
@@ -53,11 +53,7 @@ internal class Program
         {
             var htmlContent = await File.ReadAllTextAsync(inputFile);
 
-            var layoutBuilder = new LayoutBuilder();
-            var layout = await layoutBuilder.BuildAsync(htmlContent);
-
-            var pdfRenderer = new PdfRenderer();
-            var pdfBytes = await pdfRenderer.RenderAsync(layout, options);
+            var pdfBytes = await new HtmlConverter().ToPdfAsync(htmlContent, options);
 
             await File.WriteAllBytesAsync(outputPath, pdfBytes);
 

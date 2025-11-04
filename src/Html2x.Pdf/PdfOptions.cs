@@ -1,6 +1,17 @@
-﻿namespace Html2x.Pdf;
+﻿using Html2x.Core;
+
+namespace Html2x.Pdf;
+
+public enum PdfLicenseType
+{
+    Community,
+    Professional,
+    Enterprise
+}
 
 public class PdfOptions
 {
-    public string ForntPath { get; set; }
+    public string? FontPath { get; set; }
+    public PdfLicenseType LicenseType { get; set; } = PdfLicenseType.Community;
+    public Dimensions PageSize { get; set; } = PaperSizes.Letter;
 }

@@ -1,5 +1,5 @@
 ﻿using System.Drawing;
-using AngleSharp;
+using Html2x.Core;
 using Html2x.Core.Layout;
 using Html2x.Layout.Box;
 using Html2x.Layout.Dom;
@@ -12,33 +12,33 @@ namespace Html2x.Layout;
 ///     High-level orchestrator that enforces the layered pipeline:
 ///     DOM/CSSOM → Style Tree → Box Tree → Fragment Tree → HtmlLayout
 /// </summary>
-public class LayoutBuilder
+public class LayoutBuilder(
+    IDomProvider domProvider,
+    IStyleComputer styleComputer,
+    IBoxTreeBuilder boxBuilder,
+    IFragmentBuilder fragmentBuilder)
 {
-    private readonly IBoxTreeBuilder _boxBuilder;
-    private readonly IDomProvider _domProvider;
-    private readonly IFragmentBuilder _fragmentBuilder;
-    private readonly IStyleComputer _styleComputer;
+    private readonly IBoxTreeBuilder _boxBuilder =
+        boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
 
-    public LayoutBuilder()
-    {
-        var cfg = Configuration.Default.WithCss();
+    private readonly IDomProvider _domProvider =
+        domProvider ?? throw new ArgumentNullException(nameof(domProvider));
 
-        _domProvider = new AngleSharpDomProvider(cfg);
-        _styleComputer = new CssStyleComputer();
-        _boxBuilder = new BoxTreeBuilder();
-        _fragmentBuilder = new FragmentBuilder();
-    }
+    private readonly IFragmentBuilder _fragmentBuilder =
+        fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
 
-    public async Task<HtmlLayout> BuildAsync(string html)
+    private readonly IStyleComputer _styleComputer =
+        styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
+
+    public async Task<HtmlLayout> BuildAsync(string html, Dimensions pageSize)
     {
         var dom = await _domProvider.LoadAsync(html);
         var styleTree = _styleComputer.Compute(dom);
         var boxTree = _boxBuilder.Build(styleTree);
         var fragments = _fragmentBuilder.Build(boxTree);
 
-        // Wrap fragments into HtmlLayout (single page MVP)
         var layout = new HtmlLayout();
-        var page = new LayoutPage(new SizeF(595, 842),
+        var page = new LayoutPage(new SizeF(pageSize.Width, pageSize.Height),
             new Margins(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
                 boxTree.Page.MarginLeftPt),
             fragments.Blocks);

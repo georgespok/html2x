@@ -1,11 +1,37 @@
-﻿namespace Html2x.Layout.Box;
+namespace Html2x.Layout.Box;
 
 public sealed class InlineLayoutEngine : IInlineLayoutEngine
 {
+    private readonly ILineHeightStrategy _lineHeightStrategy;
+    private readonly IFontMetricsProvider _metrics;
+
+    public InlineLayoutEngine()
+        : this(new FontMetricsProvider(), new DefaultLineHeightStrategy())
+    {
+    }
+
+    public InlineLayoutEngine(IFontMetricsProvider metrics)
+        : this(metrics, new DefaultLineHeightStrategy())
+    {
+    }
+
+    public InlineLayoutEngine(IFontMetricsProvider metrics, ILineHeightStrategy lineHeightStrategy)
+    {
+        _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+    }
+
     public float MeasureHeight(DisplayNode block, float availableWidth)
     {
-        // MVP: approximate line height as 1.2 * font-size
-        var fs = block.Style.FontSizePt > 0 ? block.Style.FontSizePt : 12f;
-        return fs * 1.2f;
+        if (block is null)
+        {
+            throw new ArgumentNullException(nameof(block));
+        }
+
+        var fontSize = _metrics.GetFontSize(block.Style);
+        var font = _metrics.GetFontKey(block.Style);
+        var metrics = _metrics.GetMetrics(font, fontSize);
+
+        return _lineHeightStrategy.GetLineHeight(block.Style, font, fontSize, metrics);
     }
 }

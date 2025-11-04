@@ -1,4 +1,7 @@
-﻿using System.Drawing;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using Html2x.Core.Layout;
 using Html2x.Layout.Box;
 
@@ -6,36 +9,137 @@ namespace Html2x.Layout.Fragment.Stages;
 
 public sealed class InlineFragmentStage : IFragmentBuildStage
 {
-    private readonly TextRunFactory _textRunFactory = new();
+    private readonly TextRunFactory _textRunFactory;
+    private const float BaselineTolerance = 0.1f;
 
-    public void Execute(FragmentBuildContext context)
+    public InlineFragmentStage()
+        : this(new TextRunFactory())
     {
-        foreach (var block in context.BoxTree.Blocks)
+    }
+
+    public InlineFragmentStage(TextRunFactory textRunFactory)
+    {
+        _textRunFactory = textRunFactory ?? throw new ArgumentNullException(nameof(textRunFactory));
+    }
+
+    public FragmentBuildState Execute(FragmentBuildState state)
+    {
+        if (state is null)
         {
-            if (!context.Map.TryGetValue(block, out var frag) || frag is not BlockFragment blockFragment)
+            throw new ArgumentNullException(nameof(state));
+        }
+
+        if (state.BlockBindings.Count == 0)
+        {
+            return state;
+        }
+
+        var lookup = state.BlockBindings.ToDictionary(b => b.Source, b => b.Fragment);
+        var visited = new HashSet<BlockBox>();
+
+        foreach (var binding in state.BlockBindings)
+        {
+            ProcessBlock(binding.Source, binding.Fragment, lookup, visited, state.Observers);
+        }
+
+        return state;
+    }
+
+    private void ProcessBlock(BlockBox blockBox, BlockFragment fragment,
+        IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
+        ISet<BlockBox> visited,
+        IReadOnlyList<IFragmentBuildObserver> observers)
+    {
+        if (!visited.Add(blockBox))
+        {
+            return;
+        }
+
+        foreach (var child in blockBox.Children)
+        {
+            switch (child)
             {
-                continue;
-            }
-
-            foreach (var inline in block.Children.OfType<InlineBox>())
-            {
-                if (string.IsNullOrWhiteSpace(inline.TextContent))
-                {
-                    continue;
-                }
-
-                var run = _textRunFactory.Create(inline);
-                var line = new LineBoxFragment
-                {
-                    Rect = new RectangleF(block.X, block.Y, run.AdvanceWidth, run.Ascent + run.Descent),
-                    BaselineY = block.Y + run.Ascent,
-                    LineHeight = run.Ascent + run.Descent,
-                    Runs = [run]
-                };
-
-                blockFragment.Children.Add(line);
-                context.Map[inline] = line;
+                case InlineBox inline:
+                    ProcessInline(inline, fragment, observers);
+                    break;
+                case BlockBox childBlock when lookup.TryGetValue(childBlock, out var childFragment):
+                    ProcessBlock(childBlock, childFragment, lookup, visited, observers);
+                    break;
             }
         }
+    }
+
+    private void ProcessInline(InlineBox inline, BlockFragment parentFragment, IReadOnlyList<IFragmentBuildObserver> observers)
+    {
+        if (!string.IsNullOrWhiteSpace(inline.TextContent))
+        {
+            var run = _textRunFactory.Create(inline);
+            var baselineY = run.Origin.Y + run.Ascent;
+            var height = run.Ascent + run.Descent;
+
+            var line = new LineBoxFragment
+            {
+                Rect = new RectangleF(run.Origin.X, run.Origin.Y, run.AdvanceWidth, height),
+                BaselineY = baselineY,
+                LineHeight = height,
+                Runs = [run]
+            };
+
+            var storedLine = TryMergeWithPreviousLine(parentFragment, line) ?? line;
+            if (ReferenceEquals(storedLine, line))
+            {
+                parentFragment.Children.Add(line);
+            }
+
+            foreach (var observer in observers)
+            {
+                observer.OnInlineFragmentCreated(inline, parentFragment, storedLine);
+            }
+        }
+
+        foreach (var childInline in inline.Children.OfType<InlineBox>())
+        {
+            ProcessInline(childInline, parentFragment, observers);
+        }
+    }
+
+    private static LineBoxFragment? TryMergeWithPreviousLine(BlockFragment parentFragment, LineBoxFragment candidate)
+    {
+        if (parentFragment.Children.Count == 0)
+        {
+            return null;
+        }
+
+        if (parentFragment.Children[^1] is not LineBoxFragment previous)
+        {
+            return null;
+        }
+
+        if (Math.Abs(previous.BaselineY - candidate.BaselineY) > BaselineTolerance)
+        {
+            return null;
+        }
+
+        var mergedRuns = new List<TextRun>(previous.Runs.Count + candidate.Runs.Count);
+        mergedRuns.AddRange(previous.Runs);
+        mergedRuns.AddRange(candidate.Runs);
+
+        var left = Math.Min(previous.Rect.X, candidate.Rect.X);
+        var top = Math.Min(previous.Rect.Y, candidate.Rect.Y);
+        var right = Math.Max(previous.Rect.Right, candidate.Rect.Right);
+        var bottom = Math.Max(previous.Rect.Bottom, candidate.Rect.Bottom);
+
+        var merged = new LineBoxFragment
+        {
+            Rect = new RectangleF(left, top, right - left, bottom - top),
+            BaselineY = previous.BaselineY,
+            LineHeight = Math.Max(previous.LineHeight, candidate.LineHeight),
+            Runs = mergedRuns,
+            Style = previous.Style ?? candidate.Style,
+            ZOrder = Math.Max(previous.ZOrder, candidate.ZOrder)
+        };
+
+        parentFragment.Children[parentFragment.Children.Count - 1] = merged;
+        return merged;
     }
 }
