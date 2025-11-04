@@ -1,4 +1,6 @@
-﻿using Html2x.Core.Layout;
+using Html2x.Core.Layout;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 
@@ -7,15 +9,28 @@ namespace Html2x.Pdf;
 public class PdfRenderer
 {
     private readonly IFragmentRendererFactory _rendererFactory;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<PdfRenderer> _logger;
+    private readonly ILogger<FragmentRenderDispatcher> _dispatcherLogger;
 
     public PdfRenderer()
-        : this(new QuestPdfFragmentRendererFactory())
+        : this(new QuestPdfFragmentRendererFactory(), null)
     {
     }
 
-    public PdfRenderer(IFragmentRendererFactory rendererFactory)
+    public PdfRenderer(ILoggerFactory? loggerFactory)
+        : this(new QuestPdfFragmentRendererFactory(loggerFactory), loggerFactory)
+    {
+    }
+
+    public PdfRenderer(
+        IFragmentRendererFactory rendererFactory,
+        ILoggerFactory? loggerFactory = null)
     {
         _rendererFactory = rendererFactory ?? throw new ArgumentNullException(nameof(rendererFactory));
+        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
+        _logger = _loggerFactory.CreateLogger<PdfRenderer>();
+        _dispatcherLogger = _loggerFactory.CreateLogger<FragmentRenderDispatcher>();
     }
 
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null)
@@ -29,19 +44,32 @@ public class PdfRenderer
 
         options ??= new PdfOptions();
 
-        var bytes = RenderWithQuestPdf(htmlLayout, options);
-        return Task.FromResult(bytes);
+        try
+        {
+            var bytes = RenderWithQuestPdf(htmlLayout, options);
+            return Task.FromResult(bytes);
+        }
+        catch (Exception ex)
+        {
+            RendererLog.Exception(_logger, ex);
+            throw;
+        }
     }
 
     private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
     {
+        RendererLog.LayoutStart(_logger, layout.Pages.Count, ComputeOptionsHash(options));
+
         using var stream = new MemoryStream();
 
         Document.Create(doc =>
             {
-                foreach (var page in layout.Pages)
+                for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
                 {
+                    var page = layout.Pages[pageIndex];
                     var pageSize = page.Size;
+
+                    RendererLog.PageStart(_logger, pageIndex, pageSize.Width, pageSize.Height);
 
                     doc.Page(p =>
                     {
@@ -53,10 +81,12 @@ public class PdfRenderer
 
                         p.Content().Column(col =>
                         {
-                            var currentY = 0f; // relative to content area (after page margins)
+                            var currentY = 0f;
 
                             foreach (var fragment in page.Children)
                             {
+                                RendererLog.FragmentStart(_logger, fragment);
+
                                 var xRel = fragment.Rect.X - page.Margins.Left;
                                 var yRel = fragment.Rect.Y - page.Margins.Top;
 
@@ -69,7 +99,6 @@ public class PdfRenderer
 
                                 col.Item().Row(row =>
                                 {
-                                    // left offset spacer
                                     if (xRel > 0)
                                     {
                                         row.ConstantItem(xRel).Element(_ => { });
@@ -81,8 +110,8 @@ public class PdfRenderer
                                             ? box.MinHeight(fragment.Rect.Height)
                                             : box;
 
-                                        var renderer = _rendererFactory.Create(target, options);
-                                        var dispatcher = new FragmentRenderDispatcher(renderer);
+                                        var renderer = _rendererFactory.Create(target, options, _loggerFactory);
+                                        var dispatcher = new FragmentRenderDispatcher(renderer, _dispatcherLogger);
                                         fragment.VisitWith(dispatcher);
                                     });
                                 });
@@ -96,5 +125,13 @@ public class PdfRenderer
             .GeneratePdf(stream);
 
         return stream.ToArray();
+    }
+
+    private static int ComputeOptionsHash(PdfOptions options)
+    {
+        return HashCode.Combine(
+            options.FontPath is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(options.FontPath),
+            options.LicenseType,
+            options.PageSize.GetHashCode());
     }
 }

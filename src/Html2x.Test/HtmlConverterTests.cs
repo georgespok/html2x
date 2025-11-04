@@ -1,14 +1,29 @@
 using System.Text;
 using html2x.IntegrationTest;
 using Html2x.Pdf;
+using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
 
-public class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(output)
+public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
 {
-    private readonly HtmlConverter _htmlConverter = new();
+    private readonly HtmlConverter _htmlConverter;
     private readonly PdfOptions _options = new() { FontPath = Path.Combine("Fonts", "Inter-Regular.ttf") };
+    private readonly ILoggerFactory _loggerFactory;
+
+    public HtmlConverterTests(ITestOutputHelper output)
+        : base(output)
+    {
+        _loggerFactory = LoggerFactory.Create(builder =>
+        {
+            builder.ClearProviders();
+            builder.SetMinimumLevel(LogLevel.Trace);
+            builder.AddProvider(new TestOutputLoggerProvider(output, LogLevel.Trace));
+        });
+
+        _htmlConverter = new HtmlConverter(loggerFactory: _loggerFactory);
+    }
 
     [Fact]
     public async Task ConvertSimpleHtmlToPdf_ShouldGenerateValidPdf()
@@ -62,7 +77,6 @@ public class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(
               </body>
             </html>";
 
-
         // Act
         var pdfBytes = await _htmlConverter.ToPdfAsync(html, _options);
 
@@ -72,5 +86,10 @@ public class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(
         Assert.NotNull(pdfBytes);
         Assert.NotEmpty(pdfBytes);
         Assert.Equal("%PDF", Encoding.ASCII.GetString(pdfBytes, 0, 4));
+    }
+
+    public void Dispose()
+    {
+        _loggerFactory.Dispose();
     }
 }

@@ -1,22 +1,22 @@
-using System;
 using Html2x.Core.Layout;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
 namespace Html2x.Pdf;
 
-internal sealed class QuestPdfFragmentRenderer : IFragmentRenderer
+internal sealed class QuestPdfFragmentRenderer(
+    IContainer container,
+    PdfOptions options,
+    ILogger<QuestPdfFragmentRenderer>? logger = null)
+    : IFragmentRenderer
 {
-    private readonly IContainer _container;
-    private readonly PdfOptions _options;
+    private readonly IContainer _container = container ?? throw new ArgumentNullException(nameof(container));
+    private readonly PdfOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    private readonly ILogger<QuestPdfFragmentRenderer> _logger = logger ?? NullLogger<QuestPdfFragmentRenderer>.Instance;
 
-    public QuestPdfFragmentRenderer(IContainer container, PdfOptions options)
-    {
-        _container = container ?? throw new ArgumentNullException(nameof(container));
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-    }
-
-    public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> _)
+    public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
         _container.Column(inner =>
         {
@@ -36,10 +36,12 @@ internal sealed class QuestPdfFragmentRenderer : IFragmentRenderer
                         break;
                     case Fragment child:
                         i++;
-                        var childRenderer = new QuestPdfFragmentRenderer(inner.Item(), _options);
-                        child.VisitWith(new FragmentRenderDispatcher(childRenderer));
+                        RendererLog.FragmentStart(_logger, child);
+                        var childRenderer = new QuestPdfFragmentRenderer(inner.Item(), _options, _logger);
+                        renderChild(child, childRenderer);
                         break;
                     default:
+                        RendererLog.FragmentUnsupported(_logger, children[i]);
                         i++;
                         break;
                 }
@@ -54,7 +56,7 @@ internal sealed class QuestPdfFragmentRenderer : IFragmentRenderer
 
     public void RenderImage(ImageFragment fragment)
     {
-        // Placeholder for image support
+        RendererLog.FragmentUnsupported(_logger, fragment);
     }
 
     public void RenderRule(RuleFragment fragment)
@@ -66,7 +68,7 @@ internal sealed class QuestPdfFragmentRenderer : IFragmentRenderer
         _container.LineHorizontal(width).LineColor(color);
     }
 
-    private void RenderSingleLine(IContainer container, LineBoxFragment line)
+    private static void RenderSingleLine(IContainer container, LineBoxFragment line)
     {
         container.Row(row =>
         {
