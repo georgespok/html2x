@@ -1,65 +1,54 @@
 # Testing Guidelines
 
-This document outlines testing standards for Html2x.
+These practices keep Html2x shippable while the surface area grows. Every contribution is expected to follow incremental TDD and preserve deterministic outputs.
 
-### Foundational Practices
+## Foundational Practices
 
-- Code must be developed using incremental TDD: introduce one failing test at a time, implement the minimal passing code, and refactor before adding the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt.
-- Tests MUST exercise observable behavior (e.g., rendered output, pagination results) and MUST NOT rely on reflection-based contract checks of internal types.
-- Reflection APIs (e.g., `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are explicitly prohibited in test code.
+- **Fail first**: Introduce one failing test, implement the minimal code to pass, then refactor. Constructors and trivial DTOs are the only exceptions.
+- **Behavior over structure**: Assertions must focus on observable outcomes (fragment shapes, PDF metadata, layout positions) rather than internal state or reflection.
+- **No reflection**: `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`, etc., are banned in test projects. Favor direct API calls or explicit test doubles.
+- **Layer isolation**: Each stage—Core, Layout, PDF renderer—must be testable in isolation. Integration tests cover the seams, not the only validation.
 
-### Test Strategy and Coverage Discipline
-Tests are first-class and focus on observable behavior, not implementation details. Code MUST follow incremental TDD: introduce one failing test, implement the minimal passing code, then refactor before the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt. Tests MUST exercise outcomes such as rendered output, pagination results, logging, or API responses and MUST NOT rely on reflection-based contract checks. Reflection APIs (e.g., Activator.CreateInstance, Type.GetType, MethodInfo.Invoke) are prohibited in test code. Prioritize tests for business logic and complex flows, use parameterized tests for multi-scenario logic, and keep tests independent and readable. Each layer/module MUST be testable in isolation.
-Rationale: Guarantees quality, documents behavior, and enables safe refactoring.
+## Test Layout by Project
 
-## Test Organization
+| Project | Scope | Typical Scenarios | Notes |
+| --- | --- | --- | --- |
+| `Html2x.Core.Tests` (in `Html2x.Layout.Test` for now) | Value types, geometry helpers, computed style defaults. | Edge cases for `Dimensions`, color parsing, fragment invariants. | Keep data-driven `[Theory]` tests to cover boundaries. |
+| `Html2x.Layout.Test` | DOM/load, style cascade, box flow, fragmentation. | HTML fixtures producing expected fragments or pagination rules. | Use snapshot-style helpers sparingly; prefer explicit assertions. |
+| `Html2x.Pdf.Test` | Fragment dispatch and QuestPDF integration. | Rendering simple layouts, validating fonts, line weights, warnings for unsupported fragments. | Record fragments (`RecordingFragmentRenderer`) when diagnosing traversal. |
+| `Html2x.Test` | End-to-end `HtmlConverter` verification. | Whole documents, PDF header checks, logging emission via `TestOutputLoggerProvider`. | Keep scenarios realistic and document the purpose in comments. |
 
-**Tests MUST be treated with the same quality standards as production code.**
+## Writing High-Quality Tests
 
-### Clean Code Principles for Tests
+- **Name** tests following `Method_Scenario_Expectation`. Prefer expressive names over abbreviations.
+- **Arrange-Act-Assert**: Keep blocks visually distinct. Extract helpers when repeated setups appear.
+- **Use `[Theory]` first**: Parameterize scenarios with `[InlineData]`, `[MemberData]`, or `[ClassData]` to collapse repetitive tests. Reserve `[Fact]` for unique flows.
+- **No magic numbers**: When asserting coordinates or sizes, describe meaning (e.g., `expectedBaseline`) in variable names or comments.
+- **Keep tests short**: Aim for ≤15 executable lines. If longer, consider helper methods or additional test classes.
 
-- **SOLID**: Apply Single Responsibility, Open/Closed, and other SOLID principles
-- **DRY**: Don't Repeat Yourself - eliminate code duplication
-- **KISS**: Keep It Simple, Stupid - avoid over-engineering tests
-- **Readability**: Tests should be easy to read and understand
+## Snapshot & Golden Files
 
-### Theory Tests Priority
+- Prefer programmatic assertions. If snapshots are necessary, store them under the test project in a clearly named folder (`Snapshots/`).
+- Update snapshots only with a corresponding explanation in the PR description. Include a `Assert.True(Fixture.Verify(...))` style call rather than raw string equality.
+- When changing expected output intentionally, provide before/after commentary in the commit message to aid reviewers.
 
-- **Theory tests (`[Theory]` with `[InlineData]`) are PRIORITY for parameterized testing scenarios.** Analyze test classes regularly to ensure optimal organization using xUnit features.
-- **Regular Analysis**: Analyze test classes regularly to ensure optimal organization using xUnit features
-- **Consolidation**: Consolidate similar test scenarios using `[Theory]` with `[InlineData]`, `[MemberData]`, or `[ClassData]`
-- **Helper Methods**: Create helper methods to eliminate repetitive arrange sections
+## PDF Validation Guidance
 
+- Use `PdfWordParser` to read text content and attributes; verify font usage, positions, and styling.
+- `PdfValidator` should back structural assertions (valid PDF, page count). Do not assert binary equality—prefer semantic checks.
+- For regression debugging, store PDFs temporarily using `SavePdfForInspectionAsync` and link the temp path in test output.
 
-#### When to Use Theory Tests
-- ✅ **Use `[Theory]` with `[InlineData]`**: For simple parameterized tests with 2-5 parameters
-- ✅ **Use `[Theory]` with `[MemberData]`**: For complex test data or dynamic data generation
-- ✅ **Use `[Theory]` with `[ClassData]`**: For reusable test data classes
-- ✅ **Consolidate Similar Scenarios**: Multiple test cases that follow the same pattern
-- ❌ **Don't Use `[Fact]`**: For scenarios that can be parameterized
+## Integration Strategy
 
-## Test Quality
+1. Cover the same user journey once. Avoid duplicating the same checks across multiple integration tests.
+2. Use real options and fonts shipped with the repo to catch platform-specific issues.
+3. Capture logging output via the `TestOutputLoggerProvider` when verifying diagnostics or error flows.
+4. Validate error propagation—assert the thrown exception type and that logs surface the failure.
 
-- **Short Tests**: Keep test methods short and focused (ideally under 15 lines)
-- **Clean Tests**: Apply the same clean code principles to test code
-- **Descriptive Names**: Use descriptive test method names following `MethodName_Scenario_ExpectedResult` pattern
-- **Functional Organization**: Organize tests by functionality, not by implementation details
+## Continuous Improvement
 
-## Test Coverage Goals
+- Review test suites periodically to consolidate similar `[Theory]` cases.
+- When adding new CSS or renderer features, start by extending unit tests, then add a focused integration scenario.
+- Before merging, run `dotnet test Html2x.sln -c Release` and ensure diagnostics remain informative.
 
-- Unit tests for core logic
-- Integration tests for end-to-end conversion pipeline
-- Deterministic tests (same input → same output across platforms)
-
-## Integration Testing Strategy
-
-Integration tests focus on **cross-module communication** with the goal of minimal number of tests and maximum coverage of important interactions.
-
-#### Implementation Guidelines
-
-1. **Focus on major use cases** rather than individual method combinations
-2. **Test end-to-end workflows** that span multiple modules
-3. **Verify integration contracts** between components
-4. **Minimize test duplication** with unit tests
-5. **Use real or realistic dependencies** where appropriate
-6. **Test error propagation** across module boundaries
+Good tests are readable specifications. Treat them as documentation for future contributors.
