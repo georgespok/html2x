@@ -60,6 +60,9 @@ public static class HtmlCssConstants
         public const string MarginRight = "margin-right";
         public const string MarginBottom = "margin-bottom";
         public const string MarginLeft = "margin-left";
+        public const string BorderWidth = "border-width";
+        public const string BorderStyle = "border-style";
+        public const string BorderColor = "border-color";
         public const string FontFamily = "font-family";
         public const string FontSize = "font-size";
         public const string FontWeight = "font-weight";
@@ -88,6 +91,9 @@ public static class HtmlCssConstants
         public const string Right = "right";
         public const string None = "none";
         public const string Zero = "0";
+        public const string Solid = "solid";
+        public const string Dashed = "dashed";
+        public const string Dotted = "dotted";
     }
 
     /// <summary>

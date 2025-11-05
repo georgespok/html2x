@@ -1,18 +1,22 @@
-using System;
+using System.Linq;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Layout;
+using Html2x.Core.Layout;
 
 namespace Html2x.Layout.Style;
 
 /// <summary>
 /// Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
 /// </summary>
-public sealed class CssStyleComputer : IStyleComputer
+public sealed class CssStyleComputer(
+    IStyleTraversal traversal,
+    IUserAgentDefaults uaDefaults,
+    ICssValueConverter converter)
+    : IStyleComputer
 {
-    private readonly IStyleTraversal _traversal;
-    private readonly IUserAgentDefaults _uaDefaults;
-    private readonly ICssValueConverter _converter;
+    private readonly IStyleTraversal _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
+    private readonly IUserAgentDefaults _uaDefaults = uaDefaults ?? throw new ArgumentNullException(nameof(uaDefaults));
+    private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
 
     public CssStyleComputer()
         : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter())
@@ -22,13 +26,6 @@ public sealed class CssStyleComputer : IStyleComputer
     public CssStyleComputer(IStyleTraversal traversal, IUserAgentDefaults uaDefaults)
         : this(traversal, uaDefaults, new CssValueConverter())
     {
-    }
-
-    public CssStyleComputer(IStyleTraversal traversal, IUserAgentDefaults uaDefaults, ICssValueConverter converter)
-    {
-        _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
-        _uaDefaults = uaDefaults ?? throw new ArgumentNullException(nameof(uaDefaults));
-        _converter = converter ?? throw new ArgumentNullException(nameof(converter));
     }
 
     public StyleTree Compute(IDocument doc)
@@ -79,6 +76,7 @@ public sealed class CssStyleComputer : IStyleComputer
         };
 
         _uaDefaults.Apply(element, style, parentStyle);
+        ApplyBorders(css, style);
         return style;
     }
 
@@ -122,5 +120,42 @@ public sealed class CssStyleComputer : IStyleComputer
         {
             tree.Page.MarginLeftPt = shorthand;
         }
+    }
+
+    private void ApplyBorders(ICssStyleDeclaration css, ComputedStyle style)
+    {
+        var hasWidth = _converter.TryGetLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.BorderWidth), out var widthPt);
+        var lineStyle = ParseBorderStyle(css.GetPropertyValue(HtmlCssConstants.CssProperties.BorderStyle));
+
+        if (!hasWidth || widthPt <= 0 || lineStyle == BorderLineStyle.None)
+        {
+            style.Borders = BorderEdges.None;
+            return;
+        }
+
+        var color = ColorRgba.FromCss(style.Color, new ColorRgba(0, 0, 0, 255));
+        var side = new BorderSide(widthPt, color, lineStyle);
+        style.Borders = BorderEdges.Uniform(side);
+    }
+
+    private static BorderLineStyle ParseBorderStyle(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return BorderLineStyle.None;
+        }
+
+        var token = raw.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault()
+            ?.ToLowerInvariant();
+
+        return token switch
+        {
+            HtmlCssConstants.CssValues.None => BorderLineStyle.None,
+            HtmlCssConstants.CssValues.Solid => BorderLineStyle.Solid,
+            HtmlCssConstants.CssValues.Dashed => BorderLineStyle.Dashed,
+            HtmlCssConstants.CssValues.Dotted => BorderLineStyle.Dotted,
+            _ => BorderLineStyle.None
+        };
     }
 }
