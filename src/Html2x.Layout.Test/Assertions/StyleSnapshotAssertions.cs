@@ -74,7 +74,7 @@ public static class StyleSnapshotAssertions
 
             try
             {
-                actualValue.ShouldBe(expectedValue,
+                actualValue.ShouldBeEquivalentTo(expectedValue,
                     $"Mismatch in style property '{prop.Name}'");
             }
             catch (ShouldAssertException)
