@@ -24,8 +24,8 @@
 
 **Purpose**: Confirm baseline project health before feature work begins.
 
-- [ ] T001 Run `dotnet restore Html2x.sln` and verify all dependencies resolve correctly
-- [ ] T002 Verify analyzer and formatting configuration (`.editorconfig`) is in place
+- [x] T001 Run `dotnet restore Html2x.sln` and verify all dependencies resolve correctly
+- [x] T002 Verify analyzer and formatting configuration (`.editorconfig`) is in place
 - [ ] T003 [P] Review existing margin implementation in `src/Html2x.Layout/Style/CssStyleComputer.cs` and `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to understand pattern
 
 ---
