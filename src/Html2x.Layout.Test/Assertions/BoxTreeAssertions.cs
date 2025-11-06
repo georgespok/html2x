@@ -1,6 +1,7 @@
 using System.Reflection;
 using AngleSharp.Dom;
 using Html2x.Layout.Box;
+using Html2x.Layout.Style;
 
 namespace Html2x.Layout.Test.Assertions;
 
@@ -75,37 +76,30 @@ public sealed class PageBoxExpectationBuilder
     }
 }
 
-public sealed class BlockExpectationBuilder
+public sealed class BlockExpectationBuilder(BlockBox block)
 {
-    private readonly BlockBox _block;
-
-    public BlockExpectationBuilder(BlockBox block)
-    {
-        _block = block;
-    }
-
     public BlockExpectationBuilder Element(IElement element)
     {
-        InitPropertySetter.SetElement(_block, element);
+        InitPropertySetter.SetElement(block, element);
         return this;
     }
 
     public BlockExpectationBuilder Position(float x, float y)
     {
-        _block.X = x;
-        _block.Y = y;
+        block.X = x;
+        block.Y = y;
         return this;
     }
 
     public BlockExpectationBuilder Width(float width)
     {
-        _block.Width = width;
+        block.Width = width;
         return this;
     }
 
     public BlockExpectationBuilder Height(float height)
     {
-        _block.Height = height;
+        block.Height = height;
         return this;
     }
 
@@ -113,7 +107,13 @@ public sealed class BlockExpectationBuilder
     {
         var inline = new InlineBox();
         InitPropertySetter.SetText(inline, text);
-        _block.Children.Add(inline);
+        block.Children.Add(inline);
+        return this;
+    }
+
+    public BlockExpectationBuilder Style(ComputedStyle style)
+    {
+        InitPropertySetter.SetStyle(block, style);
         return this;
     }
 
@@ -121,7 +121,7 @@ public sealed class BlockExpectationBuilder
     {
         var inline = new InlineBox();
         configure(new InlineExpectationBuilder(inline));
-        _block.Children.Add(inline);
+        block.Children.Add(inline);
         return this;
     }
 
@@ -129,7 +129,7 @@ public sealed class BlockExpectationBuilder
     {
         var child = new BlockBox();
         configure(new BlockExpectationBuilder(child));
-        _block.Children.Add(child);
+        block.Children.Add(child);
         return this;
     }
 }
@@ -174,6 +174,10 @@ internal static class InitPropertySetter
         typeof(InlineBox).GetProperty(nameof(InlineBox.TextContent)) ??
         throw new InvalidOperationException("InlineBox.TextContent property not found.");
 
+    private static readonly PropertyInfo StyleProperty =
+        typeof(BlockBox).GetProperty(nameof(BlockBox.Style)) ??
+        throw new InvalidOperationException("BlockBox.Style property not found.");
+
     public static void SetElement(DisplayNode node, IElement element)
     {
         ElementProperty.SetValue(node, element);
@@ -182,6 +186,11 @@ internal static class InitPropertySetter
     public static void SetText(InlineBox inline, string text)
     {
         TextContentProperty.SetValue(inline, text);
+    }
+
+    public static void SetStyle(BlockBox block, ComputedStyle style)
+    {
+        StyleProperty.SetValue(block, style);
     }
 }
 

@@ -74,6 +74,10 @@ public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
                     <li>Ordered item 2</li>
                 </ol>
 
+                <div style='border-width: 1px; border-style: dashed;'>
+                    Text with border around
+                </div>
+
               </body>
             </html>";
 

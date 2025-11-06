@@ -18,13 +18,10 @@ internal sealed class QuestPdfFragmentRenderer(
 
     public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
-        _container.Column(inner =>
-        {
-            if (fragment.Style?.BackgroundColor is { } bg)
-            {
-                inner.Item().Background(QuestPdfStyleMapper.Map(bg));
-            }
+        var blockContainer = ApplyBlockDecorations(_container, fragment.Style);
 
+        blockContainer.Column(inner =>
+        {
             var children = fragment.Children;
             for (var i = 0; i < children.Count;)
             {
@@ -62,10 +59,38 @@ internal sealed class QuestPdfFragmentRenderer(
     public void RenderRule(RuleFragment fragment)
     {
         var color = QuestPdfStyleMapper.Map(
-            fragment.Style?.BorderTop?.Color ?? new ColorRgba(0, 0, 0, 255));
-        var width = fragment.Style?.BorderTop?.Width ?? 1f;
+            fragment.Style?.Borders?.Top?.Color ?? new ColorRgba(0, 0, 0, 255));
+        var width = fragment.Style?.Borders?.Top?.Width ?? 1f;
 
         _container.LineHorizontal(width).LineColor(color);
+    }
+
+    private IContainer ApplyBlockDecorations(IContainer container, VisualStyle? style)
+    {
+        if (style is null)
+        {
+            return container;
+        }
+
+        var decorated = container;
+
+        if (style.BackgroundColor is { } background)
+        {
+            decorated = decorated.Background(QuestPdfStyleMapper.Map(background));
+        }
+
+        if (BorderRendering.GetUniformBorder(style.Borders) is { } border)
+        {
+            if (border.LineStyle is BorderLineStyle.Dashed or BorderLineStyle.Dotted)
+            {
+                _logger.LogDebug("Border style {BorderStyle} not supported, rendering as solid.", border.LineStyle);
+            }
+
+            decorated = decorated.Border(border.Width)
+                .BorderColor(QuestPdfStyleMapper.Map(border.Color));
+        }
+
+        return decorated;
     }
 
     private static void RenderSingleLine(IContainer container, LineBoxFragment line)
