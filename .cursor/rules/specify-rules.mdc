@@ -1,0 +1,29 @@
+﻿# html2x Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-11-06
+
+## Active Technologies
+
+- .NET 8 + AngleSharp (CSS parsing), QuestPDF (rendering), Html2x shared libraries (`Html2x.Core`, `Html2x.Layout`) (001-css-padding)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+# Add commands for .NET 8
+
+## Code Style
+
+.NET 8: Follow standard conventions
+
+## Recent Changes
+
+- 001-css-padding: Added .NET 8 + AngleSharp (CSS parsing), QuestPDF (rendering), Html2x shared libraries (`Html2x.Core`, `Html2x.Layout`)
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
