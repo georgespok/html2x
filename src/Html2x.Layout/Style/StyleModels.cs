@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Dom;
+using Html2x.Core.Layout;
 
 namespace Html2x.Layout.Style;
 
@@ -35,4 +36,5 @@ public sealed class ComputedStyle
     public float MarginRightPt { get; set; }
     public float MarginBottomPt { get; set; }
     public float MarginLeftPt { get; set; }
+    public BorderEdges Borders { get; set; } = BorderEdges.None;
 }

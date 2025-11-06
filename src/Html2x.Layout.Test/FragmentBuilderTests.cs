@@ -3,6 +3,7 @@ using AngleSharp.Dom;
 using Html2x.Core.Layout;
 using Html2x.Layout.Box;
 using Html2x.Layout.Fragment;
+using Html2x.Layout.Style;
 using Html2x.Layout.Test.Assertions;
 using Shouldly;
 using CoreFragment = Html2x.Core.Layout.Fragment;
@@ -27,6 +28,27 @@ public class FragmentBuilderTests
         fragment.Rect.Y.ShouldBe(20f);
         fragment.Rect.Width.ShouldBe(100f);
         fragment.Rect.Height.ShouldBe(50f);
+    }
+
+    [Fact]
+    public void Build_WithBlockBorder_CreatesBlockFragment()
+    {
+        // Arrange
+        var boxTree = BuildBoxTree()
+            .AddBlock(10, 20, 100, 50, style: new ComputedStyle
+            {
+                Borders = BorderEdges.Uniform(new(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid ))
+            });
+
+        // Act
+        var fragments = CreateFragmentBuilder().Build(boxTree);
+
+        // Assert
+        var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
+        fragment.Style.Borders.ShouldBeEquivalentTo(
+            BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid))
+        );
+
     }
 
     [Fact]

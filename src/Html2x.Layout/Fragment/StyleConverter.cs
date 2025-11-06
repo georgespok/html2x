@@ -7,7 +7,10 @@ public static class StyleConverter
 {
     public static VisualStyle FromComputed(ComputedStyle s)
     {
-        return new VisualStyle(// no background in MVP
+        var hasBorders = s.Borders?.HasAny == true;
+
+        return new VisualStyle(
+            Borders: hasBorders ? s.Borders : null
         );
     }
 

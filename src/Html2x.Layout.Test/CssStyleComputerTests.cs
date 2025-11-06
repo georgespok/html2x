@@ -1,5 +1,6 @@
 using AngleSharp;
 using AngleSharp.Dom;
+using Html2x.Core.Layout;
 using Html2x.Layout.Style;
 using Html2x.Layout.Test.Assertions;
 
@@ -110,6 +111,28 @@ public class CssStyleComputerTests
                 new("li"),  
                 new("li")
             ])
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_WithBorder_ProducesExpectedTree()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='border-width: 1px; border-style: dashed;'>
+                    Text                
+                </div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                Borders = BorderEdges.Uniform(new BorderSide(0.75f, new(0, 0, 0, 255), BorderLineStyle.Dashed))
+            })
         ]));
     }
 

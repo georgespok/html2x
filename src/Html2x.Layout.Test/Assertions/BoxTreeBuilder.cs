@@ -16,7 +16,7 @@ internal sealed class BoxTreeTestBuilder
         return this;
     }
 
-    public BoxTreeTestBuilder AddBlock(float x, float y, float width, float height, float fontSize = 12, Action<BlockBoxBuilder>? configure = null)
+    public BoxTreeTestBuilder AddBlock(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null, Action<BlockBoxBuilder>? configure = null)
     {
         var block = new BlockBox
         {
@@ -24,9 +24,8 @@ internal sealed class BoxTreeTestBuilder
             Y = y,
             Width = width,
             Height = height,
-            Style = new ComputedStyle { FontSizePt = fontSize }
+            Style = style ?? new ComputedStyle { FontSizePt = fontSize }
         };
-
         configure?.Invoke(new BlockBoxBuilder(block));
         _tree.Blocks.Add(block);
         return this;
@@ -37,12 +36,8 @@ internal sealed class BoxTreeTestBuilder
     public static implicit operator BoxTree(BoxTreeTestBuilder builder) => builder._tree;
 }
 
-internal sealed class BlockBoxBuilder
+internal sealed class BlockBoxBuilder(BlockBox block)
 {
-    private readonly BlockBox _block;
-
-    public BlockBoxBuilder(BlockBox block) => _block = block;
-
     public BlockBoxBuilder AddInline(string textContent, float fontSize = 12)
     {
         var inline = new InlineBox
@@ -50,11 +45,11 @@ internal sealed class BlockBoxBuilder
             Style = new ComputedStyle { FontSizePt = fontSize },
             TextContent = textContent
         };
-        _block.Children.Add(inline);
+        block.Children.Add(inline);
         return this;
     }
-
-    public BlockBoxBuilder AddBlock(float x, float y, float width, float height, float fontSize = 12, Action<BlockBoxBuilder>? configure = null)
+    
+    public BlockBoxBuilder AddBlock(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null, Action<BlockBoxBuilder>? configure = null)
     {
         var child = new BlockBox
         {
@@ -62,10 +57,10 @@ internal sealed class BlockBoxBuilder
             Y = y,
             Width = width,
             Height = height,
-            Style = new ComputedStyle { FontSizePt = fontSize }
+            Style = style ?? new ComputedStyle { FontSizePt = fontSize }
         };
         configure?.Invoke(new BlockBoxBuilder(child));
-        _block.Children.Add(child);
+        block.Children.Add(child);
         return this;
     }
 }

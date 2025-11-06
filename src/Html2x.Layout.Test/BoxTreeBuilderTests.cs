@@ -1,5 +1,6 @@
 using AngleSharp;
 using AngleSharp.Dom;
+using Html2x.Core.Layout;
 using Html2x.Layout.Box;
 using Html2x.Layout.Style;
 using Html2x.Layout.Test.Assertions;
@@ -52,9 +53,36 @@ public class BoxTreeBuilderTests
                 .Inline(i => i.Text("Hello"))));
     }
 
-    [Fact] 
+    [Fact]
+    public async Task Build_WithDivAndBorder_BuildsBlockAtExpectedPosition()
+    {
+        // Arrange
+        const string html = "<html><body><div style='border-width: 1px; border-style: solid;'>Hello</div></body></html>";
+        var doc = await ParseHtml(html);
+
+        var div = doc.QuerySelector("div")!;
+
+        var styles = BuildStyleTree(doc.Body!)
+            .WithPageMargins(0, 0, 0, 0)
+            .AddChild(div, divNode => divNode
+                .WithBorders(BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid))));
+
+        // Act
+        var actual = CreateBoxTreeBuilder().Build(styles);
+
+        // Assert
+        actual.ShouldMatch(tree => tree
+            .Block(b => b.Element(div)
+                .Style(new ComputedStyle { Borders = BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid )) })
+                .Inline(i => i.Text("Hello"))
+            )
+        );
+    }
+
+    [Fact]
     public async Task Build_WithListItems_BuildsBlockAtExpectedPosition()
     {
+        // Arrange
         const string html = "<html><ul><li>item 1</li><li>item 2</li></ul></html>";
         var doc = await ParseHtml(html);
 
@@ -62,8 +90,8 @@ public class BoxTreeBuilderTests
         var listItems = doc.QuerySelectorAll("li");
         var firstLi = listItems[0]!;
         var secondLi = listItems[1]!;
-
         var root = new StyleNode { Element = doc.Body!, Style = new ComputedStyle() };
+
         var ulNode = new StyleNode
         {
             Element = ul,
