@@ -1,15 +1,15 @@
 <!--
 Sync Impact Report
-Version change: N/A -> 1.0.0
-Modified principles: none (initial publication)
-Added sections: Core Principles; Operational Guardrails; Delivery Workflow; Governance
+Version change: 1.0.0 -> 1.1.0
+Modified principles: III. Test-First Delivery (expanded with incremental TDD, behavior-focused testing, reflection prohibition, isolation requirements)
+Added sections: none
 Removed sections: none
 Templates requiring updates:
 - updated: .specify/templates/plan-template.md
 - updated: .specify/templates/spec-template.md
 - updated: .specify/templates/tasks-template.md
 Follow-up TODOs:
-- TODO(RATIFICATION_DATE): Original adoption date not documented
+- (resolved) Ratification date documented: 2025-11-06
 -->
 # Html2x Constitution
 
@@ -28,10 +28,15 @@ Rationale: Preserving stage isolation keeps the system modular, testable, and en
 Rationale: Deterministic rendering underpins regression safety and cross-platform parity.
 
 ### III. Test-First Delivery
-- Every change MUST begin with a failing automated test that captures the intended behavior.
+- Tests are first-class and MUST focus on observable behavior, not implementation details.
+- Code MUST follow incremental TDD: introduce one failing test, implement the minimal passing code, then refactor before the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt.
+- Tests MUST exercise outcomes such as rendered output, pagination results, logging, or API responses and MUST NOT rely on reflection-based contract checks.
+- Reflection APIs (e.g., `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are prohibited in test code.
+- Prioritize tests for business logic and complex flows, use parameterized tests for multi-scenario logic, and keep tests independent and readable.
+- Each layer/module MUST be testable in isolation.
 - Unit, integration, and scenario tests MUST reside with the affected module and run via `dotnet test Html2x.sln -c Release`.
 - No feature merges without green tests and documented coverage of the exercised path.
-Rationale: TDD keeps the pipeline verifiable and prevents silent regressions.
+Rationale: Incremental TDD with behavior-focused tests keeps the pipeline verifiable, prevents silent regressions, and maintains test independence across layers.
 
 ### IV. Instrumented Observability
 - Layout and rendering stages MUST emit structured logs using the shared logging helpers with context-rich metadata.
@@ -66,4 +71,4 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): Original adoption date not documented | **Last Amended**: 2025-11-06
+**Version**: 1.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
