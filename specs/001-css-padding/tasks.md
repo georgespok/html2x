@@ -93,16 +93,19 @@
 
 **Goal**: Ensure padding affects layout of block and inline elements, reducing available content area where child elements are positioned. Padding applied inside border (if present) and outside content.
 
-**Independent Test**: Add failing test in `src/Html2x.Layout.Test/BoxTreeBuilderTests.cs` or `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` that creates block element with `style="width: 200px; padding: 20px"` and asserts child content width is 160 points and X position accounts for left padding.
+**Independent Test**: Add failing test in `src/Html2x.Layout.Test/BoxTreeBuilderTests.cs` or `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` that creates block element with `style="width: 200px; padding: 20px"` and asserts child content width is 120 points (200px * 0.75 = 150pt total, minus 30pt horizontal padding) and X position accounts for left padding (15pt).
 
 ### Tests for User Story 3
 
 - [ ] T030 [P] [US3] Write failing test `BlockBoxWithPadding_ReducesContentArea` in `src/Html2x.Layout.Test/BoxTreeBuilderTests.cs` verifying padding values copied from `ComputedStyle` to `BlockBox.Padding`
-- [ ] T031 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsContentWidth` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for block with `width: 200px; padding: 20px` → content width = 160 points
+- [ ] T031 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsContentWidth` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for block with `width: 200px; padding: 20px` → content width = 120 points (200px * 0.75 = 150pt total, minus 30pt horizontal padding)
 - [ ] T032 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsChildPosition` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` verifying child X position accounts for left padding
 - [ ] T033 [P] [US3] Write failing test `LayoutBlockWithAsymmetricPadding_PositionsCorrectly` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for `padding: 10px 20px 15px 5px` with correct offsets
+- [ ] T048 [P] [US3] Write failing test `LayoutInlineWithPadding_AffectsHorizontalSpacing` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for inline element with `style="padding: 10px"` verifying horizontal spacing is affected and padding values are applied
 
 ### Implementation for User Story 3
+
+**Note**: Inline element padding may be handled differently than block elements per data-model.md decision. Padding may be applied directly from `ComputedStyle` during inline layout without explicit `InlineBox.Padding` storage, depending on implementation approach. The T048 test will drive the implementation decision.
 
 - [ ] T034 [US3] Add `Padding` property of type `Spacing` to `BlockBox` class in `src/Html2x.Layout/Box/BoxModels.cs`
 - [ ] T035 [US3] Extend box tree building in `src/Html2x.Layout/Box/BoxTreeBuilder.cs` to copy padding values from `ComputedStyle` to `BlockBox.Padding` using `Spacing` instance
@@ -110,6 +113,7 @@
 - [ ] T037 [US3] Adjust child positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for padding: `contentX = parentX + margin.Left + padding.Left`
 - [ ] T038 [US3] Update vertical cursor positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for top padding when positioning first child
 - [ ] T039 [US3] Ensure block total width remains unchanged in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` while content area is reduced by padding
+- [ ] T049 [US3] Implement inline element padding support in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` (or inline layout engine) based on T048 test requirements, ensuring padding affects horizontal spacing without breaking existing inline layout behavior
 
 **Checkpoint**: All user stories function independently with passing tests and observability hooks. Padding affects layout correctly, reducing content area while maintaining element dimensions.
 
@@ -122,6 +126,7 @@
 - [ ] T040 [P] Update `docs/extending-css.md` to include padding as example of CSS property extension, referencing margin pattern
 - [ ] T041 [P] Add padding examples to HTML samples in `src/Html2x.Pdf.TestConsole/html/` for manual smoke testing
 - [ ] T042 Verify all edge cases are handled: invalid values, unsupported units, inheritance, zero/auto values
+- [ ] T050 [P] Write regression test in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` verifying inline elements without padding continue to layout correctly (ensure padding support doesn't break existing inline behavior)
 - [ ] T043 Validate `dotnet test Html2x.sln -c Release` passes on Windows with all new padding-related tests
 - [ ] T044 Run manual smoke test in `src/Html2x.Pdf.TestConsole/` with padding examples and verify PDF output
 - [ ] T045 Verify deterministic rendering: identical HTML/CSS inputs produce identical fragment geometry

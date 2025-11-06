@@ -42,10 +42,10 @@ A developer wants to apply padding to individual sides of an HTML element using 
 
 **Acceptance Scenarios**:
 
-1. **Given** an HTML element with `style="padding-top: 20px"`, **When** the layout is computed, **Then** the element's content area is reduced by 20 points from the top, and the computed style contains `PaddingTopPt = 20`.
-2. **Given** an HTML element with `style="padding-right: 15px"`, **When** the layout is computed, **Then** the padding-right is 15 points, and the content area is reduced accordingly.
-3. **Given** an HTML element with `style="padding-bottom: 10px"`, **When** the layout is computed, **Then** the padding-bottom is 10 points, and the content area reflects this reduction.
-4. **Given** an HTML element with `style="padding-left: 5px"`, **When** the layout is computed, **Then** the padding-left is 5 points, and child content is positioned 5 points from the left edge of the element's content box.
+1. **Given** an HTML element with `style="padding-top: 20px"`, **When** the layout is computed, **Then** the element's content area is reduced by 15 points from the top (20px * 0.75 = 15pt), and the computed style contains `PaddingTopPt = 15`.
+2. **Given** an HTML element with `style="padding-right: 15px"`, **When** the layout is computed, **Then** the padding-right is 11.25 points (15px * 0.75 = 11.25pt), and the content area is reduced accordingly.
+3. **Given** an HTML element with `style="padding-bottom: 10px"`, **When** the layout is computed, **Then** the padding-bottom is 7.5 points (10px * 0.75 = 7.5pt), and the content area reflects this reduction.
+4. **Given** an HTML element with `style="padding-left: 5px"`, **When** the layout is computed, **Then** the padding-left is 3.75 points (5px * 0.75 = 3.75pt), and child content is positioned 3.75 points from the left edge of the element's content box.
 
 ---
 
@@ -59,11 +59,11 @@ A developer wants to use the CSS `padding` shorthand property to set padding val
 
 **Acceptance Scenarios**:
 
-1. **Given** an HTML element with `style="padding: 15px"`, **When** the layout is computed, **Then** all four sides (top, right, bottom, left) have padding of 15 points.
-2. **Given** an HTML element with `style="padding: 10px 20px"`, **When** the layout is computed, **Then** top and bottom padding are 10 points, and right and left padding are 20 points.
-3. **Given** an HTML element with `style="padding: 10px 20px 15px"`, **When** the layout is computed, **Then** top padding is 10 points, right and left padding are 20 points, and bottom padding is 15 points.
-4. **Given** an HTML element with `style="padding: 10px 20px 15px 5px"`, **When** the layout is computed, **Then** padding values are top=10, right=20, bottom=15, left=5 points.
-5. **Given** an HTML element with `style="padding: 10px; padding-top: 25px"`, **When** the layout is computed, **Then** padding-top is 25 points (individual property overrides shorthand), and other sides remain 10 points.
+1. **Given** an HTML element with `style="padding: 15px"`, **When** the layout is computed, **Then** all four sides (top, right, bottom, left) have padding of 11.25 points (15px * 0.75 = 11.25pt).
+2. **Given** an HTML element with `style="padding: 10px 20px"`, **When** the layout is computed, **Then** top and bottom padding are 7.5 points (10px * 0.75), and right and left padding are 15 points (20px * 0.75).
+3. **Given** an HTML element with `style="padding: 10px 20px 15px"`, **When** the layout is computed, **Then** top padding is 7.5 points (10px * 0.75), right and left padding are 15 points (20px * 0.75), and bottom padding is 11.25 points (15px * 0.75).
+4. **Given** an HTML element with `style="padding: 10px 20px 15px 5px"`, **When** the layout is computed, **Then** padding values are top=7.5pt (10px * 0.75), right=15pt (20px * 0.75), bottom=11.25pt (15px * 0.75), left=3.75pt (5px * 0.75).
+5. **Given** an HTML element with `style="padding: 10px; padding-top: 25px"`, **When** the layout is computed, **Then** padding-top is 18.75 points (25px * 0.75, individual property overrides shorthand), and other sides remain 7.5 points (10px * 0.75).
 
 ---
 
@@ -73,13 +73,13 @@ A developer expects padding to affect the layout of block and inline elements, r
 
 **Why this priority**: Parsing padding values is necessary but insufficient if padding doesn't affect layout. This story ensures padding values flow through the pipeline and influence box geometry. It depends on P1 and P2 being implemented, as it uses the computed padding values.
 
-**Independent Test**: Add a failing test in `BoxTreeBuilderTests` or `LayoutIntegrationTests` that creates a block element with `style="width: 200px; padding: 20px"` containing child content. Assert that the child content's available width is 160 points (200 - 20*2) and that the child's X position accounts for the left padding. Verify that the block's total width remains 200 points, but the content area is reduced.
+**Independent Test**: Add a failing test in `BoxTreeBuilderTests` or `LayoutIntegrationTests` that creates a block element with `style="width: 200px; padding: 20px"` containing child content. Assert that the child content's available width is 120 points (200px * 0.75 = 150pt total, minus 30pt horizontal padding) and that the child's X position accounts for the left padding (15pt). Verify that the block's total width remains 150 points (converted from 200px), but the content area is reduced.
 
 **Acceptance Scenarios**:
 
-1. **Given** a block element with `style="width: 200px; padding: 20px"` containing text, **When** the layout is computed, **Then** the text content area has an effective width of 160 points (200 - 40 total horizontal padding), and text starts 20 points from the left edge of the element.
-2. **Given** a block element with `style="padding-top: 30px; padding-bottom: 10px"` containing multiple child blocks, **When** the layout is computed, **Then** the first child block is positioned 30 points below the top border, and spacing accounts for bottom padding.
-3. **Given** a block element with asymmetric padding `style="padding: 10px 20px 15px 5px"`, **When** the layout is computed, **Then** child content is positioned with correct offsets: 10pt from top, 20pt from right, 15pt from bottom, 5pt from left.
+1. **Given** a block element with `style="width: 200px; padding: 20px"` containing text, **When** the layout is computed, **Then** the text content area has an effective width of 120 points (200px * 0.75 = 150pt total width, minus 30pt total horizontal padding = 120pt), and text starts 15 points (20px * 0.75) from the left edge of the element.
+2. **Given** a block element with `style="padding-top: 30px; padding-bottom: 10px"` containing multiple child blocks, **When** the layout is computed, **Then** the first child block is positioned 22.5 points below the top border (30px * 0.75), and spacing accounts for bottom padding (10px * 0.75 = 7.5pt).
+3. **Given** a block element with asymmetric padding `style="padding: 10px 20px 15px 5px"`, **When** the layout is computed, **Then** child content is positioned with correct offsets: 7.5pt from top (10px * 0.75), 15pt from right (20px * 0.75), 11.25pt from bottom (15px * 0.75), 3.75pt from left (5px * 0.75).
 
 ---
 
@@ -123,6 +123,6 @@ A developer expects padding to affect the layout of block and inline elements, r
 - **SC-002**: Integration tests confirm deterministic fragment geometry for HTML elements with padding. Identical HTML/CSS inputs produce identical fragment positions and dimensions.
 - **SC-003**: Observability signals (structured logs) expose padding parsing events, invalid value warnings, and unsupported unit warnings. Logs are traceable in the test harness (`Html2x.Pdf.TestConsole`) and include element context.
 - **SC-004**: Documentation in `docs/extending-css.md` or equivalent is updated to reflect padding support, including examples of shorthand parsing and precedence rules. Release notes document the new CSS property support.
-- **SC-005**: Padding values correctly reduce content area: a block element with `width: 200px; padding: 20px` has child content positioned within a 160-point wide area (200 - 40 total horizontal padding).
+- **SC-005**: Padding values correctly reduce content area: a block element with `width: 200px; padding: 20px` has child content positioned within a 120-point wide area (200px * 0.75 = 150pt total width, minus 30pt total horizontal padding = 120pt).
 - **SC-006**: All four shorthand forms are supported and tested: single value (all sides), two values (vertical/horizontal), three values (top/horizontal/bottom), four values (top/right/bottom/left).
 - **SC-007**: Individual padding properties override shorthand when both are present on the same element, verified through explicit test assertions.
