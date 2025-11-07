@@ -53,65 +53,10 @@ public sealed class CssStyleComputer(
     {
         var css = element.ComputeCurrentStyle();
 
-        var style = new ComputedStyle
-        {
-            FontFamily = _converter.GetString(css, HtmlCssConstants.CssProperties.FontFamily,
-                parentStyle?.FontFamily ?? HtmlCssConstants.Defaults.FontFamily),
+        var style = new ComputedStyle();
 
-            FontSizePt = _converter.TryGetLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.FontSize), out var fs)
-                ? fs
-                : parentStyle?.FontSizePt ?? HtmlCssConstants.Defaults.DefaultFontSizePt,
-
-            Bold = _converter.IsBold(_converter.GetString(css, HtmlCssConstants.CssProperties.FontWeight)) ||
-                   (parentStyle?.Bold ?? false),
-            Italic = _converter.IsItalic(_converter.GetString(css, HtmlCssConstants.CssProperties.FontStyle)) ||
-                     (parentStyle?.Italic ?? false),
-
-            TextAlign = _converter.NormalizeAlign(
-                _converter.GetString(css, HtmlCssConstants.CssProperties.TextAlign),
-                parentStyle?.TextAlign ?? HtmlCssConstants.Defaults.TextAlign),
-
-            Color = _converter.GetString(css, HtmlCssConstants.CssProperties.Color,
-                parentStyle?.Color ?? HtmlCssConstants.Defaults.Color),
-
-            MarginTopPt = 0,
-            MarginRightPt = 0,
-            MarginBottomPt = 0,
-            MarginLeftPt = 0,
-
-            PaddingTopPt = 0,
-            PaddingRightPt = 0,
-            PaddingBottomPt = 0,
-            PaddingLeftPt = 0
-        };
-
-        ApplySpacingWithOverrides(
-            css,
-            HtmlCssConstants.CssProperties.Margin,
-            HtmlCssConstants.CssProperties.MarginTop,
-            HtmlCssConstants.CssProperties.MarginRight,
-            HtmlCssConstants.CssProperties.MarginBottom,
-            HtmlCssConstants.CssProperties.MarginLeft,
-            allowNegative: true,
-            element,
-            value => style.MarginTopPt = value,
-            value => style.MarginRightPt = value,
-            value => style.MarginBottomPt = value,
-            value => style.MarginLeftPt = value);
-
-        ApplySpacingWithOverrides(
-            css,
-            HtmlCssConstants.CssProperties.Padding,
-            HtmlCssConstants.CssProperties.PaddingTop,
-            HtmlCssConstants.CssProperties.PaddingRight,
-            HtmlCssConstants.CssProperties.PaddingBottom,
-            HtmlCssConstants.CssProperties.PaddingLeft,
-            allowNegative: false,
-            element,
-            value => style.PaddingTopPt = value,
-            value => style.PaddingRightPt = value,
-            value => style.PaddingBottomPt = value,
-            value => style.PaddingLeftPt = value);
+        ApplyTypography(css, style, parentStyle);
+        ApplySpacing(css, element, style);
 
         _uaDefaults.Apply(element, style, parentStyle);
         ApplyBorders(css, style);
@@ -223,6 +168,65 @@ public sealed class CssStyleComputer(
                 StyleLog.InvalidSpacingValue(_logger, shorthandProperty, shorthandValue, element);
                 break;
         }
+    }
+
+    private void ApplyTypography(ICssStyleDeclaration css, ComputedStyle style, ComputedStyle? parentStyle)
+    {
+        style.FontFamily = _converter.GetString(css, HtmlCssConstants.CssProperties.FontFamily,
+            parentStyle?.FontFamily ?? HtmlCssConstants.Defaults.FontFamily);
+
+        if (_converter.TryGetLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.FontSize), out var fs))
+        {
+            style.FontSizePt = fs;
+        }
+        else
+        {
+            style.FontSizePt = parentStyle?.FontSizePt ?? HtmlCssConstants.Defaults.DefaultFontSizePt;
+        }
+
+        style.Bold = _converter.IsBold(_converter.GetString(css, HtmlCssConstants.CssProperties.FontWeight)) ||
+                     (parentStyle?.Bold ?? false);
+
+        style.Italic = _converter.IsItalic(_converter.GetString(css, HtmlCssConstants.CssProperties.FontStyle)) ||
+                       (parentStyle?.Italic ?? false);
+
+        style.TextAlign = _converter.NormalizeAlign(
+            _converter.GetString(css, HtmlCssConstants.CssProperties.TextAlign),
+            parentStyle?.TextAlign ?? HtmlCssConstants.Defaults.TextAlign);
+
+        style.Color = _converter.GetString(css, HtmlCssConstants.CssProperties.Color,
+            parentStyle?.Color ?? HtmlCssConstants.Defaults.Color);
+    }
+
+    private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyle style)
+    {
+        ApplySpacingWithOverrides(
+            css,
+            HtmlCssConstants.CssProperties.Margin,
+            HtmlCssConstants.CssProperties.MarginTop,
+            HtmlCssConstants.CssProperties.MarginRight,
+            HtmlCssConstants.CssProperties.MarginBottom,
+            HtmlCssConstants.CssProperties.MarginLeft,
+            allowNegative: true,
+            element,
+            value => style.MarginTopPt = value,
+            value => style.MarginRightPt = value,
+            value => style.MarginBottomPt = value,
+            value => style.MarginLeftPt = value);
+
+        ApplySpacingWithOverrides(
+            css,
+            HtmlCssConstants.CssProperties.Padding,
+            HtmlCssConstants.CssProperties.PaddingTop,
+            HtmlCssConstants.CssProperties.PaddingRight,
+            HtmlCssConstants.CssProperties.PaddingBottom,
+            HtmlCssConstants.CssProperties.PaddingLeft,
+            allowNegative: false,
+            element,
+            value => style.PaddingTopPt = value,
+            value => style.PaddingRightPt = value,
+            value => style.PaddingBottomPt = value,
+            value => style.PaddingLeftPt = value);
     }
 
     private bool TryParseSpacingValues(
