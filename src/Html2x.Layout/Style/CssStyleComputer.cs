@@ -2,6 +2,8 @@ using System.Linq;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 using Html2x.Core.Layout;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Html2x.Layout.Style;
 
@@ -11,20 +13,22 @@ namespace Html2x.Layout.Style;
 public sealed class CssStyleComputer(
     IStyleTraversal traversal,
     IUserAgentDefaults uaDefaults,
-    ICssValueConverter converter)
+    ICssValueConverter converter,
+    ILogger<CssStyleComputer>? logger = null)
     : IStyleComputer
 {
     private readonly IStyleTraversal _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
     private readonly IUserAgentDefaults _uaDefaults = uaDefaults ?? throw new ArgumentNullException(nameof(uaDefaults));
     private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+    private readonly ILogger<CssStyleComputer> _logger = logger ?? NullLogger<CssStyleComputer>.Instance;
 
     public CssStyleComputer()
-        : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter())
+        : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter(), null)
     {
     }
 
     public CssStyleComputer(IStyleTraversal traversal, IUserAgentDefaults uaDefaults)
-        : this(traversal, uaDefaults, new CssValueConverter())
+        : this(traversal, uaDefaults, new CssValueConverter(), null)
     {
     }
 
@@ -72,7 +76,12 @@ public sealed class CssStyleComputer(
             MarginTopPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginTop, 0),
             MarginRightPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginRight, 0),
             MarginBottomPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginBottom, 0),
-            MarginLeftPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginLeft, 0)
+            MarginLeftPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginLeft, 0),
+
+            PaddingTopPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingTop, element),
+            PaddingRightPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingRight, element),
+            PaddingBottomPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingBottom, element),
+            PaddingLeftPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingLeft, element)
         };
 
         _uaDefaults.Apply(element, style, parentStyle);
@@ -136,6 +145,34 @@ public sealed class CssStyleComputer(
         var color = ColorRgba.FromCss(style.Color, new ColorRgba(0, 0, 0, 255));
         var side = new BorderSide(widthPt, color, lineStyle);
         style.Borders = BorderEdges.Uniform(side);
+    }
+
+    private float GetPaddingWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    {
+        var rawValue = css.GetPropertyValue(property);
+        
+        // If no value provided, return default (0) without logging
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return 0;
+        }
+
+        // Try to parse the value
+        if (!_converter.TryGetLengthPt(rawValue, out var points))
+        {
+            // Value provided but couldn't be parsed (non-numeric, unsupported unit, etc.)
+            StyleLog.InvalidPaddingValue(_logger, property, rawValue, element);
+            return 0;
+        }
+
+        // Check for negative values
+        if (points < 0)
+        {
+            StyleLog.NegativePaddingValue(_logger, property, points, element);
+            return 0;
+        }
+
+        return points;
     }
 
     private static BorderLineStyle ParseBorderStyle(string? raw)
