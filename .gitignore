@@ -46,7 +46,6 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
-.specify/
-.codex/
-.cursor/
-AGENTS.md
+#.specify/
+#.cursor/
+#AGENTS.md
