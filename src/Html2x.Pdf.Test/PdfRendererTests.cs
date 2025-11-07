@@ -62,7 +62,7 @@ public class PdfRendererTests
 
         var page = new LayoutPage(
             new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
-            new Margins(72, 72, 72, 72),
+            new Spacing(72, 72, 72, 72),
             CreateSimpleContent(),
             1,
             new ColorRgba(255, 255, 255, 255)
@@ -117,7 +117,7 @@ public class PdfRendererTests
 
         var page = new LayoutPage(
             new SizeF(400, 400),
-            new Margins(0, 0, 0, 0),
+            new Spacing(0, 0, 0, 0),
             new List<Fragment> { block },
             1,
             new ColorRgba(255, 255, 255, 255));

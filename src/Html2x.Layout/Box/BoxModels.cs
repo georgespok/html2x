@@ -1,4 +1,5 @@
 ﻿using AngleSharp.Dom;
+using Html2x.Core.Layout;
 using Html2x.Layout.Style;
 
 namespace Html2x.Layout.Box;
@@ -21,16 +22,6 @@ public sealed class PageBox
     public float PageWidthPt { get; set; } = 595;
     public float PageHeightPt { get; set; } = 842;
 }
-
-public sealed class Spacing
-{
-    public float Top { get; set; }
-    public float Right { get; set; }
-    public float Bottom { get; set; }
-    public float Left { get; set; }
-}
-
-// new models
 
 public abstract class DisplayNode
 {
