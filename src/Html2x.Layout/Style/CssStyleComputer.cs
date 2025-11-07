@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 using Html2x.Core.Layout;
@@ -24,12 +22,12 @@ public sealed class CssStyleComputer(
     private readonly ILogger<CssStyleComputer> _logger = logger ?? NullLogger<CssStyleComputer>.Instance;
 
     public CssStyleComputer()
-        : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter(), null)
+        : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter())
     {
     }
 
     public CssStyleComputer(IStyleTraversal traversal, IUserAgentDefaults uaDefaults)
-        : this(traversal, uaDefaults, new CssValueConverter(), null)
+        : this(traversal, uaDefaults, new CssValueConverter())
     {
     }
 
@@ -236,9 +234,9 @@ public sealed class CssStyleComputer(
         bool allowNegative,
         out List<float> parsedValues)
     {
-        parsedValues = new List<float>();
+        parsedValues = [];
 
-        var tokens = shorthandValue.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+        var tokens = shorthandValue.Split([' '], StringSplitOptions.RemoveEmptyEntries)
             .Select(v => v.Trim())
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .ToArray();
