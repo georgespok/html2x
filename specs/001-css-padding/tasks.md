@@ -60,7 +60,7 @@
 
 - [x] T014 [US1] Extend `MapStyle()` method in `src/Html2x.Layout/Style/CssStyleComputer.cs` to parse individual padding properties using `_converter.GetLengthPt()` for each side
 - [x] T015 [US1] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for invalid padding values (negative, non-numeric) with element context
-- [ ] T016 [US1] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for unsupported units (non-px) with warning message and element context
+- [x] T016 [US1] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for unsupported units (non-px) with warning message and element context
 
 **Checkpoint**: User Story 1 fully functional, independently testable, and observable. Individual padding properties parse correctly with px units, default to 0, and do not inherit.
 
