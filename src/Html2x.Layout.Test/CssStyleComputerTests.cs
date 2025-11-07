@@ -136,6 +136,39 @@ public class CssStyleComputerTests
         ]));
     }
 
+    [Fact]
+    public async Task Compute_WithIndividualPaddingProperties_ParsesCorrectPointValues()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding-top: 20px = 15pt (20 * 0.75)
+        // padding-right: 15px = 11.25pt (15 * 0.75)
+        // padding-bottom: 10px = 7.5pt (10 * 0.75)
+        // padding-left: 5px = 3.75pt (5 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 15f,
+                PaddingRightPt = 11.25f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 3.75f
+            })
+        ]));
+    }
+
     private static async Task<IDocument> CreateHtmlDocument(string html)
     {
         var context = BrowsingContext.New(Configuration.Default.WithCss());
