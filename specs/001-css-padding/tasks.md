@@ -74,15 +74,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] Write failing test `ParsePaddingShorthand_SingleValue_SetsAllSides` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px` → all sides = 10px
-- [ ] T021 [P] [US2] Write failing test `ParsePaddingShorthand_TwoValues_SetsVerticalAndHorizontal` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px` → top/bottom=10px, left/right=20px
-- [ ] T022 [P] [US2] Write failing test `ParsePaddingShorthand_ThreeValues_SetsTopHorizontalBottom` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px 15px` → top=10px, left/right=20px, bottom=15px
-- [ ] T023 [P] [US2] Write failing test `ParsePaddingShorthand_FourValues_SetsAllSidesIndividually` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px 15px 5px` → top=10px, right=20px, bottom=15px, left=5px
-- [ ] T024 [P] [US2] Write failing test `ParsePaddingShorthand_WithIndividualProperty_IndividualTakesPrecedence` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px; padding-top: 25px` → top=25px, others=10px
+- [x] T020 [P] [US2] Write failing test `ParsePaddingShorthand_SingleValue_SetsAllSides` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px` → all sides = 10px
+- [x] T021 [P] [US2] Write failing test `ParsePaddingShorthand_TwoValues_SetsVerticalAndHorizontal` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px` → top/bottom=10px, left/right=20px
+- [x] T022 [P] [US2] Write failing test `ParsePaddingShorthand_ThreeValues_SetsTopHorizontalBottom` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px 15px` → top=10px, left/right=20px, bottom=15px
+- [x] T023 [P] [US2] Write failing test `ParsePaddingShorthand_FourValues_SetsAllSidesIndividually` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px 20px 15px 5px` → top=10px, right=20px, bottom=15px, left=5px
+- [x] T024 [P] [US2] Write failing test `ParsePaddingShorthand_WithIndividualProperty_IndividualTakesPrecedence` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for `padding: 10px; padding-top: 25px` → top=25px, others=10px
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Add `ApplyPaddingShorthand()` method in `src/Html2x.Layout/Style/CssStyleComputer.cs` to parse and expand shorthand values (similar to `ApplyPageMargins` pattern)
+- [x] T025 [US2] Add `ApplyPaddingShorthand()` method in `src/Html2x.Layout/Style/CssStyleComputer.cs` to parse and expand shorthand values (similar to `ApplyPageMargins` pattern)
 - [ ] T026 [US2] Implement shorthand value parsing logic in `src/Html2x.Layout/Style/CssStyleComputer.cs` to handle 1, 2, 3, and 4 value forms
 - [ ] T027 [US2] Ensure individual properties take precedence over shorthand in `src/Html2x.Layout/Style/CssStyleComputer.cs` by parsing shorthand first, then individual properties override
 - [ ] T028 [US2] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for invalid shorthand values with element context
