@@ -35,7 +35,7 @@
 **Purpose**: Core infrastructure that MUST be complete before any user story starts.
 
 - [x] T004 Add padding property constants to `src/Html2x.Layout/HtmlCssConstants.cs` in `CssProperties` class: `Padding`, `PaddingTop`, `PaddingRight`, `PaddingBottom`, `PaddingLeft`
-- [ ] T005 Extend `ComputedStyle` class in `src/Html2x.Layout/Style/StyleModels.cs` with padding properties: `PaddingTopPt`, `PaddingRightPt`, `PaddingBottomPt`, `PaddingLeftPt` (default 0)
+- [x] T005 Extend `ComputedStyle` class in `src/Html2x.Layout/Style/StyleModels.cs` with padding properties: `PaddingTopPt`, `PaddingRightPt`, `PaddingBottomPt`, `PaddingLeftPt` (default 0)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
