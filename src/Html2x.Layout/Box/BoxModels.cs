@@ -47,6 +47,7 @@ public sealed class BlockBox : DisplayNode
     public float Width { get; set; }
     public float Height { get; set; }
     public Spacing Margin { get; set; } = new();
+    public Spacing Padding { get; set; } = new();
     public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
 }
 

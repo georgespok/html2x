@@ -83,9 +83,9 @@
 ### Implementation for User Story 2
 
 - [x] T025 [US2] Add `ApplyPaddingShorthand()` method in `src/Html2x.Layout/Style/CssStyleComputer.cs` to parse and expand shorthand values (similar to `ApplyPageMargins` pattern)
-- [ ] T026 [US2] Implement shorthand value parsing logic in `src/Html2x.Layout/Style/CssStyleComputer.cs` to handle 1, 2, 3, and 4 value forms
-- [ ] T027 [US2] Ensure individual properties take precedence over shorthand in `src/Html2x.Layout/Style/CssStyleComputer.cs` by parsing shorthand first, then individual properties override
-- [ ] T028 [US2] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for invalid shorthand values with element context
+- [x] T026 [US2] Implement shorthand value parsing logic in `src/Html2x.Layout/Style/CssStyleComputer.cs` to handle 1, 2, 3, and 4 value forms
+- [x] T027 [US2] Ensure individual properties take precedence over shorthand in `src/Html2x.Layout/Style/CssStyleComputer.cs` by parsing shorthand first, then individual properties override
+- [x] T028 [US2] Add structured logging in `src/Html2x.Layout/Style/CssStyleComputer.cs` for invalid shorthand values with element context
 
 **Checkpoint**: User Stories 1 and 2 remain independently deliverable. Padding shorthand parsing works for all four forms with correct precedence rules.
 
@@ -99,23 +99,23 @@
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Write failing test `BlockBoxWithPadding_ReducesContentArea` in `src/Html2x.Layout.Test/BoxTreeBuilderTests.cs` verifying padding values copied from `ComputedStyle` to `BlockBox.Padding`
-- [ ] T031 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsContentWidth` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for block with `width: 200px; padding: 20px` → content width = 120 points (200px * 0.75 = 150pt total, minus 30pt horizontal padding)
-- [ ] T032 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsChildPosition` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` verifying child X position accounts for left padding
-- [ ] T033 [P] [US3] Write failing test `LayoutBlockWithAsymmetricPadding_PositionsCorrectly` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for `padding: 10px 20px 15px 5px` with correct offsets
-- [ ] T048 [P] [US3] Write failing test `LayoutInlineWithPadding_AffectsHorizontalSpacing` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for inline element with `style="padding: 10px"` verifying horizontal spacing is affected and padding values are applied
+- [x] T030 [P] [US3] Write failing test `BlockBoxWithPadding_ReducesContentArea` in `src/Html2x.Layout.Test/BoxTreeBuilderTests.cs` verifying padding values copied from `ComputedStyle` to `BlockBox.Padding`
+- [x] T031 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsContentWidth` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for block with `width: 200px; padding: 20px` → content width = 120 points (200px * 0.75 = 150pt total, minus 30pt horizontal padding) [Note: Requires CSS width support for full validation]
+- [x] T032 [P] [US3] Write failing test `LayoutBlockWithPadding_AdjustsChildPosition` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` verifying child X position accounts for left padding
+- [x] T033 [P] [US3] Write failing test `LayoutBlockWithAsymmetricPadding_PositionsCorrectly` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for `padding: 10px 20px 15px 5px` with correct offsets
+- [x] T048 [P] [US3] Write failing test `LayoutInlineWithPadding_AffectsHorizontalSpacing` in `src/Html2x.Layout.Test/LayoutIntegrationTests.cs` for inline element with `style="padding: 10px"` verifying horizontal spacing is affected and padding values are applied
 
 ### Implementation for User Story 3
 
 **Note**: Inline element padding may be handled differently than block elements per data-model.md decision. Padding may be applied directly from `ComputedStyle` during inline layout without explicit `InlineBox.Padding` storage, depending on implementation approach. The T048 test will drive the implementation decision.
 
-- [ ] T034 [US3] Add `Padding` property of type `Spacing` to `BlockBox` class in `src/Html2x.Layout/Box/BoxModels.cs`
-- [ ] T035 [US3] Extend box tree building in `src/Html2x.Layout/Box/BoxTreeBuilder.cs` to copy padding values from `ComputedStyle` to `BlockBox.Padding` using `Spacing` instance
-- [ ] T036 [US3] Modify content area calculation in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for padding: `contentWidth = totalWidth - padding.Left - padding.Right`
-- [ ] T037 [US3] Adjust child positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for padding: `contentX = parentX + margin.Left + padding.Left`
-- [ ] T038 [US3] Update vertical cursor positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for top padding when positioning first child
-- [ ] T039 [US3] Ensure block total width remains unchanged in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` while content area is reduced by padding
-- [ ] T049 [US3] Implement inline element padding support in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` (or inline layout engine) based on T048 test requirements, ensuring padding affects horizontal spacing without breaking existing inline layout behavior
+- [x] T034 [US3] Add `Padding` property of type `Spacing` to `BlockBox` class in `src/Html2x.Layout/Box/BoxModels.cs`
+- [x] T035 [US3] Extend box tree building in `src/Html2x.Layout/Box/BoxTreeBuilder.cs` to copy padding values from `ComputedStyle` to `BlockBox.Padding` using `Spacing` instance
+- [x] T036 [US3] Modify content area calculation in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for padding: `contentWidth = totalWidth - padding.Left - padding.Right`
+- [x] T037 [US3] Adjust child positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for padding: `contentX = parentX + margin.Left + padding.Left`
+- [x] T038 [US3] Update vertical cursor positioning in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to account for top padding when positioning first child
+- [x] T039 [US3] Ensure block total width remains unchanged in `src/Html2x.Layout/Box/BlockLayoutEngine.cs` while content area is reduced by padding
+- [x] T049 [US3] Implement inline element padding support in `src/Html2x.Layout/Fragment/Stages/InlineFragmentStage.cs` based on T048 test requirements, ensuring padding affects horizontal spacing without breaking existing inline layout behavior
 
 **Checkpoint**: All user stories function independently with passing tests and observability hooks. Padding affects layout correctly, reducing content area while maintaining element dimensions.
 

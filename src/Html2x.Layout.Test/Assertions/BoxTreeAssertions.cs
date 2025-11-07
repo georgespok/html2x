@@ -132,6 +132,18 @@ public sealed class BlockExpectationBuilder(BlockBox block)
         block.Children.Add(child);
         return this;
     }
+
+    public BlockExpectationBuilder Padding(float top, float right, float bottom, float left)
+    {
+        block.Padding = new Spacing
+        {
+            Top = top,
+            Right = right,
+            Bottom = bottom,
+            Left = left
+        };
+        return this;
+    }
 }
 
 public sealed class InlineExpectationBuilder
