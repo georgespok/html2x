@@ -122,7 +122,7 @@ public sealed class BlockLayoutEngine(
         node.X = x;
         node.Y = y;
         node.Width = width; // Total width (for fragment Rect)
-        node.Height = height;
+        node.Height = height + padding.Top + padding.Bottom;
         node.Margin = margin;
         node.Padding = padding;
         node.TextAlign = s.TextAlign ?? "left";
