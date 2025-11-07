@@ -74,10 +74,10 @@ public sealed class CssStyleComputer(
             Color = _converter.GetString(css, HtmlCssConstants.CssProperties.Color,
                 parentStyle?.Color ?? HtmlCssConstants.Defaults.Color),
 
-            MarginTopPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginTop, 0),
-            MarginRightPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginRight, 0),
-            MarginBottomPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginBottom, 0),
-            MarginLeftPt = _converter.GetLengthPt(css, HtmlCssConstants.CssProperties.MarginLeft, 0),
+            MarginTopPt = 0,
+            MarginRightPt = 0,
+            MarginBottomPt = 0,
+            MarginLeftPt = 0,
 
             PaddingTopPt = 0,
             PaddingRightPt = 0,
@@ -85,51 +85,33 @@ public sealed class CssStyleComputer(
             PaddingLeftPt = 0
         };
 
-        // Apply margin and padding shorthands first (if present)
-        ApplySpacingShorthand(
+        ApplySpacingWithOverrides(
             css,
             HtmlCssConstants.CssProperties.Margin,
-            0f,
+            HtmlCssConstants.CssProperties.MarginTop,
+            HtmlCssConstants.CssProperties.MarginRight,
+            HtmlCssConstants.CssProperties.MarginBottom,
+            HtmlCssConstants.CssProperties.MarginLeft,
+            allowNegative: true,
             element,
             value => style.MarginTopPt = value,
             value => style.MarginRightPt = value,
             value => style.MarginBottomPt = value,
             value => style.MarginLeftPt = value);
 
-        ApplySpacingShorthand(
+        ApplySpacingWithOverrides(
             css,
             HtmlCssConstants.CssProperties.Padding,
-            0f,
+            HtmlCssConstants.CssProperties.PaddingTop,
+            HtmlCssConstants.CssProperties.PaddingRight,
+            HtmlCssConstants.CssProperties.PaddingBottom,
+            HtmlCssConstants.CssProperties.PaddingLeft,
+            allowNegative: false,
             element,
             value => style.PaddingTopPt = value,
             value => style.PaddingRightPt = value,
             value => style.PaddingBottomPt = value,
             value => style.PaddingLeftPt = value);
-
-        // Then apply individual padding properties (override shorthand if explicitly set)
-        var paddingTopValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingTop);
-        if (!string.IsNullOrWhiteSpace(paddingTopValue))
-        {
-            style.PaddingTopPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingTop, element);
-        }
-
-        var paddingRightValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingRight);
-        if (!string.IsNullOrWhiteSpace(paddingRightValue))
-        {
-            style.PaddingRightPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingRight, element);
-        }
-
-        var paddingBottomValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingBottom);
-        if (!string.IsNullOrWhiteSpace(paddingBottomValue))
-        {
-            style.PaddingBottomPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingBottom, element);
-        }
-
-        var paddingLeftValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingLeft);
-        if (!string.IsNullOrWhiteSpace(paddingLeftValue))
-        {
-            style.PaddingLeftPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingLeft, element);
-        }
 
         _uaDefaults.Apply(element, style, parentStyle);
         ApplyBorders(css, style);
@@ -138,46 +120,67 @@ public sealed class CssStyleComputer(
 
     private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles, IElement element)
     {
-        ApplySpacingShorthand(
+        ApplySpacingWithOverrides(
             styles,
             HtmlCssConstants.CssProperties.Margin,
-            0f,
+            HtmlCssConstants.CssProperties.MarginTop,
+            HtmlCssConstants.CssProperties.MarginRight,
+            HtmlCssConstants.CssProperties.MarginBottom,
+            HtmlCssConstants.CssProperties.MarginLeft,
+            allowNegative: true,
             element,
             value => tree.Page.MarginTopPt = value,
             value => tree.Page.MarginRightPt = value,
             value => tree.Page.MarginBottomPt = value,
             value => tree.Page.MarginLeftPt = value);
-
-        if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginTop), out var top))
-        {
-            tree.Page.MarginTopPt = top;
-        }
-
-        if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginRight), out var right))
-        {
-            tree.Page.MarginRightPt = right;
-        }
-
-        if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginBottom), out var bottom))
-        {
-            tree.Page.MarginBottomPt = bottom;
-        }
-
-        if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginLeft), out var left))
-        {
-            tree.Page.MarginLeftPt = left;
-        }
     }
 
-    private void ApplySpacingShorthand(
+    private void ApplySpacingWithOverrides(
         ICssStyleDeclaration css,
         string shorthandProperty,
-        float defaultValue,
+        string topProperty,
+        string rightProperty,
+        string bottomProperty,
+        string leftProperty,
+        bool allowNegative,
         IElement element,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
         Action<float> setLeft)
+    {
+        ApplySpacingShorthand(css, shorthandProperty, element, setTop, setRight, setBottom, setLeft, allowNegative);
+        OverrideSpacingSide(css, topProperty, element, setTop, allowNegative);
+        OverrideSpacingSide(css, rightProperty, element, setRight, allowNegative);
+        OverrideSpacingSide(css, bottomProperty, element, setBottom, allowNegative);
+        OverrideSpacingSide(css, leftProperty, element, setLeft, allowNegative);
+    }
+
+    private void OverrideSpacingSide(
+        ICssStyleDeclaration css,
+        string property,
+        IElement element,
+        Action<float> setter,
+        bool allowNegative)
+    {
+        var raw = css.GetPropertyValue(property);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return;
+        }
+
+        setter(GetSpacingWithLogging(css, property, element, allowNegative));
+    }
+
+    private void ApplySpacingShorthand(
+        ICssStyleDeclaration css,
+        string shorthandProperty,
+        IElement element,
+        Action<float> setTop,
+        Action<float> setRight,
+        Action<float> setBottom,
+        Action<float> setLeft,
+        bool allowNegative)
     {
         var shorthandValue = css.GetPropertyValue(shorthandProperty);
         if (string.IsNullOrWhiteSpace(shorthandValue))
@@ -185,12 +188,8 @@ public sealed class CssStyleComputer(
             return;
         }
 
-        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, out var parsedValues))
+        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, allowNegative, out var parsedValues))
         {
-            setTop(defaultValue);
-            setRight(defaultValue);
-            setBottom(defaultValue);
-            setLeft(defaultValue);
             return;
         }
 
@@ -222,15 +221,16 @@ public sealed class CssStyleComputer(
                 break;
             default:
                 StyleLog.InvalidSpacingValue(_logger, shorthandProperty, shorthandValue, element);
-                setTop(defaultValue);
-                setRight(defaultValue);
-                setBottom(defaultValue);
-                setLeft(defaultValue);
                 break;
         }
     }
 
-    private bool TryParseSpacingValues(string property, string shorthandValue, IElement element, out List<float> parsedValues)
+    private bool TryParseSpacingValues(
+        string property,
+        string shorthandValue,
+        IElement element,
+        bool allowNegative,
+        out List<float> parsedValues)
     {
         parsedValues = new List<float>();
 
@@ -259,7 +259,7 @@ public sealed class CssStyleComputer(
                 return false;
             }
 
-            if (points < 0)
+            if (points < 0 && !allowNegative)
             {
                 StyleLog.NegativeSpacingValue(_logger, property, points, element);
                 return false;
@@ -287,7 +287,7 @@ public sealed class CssStyleComputer(
         style.Borders = BorderEdges.Uniform(side);
     }
 
-    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element, bool allowNegative)
     {
         var rawValue = css.GetPropertyValue(property);
         
@@ -316,7 +316,7 @@ public sealed class CssStyleComputer(
         }
 
         // Check for negative values
-        if (points < 0)
+        if (points < 0 && !allowNegative)
         {
             StyleLog.NegativeSpacingValue(_logger, property, points, element);
             return 0;
