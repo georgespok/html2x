@@ -36,5 +36,9 @@ public sealed class ComputedStyle
     public float MarginRightPt { get; set; }
     public float MarginBottomPt { get; set; }
     public float MarginLeftPt { get; set; }
+    public float PaddingTopPt { get; set; }
+    public float PaddingRightPt { get; set; }
+    public float PaddingBottomPt { get; set; }
+    public float PaddingLeftPt { get; set; }
     public BorderEdges Borders { get; set; } = BorderEdges.None;
 }
