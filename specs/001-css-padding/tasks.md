@@ -26,7 +26,7 @@
 
 - [x] T001 Run `dotnet restore Html2x.sln` and verify all dependencies resolve correctly
 - [x] T002 Verify analyzer and formatting configuration (`.editorconfig`) is in place
-- [ ] T003 [P] Review existing margin implementation in `src/Html2x.Layout/Style/CssStyleComputer.cs` and `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to understand pattern
+- [x] T003 [P] Review existing margin implementation in `src/Html2x.Layout/Style/CssStyleComputer.cs` and `src/Html2x.Layout/Box/BlockLayoutEngine.cs` to understand pattern
 
 ---
 
@@ -34,7 +34,7 @@
 
 **Purpose**: Core infrastructure that MUST be complete before any user story starts.
 
-- [ ] T004 Add padding property constants to `src/Html2x.Layout/HtmlCssConstants.cs` in `CssProperties` class: `Padding`, `PaddingTop`, `PaddingRight`, `PaddingBottom`, `PaddingLeft`
+- [x] T004 Add padding property constants to `src/Html2x.Layout/HtmlCssConstants.cs` in `CssProperties` class: `Padding`, `PaddingTop`, `PaddingRight`, `PaddingBottom`, `PaddingLeft`
 - [ ] T005 Extend `ComputedStyle` class in `src/Html2x.Layout/Style/StyleModels.cs` with padding properties: `PaddingTopPt`, `PaddingRightPt`, `PaddingBottomPt`, `PaddingLeftPt` (default 0)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
