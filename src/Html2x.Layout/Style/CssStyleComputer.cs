@@ -157,10 +157,20 @@ public sealed class CssStyleComputer(
             return 0;
         }
 
+        var trimmed = rawValue.Trim();
+
+        // Check for unsupported units (non-px, non-pt)
+        var unsupportedUnit = DetectUnsupportedUnit(trimmed);
+        if (unsupportedUnit != null)
+        {
+            StyleLog.UnsupportedPaddingUnit(_logger, property, rawValue, unsupportedUnit, element);
+            return 0;
+        }
+
         // Try to parse the value
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
-            // Value provided but couldn't be parsed (non-numeric, unsupported unit, etc.)
+            // Value provided but couldn't be parsed (non-numeric, etc.)
             StyleLog.InvalidPaddingValue(_logger, property, rawValue, element);
             return 0;
         }
@@ -173,6 +183,39 @@ public sealed class CssStyleComputer(
         }
 
         return points;
+    }
+
+    private static string? DetectUnsupportedUnit(string trimmed)
+    {
+        // Supported units: px, pt
+        // Check for common unsupported units: em, rem, %, in, cm, mm, vh, vw, etc.
+        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.EndsWith("pt", StringComparison.OrdinalIgnoreCase))
+        {
+            return null; // Supported unit
+        }
+
+        // Check for unit suffixes (2-3 characters at the end)
+        if (trimmed.Length >= 3)
+        {
+            var lastTwo = trimmed.Substring(trimmed.Length - 2, 2).ToLowerInvariant();
+            var lastThree = trimmed.Length >= 4 ? trimmed.Substring(trimmed.Length - 3, 3).ToLowerInvariant() : null;
+
+            // Common unsupported units
+            if (lastTwo == "em" || lastTwo == "in" || lastTwo == "cm" || lastTwo == "mm" ||
+                lastTwo == "vh" || lastTwo == "vw" || lastTwo == "ex" || lastTwo == "ch" ||
+                lastTwo == "pc" || trimmed.EndsWith("%"))
+            {
+                return lastTwo == "%" ? "%" : lastTwo;
+            }
+
+            if (lastThree == "rem")
+            {
+                return lastThree;
+            }
+        }
+
+        return null; // No unit detected or unit is not recognized as unsupported
     }
 
     private static BorderLineStyle ParseBorderStyle(string? raw)
