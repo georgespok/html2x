@@ -27,6 +27,15 @@ internal sealed class StyleNodeBuilder(StyleNode node)
         return this;
     }
 
+    public StyleNodeBuilder WithPadding(float top, float right, float bottom, float left)
+    {
+        node.Style.PaddingTopPt = top;
+        node.Style.PaddingRightPt = right;
+        node.Style.PaddingBottomPt = bottom;
+        node.Style.PaddingLeftPt = left;
+        return this;
+    }
+
     private static StyleNode CreateNode(IElement el, float? marginTop = null, float? marginLeft = null, float fontSize = 12)
     {
         var style = new ComputedStyle { FontSizePt = fontSize };

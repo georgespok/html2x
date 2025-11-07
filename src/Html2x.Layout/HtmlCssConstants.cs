@@ -60,6 +60,11 @@ public static class HtmlCssConstants
         public const string MarginRight = "margin-right";
         public const string MarginBottom = "margin-bottom";
         public const string MarginLeft = "margin-left";
+        public const string Padding = "padding";
+        public const string PaddingTop = "padding-top";
+        public const string PaddingRight = "padding-right";
+        public const string PaddingBottom = "padding-bottom";
+        public const string PaddingLeft = "padding-left";
         public const string BorderWidth = "border-width";
         public const string BorderStyle = "border-style";
         public const string BorderColor = "border-color";

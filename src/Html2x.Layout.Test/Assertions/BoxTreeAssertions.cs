@@ -57,21 +57,14 @@ public sealed class BoxTreeExpectationBuilder
     }
 }
 
-public sealed class PageBoxExpectationBuilder
+public sealed class PageBoxExpectationBuilder(PageBox page)
 {
-    private readonly PageBox _page;
-
-    public PageBoxExpectationBuilder(PageBox page)
-    {
-        _page = page;
-    }
-
     public PageBoxExpectationBuilder Margins(float top, float right, float bottom, float left)
     {
-        _page.MarginTopPt = top;
-        _page.MarginRightPt = right;
-        _page.MarginBottomPt = bottom;
-        _page.MarginLeftPt = left;
+        page.MarginTopPt = top;
+        page.MarginRightPt = right;
+        page.MarginBottomPt = bottom;
+        page.MarginLeftPt = left;
         return this;
     }
 }
@@ -132,26 +125,31 @@ public sealed class BlockExpectationBuilder(BlockBox block)
         block.Children.Add(child);
         return this;
     }
+
+    public BlockExpectationBuilder Padding(float top, float right, float bottom, float left)
+    {
+        block.Padding = new()
+        {
+            Top = top,
+            Right = right,
+            Bottom = bottom,
+            Left = left
+        };
+        return this;
+    }
 }
 
-public sealed class InlineExpectationBuilder
+public sealed class InlineExpectationBuilder(InlineBox inline)
 {
-    private readonly InlineBox _inline;
-
-    public InlineExpectationBuilder(InlineBox inline)
-    {
-        _inline = inline;
-    }
-
     public InlineExpectationBuilder Element(IElement element)
     {
-        InitPropertySetter.SetElement(_inline, element);
+        InitPropertySetter.SetElement(inline, element);
         return this;
     }
 
     public InlineExpectationBuilder Text(string text)
     {
-        InitPropertySetter.SetText(_inline, text);
+        InitPropertySetter.SetText(inline, text);
         return this;
     }
 
@@ -159,7 +157,7 @@ public sealed class InlineExpectationBuilder
     {
         var child = new InlineBox();
         configure(new InlineExpectationBuilder(child));
-        _inline.Children.Add(child);
+        inline.Children.Add(child);
         return this;
     }
 }
