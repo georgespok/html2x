@@ -35,14 +35,13 @@ public class PdfRenderer
 
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null)
     {
-        QuestPdfConfigurator.Configure(options?.FontPath, options?.LicenseType ?? PdfLicenseType.Community);
+        options ??= new PdfOptions();
+        QuestPdfConfigurator.Configure(options.FontPath, options.LicenseType, options.EnableDebugging);
 
         if (htmlLayout is null)
         {
             throw new ArgumentNullException(nameof(htmlLayout));
         }
-
-        options ??= new PdfOptions();
 
         try
         {

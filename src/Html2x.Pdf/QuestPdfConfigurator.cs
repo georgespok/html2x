@@ -6,7 +6,7 @@ namespace Html2x.Pdf;
 
 public static class QuestPdfConfigurator
 {
-    public static void Configure(string? fontPath, PdfLicenseType optionsLicenseType)
+    public static void Configure(string? fontPath, PdfLicenseType optionsLicenseType, bool enableDebugging)
     {
         Settings.License = MapLicenseType(optionsLicenseType);
 
@@ -20,6 +20,8 @@ public static class QuestPdfConfigurator
             using var fontStream = File.OpenRead(fontPath);
             FontManager.RegisterFont(fontStream);
         }
+
+        Settings.EnableDebugging = enableDebugging;
     }
 
     private static LicenseType? MapLicenseType(PdfLicenseType licenseType)

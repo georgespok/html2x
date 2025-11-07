@@ -31,62 +31,15 @@ public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
         // Arrange
         const string html = @"<!DOCTYPE html>
             <html>
-              <head>
-                <meta charset='utf-8' />
-                <style>
-                  body {
-                    font-family: 'Arial';
-                    font-size: 12pt;
-                    margin: 24pt
-                  }
-                  
-                </style>
-              </head>
-              <body>
-
-                <h1>H1</h1>
-                <h2>H2</h2>
-                <h3>H3</h3>
-                <h4>H4</h4>
-                <h5>H5</h5>
-                <h6>H6</h6>
-
-                <p>Paragraph</p>
-
-                <div>
-                    <span>Span inside Div</span> 
-                    <p>
-                        Paragraph inside Div
-                        <div>
-                            Nested Div inside Paragraph
-                            <span>Nested Span inside nested Div</span>
-                        </div>
-                    </p>
-                </div>
-
-                <ul>
-                    <li>Unordered item 1</li>
-                    <li>Unordered item 2</li>
-                </ul>
-
-                <ol>
-                    <li>Ordered item 1</li>
-                    <li>Ordered item 2</li>
-                </ol>
-
-                <div style='border-width: 1px; border-style: dashed;'>
-                    Text box
-                </div>
-
-                <div style='border-width: 1px; border-style: dashed; margin: 30px; padding: 20px;'>
-                    Text with border around
-                </div>
-
-                <div style='border-width: 1px; border-style: dashed;'>
-                    Text box
-                </div>
-
-              </body>
+                <div style=""border-width: 1px; border-style: dashed;"">
+                     TopBox
+                 </div>
+                 <div style=""border-width: 1px; border-style: dashed; "">
+                     Padding 30px
+                 </div>
+                 <div style=""border-width: 1px; border-style: dashed;"">
+                     BottomBox
+                 </div>
             </html>";
 
         // Act

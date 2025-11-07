@@ -39,7 +39,11 @@ internal class Program
             Directory.CreateDirectory(outputDir);
         }
 
-        var options = new PdfOptions { FontPath = "\\fonts\\Inter-Regular.ttf" };
+        var options = new PdfOptions
+        {
+            FontPath = "\\fonts\\Inter-Regular.ttf", 
+            EnableDebugging = true
+        };
 
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
