@@ -78,7 +78,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
                     Text box
                 </div>
 
-                <div style='border-width: 1px; border-style: dashed; margin: 30px'>
+                <div style='border-width: 1px; border-style: dashed; margin: 30px; padding: 20px;'>
                     Text with border around
                 </div>
 
