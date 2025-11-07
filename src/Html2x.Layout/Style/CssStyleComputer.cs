@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
@@ -42,7 +43,7 @@ public sealed class CssStyleComputer(
         }
 
         var bodyStyle = body.ComputeCurrentStyle();
-        ApplyPageMargins(tree, bodyStyle);
+        ApplyPageMargins(tree, bodyStyle, body);
 
         tree.Root = _traversal.Build(body, MapStyle);
         return tree;
@@ -84,32 +85,50 @@ public sealed class CssStyleComputer(
             PaddingLeftPt = 0
         };
 
-        // Apply padding shorthand first (if present)
-        ApplyPaddingShorthand(css, style, element);
+        // Apply margin and padding shorthands first (if present)
+        ApplySpacingShorthand(
+            css,
+            HtmlCssConstants.CssProperties.Margin,
+            0f,
+            element,
+            value => style.MarginTopPt = value,
+            value => style.MarginRightPt = value,
+            value => style.MarginBottomPt = value,
+            value => style.MarginLeftPt = value);
+
+        ApplySpacingShorthand(
+            css,
+            HtmlCssConstants.CssProperties.Padding,
+            0f,
+            element,
+            value => style.PaddingTopPt = value,
+            value => style.PaddingRightPt = value,
+            value => style.PaddingBottomPt = value,
+            value => style.PaddingLeftPt = value);
 
         // Then apply individual padding properties (override shorthand if explicitly set)
         var paddingTopValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingTop);
         if (!string.IsNullOrWhiteSpace(paddingTopValue))
         {
-            style.PaddingTopPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingTop, element);
+            style.PaddingTopPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingTop, element);
         }
 
         var paddingRightValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingRight);
         if (!string.IsNullOrWhiteSpace(paddingRightValue))
         {
-            style.PaddingRightPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingRight, element);
+            style.PaddingRightPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingRight, element);
         }
 
         var paddingBottomValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingBottom);
         if (!string.IsNullOrWhiteSpace(paddingBottomValue))
         {
-            style.PaddingBottomPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingBottom, element);
+            style.PaddingBottomPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingBottom, element);
         }
 
         var paddingLeftValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.PaddingLeft);
         if (!string.IsNullOrWhiteSpace(paddingLeftValue))
         {
-            style.PaddingLeftPt = GetPaddingWithLogging(css, HtmlCssConstants.CssProperties.PaddingLeft, element);
+            style.PaddingLeftPt = GetSpacingWithLogging(css, HtmlCssConstants.CssProperties.PaddingLeft, element);
         }
 
         _uaDefaults.Apply(element, style, parentStyle);
@@ -117,134 +136,139 @@ public sealed class CssStyleComputer(
         return style;
     }
 
-    private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles)
+    private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles, IElement element)
     {
-        var shorthandDefined = _converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.Margin),
-            out var shorthand);
+        ApplySpacingShorthand(
+            styles,
+            HtmlCssConstants.CssProperties.Margin,
+            0f,
+            element,
+            value => tree.Page.MarginTopPt = value,
+            value => tree.Page.MarginRightPt = value,
+            value => tree.Page.MarginBottomPt = value,
+            value => tree.Page.MarginLeftPt = value);
 
         if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginTop), out var top))
         {
             tree.Page.MarginTopPt = top;
-        }
-        else if (shorthandDefined)
-        {
-            tree.Page.MarginTopPt = shorthand;
         }
 
         if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginRight), out var right))
         {
             tree.Page.MarginRightPt = right;
         }
-        else if (shorthandDefined)
-        {
-            tree.Page.MarginRightPt = shorthand;
-        }
 
         if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginBottom), out var bottom))
         {
             tree.Page.MarginBottomPt = bottom;
-        }
-        else if (shorthandDefined)
-        {
-            tree.Page.MarginBottomPt = shorthand;
         }
 
         if (_converter.TryGetLengthPt(styles.GetPropertyValue(HtmlCssConstants.CssProperties.MarginLeft), out var left))
         {
             tree.Page.MarginLeftPt = left;
         }
-        else if (shorthandDefined)
+    }
+
+    private void ApplySpacingShorthand(
+        ICssStyleDeclaration css,
+        string shorthandProperty,
+        float defaultValue,
+        IElement element,
+        Action<float> setTop,
+        Action<float> setRight,
+        Action<float> setBottom,
+        Action<float> setLeft)
+    {
+        var shorthandValue = css.GetPropertyValue(shorthandProperty);
+        if (string.IsNullOrWhiteSpace(shorthandValue))
         {
-            tree.Page.MarginLeftPt = shorthand;
+            return;
+        }
+
+        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, out var parsedValues))
+        {
+            setTop(defaultValue);
+            setRight(defaultValue);
+            setBottom(defaultValue);
+            setLeft(defaultValue);
+            return;
+        }
+
+        switch (parsedValues.Count)
+        {
+            case 1:
+                setTop(parsedValues[0]);
+                setRight(parsedValues[0]);
+                setBottom(parsedValues[0]);
+                setLeft(parsedValues[0]);
+                break;
+            case 2:
+                setTop(parsedValues[0]);
+                setBottom(parsedValues[0]);
+                setRight(parsedValues[1]);
+                setLeft(parsedValues[1]);
+                break;
+            case 3:
+                setTop(parsedValues[0]);
+                setRight(parsedValues[1]);
+                setLeft(parsedValues[1]);
+                setBottom(parsedValues[2]);
+                break;
+            case 4:
+                setTop(parsedValues[0]);
+                setRight(parsedValues[1]);
+                setBottom(parsedValues[2]);
+                setLeft(parsedValues[3]);
+                break;
+            default:
+                StyleLog.InvalidSpacingValue(_logger, shorthandProperty, shorthandValue, element);
+                setTop(defaultValue);
+                setRight(defaultValue);
+                setBottom(defaultValue);
+                setLeft(defaultValue);
+                break;
         }
     }
 
-    private void ApplyPaddingShorthand(ICssStyleDeclaration css, ComputedStyle style, IElement element)
+    private bool TryParseSpacingValues(string property, string shorthandValue, IElement element, out List<float> parsedValues)
     {
-        var shorthandValue = css.GetPropertyValue(HtmlCssConstants.CssProperties.Padding);
-        if (string.IsNullOrWhiteSpace(shorthandValue))
-        {
-            return; // No shorthand defined
-        }
+        parsedValues = new List<float>();
 
-        // Split shorthand value by spaces to get individual values
-        var values = shorthandValue.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+        var tokens = shorthandValue.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
             .Select(v => v.Trim())
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .ToArray();
 
-        if (values.Length == 0)
+        if (tokens.Length == 0)
         {
-            return; // Empty shorthand
+            return false;
         }
 
-        // Parse values to points
-        var parsedValues = new List<float>();
-        foreach (var value in values)
+        foreach (var token in tokens)
         {
-            // Check for unsupported units
-            var unsupportedUnit = DetectUnsupportedUnit(value);
+            var unsupportedUnit = DetectUnsupportedUnit(token);
             if (unsupportedUnit != null)
             {
-                StyleLog.UnsupportedPaddingUnit(_logger, HtmlCssConstants.CssProperties.Padding, shorthandValue, unsupportedUnit, element);
-                return; // Invalid shorthand, don't apply
+                StyleLog.UnsupportedSpacingUnit(_logger, property, shorthandValue, unsupportedUnit, element);
+                return false;
             }
 
-            if (!_converter.TryGetLengthPt(value, out var points))
+            if (!_converter.TryGetLengthPt(token, out var points))
             {
-                StyleLog.InvalidPaddingValue(_logger, HtmlCssConstants.CssProperties.Padding, shorthandValue, element);
-                return; // Invalid shorthand, don't apply
+                StyleLog.InvalidSpacingValue(_logger, property, shorthandValue, element);
+                return false;
             }
 
             if (points < 0)
             {
-                StyleLog.NegativePaddingValue(_logger, HtmlCssConstants.CssProperties.Padding, points, element);
-                return; // Invalid shorthand, don't apply
+                StyleLog.NegativeSpacingValue(_logger, property, points, element);
+                return false;
             }
 
             parsedValues.Add(points);
         }
 
-        // Expand based on value count (CSS Box Model specification)
-        switch (parsedValues.Count)
-        {
-            case 1:
-                // All sides = value
-                style.PaddingTopPt = parsedValues[0];
-                style.PaddingRightPt = parsedValues[0];
-                style.PaddingBottomPt = parsedValues[0];
-                style.PaddingLeftPt = parsedValues[0];
-                break;
-
-            case 2:
-                // top/bottom = first, left/right = second
-                style.PaddingTopPt = parsedValues[0];
-                style.PaddingRightPt = parsedValues[1];
-                style.PaddingBottomPt = parsedValues[0];
-                style.PaddingLeftPt = parsedValues[1];
-                break;
-
-            case 3:
-                // top = first, left/right = second, bottom = third
-                style.PaddingTopPt = parsedValues[0];
-                style.PaddingRightPt = parsedValues[1];
-                style.PaddingBottomPt = parsedValues[2];
-                style.PaddingLeftPt = parsedValues[1];
-                break;
-
-            case 4:
-                // top = first, right = second, bottom = third, left = fourth
-                style.PaddingTopPt = parsedValues[0];
-                style.PaddingRightPt = parsedValues[1];
-                style.PaddingBottomPt = parsedValues[2];
-                style.PaddingLeftPt = parsedValues[3];
-                break;
-
-            default:
-                // More than 4 values is invalid
-                StyleLog.InvalidPaddingValue(_logger, HtmlCssConstants.CssProperties.Padding, shorthandValue, element);
-                break;
-        }
+        return true;
     }
 
     private void ApplyBorders(ICssStyleDeclaration css, ComputedStyle style)
@@ -263,7 +287,7 @@ public sealed class CssStyleComputer(
         style.Borders = BorderEdges.Uniform(side);
     }
 
-    private float GetPaddingWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element)
     {
         var rawValue = css.GetPropertyValue(property);
         
@@ -279,7 +303,7 @@ public sealed class CssStyleComputer(
         var unsupportedUnit = DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
-            StyleLog.UnsupportedPaddingUnit(_logger, property, rawValue, unsupportedUnit, element);
+            StyleLog.UnsupportedSpacingUnit(_logger, property, rawValue, unsupportedUnit, element);
             return 0;
         }
 
@@ -287,14 +311,14 @@ public sealed class CssStyleComputer(
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
             // Value provided but couldn't be parsed (non-numeric, etc.)
-            StyleLog.InvalidPaddingValue(_logger, property, rawValue, element);
+            StyleLog.InvalidSpacingValue(_logger, property, rawValue, element);
             return 0;
         }
 
         // Check for negative values
         if (points < 0)
         {
-            StyleLog.NegativePaddingValue(_logger, property, points, element);
+            StyleLog.NegativeSpacingValue(_logger, property, points, element);
             return 0;
         }
 

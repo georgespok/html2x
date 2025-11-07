@@ -1,4 +1,6 @@
-﻿namespace Html2x.Layout.Box;
+﻿using Html2x.Core.Layout;
+
+namespace Html2x.Layout.Box;
 
 public sealed class BlockLayoutEngine(
     IInlineLayoutEngine inlineEngine,
