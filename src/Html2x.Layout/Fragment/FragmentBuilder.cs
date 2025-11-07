@@ -3,7 +3,7 @@ using Html2x.Layout.Fragment.Stages;
 
 namespace Html2x.Layout.Fragment;
 
-public sealed class FragmentBuilder : IFragmentBuilder
+public sealed class FragmentBuilder(IEnumerable<IFragmentBuildObserver> observers) : IFragmentBuilder
 {
     private readonly IReadOnlyList<IFragmentBuildStage> _stages =
     [
@@ -13,16 +13,11 @@ public sealed class FragmentBuilder : IFragmentBuilder
         new ZOrderStage()
     ];
 
-    private readonly IReadOnlyList<IFragmentBuildObserver> _observers;
+    private readonly IReadOnlyList<IFragmentBuildObserver> _observers = observers?.ToArray() ?? [];
 
     public FragmentBuilder()
-        : this(Array.Empty<IFragmentBuildObserver>())
+        : this([])
     {
-    }
-
-    public FragmentBuilder(IEnumerable<IFragmentBuildObserver> observers)
-    {
-        _observers = observers?.ToArray() ?? Array.Empty<IFragmentBuildObserver>();
     }
 
     public FragmentTree Build(BoxTree boxes)
