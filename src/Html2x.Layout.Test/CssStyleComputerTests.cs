@@ -136,6 +136,317 @@ public class CssStyleComputerTests
         ]));
     }
 
+    [Fact]
+    public async Task Compute_WithIndividualPaddingProperties_ParsesCorrectPointValues()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding-top: 20px = 15pt (20 * 0.75)
+        // padding-right: 15px = 11.25pt (15 * 0.75)
+        // padding-bottom: 10px = 7.5pt (10 * 0.75)
+        // padding-left: 5px = 3.75pt (5 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 15f,
+                PaddingRightPt = 11.25f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 3.75f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParseIndividualPaddingProperties_WithAllSides_ReturnsCorrectPointValues()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding-top: 40px; padding-right: 30px; padding-bottom: 20px; padding-left: 10px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding-top: 40px = 30pt (40 * 0.75)
+        // padding-right: 30px = 22.5pt (30 * 0.75)
+        // padding-bottom: 20px = 15pt (20 * 0.75)
+        // padding-left: 10px = 7.5pt (10 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 30f,
+                PaddingRightPt = 22.5f,
+                PaddingBottomPt = 15f,
+                PaddingLeftPt = 7.5f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingTop_WithPxValue_ConvertsToPoints()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding-top: 20px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding-top: 20px = 15pt (20 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 15f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingProperties_WhenNotSpecified_DefaultsToZero()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div>
+                    Content without padding
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Padding should default to 0 for all sides when not specified
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 0f,
+                PaddingRightPt = 0f,
+                PaddingBottomPt = 0f,
+                PaddingLeftPt = 0f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingProperties_DoesNotInheritFromParent()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px;'>
+                    <p>
+                        Child without padding
+                    </p>
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Parent has padding, child should have 0 (padding does not inherit)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 15f,
+                PaddingRightPt = 11.25f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 3.75f
+            }, [
+                new("p", new()
+                {
+                    PaddingTopPt = 0f,
+                    PaddingRightPt = 0f,
+                    PaddingBottomPt = 0f,
+                    PaddingLeftPt = 0f
+                })
+            ])
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingShorthand_SingleValue_SetsAllSides()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: 10px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding: 10px should set all sides to 7.5pt (10 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 7.5f,
+                PaddingRightPt = 7.5f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 7.5f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingShorthand_TwoValues_SetsVerticalAndHorizontal()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: 10px 20px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding: 10px 20px → top/bottom=7.5pt (10 * 0.75), left/right=15pt (20 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 7.5f,
+                PaddingRightPt = 15f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 15f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingShorthand_ThreeValues_SetsTopHorizontalBottom()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: 10px 20px 15px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding: 10px 20px 15px → top=7.5pt (10 * 0.75), left/right=15pt (20 * 0.75), bottom=11.25pt (15 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 7.5f,
+                PaddingRightPt = 15f,
+                PaddingBottomPt = 11.25f,
+                PaddingLeftPt = 15f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingShorthand_FourValues_SetsAllSidesIndividually()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: 10px 20px 15px 5px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding: 10px 20px 15px 5px → top=7.5pt (10 * 0.75), right=15pt (20 * 0.75), bottom=11.25pt (15 * 0.75), left=3.75pt (5 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 7.5f,
+                PaddingRightPt = 15f,
+                PaddingBottomPt = 11.25f,
+                PaddingLeftPt = 3.75f
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task ParsePaddingShorthand_WithIndividualProperty_IndividualTakesPrecedence()
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: 10px; padding-top: 25px;'>
+                    Content
+                </div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        // Conversion: 1px = 0.75pt
+        // padding: 10px sets all sides to 7.5pt, but padding-top: 25px overrides top to 18.75pt (25 * 0.75)
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                PaddingTopPt = 18.75f,
+                PaddingRightPt = 7.5f,
+                PaddingBottomPt = 7.5f,
+                PaddingLeftPt = 7.5f
+            })
+        ]));
+    }
+
     private static async Task<IDocument> CreateHtmlDocument(string html)
     {
         var context = BrowsingContext.New(Configuration.Default.WithCss());
