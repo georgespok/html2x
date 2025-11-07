@@ -1,4 +1,6 @@
-﻿namespace Html2x.Layout.Box;
+﻿using Html2x.Core.Layout;
+
+namespace Html2x.Layout.Box;
 
 public sealed class BlockLayoutEngine(
     IInlineLayoutEngine inlineEngine,
@@ -100,19 +102,31 @@ public sealed class BlockLayoutEngine(
             Left = Safe(s.MarginLeftPt)
         };
 
+        var padding = new Spacing
+        {
+            Top = Safe(s.PaddingTopPt),
+            Right = Safe(s.PaddingRightPt),
+            Bottom = Safe(s.PaddingBottomPt),
+            Left = Safe(s.PaddingLeftPt)
+        };
+
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
         var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
 
-        // use inline engine for height estimation
+        // Content width accounts for padding (for children/inline content)
+        var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right);
+
+        // use inline engine for height estimation (use content width)
         floatEngine.PlaceFloats(node, x, y, width);
-        var height = inlineEngine.MeasureHeight(node, width);
+        var height = inlineEngine.MeasureHeight(node, contentWidthForChildren);
 
         node.X = x;
         node.Y = y;
-        node.Width = width;
-        node.Height = height;
+        node.Width = width; // Total width (for fragment Rect)
+        node.Height = height + padding.Top + padding.Bottom;
         node.Margin = margin;
+        node.Padding = padding;
         node.TextAlign = s.TextAlign ?? "left";
 
         return node;

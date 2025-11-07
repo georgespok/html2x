@@ -77,10 +77,19 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             var baselineY = run.Origin.Y + run.Ascent;
             var height = run.Ascent + run.Descent;
 
+            // Find the parent BlockBox to get padding
+            var parentBlockBox = FindParentBlockBox(inline);
+            var paddingLeft = parentBlockBox?.Padding.Left ?? 0f;
+            var paddingTop = parentBlockBox?.Padding.Top ?? 0f;
+
+            // Offset text run position by padding
+            var adjustedX = run.Origin.X + paddingLeft;
+            var adjustedY = run.Origin.Y + paddingTop;
+
             var line = new LineBoxFragment
             {
-                Rect = new RectangleF(run.Origin.X, run.Origin.Y, run.AdvanceWidth, height),
-                BaselineY = baselineY,
+                Rect = new RectangleF(adjustedX, adjustedY, run.AdvanceWidth, height),
+                BaselineY = baselineY + paddingTop,
                 LineHeight = height,
                 Runs = [run]
             };
@@ -141,5 +150,19 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         parentFragment.Children[parentFragment.Children.Count - 1] = merged;
         return merged;
+    }
+
+    private static BlockBox? FindParentBlockBox(InlineBox inline)
+    {
+        var parent = inline.Parent;
+        while (parent != null)
+        {
+            if (parent is BlockBox blockBox)
+            {
+                return blockBox;
+            }
+            parent = parent.Parent;
+        }
+        return null;
     }
 }
