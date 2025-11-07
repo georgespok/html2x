@@ -51,10 +51,10 @@
 
 - [x] T006 [US1] Write failing test `Compute_WithIndividualPaddingProperties_ParsesCorrectPointValues` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` that parses HTML with `style="padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px"` and asserts `ComputedStyle` contains correct point values (20px→15pt, 15px→11.25pt, 10px→7.5pt, 5px→3.75pt)
 
-- [ ] T010 [P] [US1] Write failing test `ParseIndividualPaddingProperties_WithAllSides_ReturnsCorrectPointValues` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for parsing all four individual padding properties
-- [ ] T011 [P] [US1] Write failing test `ParsePaddingTop_WithPxValue_ConvertsToPoints` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying px→pt conversion (20px = 15pt)
-- [ ] T012 [P] [US1] Write failing test `ParsePaddingProperties_WhenNotSpecified_DefaultsToZero` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying default value is 0
-- [ ] T013 [P] [US1] Write failing test `ParsePaddingProperties_DoesNotInheritFromParent` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying padding does not inherit (parent has padding, child has 0)
+- [x] T010 [P] [US1] Write failing test `ParseIndividualPaddingProperties_WithAllSides_ReturnsCorrectPointValues` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` for parsing all four individual padding properties
+- [x] T011 [P] [US1] Write failing test `ParsePaddingTop_WithPxValue_ConvertsToPoints` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying px→pt conversion (20px = 15pt)
+- [x] T012 [P] [US1] Write failing test `ParsePaddingProperties_WhenNotSpecified_DefaultsToZero` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying default value is 0
+- [x] T013 [P] [US1] Write failing test `ParsePaddingProperties_DoesNotInheritFromParent` in `src/Html2x.Layout.Test/CssStyleComputerTests.cs` verifying padding does not inherit (parent has padding, child has 0)
 
 ### Implementation for User Story 1
 
