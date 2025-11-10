@@ -21,9 +21,9 @@ description: "Task list for CSS width and height feature delivery"
 
 **Purpose**: Prove the repo is healthy and capture baseline fixtures before touching contracts.
 
-- [ ] T001 Run `dotnet restore Html2x.sln` to ensure NuGet dependencies resolve for Html2x.sln.
-- [ ] T002 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Layout.Test&&Category=Dimensions"` to record baseline results for `tests/Html2x.Layout.Test`.
-- [ ] T003 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Pdf.Test&&Category=BorderedBlocks"` to confirm renderer baseline in `tests/Html2x.Pdf.Test`.
+- [X] T001 Run `dotnet restore Html2x.sln` to ensure NuGet dependencies resolve for Html2x.sln.
+- [X] T002 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Layout.Test&&Category=Dimensions"` to record baseline results for `tests/Html2x.Layout.Test`.
+- [X] T003 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Pdf.Test&&Category=BorderedBlocks"` to confirm renderer baseline in `tests/Html2x.Pdf.Test`.
 - [ ] T004 Capture a reference PDF and diagnostics log by running `src/Html2x.Pdf.TestConsole/Html2x.Pdf.TestConsole.csproj` against `src/Html2x.Pdf.TestConsole/html/width-height/grid.html` with output in `build/width-height/grid.pdf`.
 
 ---
@@ -162,4 +162,3 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
-
