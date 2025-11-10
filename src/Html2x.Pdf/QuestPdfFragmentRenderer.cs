@@ -22,26 +22,67 @@ internal sealed class QuestPdfFragmentRenderer(
 
         blockContainer.Column(inner =>
         {
+            var cursorY = 0f;
             var children = fragment.Children;
+
             for (var i = 0; i < children.Count;)
             {
-                switch (children[i])
+                var child = children[i];
+                var relativeTop = child.Rect.Y - fragment.Rect.Y;
+                var topSpacing = relativeTop - cursorY;
+                if (topSpacing > 0)
+                {
+                    inner.Item().Height(topSpacing);
+                    cursorY += topSpacing;
+                }
+
+                var childHeight = Math.Max(child.Rect.Height, 0);
+                var relativeLeft = child.Rect.X - fragment.Rect.X;
+
+                switch (child)
                 {
                     case LineBoxFragment line:
-                        RenderSingleLine(inner.Item(), line);
+                        inner.Item().MinHeight(childHeight).Element(item =>
+                        {
+                            item.Row(row =>
+                            {
+                                if (relativeLeft > 0)
+                                {
+                                    row.ConstantItem(relativeLeft).Element(_ => { });
+                                }
+
+                                row.RelativeItem().Element(box =>
+                                {
+                                    RenderSingleLine(box, line);
+                                });
+                            });
+                        });
                         i++;
-                        break;
-                    case Fragment child:
-                        i++;
-                        RendererLog.FragmentStart(_logger, child);
-                        var childRenderer = new QuestPdfFragmentRenderer(inner.Item(), _options, _logger);
-                        renderChild(child, childRenderer);
                         break;
                     default:
-                        RendererLog.FragmentUnsupported(_logger, children[i]);
                         i++;
+                        RendererLog.FragmentStart(_logger, child);
+                        inner.Item().MinHeight(childHeight).Element(item =>
+                        {
+                            item.Row(row =>
+                            {
+                                if (relativeLeft > 0)
+                                {
+                                    row.ConstantItem(relativeLeft).Element(_ => { });
+                                }
+
+                                var childWidth = Math.Max(Math.Min(child.Rect.Width, fragment.Rect.Width - relativeLeft), 0);
+                                row.ConstantItem(childWidth).Element(box =>
+                                {
+                                    var childRenderer = new QuestPdfFragmentRenderer(box, _options, _logger);
+                                    renderChild(child, childRenderer);
+                                });
+                            });
+                        });
                         break;
                 }
+
+                cursorY = Math.Max(cursorY, relativeTop + childHeight);
             }
         });
     }

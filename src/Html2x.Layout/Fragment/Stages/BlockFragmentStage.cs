@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Drawing;
 using Html2x.Core.Layout;
 using Html2x.Layout.Box;
