@@ -81,8 +81,9 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 ### Key Entities (include if feature involves data)
 
-- **Computed Dimension**: Represents the normalized width and height (in logical units) coming out of style resolution, including metadata on original CSS source and fallback reason.
-- **Fragment Box**: Carries the final renderable rectangle per element, referencing the Computed Dimension and exposing intrinsic versus resolved measurements for downstream renderers and observers.
+- **Requested Dimension**: Captures the raw CSS `width`/`height` declarations (value + unit) plus source metadata coming out of style resolution.
+- **Resolved Dimension**: Holds the final normalized width and height (points), percentage flags, and fallback reasoning consumed by box/fragment builders.
+- **Fragment Box**: Carries the renderable rectangle per element, referencing the Resolved Dimension and exposing overflow behavior for downstream renderers and observers.
 
 ## Assumptions
 
