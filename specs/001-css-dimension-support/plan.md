@@ -11,7 +11,7 @@ Enable deterministic handling of CSS `width` and `height` declarations for block
 
 **Language/Version**: .NET 8 (`net8.0` across Html2x assemblies)  
 **Primary Dependencies**: AngleSharp for CSS parsing, Html2x.Core contracts, Html2x.Layout fragment builder, Html2x.Pdf renderer, QuestPDF output harness  
-**Storage**: In-memory only; width/height metadata live on transient Requested/Resolved Dimension records plus Fragment Box objects  
+**Storage**: In-memory only; width/height metadata live on transient Requested/Resolved Dimension records plus FragmentDimension objects  
 **Testing**: xUnit suites per module plus Pdf.TestConsole regression captures; new tests live in `Html2x.Layout.Test`, `Html2x.Pdf.Test`, and a console harness sample run scripted in `build/`  
 **Target Platform**: Windows and Linux runners via `dotnet test Html2x.sln -c Release` and console smoke tests  
 **Project Type**: Modular library with shared contracts and PDF renderer; no services introduced  

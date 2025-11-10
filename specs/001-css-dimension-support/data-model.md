@@ -23,12 +23,12 @@
   - `IsPercentageHeight` (bool).
   - `PassCount` (int, 1-2) – indicates whether a re-measurement occurred.
   - `FallbackReason` (string, nullable) – describes unsupported units, conflicts, or missing parents.
-- **Relationships**: Feeds directly into `FragmentBoxDimension`.
+- **Relationships**: Feeds directly into `FragmentDimension`.
 - **Validation Rules**:
   - `WidthPt`/`HeightPt` must stay within ±1pt of the measured layout pass.
   - `PassCount > 2` is invalid and must fail the test harness.
 
-## Entity: FragmentBoxDimension
+## Entity: FragmentDimension
 - **Purpose**: Carries render-ready rectangle metrics plus diagnostics metadata into the fragment tree and renderer.
 - **Fields**:
   - `ElementId` (string, required).
