@@ -54,10 +54,10 @@ tests/
     Html2x.Layout.Test/
     Html2x.Pdf.Test/
     html2x.IntegrationTest/
-src/Html2x.Pdf.TestConsole/
+src/Html2x.TestConsole/
 ```
 
-**Structure Decision**: Extend `Html2x.Core` dimension records with unit source metadata, wire `Html2x.Layout` style resolvers and box builders to honor px/pt/% widths and heights, propagate metrics unchanged into `Html2x.Pdf`, and seed new regression assets under `src/Html2x.Pdf.TestConsole/html/width-height/`.
+**Structure Decision**: Extend `Html2x.Core` dimension records with unit source metadata, wire `Html2x.Layout` style resolvers and box builders to honor px/pt/% widths and heights, propagate metrics unchanged into `Html2x.Pdf`, and seed new regression assets under `src/Html2x.TestConsole/html/width-height/`.
 
 ## Complexity Tracking
 

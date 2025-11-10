@@ -24,7 +24,7 @@ description: "Task list for CSS width and height feature delivery"
 - [X] T001 Run `dotnet restore Html2x.sln` to ensure NuGet dependencies resolve for Html2x.sln.
 - [X] T002 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Layout.Test&&Category=Dimensions"` to record baseline results for `tests/Html2x.Layout.Test`.
 - [X] T003 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Pdf.Test&&Category=BorderedBlocks"` to confirm renderer baseline in `tests/Html2x.Pdf.Test`.
-- [ ] T004 Capture a reference PDF and diagnostics log by running `src/Html2x.Pdf.TestConsole/Html2x.Pdf.TestConsole.csproj` against `src/Html2x.Pdf.TestConsole/html/width-height/grid.html` with output in `build/width-height/grid.pdf`.
+- [ ] T004 Capture a reference PDF and diagnostics log by running `src/Html2x.TestConsole/Html2x.TestConsole.csproj` against `src/Html2x.TestConsole/html/width-height/grid.html` with output in `build/width-height/grid.pdf`.
 
 ---
 
@@ -44,7 +44,7 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 3: User Story 1 - Fixed Width Blocks Render Predictably (Priority: P1)  MVP
 
 **Goal**: Block-level containers respect px and pt `width` / `height` declarations end to end.  
-**Independent Test**: Layout diagnostics prove fragment rectangles equal requested dimensions within 1pt tolerance using the grid fixture in `src/Html2x.Pdf.TestConsole/html/width-height/grid.html`.
+**Independent Test**: Layout diagnostics prove fragment rectangles equal requested dimensions within 1pt tolerance using the grid fixture in `src/Html2x.TestConsole/html/width-height/grid.html`.
 
 ### Tests for User Story 1
 
@@ -57,7 +57,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragments/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
 - [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/Rendering/BlockRenderer.cs` ensuring clip behavior for overflow.
 - [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs`.
-- [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.Pdf.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
+- [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
 
 **Checkpoint**: Fixed pixel dimensions render deterministically with diagnostics proving dimension lineage.
 
@@ -66,7 +66,7 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 4: User Story 2 - Bordered Blocks Show Consistent Footprints (Priority: P2)
 
 **Goal**: Bordered placeholders accept percentage widths and pixel heights while keeping frame footprints aligned.  
-**Independent Test**: Integration sample `src/Html2x.Pdf.TestConsole/html/width-height/bordered-grid.html` renders consistent rectangles validated by Html2x.Pdf.Test snapshots.
+**Independent Test**: Integration sample `src/Html2x.TestConsole/html/width-height/bordered-grid.html` renders consistent rectangles validated by Html2x.Pdf.Test snapshots.
 
 ### Tests for User Story 2
 
@@ -78,7 +78,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.Layout/Fragments/BorderedBlockBuilder.cs`.
 - [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Pdf/Rendering/BorderedBlockRenderer.cs`.
 - [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs`.
-- [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Html2x.Pdf.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
+- [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Html2x.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
 
 **Checkpoint**: Percentage-driven bordered blocks align with brand guides and emit deterministic diagnostics.
 
@@ -87,7 +87,7 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 5: User Story 3 - Invalid Dimension Inputs Fail Gracefully (Priority: P3)
 
 **Goal**: Unsupported units and conflicting constraints fall back to auto sizing while logging actionable diagnostics.  
-**Independent Test**: Negative fixture `src/Html2x.Pdf.TestConsole/html/width-height/invalid.html` produces warnings captured by Layout tests and console logs.
+**Independent Test**: Negative fixture `src/Html2x.TestConsole/html/width-height/invalid.html` produces warnings captured by Layout tests and console logs.
 
 ### Tests for User Story 3
 
@@ -111,7 +111,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T027 [P] Update feature documentation and constitution references inside `specs/001-css-dimension-support/plan.md` and `docs/release-notes.md`.
 - [ ] T028 Run `dotnet test Html2x.sln -c Release` plus Pdf.TestConsole scripts to regenerate `build/width-height/*.pdf` and attach diagnostics artifacts.
 - [ ] T029 [P] Capture final evidence in `docs/testing-guidelines.md` and archive logs under `build/logs/width-height` for stakeholder review.
-- [ ] T030 Verify `dotnet run --project src/Html2x.Pdf.TestConsole/Html2x.Pdf.TestConsole.csproj` smoke test uses updated fixtures before merge.
+- [ ] T030 Verify `dotnet run --project src/Html2x.TestConsole/Html2x.TestConsole.csproj` smoke test uses updated fixtures before merge.
 
 ---
 
@@ -162,3 +162,4 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
+

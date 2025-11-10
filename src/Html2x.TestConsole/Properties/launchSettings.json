@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Html2x.Pdf.TestConsole": {
+    "Html2x.TestConsole": {
       "commandName": "Project",
       "commandLineArgs": "./html/padding.html"
     }
