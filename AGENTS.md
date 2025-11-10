@@ -134,14 +134,14 @@ When approaching problems, use this planning structure:
 ## Project Structure & Module Organization
 - `src/Html2x.Layout` builds the fragment tree; `Html2x.Core` holds shared layout contracts; `Html2x.Pdf` renders output.
 - Tests live alongside modules: `Html2x.Layout.Test`, `Html2x.Pdf.Test`, and scenario coverage via `html2x.IntegrationTest`.
-- The interactive harness is `Html2x.Pdf.TestConsole` with sample inputs under `html/` and fonts in `fonts/`.
+- The interactive harness is `Html2x.TestConsole` with sample inputs under `html/` and fonts in `fonts/`.
 - Developer docs are under `docs/` (architecture, coding standards, testing); reserve `build/` for local artifacts you do not commit.
 
 ## Build, Test, and Development Commands
 - `dotnet restore Html2x.sln` – sync NuGet dependencies before first build.
 - `dotnet build Html2x.sln -c Release` – compile all projects and validate analyzer warnings.
 - `dotnet test Html2x.sln -c Release` – run unit + integration suites; append `--filter Category=Integration` to scope runs.
-- `dotnet run --project src/Html2x.Pdf.TestConsole/Html2x.Pdf.TestConsole.csproj -- --input src/Html2x.Pdf.TestConsole/html/example.html --output build/example.pdf` – quick manual rendering smoke test.
+- `dotnet run --project src/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input src/Html2x.TestConsole/html/example.html --output build/example.pdf` - quick manual rendering smoke test.
 
 ## Coding Style & Naming Conventions
 - Respect `.editorconfig`: 4-space indentation for C#/HTML, 2-space for XML-style files; never mix tabs/spaces.
@@ -162,7 +162,7 @@ When approaching problems, use this planning structure:
 - Note any follow-up work explicitly and request reviewers versed in the touched module.
 
 ## Tooling & Environment
-- Target .NET 8; the solution expects QuestPDF assets—verify custom fonts under `Html2x.Pdf.TestConsole/fonts`.
+- Target .NET 8; the solution expects QuestPDF assets-verify custom fonts under `Html2x.TestConsole/fonts`.
 - Keep local scripts under `build/` or `.vscode/` and document anything new in `docs/`.
 
 
