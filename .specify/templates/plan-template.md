@@ -27,7 +27,7 @@
 
 - [ ] Stage isolation maintained (Principle I: Staged Layout Discipline).
 - [ ] Deterministic rendering risks addressed with tests or instrumentation (Principle II).
-- [ ] TDD approach defined, including failing tests to introduce (Principle III).
+- [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
 - [ ] Logging and diagnostics updates planned (Principle IV).
 - [ ] Extension points documented with migration guidance (Principle V).
 
@@ -57,7 +57,7 @@ tests/
     Html2x.Layout.Test/
     Html2x.Pdf.Test/
     html2x.IntegrationTest/
-src/Html2x.Pdf.TestConsole/
+src/Html2x.TestConsole/
 ```
 
 **Structure Decision**: [Record affected projects, new folders, and justification]

@@ -1,15 +1,16 @@
 <!--
 Sync Impact Report
-Version change: 1.0.0 -> 1.1.0
-Modified principles: III. Test-First Delivery (expanded with incremental TDD, behavior-focused testing, reflection prohibition, isolation requirements)
+Version change: 1.1.1 -> 1.1.2
+Modified principles: III. Test-First Delivery (plan/task sequencing for single failing test loop)
 Added sections: none
 Removed sections: none
 Templates requiring updates:
 - updated: .specify/templates/plan-template.md
-- updated: .specify/templates/spec-template.md
 - updated: .specify/templates/tasks-template.md
+Runtime guidance updates:
+- none
 Follow-up TODOs:
-- (resolved) Ratification date documented: 2025-11-06
+- none
 -->
 # Html2x Constitution
 
@@ -29,14 +30,14 @@ Rationale: Deterministic rendering underpins regression safety and cross-platfor
 
 ### III. Test-First Delivery
 - Tests are first-class and MUST focus on observable behavior, not implementation details.
-- Code MUST follow incremental TDD: introduce one failing test, implement the minimal passing code, then refactor before the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt.
+- Plans and task lists MUST enforce the incremental TDD loop: introduce exactly one failing test, implement the minimal passing change, refactor, then document the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt.
 - Tests MUST exercise outcomes such as rendered output, pagination results, logging, or API responses and MUST NOT rely on reflection-based contract checks.
 - Reflection APIs (e.g., `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are prohibited in test code.
 - Prioritize tests for business logic and complex flows, use parameterized tests for multi-scenario logic, and keep tests independent and readable.
 - Each layer/module MUST be testable in isolation.
 - Unit, integration, and scenario tests MUST reside with the affected module and run via `dotnet test Html2x.sln -c Release`.
 - No feature merges without green tests and documented coverage of the exercised path.
-Rationale: Incremental TDD with behavior-focused tests keeps the pipeline verifiable, prevents silent regressions, and maintains test independence across layers.
+Rationale: Incremental TDD with behavior-focused tests keeps the pipeline verifiable, prevents silent regressions, and maintains test independence across layers. Aligning plans with the single-failing-test loop protects this discipline.
 
 ### IV. Instrumented Observability
 - Layout and rendering stages MUST emit structured logs using the shared logging helpers with context-rich metadata.
@@ -55,7 +56,7 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Target framework MUST remain `net8.0`; deviations require architecture review and migration plan.
 - Third-party dependencies MUST be managed through NuGet packages approved for pure .NET usage.
 - Fonts, HTML samples, and generated artifacts MUST live under tracked directories (`fonts/`, `html/`, `build/`) with provenance documented.
-- CLI smoke tests (`Html2x.Pdf.TestConsole`) MUST be runnable on Windows and Linux without extra tooling.
+- CLI smoke tests (project `src/Html2x.TestConsole/Html2x.TestConsole.csproj`) MUST be runnable on Windows and Linux without extra tooling.
 
 ## Delivery Workflow
 
@@ -71,4 +72,12 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 1.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
+**Version**: 1.1.2 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-10
+
+
+
+
+
+
+
+

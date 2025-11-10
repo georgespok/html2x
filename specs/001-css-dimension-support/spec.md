@@ -15,7 +15,7 @@ Report designers need block containers (cards, summary rows) to respect CSS `wid
 
 **Why this priority**: Without predictable sizing the generated PDF breaks tabular balance, making reports unusable for finance approvals.
 
-**Independent Test**: Create a regression fixture in `Html2x.Pdf.TestConsole` that renders a grid of divs with varied `width`/`height`; capture fragment metrics via layout diagnostics and assert PDF bounding boxes match expected values.
+**Independent Test**: Create a regression fixture in `Html2x.TestConsole` that renders a grid of divs with varied `width`/`height`; capture fragment metrics via layout diagnostics and assert PDF bounding boxes match expected values.
 
 **Constitution alignment**: Style computation produces normalized dimensions before pagination, fragment builder records them, and harness logs include `Box.WidthResolved` and `Box.HeightResolved` for traceability.
 

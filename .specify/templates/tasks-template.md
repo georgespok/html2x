@@ -8,7 +8,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`  
 **Prerequisites**: plan.md (required), spec.md (user stories), research.md, data-model.md, contracts/
 
-**Tests**: Failing automated tests MUST be authored first and listed explicitly for each user story. Remove a task only after the test suite passes.
+**Tests**: Introduce exactly one failing automated test at a time and list it explicitly for each user story. Pair every failing-test task with the minimal implementation/refactor tasks required to turn the suite green before adding the next test.
 
 **Organization**: Tasks are grouped by user story to keep delivery incremental and independently testable.
 
@@ -22,8 +22,8 @@ description: "Task list template for feature implementation"
 
 - Source: `src/Html2x.*`
 - Tests: `tests/Html2x.*` (`html2x.IntegrationTest` for end-to-end)
-- Console harness: `src/Html2x.Pdf.TestConsole/`
-- Samples and fonts: `src/Html2x.Pdf.TestConsole/html/`, `src/Html2x.Pdf.TestConsole/fonts/`
+- Console harness: `src/Html2x.TestConsole/`
+- Samples and fonts: `src/Html2x.TestConsole/html/`, `src/Html2x.TestConsole/fonts/`
 
 <!--
   ============================================================================
@@ -160,7 +160,7 @@ description: "Task list template for feature implementation"
 
 ### Within Each User Story
 
-- Write tests first and ensure they fail before implementation.
+- Introduce a single failing test, implement the minimal passing change, refactor, then repeat for the next scenario.
 - Update shared contracts prior to renderer changes.
 - Keep determinism checks and logging tasks visible in the plan.
 - Confirm documentation and release notes before closing the story.
