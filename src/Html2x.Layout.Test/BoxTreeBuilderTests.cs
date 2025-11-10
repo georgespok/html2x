@@ -209,6 +209,28 @@ public class BoxTreeBuilderTests
             .OpenAsync(req => req.Content(html));
     }
 
+    [Fact]
+    public async Task BlockBoxWithPadding_ReducesContentArea()
+    {
+        // Arrange: Block with padding should have padding values copied from ComputedStyle
+        const string html = "<html><body><div>Content</div></body></html>";
+        var doc = await ParseHtml(html);
+
+        var div = doc.QuerySelector("div")!;
+
+        var styles = BuildStyleTree(doc.Body!)
+            .WithPageMargins(0, 0, 0, 0)
+            .AddChild(div, divNode => divNode.WithPadding(15f, 11.25f, 7.5f, 3.75f));
+
+        // Act
+        var actual = CreateBoxTreeBuilder().Build(styles);
+
+        // Assert: Padding values should be copied to BlockBox.Padding
+        actual.ShouldMatch(tree => tree
+            .Block(b => b.Element(div)
+                .Padding(15f, 11.25f, 7.5f, 3.75f)));
+    }
+
     private static StyleTreeBuilder BuildStyleTree(IElement body)
     {
         return new StyleTreeBuilder(body);

@@ -7,6 +7,7 @@ using Html2x.Layout.Fragment;
 using Html2x.Layout.Style;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Spacing = Html2x.Core.Layout.Spacing;
 
 namespace Html2x.Layout;
 
@@ -54,7 +55,7 @@ public class LayoutBuilder
 
         var layout = new HtmlLayout();
         var page = new LayoutPage(new SizeF(pageSize.Width, pageSize.Height),
-            new Margins(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
+            new Spacing(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
                 boxTree.Page.MarginLeftPt),
             fragments.Blocks);
         layout.Pages.Add(page);
