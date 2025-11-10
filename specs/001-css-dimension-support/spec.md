@@ -83,7 +83,7 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 - **Requested Dimension**: Captures the raw CSS `width`/`height` declarations (value + unit) plus source metadata coming out of style resolution.
 - **Resolved Dimension**: Holds the final normalized width and height (points), percentage flags, and fallback reasoning consumed by box/fragment builders.
-- **Fragment Box**: Carries the renderable rectangle per element, referencing the Resolved Dimension and exposing overflow behavior for downstream renderers and observers.
+- **Fragment Dimension**: Carries the renderable rectangle per element, referencing the Resolved Dimension and exposing overflow behavior for downstream renderers and observers.
 
 ## Assumptions
 
