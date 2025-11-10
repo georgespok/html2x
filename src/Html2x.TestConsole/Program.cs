@@ -80,13 +80,14 @@ internal class Program
 
     private static void ShowUsage()
     {
-        Console.WriteLine("Usage: Html2x.Pdf.TestConsole <input.html> [output.pdf]");
+        Console.WriteLine("Usage: Html2x.TestConsole <input.html> [output.pdf]");
         Console.WriteLine();
         Console.WriteLine("Examples:");
-        Console.WriteLine("  Html2x.Pdf.TestConsole example.html");
-        Console.WriteLine("  Html2x.Pdf.TestConsole example.html output.pdf");
-        Console.WriteLine("  Html2x.Pdf.TestConsole example.html C:\\temp\\report.pdf");
-        Console.WriteLine("  Html2x.Pdf.TestConsole example.html ./reports/monthly-report.pdf");
+        Console.WriteLine("  Html2x.TestConsole example.html");
+        Console.WriteLine("  Html2x.TestConsole example.html output.pdf");
+        Console.WriteLine("  Html2x.TestConsole example.html C:\\temp\\report.pdf");
+        Console.WriteLine("  Html2x.TestConsole example.html ./reports/monthly-report.pdf");
         Console.WriteLine();
     }
 }
+
