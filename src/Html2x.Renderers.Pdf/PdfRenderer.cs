@@ -1,10 +1,12 @@
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
+using Html2x.Abstractions.Measurements.Units;
+using QuestPageSize = QuestPDF.Helpers.PageSize;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 public class PdfRenderer
 {
@@ -72,7 +74,7 @@ public class PdfRenderer
 
                     doc.Page(p =>
                     {
-                        p.Size(new PageSize(pageSize.Width, pageSize.Height));
+                        p.Size(new QuestPageSize(pageSize.Width, pageSize.Height));
                         p.MarginTop(page.Margins.Top);
                         p.MarginRight(page.Margins.Right);
                         p.MarginBottom(page.Margins.Bottom);
@@ -134,3 +136,5 @@ public class PdfRenderer
             options.PageSize.GetHashCode());
     }
 }
+
+

@@ -2,7 +2,7 @@ using QuestPDF;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 public static class QuestPdfConfigurator
 {

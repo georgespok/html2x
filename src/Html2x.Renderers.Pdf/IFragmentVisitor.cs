@@ -1,6 +1,6 @@
-﻿using Html2x.Core.Layout;
+﻿using Html2x.Abstractions.Layout;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 /// <summary>
 ///     Defines the visitor interface — one method per fragment type.
