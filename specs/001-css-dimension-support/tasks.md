@@ -59,7 +59,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T011A [US1] Update `src/Html2x.Layout/Style/CssDimensionResolver.cs` (or adjacent helpers) to derive the complementary dimension when only width or height is supplied, emitting the tolerance metadata needed by FR-004.
 - [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragment/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
 - [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/PdfRenderer.cs`, ensuring clip behavior for overflow.
-- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the ± 1 pt tolerance and fail fast when it is exceeded.
+- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the +/-1 pt tolerance and fail fast when it is exceeded.
 - [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs`.
 - [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
 
@@ -173,6 +173,7 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
+
 
 
 

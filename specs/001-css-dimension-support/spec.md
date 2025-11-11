@@ -74,8 +74,8 @@ Operators require actionable feedback when authors use unsupported units or conf
 - **FR-001**: The style system must parse `width` and `height` declarations (limited to px, pt, and percent units) into normalized layout units before box construction, rejecting unsupported units with actionable warnings.
 - **FR-002**: The box builder must apply resolved widths and heights to block-level elements (including bordered placeholders) while preserving pipeline ordering; no renderer-specific shortcuts may alter these metrics downstream.
 - **FR-003**: Percentage widths and heights must resolve against the containing block size with a documented fallback when the container lacks an explicit dimension (default to content width and log the assumption).
-- **FR-004**: When only one dimension is provided, the layout engine must derive the complementary measurement from content flow without introducing cross-platform variance greater than 1pt.
-- **FR-005**: Auto height with fixed width must trigger content measurement passes that cap variance to less than 1pt between runs; exceeding the threshold marks the run as failed.
+- **FR-004**: When only one dimension is provided, the layout engine must derive the complementary measurement from content flow without introducing cross-platform variance greater than 1 pt.
+- **FR-005**: Auto height with fixed width must trigger content measurement passes that cap variance to less than 1 pt between runs; exceeding the threshold marks the run as failed.
 - **FR-006**: Validation must handle conflicting constraints (`min/max/explicit`) by applying CSS precedence rules and logging the chosen outcome for audit trails.
 - **FR-007**: Structured diagnostics must include element identifier, resolved width, resolved height, unit source, and any fallback decision so QA can assert behavior using existing harness tooling.
 
@@ -95,7 +95,8 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 ### Measurable Outcomes
 
-- **SC-001**: For the provided regression fixtures, resolved fragment widths and heights stay within 1 pt of expected measurements on the supported Windows runner in Release test runs (determinism verified via archived Html2x.TestConsole outputs).
+- **SC-001**: For the provided regression fixtures, resolved fragment widths and heights stay within 1 pt of expected measurements on the supported Windows runner in Release test runs (determinism verified via archived Html2x.TestConsole outputs).
 - **SC-002**: Exercise the pixel, percentage, and invalid-input scenarios sequentially: introduce one failing automated test, implement the minimal passing change, refactor, then move to the next scenario only after the suite is green.
 - **SC-003**: Support engineers can identify dimension-related issues within five minutes using the structured diagnostics, proven by a dry run log review.
 - **SC-004**: Feature-branch runs of `dotnet test Html2x.sln -c Release` plus the Html2x.TestConsole width/height fixtures complete without manual PDF tweaks, proven by archiving the generated PDFs and logs (as-produced) under `build/width-height/`.
+
