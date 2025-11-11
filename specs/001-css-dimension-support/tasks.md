@@ -35,7 +35,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Core/Dimensions/DimensionContracts.cs` per data-model.md.
 - [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
 - [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.Layout/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
-- [ ] T008 [P] Add failing regression coverage for the contract layer in `tests/Html2x.Layout.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.
+- [ ] T008 Add failing regression coverage for the contract layer in `tests/Html2x.Layout.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.
 
 **Checkpoint**: Shared contracts, validation rules, and diagnostics scaffolding are live; user stories can now build specific behavior.
 
@@ -49,9 +49,9 @@ description: "Task list for CSS width and height feature delivery"
 ### Tests for User Story 1
 
 - [ ] T009 [US1] Introduce the first failing px/pt dimension theory in `tests/Html2x.Layout.Test/Dimensions/FixedSizeBlockTests.cs`; keep it the only failing test and unblock T011–T012 immediately afterward.
-- [ ] T009A [US1] After the T009 loop is green, add a failing complementary-dimension theory that supplies only width or height and asserts the missing dimension is derived within 1 pt before moving on.
+- [ ] T009A [US1] After the T009 loop is green, add a failing complementary-dimension theory that supplies only width or height and asserts the missing dimension is derived within 1 pt before moving on.
 - [ ] T010 [US1] Once the T009/T011 loops are green, add the renderer regression in `tests/Html2x.Pdf.Test/Dimensions/FixedBlockSnapshotTests.cs` to inspect fragment rectangles for the grid fixture before starting any new failing tests.
-- [ ] T010A [US1] After T010/T013 complete, introduce a failing auto-height variance regression (Layout + Pdf snapshot) that forces the engine to detect >1 pt variance before implementing the fix.
+- [ ] T010A [US1] After T010/T013 complete, introduce a failing auto-height variance regression (Layout + Pdf snapshot) that forces the engine to detect > 1 pt variance before implementing the fix.
 
 ### Implementation for User Story 1
 
@@ -59,7 +59,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T011A [US1] Update `src/Html2x.Layout/Style/CssDimensionResolver.cs` (or adjacent helpers) to derive the complementary dimension when only width or height is supplied, emitting the tolerance metadata needed by FR-004.
 - [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragment/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
 - [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/PdfRenderer.cs`, ensuring clip behavior for overflow.
-- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the ≤1 pt tolerance and fail fast when it is exceeded.
+- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the ± 1 pt tolerance and fail fast when it is exceeded.
 - [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs`.
 - [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
 
@@ -157,7 +157,7 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
    - Loop 3: T010 → T013  
    - Loop 4: T010A → T013A  
    Follow with diagnostics (T014) and harness refresh (T015).  
-3. Ship MVP once Pdf snapshots and console logs prove deterministic 1 pt tolerance.  
+3. Ship MVP once Pdf snapshots and console logs prove deterministic 1 pt tolerance.  
 
 **Incremental Delivery**  
 1. After MVP, branch teams tackle US2 and US3 concurrently, but each team must finish loops sequentially (T016 → T018, then T017 → T019; T022 → T024, then T023 → T025) before starting the next scenario.  
@@ -173,4 +173,9 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
+
+
+
+
+
 
