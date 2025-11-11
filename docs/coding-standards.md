@@ -30,7 +30,7 @@ Cross-layer calls must always travel forward (Core → Layout → Renderer). If 
 
 ### Logging
 
-- Use `LoggerMessage.Define` helpers for reusable events (`RendererLog`, `LayoutLog`).
+- Use `LoggerMessage.Define` helpers for reusable events (`PdfRendererLog`, `LayoutLog`).
 - Guard high-volume events (`Trace` / `Debug`) with `logger.IsEnabled` to avoid unnecessary allocations.
 - Emit context-rich messages (fragment type, coordinates, options hashes) so diagnostics remain actionable.
 
@@ -45,7 +45,7 @@ Cross-layer calls must always travel forward (Core → Layout → Renderer). If 
 - **New CSS property**: Update `CssStyleComputer`, extend the box model if geometry changes, and add fragment fields if renderers need the data.
 - **New fragment type**: Define it under `Html2x.Core.Layout`, update visitors, builders, and renderers. Maintain immutability.
 - **New renderer**: Implement `IFragmentRenderer` and provide a factory. Reuse the dispatcher pattern for traversal.
-- **New diagnostics**: Add to the relevant log helper class (`RendererLog`, `LayoutLog`) instead of ad-hoc `logger.Log...` calls.
+- **New diagnostics**: Add to the relevant log helper class (`PdfRendererLog`, `LayoutLog`) instead of ad-hoc `logger.Log...` calls.
 
 ## Coding Style
 
@@ -66,3 +66,4 @@ Before submitting a change, validate:
 5. **Naming**: Do class and method names convey intent? Could future contributors pick up the thread quickly?
 
 When in doubt, prefer clarity over cleverness. Our goal is a codebase that any contributor can extend without surprises.
+

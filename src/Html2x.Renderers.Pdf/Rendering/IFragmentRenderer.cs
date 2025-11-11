@@ -1,6 +1,7 @@
 using Html2x.Abstractions.Layout;
 
-namespace Html2x.Renderers.Pdf;
+using Html2x.Pdf.Options;
+namespace Html2x.Pdf.Rendering;
 
 public interface IFragmentRenderer
 {
@@ -12,3 +13,5 @@ public interface IFragmentRenderer
 
     void RenderRule(RuleFragment fragment);
 }
+
+

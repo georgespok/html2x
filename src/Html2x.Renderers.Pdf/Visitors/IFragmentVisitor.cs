@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Pdf.Visitors;
 
 /// <summary>
 ///     Defines the visitor interface — one method per fragment type.
@@ -12,3 +12,4 @@ internal interface IFragmentVisitor
     void Visit(ImageFragment fragment);
     void Visit(RuleFragment fragment);
 }
+

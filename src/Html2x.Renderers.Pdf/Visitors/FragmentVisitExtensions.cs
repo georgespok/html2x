@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Pdf.Visitors;
 
 /// <summary>
 ///     External extension that enables visitor-style dispatch
@@ -22,3 +22,4 @@ internal static class FragmentVisitExtensions
         }
     }
 }
+

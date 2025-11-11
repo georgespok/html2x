@@ -1,9 +1,8 @@
 using System.Text;
-using html2x.IntegrationTest;
-using Html2x.Renderers.Pdf;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
+using Html2x.Pdf.Options;
 namespace Html2x.Test;
 
 public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
@@ -58,3 +57,4 @@ public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
         _loggerFactory.Dispose();
     }
 }
+

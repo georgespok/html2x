@@ -2,7 +2,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Renderers.Pdf;
+using Html2x.Pdf.Options;
+using Html2x.Renderers.Pdf.Rendering;
+
+namespace Html2x.Pdf.Rendering;
 
 internal sealed class QuestPdfFragmentRendererFactory : IFragmentRendererFactory
 {
@@ -20,3 +23,5 @@ internal sealed class QuestPdfFragmentRendererFactory : IFragmentRendererFactory
         return new QuestPdfFragmentRenderer(container, options, logger);
     }
 }
+
+

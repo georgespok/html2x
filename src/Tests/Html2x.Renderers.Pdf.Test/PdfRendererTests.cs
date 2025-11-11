@@ -1,10 +1,10 @@
-using System.Collections.Generic;
 using System.Drawing;
-using Html2x.Abstractions;
 using Html2x.Abstractions.Layout;
 using Shouldly;
-
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Pdf.Options;
+using Html2x.Pdf.Pipeline;
+using Html2x.Renderers.Pdf.Pipeline;
 
 namespace Html2x.Renderers.Pdf.Test;
 

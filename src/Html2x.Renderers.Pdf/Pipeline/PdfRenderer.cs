@@ -1,12 +1,14 @@
 using Html2x.Abstractions.Layout;
+using Html2x.Pdf.Options;
+using Html2x.Pdf.Pipeline;
+using Html2x.Pdf.Rendering;
+using Html2x.Pdf.Visitors;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using Html2x.Abstractions.Measurements.Units;
 using QuestPageSize = QuestPDF.Helpers.PageSize;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Renderers.Pdf.Pipeline;
 
 public class PdfRenderer
 {
@@ -52,14 +54,14 @@ public class PdfRenderer
         }
         catch (Exception ex)
         {
-            RendererLog.Exception(_logger, ex);
+            PdfRendererLog.Exception(_logger, ex);
             throw;
         }
     }
 
     private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
     {
-        RendererLog.LayoutStart(_logger, layout.Pages.Count, ComputeOptionsHash(options));
+        PdfRendererLog.LayoutStart(_logger, layout.Pages.Count, ComputeOptionsHash(options));
 
         using var stream = new MemoryStream();
 
@@ -70,7 +72,7 @@ public class PdfRenderer
                     var page = layout.Pages[pageIndex];
                     var pageSize = page.Size;
 
-                    RendererLog.PageStart(_logger, pageIndex, pageSize.Width, pageSize.Height);
+                    PdfRendererLog.PageStart(_logger, pageIndex, pageSize.Width, pageSize.Height);
 
                     doc.Page(p =>
                     {
@@ -86,7 +88,7 @@ public class PdfRenderer
 
                             foreach (var fragment in page.Children)
                             {
-                                RendererLog.FragmentStart(_logger, fragment);
+                                PdfRendererLog.FragmentStart(_logger, fragment);
 
                                 var xRel = fragment.Rect.X - page.Margins.Left;
                                 var yRel = fragment.Rect.Y - page.Margins.Top;
@@ -136,5 +138,8 @@ public class PdfRenderer
             options.PageSize.GetHashCode());
     }
 }
+
+
+
 
 

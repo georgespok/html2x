@@ -1,9 +1,10 @@
 using Html2x.Abstractions.Layout;
+using Html2x.Pdf.Mapping;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-public class BorderRenderingTests
+public class BorderPainterTests
 {
     [Fact]
     public void GetUniformBorder_ShouldReturnBorder_WhenUniformSolid()
@@ -13,7 +14,7 @@ public class BorderRenderingTests
         var edges = BorderEdges.Uniform(border);
 
         // Act
-        var result = BorderRendering.GetUniformBorder(edges);
+        var result = BorderPainter.GetUniformBorder(edges);
 
         // Assert
         result.ShouldNotBeNull();
@@ -31,7 +32,7 @@ public class BorderRenderingTests
         };
 
         // Act
-        var result = BorderRendering.GetUniformBorder(edges);
+        var result = BorderPainter.GetUniformBorder(edges);
 
         // Assert
         result.ShouldBeNull();
@@ -48,7 +49,7 @@ public class BorderRenderingTests
         var edges = BorderEdges.Uniform(border);
 
         // Act
-        var result = BorderRendering.GetUniformBorder(edges);
+        var result = BorderPainter.GetUniformBorder(edges);
 
         // Assert
         result.ShouldNotBeNull();
@@ -59,9 +60,10 @@ public class BorderRenderingTests
     public void GetUniformBorder_ShouldReturnNull_WhenBorderDisabled()
     {
         // Arrange & Act
-        var result = BorderRendering.GetUniformBorder(BorderEdges.None);
+        var result = BorderPainter.GetUniformBorder(BorderEdges.None);
 
         // Assert
         result.ShouldBeNull();
     }
 }
+
