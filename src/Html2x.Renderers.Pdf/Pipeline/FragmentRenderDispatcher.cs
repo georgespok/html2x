@@ -1,6 +1,6 @@
-using Html2x.Abstractions.Layout;
-using Html2x.Pdf.Rendering;
-using Html2x.Pdf.Visitors;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Renderers.Pdf.Rendering;
+using Html2x.Renderers.Pdf.Visitors;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

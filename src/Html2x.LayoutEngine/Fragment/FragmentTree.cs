@@ -1,4 +1,4 @@
-﻿using Html2x.Abstractions.Layout;
+﻿using Html2x.Abstractions.Layout.Fragments;
 
 namespace Html2x.LayoutEngine.Fragment;
 
@@ -12,7 +12,7 @@ public sealed class FragmentTree
     /// <summary>
     ///     Optional flattened list of all fragments (useful for rendering order).
     /// </summary>
-    public List<Abstractions.Layout.Fragment> All { get; } = [];
+    public List<Abstractions.Layout.Fragments.Fragment> All { get; } = [];
 
     /// <summary>
     ///     Optional page-level metadata (A4, margins, etc.)

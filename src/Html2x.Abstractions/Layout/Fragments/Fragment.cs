@@ -1,6 +1,7 @@
 ﻿using System.Drawing;
+using Html2x.Abstractions.Layout.Styles;
 
-namespace Html2x.Abstractions.Layout;
+namespace Html2x.Abstractions.Layout.Fragments;
 
 public abstract class Fragment
 {
