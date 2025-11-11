@@ -1,7 +1,9 @@
 using Html2x.LayoutEngine;
-using Html2x.Pdf;
+using Html2x.Renderers.Pdf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x;
 
@@ -32,3 +34,5 @@ public class HtmlConverter
         return await renderer.RenderAsync(layout, options);
     }
 }
+
+

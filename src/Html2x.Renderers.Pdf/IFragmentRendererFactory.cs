@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 public interface IFragmentRendererFactory
 {

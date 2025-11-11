@@ -1,4 +1,4 @@
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 
 namespace Html2x.LayoutEngine;
 

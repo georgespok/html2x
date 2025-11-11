@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Html2x.LayoutEngine.Box;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
