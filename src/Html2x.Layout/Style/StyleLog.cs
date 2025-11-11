@@ -22,7 +22,7 @@ internal static class StyleLog
         LoggerMessage.Define<string, string, string, string>(
             LogLevel.Warning,
             new EventId(3002, nameof(UnsupportedSpacingUnit)),
-            "Unsupported unit '{Unit}' in value '{Value}' for property '{Property}' on element '{ElementTag}'. Only 'px' units are supported. Using default value 0.");
+            "Unsupported unit '{UnitEnum}' in value '{Value}' for property '{Property}' on element '{ElementTag}'. Only 'px' units are supported. Using default value 0.");
 
     public static void InvalidSpacingValue(ILogger logger, string property, string value, IElement element)
     {

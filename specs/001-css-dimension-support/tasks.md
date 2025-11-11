@@ -32,7 +32,7 @@ description: "Task list for CSS width and height feature delivery"
 
 **Purpose**: Extend shared contracts and helpers every story depends on.
 
-- [ ] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Core/Dimensions/DimensionContracts.cs` per data-model.md.
+- [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Core/Dimensions/DimensionContracts.cs` per data-model.md.
 - [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
 - [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.Layout/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
 - [ ] T008 Add failing regression coverage for the contract layer in `tests/Html2x.Layout.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.

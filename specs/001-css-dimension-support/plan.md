@@ -12,7 +12,7 @@ Enable deterministic handling of CSS `width` and `height` declarations for block
 **Language/Version**: .NET 8 (`net8.0` across Html2x assemblies)  
 **Primary Dependencies**: AngleSharp for CSS parsing, Html2x.Core contracts, Html2x.Layout fragment builder, Html2x.Pdf renderer, QuestPDF output harness  
 **Storage**: In-memory only; width/height metadata live on transient Requested/Resolved Dimension records plus FragmentDimension objects  
-**Testing**: xUnit suites per module plus Html2x.TestConsole regression captures; new tests live in `Html2x.Layout.Test`, `Html2x.Pdf.Test`, and a console harness sample run scripted in `build/`
+**Testing**: xUnit suites per module plus Html2x.TestConsole regression captures on the supported Windows runner (per SC-001); new tests live in `Html2x.Layout.Test`, `Html2x.Pdf.Test`, and a console harness sample run scripted in `build/`
 **Target Platform**: Windows runners via `dotnet test Html2x.sln -c Release` and console smoke tests  
 **Project Type**: Modular library with shared contracts and PDF renderer; no services introduced  
 **Performance Goals**: Maintain deterministic fragment sizing within ±1pt tolerance and avoid extra layout passes beyond a single retry for percentage convergence  
@@ -86,4 +86,5 @@ src/Html2x.TestConsole/
 - T029A scripts the five-minute diagnostics review and records the elapsed time in `build/logs/width-height/triage.json`.  
 - T029B stores untouched Html2x.TestConsole outputs under `build/width-height/` and references them in docs/release notes to satisfy SC-004.  
 - T030 confirms the Html2x.TestConsole harness runs with the updated fixtures before merge.
+
 

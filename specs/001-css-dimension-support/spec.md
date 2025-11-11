@@ -95,8 +95,10 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 ### Measurable Outcomes
 
-- **SC-001**: For the provided regression fixtures, resolved fragment widths and heights stay within 1 pt of expected measurements on the supported Windows runner in Release test runs (determinism verified via archived Html2x.TestConsole outputs).
+- **SC-001**: For each regression fixture, the resolved fragment width **and** height must each stay within +/- 1 pt of the expected measurement on the supported Windows runner in Release test runs (determinism verified via archived Html2x.TestConsole outputs).
 - **SC-002**: Exercise the pixel, percentage, and invalid-input scenarios sequentially: introduce one failing automated test, implement the minimal passing change, refactor, then move to the next scenario only after the suite is green.
 - **SC-003**: Support engineers can identify dimension-related issues within five minutes using the structured diagnostics, proven by a dry run log review.
 - **SC-004**: Feature-branch runs of `dotnet test Html2x.sln -c Release` plus the Html2x.TestConsole width/height fixtures complete without manual PDF tweaks, proven by archiving the generated PDFs and logs (as-produced) under `build/width-height/`.
+
+
 

@@ -23,7 +23,7 @@ internal static class LayoutLog
             new EventId(2002, nameof(BuildComplete)),
             "Layout produced {BlockCount} block fragments");
 
-    public static void BuildStart(ILogger logger, int htmlLength, Dimensions pageSize)
+    public static void BuildStart(ILogger logger, int htmlLength, PageSize pageSize)
     {
         if (logger.IsEnabled(LogLevel.Information))
         {
