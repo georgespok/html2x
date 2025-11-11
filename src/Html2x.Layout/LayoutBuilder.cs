@@ -37,7 +37,7 @@ public class LayoutBuilder
         _logger = logger ?? NullLogger<LayoutBuilder>.Instance;
     }
 
-    public async Task<HtmlLayout> BuildAsync(string html, Dimensions pageSize)
+    public async Task<HtmlLayout> BuildAsync(string html, PageSize pageSize)
     {
         LayoutLog.BuildStart(_logger, html?.Length ?? 0, pageSize);
 
