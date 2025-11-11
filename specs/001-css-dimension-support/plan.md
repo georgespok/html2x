@@ -25,7 +25,7 @@ Enable deterministic handling of CSS `width` and `height` declarations for block
 
 - [x] Stage isolation maintained (Principle I: Staged Layout Discipline).  
 - [x] Deterministic rendering risks addressed with tests or instrumentation (Principle II).  
-- [x] TDD approach defined, including failing tests to introduce (Principle III).  
+- [x] TDD approach defined, enforcing the one-failing-test-at-a-time loop from Principle III.  
 - [x] Logging and diagnostics updates planned (Principle IV).  
 - [x] Extension points documented with migration guidance (Principle V).
 
@@ -66,3 +66,23 @@ src/Html2x.TestConsole/
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|---------------------------------------|
 | *(none)* | | |
+
+## Implementation Strategy
+
+1. **Phase 1–2 (Setup + Foundational)**: Keep the tree green while enabling the new contracts and validators that US1–US3 depend on.  
+2. **Phase 3 (US1 single-test loops)**:  
+   - Loop 1: T009 → T011/T012  
+   - Loop 2: T009A → T011A  
+   - Loop 3: T010 → T013  
+   - Loop 4: T010A → T013A  
+   Run diagnostics (T014) and refresh the console fixture (T015) once all loops pass.  
+3. **Phase 4 (US2 loops)**: Execute T016 → T018, then T017 → T019, wiring diagnostics with T020 and fixtures with T021.  
+4. **Phase 5 (US3 loops)**: Execute T022 → T024, then T023 → T025, documenting remediation with T026.  
+5. **Phase 6 (Polish)**: Capture full-suite evidence (T027–T029B) and verify the console smoke test (T030). Only one failing test may exist at any time throughout the plan.
+
+## Validation & Evidence
+
+- T028 regenerates deterministic PDFs and logs for every targeted test console scenario.  
+- T029A scripts the five-minute diagnostics review and records the elapsed time in `build/logs/width-height/triage.json`.  
+- T029B stores untouched Html2x.TestConsole outputs under `build/width-height/` and references them in docs/release notes to satisfy SC-004.  
+- T030 confirms the Html2x.TestConsole harness runs with the updated fixtures before merge.

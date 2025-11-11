@@ -7,13 +7,13 @@ description: "Task list for CSS width and height feature delivery"
 **Input**: Design documents from `/specs/001-css-dimension-support/`  
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/schema.md
 
-**Tests**: Author failing tests before implementation per user story priorities. Promote deterministic layout evidence into Html2x.Layout.Test, Html2x.Pdf.Test, and Pdf.TestConsole harness artifacts.
+**Tests**: Follow the single-test TDD loop. Introduce exactly one failing test, implement the minimal passing change/refactor, then proceed to the next scenario once the suite is green. Promote deterministic layout evidence into Html2x.Layout.Test, Html2x.Pdf.Test, and Html2x.TestConsole harness artifacts.
 
 **Organization**: Tasks are grouped by user story to maintain incremental, independently testable delivery.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- **[P]** indicates the task can proceed in parallel because it touches isolated files.
+- **[P]** indicates the task can proceed in parallel because it touches isolated files and does not involve an active failing test loop.
 - **[Story]** maps tasks to spec.md user stories (US1, US2, US3).
 - Every task references the exact file path it modifies or validates.
 
@@ -34,7 +34,7 @@ description: "Task list for CSS width and height feature delivery"
 
 - [ ] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Core/Dimensions/DimensionContracts.cs` per data-model.md.
 - [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
-- [ ] T007 Implement a reusable validation service for px/pt/percent handling inside `src/Html2x.Layout/Styles/DimensionValidator.cs` that enforces Decision 1 from research.md.
+- [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.Layout/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
 - [ ] T008 [P] Add failing regression coverage for the contract layer in `tests/Html2x.Layout.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.
 
 **Checkpoint**: Shared contracts, validation rules, and diagnostics scaffolding are live; user stories can now build specific behavior.
@@ -48,14 +48,18 @@ description: "Task list for CSS width and height feature delivery"
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Create failing px and pt dimension theories in `tests/Html2x.Layout.Test/Dimensions/FixedSizeBlockTests.cs` covering width and height normalization.
-- [ ] T010 [P] [US1] Add a renderer regression in `tests/Html2x.Pdf.Test/Dimensions/FixedBlockSnapshotTests.cs` that inspects fragment rectangles for the grid fixture.
+- [ ] T009 [US1] Introduce the first failing px/pt dimension theory in `tests/Html2x.Layout.Test/Dimensions/FixedSizeBlockTests.cs`; keep it the only failing test and unblock T011–T012 immediately afterward.
+- [ ] T009A [US1] After the T009 loop is green, add a failing complementary-dimension theory that supplies only width or height and asserts the missing dimension is derived within 1 pt before moving on.
+- [ ] T010 [US1] Once the T009/T011 loops are green, add the renderer regression in `tests/Html2x.Pdf.Test/Dimensions/FixedBlockSnapshotTests.cs` to inspect fragment rectangles for the grid fixture before starting any new failing tests.
+- [ ] T010A [US1] After T010/T013 complete, introduce a failing auto-height variance regression (Layout + Pdf snapshot) that forces the engine to detect >1 pt variance before implementing the fix.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Extend CSS parsing and normalization in `src/Html2x.Layout/Styles/CssDimensionResolver.cs` to emit RequestedDimension data for px and pt units.
-- [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragments/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
-- [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/Rendering/BlockRenderer.cs` ensuring clip behavior for overflow.
+- [ ] T011 [US1] Extend CSS parsing and normalization in `src/Html2x.Layout/Style/CssDimensionResolver.cs` to emit RequestedDimension data for px and pt units.
+- [ ] T011A [US1] Update `src/Html2x.Layout/Style/CssDimensionResolver.cs` (or adjacent helpers) to derive the complementary dimension when only width or height is supplied, emitting the tolerance metadata needed by FR-004.
+- [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragment/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
+- [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/PdfRenderer.cs`, ensuring clip behavior for overflow.
+- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the ≤1 pt tolerance and fail fast when it is exceeded.
 - [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs`.
 - [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
 
@@ -70,13 +74,13 @@ description: "Task list for CSS width and height feature delivery"
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Add failing bordered placeholder regression in `tests/Html2x.Pdf.Test/Dimensions/BorderedPlaceholderTests.cs` that asserts border alignment for percent widths.
-- [ ] T017 [P] [US2] Introduce layout theories in `tests/Html2x.Layout.Test/Dimensions/BorderedPercentageTests.cs` covering container width resolution and retry logic.
+- [ ] T016 [US2] Introduce a single failing bordered placeholder regression in `tests/Html2x.Pdf.Test/Dimensions/BorderedPlaceholderTests.cs`, pair it immediately with T018 before adding more tests.
+- [ ] T017 [US2] After the T016/T018 loop is green, add layout theories in `tests/Html2x.Layout.Test/Dimensions/BorderedPercentageTests.cs` covering container width resolution and retry logic, then proceed to T019 only after they pass.
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.Layout/Fragments/BorderedBlockBuilder.cs`.
-- [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Pdf/Rendering/BorderedBlockRenderer.cs`.
+- [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.Layout/Fragment/BorderedBlockBuilder.cs` (create this builder in the `Fragment` folder if it doesn’t exist yet).
+- [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Pdf/QuestPdfFragmentRenderer.cs`.
 - [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs`.
 - [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Html2x.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
 
@@ -91,12 +95,12 @@ description: "Task list for CSS width and height feature delivery"
 
 ### Tests for User Story 3
 
-- [ ] T022 [P] [US3] Add failing invalid-input tests to `tests/Html2x.Layout.Test/Dimensions/InvalidDimensionTests.cs` covering negative values and unsupported units.
+- [ ] T022 [US3] Introduce one failing invalid-input test in `tests/Html2x.Layout.Test/Dimensions/InvalidDimensionTests.cs` (negative values or unsupported units) and pair it immediately with T024 before adding the next scenario.
 - [ ] T023 [P] [US3] Script a console regression in `build/width-height/run-invalid-grid.ps1` that asserts warnings in `build/logs/width-height/invalid.json`.
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Implement validation and fallback responses for unsupported units and conflicting constraints in `src/Html2x.Layout/Styles/DimensionValidator.cs`.
+- [ ] T024 [US3] Build on T007 by adding unsupported-unit and conflicting-constraint fallbacks in `src/Html2x.Layout/Style/DimensionValidator.cs`, emitting warning payloads needed by diagnostics.
 - [ ] T025 [US3] Surface warnings and fallbackReason fields through `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs` and wire them to console output.
 - [ ] T026 [US3] Document remediation steps and diagnostics interpretation in `docs/testing-guidelines.md` plus `docs/release-notes.md`.
 
@@ -109,8 +113,10 @@ description: "Task list for CSS width and height feature delivery"
 **Purpose**: Finish release quality work once all stories pass.
 
 - [ ] T027 [P] Update feature documentation and constitution references inside `specs/001-css-dimension-support/plan.md` and `docs/release-notes.md`.
-- [ ] T028 Run `dotnet test Html2x.sln -c Release` plus Pdf.TestConsole scripts to regenerate `build/width-height/*.pdf` and attach diagnostics artifacts.
+- [ ] T028 Run `dotnet test Html2x.sln -c Release` plus Html2x.TestConsole scripts to regenerate `build/width-height/*.pdf` and attach diagnostics artifacts.
 - [ ] T029 [P] Capture final evidence in `docs/testing-guidelines.md` and archive logs under `build/logs/width-height` for stakeholder review.
+- [ ] T029A Script a timed diagnostics dry run (≤5 minutes) that replays the logged width/height warnings and records elapsed time to `build/logs/width-height/triage.json`.
+- [ ] T029B Record “zero manual PDF edits” by storing the untouched Html2x.TestConsole outputs for the reporting cycle and referencing them in `docs/release-notes.md`.
 - [ ] T030 Verify `dotnet run --project src/Html2x.TestConsole/Html2x.TestConsole.csproj` smoke test uses updated fixtures before merge.
 
 ---
@@ -133,9 +139,9 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 
 ## Parallel Execution Examples
 
-- **US1**: T009 (layout tests) and T010 (renderer regression) can run concurrently since they target different test projects.  
-- **US2**: T016 (Pdf snapshot) and T017 (Layout theories) proceed in parallel while implementation tasks wait for test failures.  
-- **US3**: T022 (invalid unit tests) and T023 (console script) can be developed by separate contributors to speed up validation tooling.  
+- **US1**: Keep loops sequential—T009 → T011/T012, T009A → T011A, T010 → T013, T010A → T013A. Never run more than one failing test at a time even though the projects differ.  
+- **US2**: Teams may own US2 work concurrently, but finish the T016 → T018 loop before starting T017 → T019 to preserve the single-test rule.  
+- **US3**: US3 work can progress alongside other stories, yet each invalid-input scenario (T022 → T024, then T023 → T025) must remain a separate green loop before adding the next failing test.  
 - **Cross Story**: T014 (diagnostics) and T020 (border diagnostics) run in parallel once `BlockDimensionDiagnostics` scaffolding (T006) exists.  
 - **Polish**: T027 documentation updates and T029 evidence capture operate independently of the final smoke test (T030).
 
@@ -145,11 +151,16 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 
 **MVP First (User Story 1)**  
 1. Finish Phases 1 and 2.  
-2. Complete Phase 3 tasks in order: failing tests (T009–T010), core layout changes (T011–T013), diagnostics (T014), and harness refresh (T015).  
-3. Ship MVP once Pdf snapshots and console logs prove deterministic 1pt tolerance.
+2. Complete Phase 3 as alternating loops:  
+   - Loop 1: T009 → T011/T012  
+   - Loop 2: T009A → T011A  
+   - Loop 3: T010 → T013  
+   - Loop 4: T010A → T013A  
+   Follow with diagnostics (T014) and harness refresh (T015).  
+3. Ship MVP once Pdf snapshots and console logs prove deterministic 1 pt tolerance.  
 
 **Incremental Delivery**  
-1. After MVP, branch teams tackle US2 and US3 concurrently, driven by the failing tests from T016–T017 and T022–T023.  
+1. After MVP, branch teams tackle US2 and US3 concurrently, but each team must finish loops sequentially (T016 → T018, then T017 → T019; T022 → T024, then T023 → T025) before starting the next scenario.  
 2. Merge user stories individually, ensuring each phase checkpoint is respected and `docs/testing-guidelines.md` gets updates (T026, T027).  
 3. Close with Phase 6 full test sweeps.
 
