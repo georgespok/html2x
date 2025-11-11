@@ -34,6 +34,6 @@ Provides a shared contract for tooling and tests to describe how block-level con
 - `fallbackReason` (string, nullable).
 
 ## Usage Notes
-- These payloads live only inside tests, recorders, or console tooling; they document what data must flow through Html2x.Core contracts.
+- These payloads live only inside tests, recorders, or console tooling; they document what data must flow through Html2x.Abstractions contracts.
 - Emit diagnostics for every bordered block processed so deterministic comparisons can assert dimension lineage per Principle IV.
 - When future units (e.g., `em`, `cm`) are supported, extend the `unit` enum and add migration guidance in `docs/`.

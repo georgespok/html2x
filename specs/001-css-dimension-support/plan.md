@@ -10,14 +10,14 @@ Enable deterministic handling of CSS `width` and `height` declarations for block
 ## Technical Context
 
 **Language/Version**: .NET 8 (`net8.0` across Html2x assemblies)  
-**Primary Dependencies**: AngleSharp for CSS parsing, Html2x.Core contracts, Html2x.Layout fragment builder, Html2x.Pdf renderer, QuestPDF output harness  
+**Primary Dependencies**: AngleSharp for CSS parsing, Html2x.Abstractions contracts, Html2x.LayoutEngine fragment builders, Html2x.Renderers.Pdf pipeline, QuestPDF output harness  
 **Storage**: In-memory only; width/height metadata live on transient Requested/Resolved Dimension records plus FragmentDimension objects  
-**Testing**: xUnit suites per module plus Html2x.TestConsole regression captures on the supported Windows runner (per SC-001); new tests live in `Html2x.Layout.Test`, `Html2x.Pdf.Test`, and a console harness sample run scripted in `build/`
+**Testing**: xUnit suites per module plus Html2x.TestConsole regression captures on the supported Windows runner (per SC-001); new tests live in `src/Tests/Html2x.LayoutEngine.Test`, `src/Tests/Html2x.Renderers.Pdf.Test`, and a console harness sample run scripted in `build/`
 **Target Platform**: Windows runners via `dotnet test Html2x.sln -c Release` and console smoke tests  
 **Project Type**: Modular library with shared contracts and PDF renderer; no services introduced  
 **Performance Goals**: Maintain deterministic fragment sizing within ±1pt tolerance and avoid extra layout passes beyond a single retry for percentage convergence  
 **Constraints**: Managed code only, no `<img>` sizing implementation, supported units limited to px/pt/% with warnings for others, pipeline stage isolation must remain intact  
-**Scale/Scope**: Touches `Html2x.Core` (dimension contracts), `Html2x.Layout` (style resolution + box builder), `Html2x.Pdf` (fragment consumption), plus tests/console assets; expected to handle templates with hundreds of bordered blocks per page without throughput regression
+**Scale/Scope**: Touches `Html2x.Abstractions` (dimension contracts), `Html2x.LayoutEngine` (style resolution + box builder), `Html2x.Renderers.Pdf` (fragment consumption), plus tests/console assets; expected to handle templates with hundreds of bordered blocks per page without throughput regression
 
 ## Constitution Check
 
@@ -45,19 +45,24 @@ specs/001-css-dimension-support/
 
 ### Source Code (repository root)
 
+The November 2025 structure refactor consolidated legacy `Html2x.Core/Layout/Pdf` projects into the current `Html2x.*` assemblies and relocated every test harness under `src/Tests/` so feature docs must reference the new paths.
+
 ```
 src/
-    Html2x.Core/
-    Html2x.Layout/
-    Html2x.Pdf/
-tests/
-    Html2x.Layout.Test/
-    Html2x.Pdf.Test/
-    html2x.IntegrationTest/
-src/Html2x.TestConsole/
+    Html2x/                     (composition + public API surface)
+    Html2x.Abstractions/        (shared contracts + diagnostics)
+    Html2x.LayoutEngine/        (style pipeline, box + fragment builders)
+    Html2x.Renderers.Pdf/       (QuestPDF renderer + visitors)
+    Tests/
+        Html2x.LayoutEngine.Test/
+        Html2x.Renderers.Pdf.Test/
+        Html2x.Test/            (shared harness + integration glue)
+        Html2x.TestConsole/     (manual harness + fixtures)
+build/
+    width-height/               (spec evidence + generated PDFs)
 ```
 
-**Structure Decision**: Extend `Html2x.Core` dimension records with unit source metadata, wire `Html2x.Layout` style resolvers and box builders to honor px/pt/% widths and heights, propagate metrics unchanged into `Html2x.Pdf`, and seed new regression assets under `src/Html2x.TestConsole/html/width-height/`.
+**Structure Decision**: Extend `Html2x.Abstractions` dimension records with unit source metadata, wire `Html2x.LayoutEngine` style resolvers and box builders to honor px/pt/% widths and heights, propagate metrics unchanged into `Html2x.Renderers.Pdf`, and seed new regression assets under `src/Tests/Html2x.TestConsole/html/width-height/`.
 
 ## Complexity Tracking
 
