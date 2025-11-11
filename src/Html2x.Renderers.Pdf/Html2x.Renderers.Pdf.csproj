@@ -7,13 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2025.7.4" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
-    <ProjectReference Include="..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
-    <ProjectReference Include="..\Html2x.Renderers.Pdf\Html2x.Renderers.Pdf.csproj" />
   </ItemGroup>
 
 </Project>
