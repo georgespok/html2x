@@ -7,15 +7,14 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 - **Fail first**: Introduce one failing test, implement the minimal code to pass, then refactor. Constructors and trivial DTOs are the only exceptions.
 - **Behavior over structure**: Assertions must focus on observable outcomes (fragment shapes, PDF metadata, layout positions) rather than internal state or reflection.
 - **No reflection**: `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`, etc., are banned in test projects. Favor direct API calls or explicit test doubles.
-- **Layer isolation**: Each stage—Core, Layout, PDF renderer—must be testable in isolation. Integration tests cover the seams, not the only validation.
+- **Layer isolation**: Each stage (Abstractions, LayoutEngine, PDF renderer) must be testable in isolation. Integration tests cover the seams, not the only validation.
 
 ## Test Layout by Project
 
 | Project | Scope | Typical Scenarios | Notes |
 | --- | --- | --- | --- |
-| `Html2x.Core.Tests` (in `Html2x.Layout.Test` for now) | Value types, geometry helpers, computed style defaults. | Edge cases for `Dimensions`, color parsing, fragment invariants. | Keep data-driven `[Theory]` tests to cover boundaries. |
-| `Html2x.Layout.Test` | DOM/load, style cascade, box flow, fragmentation. | HTML fixtures producing expected fragments or pagination rules. | Use snapshot-style helpers sparingly; prefer explicit assertions. |
-| `Html2x.Pdf.Test` | Fragment dispatch and QuestPDF integration. | Rendering simple layouts, validating fonts, line weights, warnings for unsupported fragments. | Record fragments (`RecordingFragmentRenderer`) when diagnosing traversal. |
+| `Html2x.LayoutEngine.Test` | Value types, DOM load, style cascade, box flow, fragmentation. | HTML fixtures producing expected fragments or pagination rules, geometry edge cases. | Use snapshot helpers sparingly; prefer explicit assertions and `[Theory]` coverage. |
+| `Html2x.Renderers.Pdf.Test` | Fragment dispatch and QuestPDF integration. | Rendering simple layouts, validating fonts, line weights, warnings for unsupported fragments. | Record fragments (`RecordingFragmentRenderer`) when diagnosing traversal. |
 | `Html2x.Test` | End-to-end `HtmlConverter` verification. | Whole documents, PDF header checks, logging emission via `TestOutputLoggerProvider`. | Keep scenarios realistic and document the purpose in comments. |
 
 ## Writing High-Quality Tests
@@ -24,7 +23,7 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 - **Arrange-Act-Assert**: Keep blocks visually distinct. Extract helpers when repeated setups appear.
 - **Use `[Theory]` first**: Parameterize scenarios with `[InlineData]`, `[MemberData]`, or `[ClassData]` to collapse repetitive tests. Reserve `[Fact]` for unique flows.
 - **No magic numbers**: When asserting coordinates or sizes, describe meaning (e.g., `expectedBaseline`) in variable names or comments.
-- **Keep tests short**: Aim for ≤15 executable lines. If longer, consider helper methods or additional test classes.
+- **Keep tests short**: Aim for <=15 executable lines. If longer, consider helper methods or additional test classes.
 
 ## Snapshot & Golden Files
 
@@ -35,7 +34,7 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 ## PDF Validation Guidance
 
 - Use `PdfWordParser` to read text content and attributes; verify font usage, positions, and styling.
-- `PdfValidator` should back structural assertions (valid PDF, page count). Do not assert binary equality—prefer semantic checks.
+- `PdfValidator` should back structural assertions (valid PDF, page count). Do not assert binary equality; prefer semantic checks.
 - For regression debugging, store PDFs temporarily using `SavePdfForInspectionAsync` and link the temp path in test output.
 
 ## Integration Strategy
@@ -43,7 +42,7 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 1. Cover the same user journey once. Avoid duplicating the same checks across multiple integration tests.
 2. Use real options and fonts shipped with the repo to catch platform-specific issues.
 3. Capture logging output via the `TestOutputLoggerProvider` when verifying diagnostics or error flows.
-4. Validate error propagation—assert the thrown exception type and that logs surface the failure.
+4. Validate error propagation; assert the thrown exception type and that logs surface the failure.
 
 ## Continuous Improvement
 

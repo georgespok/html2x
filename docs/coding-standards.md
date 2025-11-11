@@ -13,12 +13,12 @@ This document captures the conventions and engineering principles that keep Html
 
 | Area | Responsibilities | Must Not |
 | --- | --- | --- |
-| `Html2x.Core` | Data contracts (styles, boxes, fragments), shared geometry, service interfaces. | Depend on AngleSharp, QuestPDF, logging implementations, or I/O primitives. |
-| `Html2x.Layout` | HTML → Fragment pipeline (DOM, style, box, fragment). | Reference QuestPDF or mutate fragment data after creation. |
-| `Html2x.Pdf` | Fragment → PDF rendering and diagnostics. | Reach back into DOM/style/box types; mutate fragment state. |
+| `Html2x.Abstractions` | Data contracts (styles, fragments, diagnostics, measurements), shared geometry, service interfaces. | Depend on AngleSharp, QuestPDF, logging implementations, or I/O primitives. |
+| `Html2x.LayoutEngine` | HTML -> Fragment pipeline (DOM, style, box, fragment). | Reference QuestPDF or mutate fragment data after creation. |
+| `Html2x.Renderers.Pdf` | Fragment -> PDF rendering and diagnostics. | Reach back into DOM/style/box types; mutate fragment state. |
 | `Html2x` (facade) | Orchestrate layout + renderer wiring for consumers. | Contain layout or rendering logic. |
 
-Cross-layer calls must always travel forward (Core → Layout → Renderer). If you need information from an earlier stage, add it to the fragment model rather than reaching back.
+Cross-layer calls must always travel forward (Abstractions -> LayoutEngine -> Renderer). If you need information from an earlier stage, add it to the fragment model rather than reaching back.
 
 ## Implementation Conventions
 
@@ -43,7 +43,7 @@ Cross-layer calls must always travel forward (Core → Layout → Renderer). If 
 ### Extensibility Hotspots
 
 - **New CSS property**: Update `CssStyleComputer`, extend the box model if geometry changes, and add fragment fields if renderers need the data.
-- **New fragment type**: Define it under `Html2x.Core.Layout`, update visitors, builders, and renderers. Maintain immutability.
+- **New fragment type**: Define it under `Html2x.Abstractions.Layout`, update visitors, builders, and renderers. Maintain immutability.
 - **New renderer**: Implement `IFragmentRenderer` and provide a factory. Reuse the dispatcher pattern for traversal.
 - **New diagnostics**: Add to the relevant log helper class (`PdfRendererLog`, `LayoutLog`) instead of ad-hoc `logger.Log...` calls.
 

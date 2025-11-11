@@ -2,7 +2,7 @@
 
 This guide walks you through adding support for a new CSS property or selector so that future contributions follow the same, predictable flow.
 
-> Summary: extend style computation → flow it into the box model → expose on fragments → render it → test it.
+> Summary: extend style computation -> flow it into the box model -> expose on fragments -> render it -> test it.
 
 ## 1. Understand the Property
 
@@ -12,27 +12,27 @@ Before writing code, clarify:
 - **Value space**: strings, lengths, enumerations, color codes.
 - **Inheritance**: does the property inherit by default?
 - **Initial value**: what should be applied when the author omits the property?
-- **Affected stages**: does the property influence layout (box tree), rendering-only (fragment → renderer), or both?
+- **Affected stages**: does the property influence layout (box tree), rendering-only (fragment -> renderer), or both?
 
 Document these decisions in the PR description so reviewers know the intended behavior.
 
 ## 2. Update Style Computation
 
-1. Add constants/parsing helpers under `Html2x.Layout.Style`.
+1. Add constants/parsing helpers under `Html2x.LayoutEngine.Style`.
 2. Extend `CssStyleComputer` (and related traversal helpers) to read values from the computed style map.
 3. Update `UserAgentDefaults` with the initial value.
 4. Ensure the resolved value is carried in an immutable record within `ComputedStyle`.
 
 ### Tests
 
-- Add unit tests in `Html2x.Layout.Test` that feed sample HTML with inline styles and verify the computed style output.
+- Add unit tests in `Html2x.LayoutEngine.Test` that feed sample HTML with inline styles and verify the computed style output.
 - Use `[Theory]` to cover valid and invalid values.
 
 ## 3. Propagate Through the Box Model
 
 If the property influences layout (e.g., margins, line height):
 
-1. Extend the relevant box type in `Html2x.Core` with new fields.
+1. Extend the relevant box type in `Html2x.Abstractions` with new fields.
 2. Modify `BoxTreeBuilder` to map the computed style into the box.
 3. Re-run TDD: add/adjust tests that validate the box structure.
 
@@ -57,7 +57,7 @@ If the property is render-only (e.g., text decoration), you may skip box changes
 
 ### Tests
 
-- Add/extend tests under `Html2x.Pdf.Test`:
+- Add/extend tests under `Html2x.Renderers.Pdf.Test`:
   - Render a minimal layout exercising the property.
   - Use `PdfWordParser` or other helpers to verify output.
   - Assert warnings for unsupported values when appropriate.
