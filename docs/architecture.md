@@ -59,7 +59,7 @@ Renderer (PDF via QuestPDF)
 | --- | --- | --- | --- |
 | `src/Html2x.Core` | Shared contracts and value types for styles, boxes, fragments, units, and colors. | `Fragment`, `BlockFragment`, `LineBoxFragment`, `LayoutPage`, `ComputedStyle`. | Add new fragment or style primitives here first so downstream projects stay aligned. |
 | `src/Html2x.Layout` | Pipeline from DOM + CSS to fragment tree. | `LayoutBuilder`, `AngleSharpDomProvider`, `CssStyleComputer`, `BoxTreeBuilder`, `FragmentBuilder`. | Keep each stage side effect free. New layout features should appear as new box types or fragment builders rather than injected logic elsewhere. |
-| `src/Html2x.Pdf` | QuestPDF backed renderer plus logging helpers. | `PdfRenderer`, `QuestPdfFragmentRendererFactory`, `QuestPdfFragmentRenderer`, `RendererLog`. | Alternate renderers belong in sibling projects that implement the same interfaces. |
+| `src/Html2x.Pdf` | QuestPDF backed renderer plus logging helpers. | `PdfRenderer`, `QuestPdfFragmentRendererFactory`, `QuestPdfFragmentRenderer`, `PdfRendererLog`. | Alternate renderers belong in sibling projects that implement the same interfaces. |
 | `src/Html2x` | Orchestration facade consumed by callers. | `HtmlConverter`. | Wire new diagnostics or configuration options here, keeping defaults lightweight. |
 | `src/Html2x.TestConsole` | Manual smoke harness with console logging. | `Program`. | Use for ad hoc validation; keep dependencies minimal. |
 | `src/Html2x.Layout.Test` | Unit tests for DOM, CSS, and layout stages. | xUnit test classes grouped by stage. | When extending layout, add golden tests here first. |
@@ -96,7 +96,7 @@ Renderer (PDF via QuestPDF)
 
 - **Role**: Render `HtmlLayout` objects to PDF bytes via QuestPDF while emitting diagnostics.
 - **Components**:
-  - `PdfRenderer` orchestrator and `RendererLog` helper.
+  - `PdfRenderer` orchestrator and `PdfRendererLog` helper.
   - `IFragmentRendererFactory` plus `QuestPdfFragmentRendererFactory` for dependency injection.
   - `QuestPdfFragmentRenderer` and `FragmentRenderDispatcher` for fragment traversal.
 - **Inputs and outputs**: Consumes fragment pages with `PdfOptions`; produces PDF byte arrays and structured logs.
@@ -170,4 +170,5 @@ With these hooks you can capture a full breadcrumb trail from HTML ingestion thr
 2. Add renderer assertions only if fragment output changes do not fully capture the intent.
 3. Update integration coverage once the end-to-end result stabilizes.
 4. Record PDF artifacts sparingly and document the reason in test comments.
+
 

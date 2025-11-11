@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 
-namespace html2x.IntegrationTest;
+namespace Html2x.Test;
 
 [CollectionDefinition("PdfRendering", DisableParallelization = true)]
 public abstract class IntegrationTestBase(ITestOutputHelper output)
