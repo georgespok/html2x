@@ -1,9 +1,9 @@
 using Html2x.Abstractions.Layout;
 using Microsoft.Extensions.Logging;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Pdf.Pipeline;
 
-internal static class RendererLog
+internal static class PdfRendererLog
 {
     private static readonly Action<ILogger, int, int, Exception?> RenderingLayout =
         LoggerMessage.Define<int, int>(
@@ -78,3 +78,6 @@ internal static class RendererLog
         }
     }
 }
+
+
+

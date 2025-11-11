@@ -1,9 +1,9 @@
-﻿using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using FontWeight = Html2x.Abstractions.Layout.FontWeight;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Pdf.Mapping;
 
 /// <summary>
 ///     Helper for mapping style and font attributes to QuestPDF API.
@@ -30,3 +30,4 @@ internal static class QuestPdfStyleMapper
             .WithAlpha(color.A / 255f);
     }
 }
+

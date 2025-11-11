@@ -1,8 +1,9 @@
+using Html2x.Pdf.Options;
 using QuestPDF;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Renderers.Pdf.Pipeline;
 
 public static class QuestPdfConfigurator
 {
@@ -35,3 +36,4 @@ public static class QuestPdfConfigurator
         };
     }
 }
+
