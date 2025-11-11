@@ -1,12 +1,14 @@
 using AngleSharp.Dom;
-using Html2x.Core;
-using Html2x.Core.Layout;
+using Html2x.Abstractions;
+using Html2x.Abstractions.Layout;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Moq;
 using Shouldly;
+
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -78,3 +80,5 @@ public class LayoutBuilderTests
         _fragmentBuilder.Verify(x => x.Build(boxTree), Times.Once);
     }
 }
+
+

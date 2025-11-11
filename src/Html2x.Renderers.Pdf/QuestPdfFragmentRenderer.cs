@@ -1,10 +1,10 @@
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 internal sealed class QuestPdfFragmentRenderer(
     IContainer container,
