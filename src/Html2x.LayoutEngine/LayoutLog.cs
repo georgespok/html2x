@@ -1,5 +1,7 @@
-using Html2x.Core;
+using Html2x.Abstractions;
 using Microsoft.Extensions.Logging;
+
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine;
 
@@ -47,3 +49,5 @@ internal static class LayoutLog
         }
     }
 }
+
+

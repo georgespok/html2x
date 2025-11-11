@@ -1,13 +1,15 @@
 using System.Drawing;
-using Html2x.Core;
-using Html2x.Core.Layout;
+using Html2x.Abstractions;
+using Html2x.Abstractions.Layout;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Spacing = Html2x.Core.Layout.Spacing;
+using Spacing = Html2x.Abstractions.Layout.Spacing;
+
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine;
 
@@ -64,3 +66,5 @@ public class LayoutBuilder
         return layout;
     }
 }
+
+

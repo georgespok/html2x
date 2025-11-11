@@ -1,7 +1,7 @@
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Shouldly;
 
-namespace Html2x.Pdf.Test;
+namespace Html2x.Renderers.Pdf.Test;
 
 public class BorderRenderingTests
 {

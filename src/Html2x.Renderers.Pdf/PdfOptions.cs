@@ -1,6 +1,8 @@
-﻿using Html2x.Core;
+using Html2x.Abstractions;
 
-namespace Html2x.Pdf;
+using Html2x.Abstractions.Measurements.Units;
+
+namespace Html2x.Renderers.Pdf;
 
 public enum PdfLicenseType
 {
@@ -16,3 +18,5 @@ public class PdfOptions
     public PageSize PageSize { get; set; } = PaperSizes.Letter;
     public bool EnableDebugging { get; set; } = false;
 }
+
+

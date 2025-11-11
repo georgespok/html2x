@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 internal sealed class QuestPdfFragmentRendererFactory : IFragmentRendererFactory
 {

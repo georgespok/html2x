@@ -1,4 +1,4 @@
-namespace Html2x.Pdf.Test;
+namespace Html2x.Renderers.Pdf.Test;
 
 public class PdfValidator
 {

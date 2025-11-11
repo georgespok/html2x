@@ -1,9 +1,9 @@
-﻿using Html2x.Core.Layout;
+﻿using Html2x.Abstractions.Layout;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
-using FontWeight = Html2x.Core.Layout.FontWeight;
+using FontWeight = Html2x.Abstractions.Layout.FontWeight;
 
-namespace Html2x.Pdf;
+namespace Html2x.Renderers.Pdf;
 
 /// <summary>
 ///     Helper for mapping style and font attributes to QuestPDF API.

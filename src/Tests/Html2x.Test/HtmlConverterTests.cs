@@ -1,6 +1,6 @@
 using System.Text;
 using html2x.IntegrationTest;
-using Html2x.Pdf;
+using Html2x.Renderers.Pdf;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 

@@ -1,4 +1,4 @@
-using Html2x.Pdf;
+using Html2x.Renderers.Pdf;
 using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;

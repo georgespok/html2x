@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Drawing;
-using Html2x.Core;
-using Html2x.Core.Layout;
+using Html2x.Abstractions;
+using Html2x.Abstractions.Layout;
 using Shouldly;
 
-namespace Html2x.Pdf.Test;
+using Html2x.Abstractions.Measurements.Units;
+
+namespace Html2x.Renderers.Pdf.Test;
 
 public class PdfRendererTests
 {
@@ -148,3 +150,5 @@ public class PdfRendererTests
         };
     }
 }
+
+

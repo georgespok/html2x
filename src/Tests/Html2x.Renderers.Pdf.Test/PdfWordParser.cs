@@ -1,9 +1,10 @@
-using Html2x.Core;
+using Html2x.Abstractions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
-namespace Html2x.Pdf.Test;
+using Html2x.Abstractions.Utilities.Color;
+namespace Html2x.Renderers.Pdf.Test;
 
 /// <summary>
 ///     Parses PDF documents to extract structured word information including text and styling attributes.

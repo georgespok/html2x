@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Html2x.LayoutEngine.Box;
 
 namespace Html2x.LayoutEngine.Fragment;
@@ -10,7 +10,7 @@ public interface IFragmentBuildObserver
 
     void OnInlineFragmentCreated(InlineBox source, BlockFragment parent, LineBoxFragment line);
 
-    void OnSpecialFragmentCreated(DisplayNode source, Core.Layout.Fragment fragment);
+    void OnSpecialFragmentCreated(DisplayNode source, Abstractions.Layout.Fragment fragment);
 
-    void OnZOrderCompleted(IReadOnlyList<Core.Layout.Fragment> fragments);
+    void OnZOrderCompleted(IReadOnlyList<Abstractions.Layout.Fragment> fragments);
 }

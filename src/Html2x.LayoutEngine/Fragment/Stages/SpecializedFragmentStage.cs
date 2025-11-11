@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using Html2x.Core.Layout;
+using Html2x.Abstractions.Layout;
 using Html2x.LayoutEngine.Box;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
@@ -73,7 +73,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         }
     }
 
-    private static void NotifySpecial(DisplayNode source, Core.Layout.Fragment fragment,
+    private static void NotifySpecial(DisplayNode source, Abstractions.Layout.Fragment fragment,
         IReadOnlyList<IFragmentBuildObserver> observers)
     {
         foreach (var observer in observers)
