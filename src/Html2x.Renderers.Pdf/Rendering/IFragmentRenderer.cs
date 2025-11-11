@@ -1,7 +1,6 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 
-using Html2x.Pdf.Options;
-namespace Html2x.Pdf.Rendering;
+namespace Html2x.Renderers.Pdf.Rendering;
 
 public interface IFragmentRenderer
 {

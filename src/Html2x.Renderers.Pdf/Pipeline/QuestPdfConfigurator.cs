@@ -1,4 +1,4 @@
-using Html2x.Pdf.Options;
+using Html2x.Renderers.Pdf.Options;
 using QuestPDF;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;

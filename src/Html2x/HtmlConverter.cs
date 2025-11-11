@@ -1,11 +1,7 @@
 using Html2x.LayoutEngine;
-using Html2x.Pdf.Pipeline;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-
-using Html2x.Abstractions.Measurements.Units;
-
-using Html2x.Pdf.Options;
+using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Pipeline;
 
 namespace Html2x;

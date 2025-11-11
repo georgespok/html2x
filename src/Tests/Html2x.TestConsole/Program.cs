@@ -1,7 +1,6 @@
-using Html2x.Pdf.Pipeline;
+using Html2x.Renderers.Pdf.Options;
 using Microsoft.Extensions.Logging;
 
-using Html2x.Pdf.Options;
 namespace Html2x.TestConsole;
 
 internal class Program

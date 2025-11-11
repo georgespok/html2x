@@ -1,8 +1,8 @@
 using System.Text;
+using Html2x.Renderers.Pdf.Options;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-using Html2x.Pdf.Options;
 namespace Html2x.Test;
 
 public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable

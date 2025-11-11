@@ -1,6 +1,8 @@
 ﻿using System.Drawing;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
 
-namespace Html2x.Abstractions.Layout;
+namespace Html2x.Abstractions.Layout.Documents;
 
 public sealed record LayoutPage(
     SizeF Size, // full page size in pt (e.g., A4 = 595x842)

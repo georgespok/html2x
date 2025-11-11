@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using AngleSharp.Dom;
-using Html2x.LayoutEngine;
 
 namespace Html2x.LayoutEngine.Style;
 

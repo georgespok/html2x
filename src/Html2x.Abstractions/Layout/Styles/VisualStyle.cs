@@ -1,4 +1,4 @@
-﻿namespace Html2x.Abstractions.Layout;
+﻿namespace Html2x.Abstractions.Layout.Styles;
 
 public sealed record VisualStyle(
     ColorRgba? BackgroundColor = null, // resolved final color; null = transparent
