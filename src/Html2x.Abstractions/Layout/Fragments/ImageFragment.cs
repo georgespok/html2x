@@ -1,9 +1,9 @@
-﻿namespace Html2x.Abstractions.Layout;
+﻿namespace Html2x.Abstractions.Layout.Fragments;
 
 // Replaced element (img)
 public sealed class ImageFragment : Fragment
 {
-    public ImageRef Image { get; init; } // logical reference; renderer resolves bytes/handle
+    public required ImageRef Image { get; init; } // logical reference; renderer resolves bytes/handle
     public ObjectFit ObjectFit { get; init; } // Contain, Cover, Fill, ScaleDown, None
     public Alignment Align { get; init; } // for contain/cover anchoring
 }

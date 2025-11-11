@@ -1,8 +1,8 @@
-using Html2x.Abstractions.Layout;
-using Html2x.Pdf.Mapping;
-using Html2x.Pdf.Options;
-using Html2x.Pdf.Pipeline;
-using Html2x.Pdf.Rendering;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Renderers.Pdf.Mapping;
+using Html2x.Renderers.Pdf.Options;
+using Html2x.Renderers.Pdf.Pipeline;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;

@@ -1,13 +1,12 @@
 using System.Drawing;
-using Html2x.Abstractions;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Documents;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Spacing = Html2x.Abstractions.Layout.Spacing;
+using Spacing = Html2x.Abstractions.Layout.Styles.Spacing;
 
 using Html2x.Abstractions.Measurements.Units;
 
@@ -17,31 +16,22 @@ namespace Html2x.LayoutEngine;
 ///     High-level orchestrator that enforces the layered pipeline:
 ///     DOM/CSSOM -> Style Tree -> Box Tree -> Fragment Tree -> HtmlLayout
 /// </summary>
-public class LayoutBuilder
+public class LayoutBuilder(
+    IDomProvider domProvider,
+    IStyleComputer styleComputer,
+    IBoxTreeBuilder boxBuilder,
+    IFragmentBuilder fragmentBuilder,
+    ILogger<LayoutBuilder>? logger = null)
 {
-    private readonly IBoxTreeBuilder _boxBuilder;
-    private readonly IDomProvider _domProvider;
-    private readonly IFragmentBuilder _fragmentBuilder;
-    private readonly IStyleComputer _styleComputer;
-    private readonly ILogger<LayoutBuilder> _logger;
-
-    public LayoutBuilder(
-        IDomProvider domProvider,
-        IStyleComputer styleComputer,
-        IBoxTreeBuilder boxBuilder,
-        IFragmentBuilder fragmentBuilder,
-        ILogger<LayoutBuilder>? logger = null)
-    {
-        _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
-        _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
-        _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
-        _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
-        _logger = logger ?? NullLogger<LayoutBuilder>.Instance;
-    }
+    private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
+    private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
+    private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
+    private readonly IStyleComputer _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
+    private readonly ILogger<LayoutBuilder> _logger = logger ?? NullLogger<LayoutBuilder>.Instance;
 
     public async Task<HtmlLayout> BuildAsync(string html, PageSize pageSize)
     {
-        LayoutLog.BuildStart(_logger, html?.Length ?? 0, pageSize);
+        LayoutLog.BuildStart(_logger, html.Length, pageSize);
 
         var dom = await _domProvider.LoadAsync(html);
         LayoutLog.StageComplete(_logger, "DomLoaded");

@@ -1,7 +1,6 @@
-using System;
 using System.Globalization;
 
-namespace Html2x.Abstractions.Layout;
+namespace Html2x.Abstractions.Layout.Styles;
 
 public readonly record struct ColorRgba(byte R, byte G, byte B, byte A)
 {

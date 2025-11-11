@@ -1,12 +1,11 @@
 using AngleSharp;
-using Html2x.Abstractions;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Shouldly;
-using CoreFragment = Html2x.Abstractions.Layout.Fragment;
+using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 using Html2x.Abstractions.Measurements.Units;
 

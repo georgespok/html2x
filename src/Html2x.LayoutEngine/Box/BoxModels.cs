@@ -1,5 +1,5 @@
 ﻿using AngleSharp.Dom;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine.Box;

@@ -1,4 +1,3 @@
-using System;
 using AngleSharp.Dom;
 
 namespace Html2x.LayoutEngine.Style;

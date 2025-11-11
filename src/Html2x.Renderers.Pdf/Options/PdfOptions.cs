@@ -1,8 +1,6 @@
-using Html2x.Abstractions;
-
 using Html2x.Abstractions.Measurements.Units;
 
-namespace Html2x.Pdf.Options;
+namespace Html2x.Renderers.Pdf.Options;
 
 public enum PdfLicenseType
 {

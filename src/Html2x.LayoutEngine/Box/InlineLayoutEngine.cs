@@ -1,9 +1,10 @@
 namespace Html2x.LayoutEngine.Box;
 
-public sealed class InlineLayoutEngine : IInlineLayoutEngine
+public sealed class InlineLayoutEngine(IFontMetricsProvider metrics, ILineHeightStrategy lineHeightStrategy)
+    : IInlineLayoutEngine
 {
-    private readonly ILineHeightStrategy _lineHeightStrategy;
-    private readonly IFontMetricsProvider _metrics;
+    private readonly ILineHeightStrategy _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+    private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
 
     public InlineLayoutEngine()
         : this(new FontMetricsProvider(), new DefaultLineHeightStrategy())
@@ -13,12 +14,6 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
     public InlineLayoutEngine(IFontMetricsProvider metrics)
         : this(metrics, new DefaultLineHeightStrategy())
     {
-    }
-
-    public InlineLayoutEngine(IFontMetricsProvider metrics, ILineHeightStrategy lineHeightStrategy)
-    {
-        _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
-        _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
     }
 
     public float MeasureHeight(DisplayNode block, float availableWidth)
