@@ -31,7 +31,7 @@ IFragmentRendererFactory ──▶ IFragmentRenderer ──▶ FragmentRenderDis
 When enhancing the default PDF renderer:
 
 - Update `QuestPdfFragmentRenderer` cautiously. Group changes behind clearly named helper methods (e.g., `RenderTextDecoration`).
-- Use `RendererLog` for new diagnostics rather than raw `logger.Log...` calls.
+- Use `PdfRendererLog` for new diagnostics rather than raw `logger.Log...` calls.
 - Keep `PdfRenderer` oblivious to QuestPDF specifics—only the factory and fragment renderer should reference QuestPDF APIs.
 
 ## Logging Expectations
@@ -77,3 +77,4 @@ For non-PDF outputs, design verification helpers that assert semantic equality (
 - [ ] Optional: console or test harness updated to demo the new renderer.
 
 By following these steps your renderer will plug into the existing pipeline cleanly and remain easy to evolve.
+

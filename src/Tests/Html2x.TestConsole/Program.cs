@@ -1,6 +1,7 @@
-using Html2x.Renderers.Pdf;
+using Html2x.Pdf.Pipeline;
 using Microsoft.Extensions.Logging;
 
+using Html2x.Pdf.Options;
 namespace Html2x.TestConsole;
 
 internal class Program
@@ -90,4 +91,5 @@ internal class Program
         Console.WriteLine();
     }
 }
+
 

@@ -1,10 +1,14 @@
 using Html2x.Abstractions.Layout;
+using Html2x.Pdf.Mapping;
+using Html2x.Pdf.Options;
+using Html2x.Pdf.Pipeline;
+using Html2x.Pdf.Rendering;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Renderers.Pdf.Rendering;
 
 internal sealed class QuestPdfFragmentRenderer(
     IContainer container,
@@ -61,7 +65,7 @@ internal sealed class QuestPdfFragmentRenderer(
                         break;
                     default:
                         i++;
-                        RendererLog.FragmentStart(_logger, child);
+                        PdfRendererLog.FragmentStart(_logger, child);
                         inner.Item().MinHeight(childHeight).Element(item =>
                         {
                             item.Row(row =>
@@ -94,7 +98,7 @@ internal sealed class QuestPdfFragmentRenderer(
 
     public void RenderImage(ImageFragment fragment)
     {
-        RendererLog.FragmentUnsupported(_logger, fragment);
+        PdfRendererLog.FragmentUnsupported(_logger, fragment);
     }
 
     public void RenderRule(RuleFragment fragment)
@@ -120,7 +124,7 @@ internal sealed class QuestPdfFragmentRenderer(
             decorated = decorated.Background(QuestPdfStyleMapper.Map(background));
         }
 
-        if (BorderRendering.GetUniformBorder(style.Borders) is { } border)
+        if (BorderPainter.GetUniformBorder(style.Borders) is { } border)
         {
             if (border.LineStyle is BorderLineStyle.Dashed or BorderLineStyle.Dotted)
             {
@@ -148,3 +152,7 @@ internal sealed class QuestPdfFragmentRenderer(
         });
     }
 }
+
+
+
+

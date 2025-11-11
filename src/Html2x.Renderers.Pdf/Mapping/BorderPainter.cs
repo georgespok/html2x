@@ -1,8 +1,8 @@
 using Html2x.Abstractions.Layout;
 
-namespace Html2x.Renderers.Pdf;
+namespace Html2x.Pdf.Mapping;
 
-internal static class BorderRendering
+internal static class BorderPainter
 {
     public static BorderSide? GetUniformBorder(BorderEdges? edges)
     {
@@ -38,3 +38,5 @@ internal static class BorderRendering
         return side is null || side == candidate;
     }
 }
+
+
