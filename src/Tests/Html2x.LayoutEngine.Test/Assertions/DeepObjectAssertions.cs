@@ -120,7 +120,7 @@ public static class DeepObjectAssertions
 
                 if (shouldMatchMethod is not null)
                 {
-                    shouldMatchMethod.Invoke(null, new[] { actualItem, expectedItem, $"{context}[{i}]" });
+                    shouldMatchMethod.Invoke(null, [actualItem, expectedItem, $"{context}[{i}]"]);
                 }
                 else
                 {
@@ -142,7 +142,7 @@ public static class DeepObjectAssertions
 
         if (shouldMatchMethod is not null)
         {
-            shouldMatchMethod.Invoke(null, new[] { actualValue, expectedValue, context });
+            shouldMatchMethod.Invoke(null, [actualValue, expectedValue, context]);
         }
         else
         {

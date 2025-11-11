@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System;
 using AngleSharp.Dom;
 
 namespace Html2x.LayoutEngine.Style;
@@ -9,18 +6,13 @@ namespace Html2x.LayoutEngine.Style;
 /// Default implementation that walks the DOM for supported elements and
 /// materializes a StyleNode tree using the provided style factory.
 /// </summary>
-public sealed class StyleTraversal : IStyleTraversal
+public sealed class StyleTraversal(IStyleDomFilter filter) : IStyleTraversal
 {
-    private readonly IStyleDomFilter _filter;
+    private readonly IStyleDomFilter _filter = filter ?? throw new ArgumentNullException(nameof(filter));
 
     public StyleTraversal()
         : this(new DefaultStyleDomFilter())
     {
-    }
-
-    public StyleTraversal(IStyleDomFilter filter)
-    {
-        _filter = filter ?? throw new ArgumentNullException(nameof(filter));
     }
 
     public StyleNode Build(IElement root, Func<IElement, ComputedStyle?, ComputedStyle> styleFactory)

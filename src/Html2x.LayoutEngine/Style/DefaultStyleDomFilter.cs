@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using AngleSharp.Dom;
 
 namespace Html2x.LayoutEngine.Style;

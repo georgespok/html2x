@@ -1,4 +1,3 @@
-using Html2x.Abstractions;
 using Microsoft.Extensions.Logging;
 
 using Html2x.Abstractions.Measurements.Units;

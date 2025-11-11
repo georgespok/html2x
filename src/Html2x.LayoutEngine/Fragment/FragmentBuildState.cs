@@ -5,7 +5,7 @@ namespace Html2x.LayoutEngine.Fragment;
 public sealed class FragmentBuildState
 {
     public FragmentBuildState(BoxTree boxes)
-        : this(boxes, new FragmentTree(), [], Array.Empty<IFragmentBuildObserver>())
+        : this(boxes, new FragmentTree(), [], [])
     {
     }
 
@@ -15,7 +15,7 @@ public sealed class FragmentBuildState
         Boxes = boxes ?? throw new ArgumentNullException(nameof(boxes));
         Fragments = fragments ?? throw new ArgumentNullException(nameof(fragments));
         BlockBindings = blockBindings ?? [];
-        Observers = observers ?? Array.Empty<IFragmentBuildObserver>();
+        Observers = observers ?? [];
     }
 
     public BoxTree Boxes { get; }
@@ -34,6 +34,6 @@ public sealed class FragmentBuildState
     public FragmentBuildState WithObservers(IReadOnlyList<IFragmentBuildObserver> observers)
     {
         return new FragmentBuildState(Boxes, Fragments, BlockBindings,
-            observers ?? Array.Empty<IFragmentBuildObserver>());
+            observers ?? []);
     }
 }

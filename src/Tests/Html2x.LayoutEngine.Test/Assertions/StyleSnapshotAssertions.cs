@@ -44,12 +44,12 @@ public static class StyleSnapshotAssertions
             return;
         }
 
-        actual.Children.Count.ShouldBe(expected.Children.Count,
+        actual.Children?.Count.ShouldBe(expected.Children.Count,
             $"Expected {expected.Children.Count} children for <{expected.Tag}> but found {actual.Children.Count}");
 
-        for (int i = 0; i < expected.Children.Count; i++)
+        for (var i = 0; i < expected.Children.Count; i++)
         {
-            actual.Children[i].ShouldMatch(expected.Children[i]);
+            actual.Children?[i].ShouldMatch(expected.Children[i]);
         }
     }
 

@@ -1,4 +1,4 @@
-﻿namespace Html2x.Abstractions.Layout;
+﻿namespace Html2x.Abstractions.Layout.Fragments;
 
 // One *line box* of inline content (text runs, inline images)
 public sealed class LineBoxFragment : Fragment

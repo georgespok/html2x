@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
@@ -29,7 +27,7 @@ public sealed class ZOrderStage : IFragmentBuildStage
         return state;
     }
 
-    private static IEnumerable<Abstractions.Layout.Fragment> Flatten(Abstractions.Layout.Fragment fragment)
+    private static IEnumerable<Abstractions.Layout.Fragments.Fragment> Flatten(Abstractions.Layout.Fragments.Fragment fragment)
     {
         yield return fragment;
 

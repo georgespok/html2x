@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
 
 namespace Html2x.LayoutEngine.Fragment;

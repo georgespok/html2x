@@ -1,6 +1,6 @@
 using AngleSharp.Dom;
-using Html2x.Abstractions;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;

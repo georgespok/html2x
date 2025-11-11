@@ -1,4 +1,4 @@
-﻿namespace Html2x.Abstractions.Layout;
+﻿namespace Html2x.Abstractions.Layout.Styles;
 
 public enum BorderLineStyle
 {

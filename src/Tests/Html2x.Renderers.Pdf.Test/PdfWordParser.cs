@@ -1,4 +1,3 @@
-using Html2x.Abstractions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;

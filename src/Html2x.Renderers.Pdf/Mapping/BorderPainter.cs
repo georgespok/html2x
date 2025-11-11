@@ -1,6 +1,6 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Styles;
 
-namespace Html2x.Pdf.Mapping;
+namespace Html2x.Renderers.Pdf.Mapping;
 
 internal static class BorderPainter
 {

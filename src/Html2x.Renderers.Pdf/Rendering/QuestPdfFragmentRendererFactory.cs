@@ -1,20 +1,13 @@
+using Html2x.Renderers.Pdf.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Infrastructure;
 
-using Html2x.Pdf.Options;
-using Html2x.Renderers.Pdf.Rendering;
+namespace Html2x.Renderers.Pdf.Rendering;
 
-namespace Html2x.Pdf.Rendering;
-
-internal sealed class QuestPdfFragmentRendererFactory : IFragmentRendererFactory
+internal sealed class QuestPdfFragmentRendererFactory(ILoggerFactory? fallbackFactory = null) : IFragmentRendererFactory
 {
-    private readonly ILoggerFactory _fallbackFactory;
-
-    public QuestPdfFragmentRendererFactory(ILoggerFactory? fallbackFactory = null)
-    {
-        _fallbackFactory = fallbackFactory ?? NullLoggerFactory.Instance;
-    }
+    private readonly ILoggerFactory _fallbackFactory = fallbackFactory ?? NullLoggerFactory.Instance;
 
     public IFragmentRenderer Create(IContainer container, PdfOptions options, ILoggerFactory? loggerFactory)
     {

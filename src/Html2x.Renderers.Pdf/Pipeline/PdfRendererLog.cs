@@ -1,7 +1,7 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 using Microsoft.Extensions.Logging;
 
-namespace Html2x.Pdf.Pipeline;
+namespace Html2x.Renderers.Pdf.Pipeline;
 
 internal static class PdfRendererLog
 {

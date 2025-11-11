@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
 
 namespace Html2x.LayoutEngine.Fragment;
@@ -14,12 +14,7 @@ public sealed class TextRunFactory
     {
     }
 
-    public TextRunFactory(IFontMetricsProvider metrics)
-        : this(metrics, null)
-    {
-    }
-
-    public TextRunFactory(IFontMetricsProvider metrics, ITextWidthEstimator? widthEstimator)
+    private TextRunFactory(IFontMetricsProvider metrics, ITextWidthEstimator? widthEstimator = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _widthEstimator = widthEstimator ?? new DefaultTextWidthEstimator(_metrics);

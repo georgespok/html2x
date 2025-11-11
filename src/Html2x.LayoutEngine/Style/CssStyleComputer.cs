@@ -1,6 +1,6 @@
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Styles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

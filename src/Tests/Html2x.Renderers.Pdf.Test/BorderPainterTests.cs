@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Layout;
-using Html2x.Pdf.Mapping;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Renderers.Pdf.Mapping;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;

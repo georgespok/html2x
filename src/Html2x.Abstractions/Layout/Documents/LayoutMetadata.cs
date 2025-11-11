@@ -1,4 +1,4 @@
-﻿namespace Html2x.Abstractions.Layout;
+﻿namespace Html2x.Abstractions.Layout.Documents;
 
 public sealed record LayoutMetadata(
     string? Title = null,

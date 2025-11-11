@@ -1,4 +1,3 @@
-using System;
 using AngleSharp.Dom;
 using Html2x.LayoutEngine.Style;
 
@@ -22,56 +21,20 @@ public sealed class DisplayTreeBuilder
         var element = styleNode.Element;
         var display = GetDisplayRole(styleNode);
 
-        DisplayNode box;
-
-        switch (display)
+        DisplayNode box = display switch
         {
-            case DisplayRole.Block:
-                box = new BlockBox
-                {
-                    Element = element,
-                    Style = styleNode.Style,
-                    Parent = parent
-                };
-                break;
-
-            case DisplayRole.Inline:
-                box = new InlineBox
-                {
-                    Element = element,
-                    Style = styleNode.Style,
-                    Parent = parent
-                };
-                break;
-
-            case DisplayRole.Float:
-                box = new FloatBox
-                {
-                    Element = element,
-                    Style = styleNode.Style,
-                    Parent = parent,
-                    FloatDirection = ResolveFloatDirection(styleNode)
-                };
-                break;
-
-            case DisplayRole.Table:
-                box = new TableBox
-                {
-                    Element = element,
-                    Style = styleNode.Style,
-                    Parent = parent
-                };
-                break;
-
-            default:
-                box = new BlockBox
-                {
-                    Element = element,
-                    Style = styleNode.Style,
-                    Parent = parent
-                };
-                break;
-        }
+            DisplayRole.Block => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.Inline => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.Float => new FloatBox
+            {
+                Element = element,
+                Style = styleNode.Style,
+                Parent = parent,
+                FloatDirection = ResolveFloatDirection(styleNode)
+            },
+            DisplayRole.Table => new TableBox { Element = element, Style = styleNode.Style, Parent = parent },
+            _ => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent }
+        };
 
         // Add child boxes recursively
         if (IsListContainer(element))

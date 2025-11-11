@@ -1,15 +1,10 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine;
 
-public sealed class DefaultTextWidthEstimator : ITextWidthEstimator
+public sealed class DefaultTextWidthEstimator(IFontMetricsProvider metricsProvider) : ITextWidthEstimator
 {
-    private readonly IFontMetricsProvider _metricsProvider;
-
-    public DefaultTextWidthEstimator(IFontMetricsProvider metricsProvider)
-    {
-        _metricsProvider = metricsProvider ?? throw new ArgumentNullException(nameof(metricsProvider));
-    }
+    private readonly IFontMetricsProvider _metricsProvider = metricsProvider ?? throw new ArgumentNullException(nameof(metricsProvider));
 
     public float MeasureWidth(FontKey font, float fontSizePt, string text)
     {

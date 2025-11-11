@@ -1,6 +1,6 @@
-using Html2x.Abstractions.Layout;
+using Html2x.Abstractions.Layout.Fragments;
 
-namespace Html2x.Pdf.Visitors;
+namespace Html2x.Renderers.Pdf.Visitors;
 
 /// <summary>
 ///     External extension that enables visitor-style dispatch
