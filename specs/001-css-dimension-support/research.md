@@ -16,6 +16,6 @@
 - **Alternatives considered**: *(a)* Logging only warnings — rejected because happy-path dimension data is necessary for triage. *(b)* Deferring to renderer logging — rejected since renderer must remain a consumer, not a decision-maker.
 
 ## Decision 4: Test Strategy = Layout + Renderer + Harness
-- **Decision**: Introduce parameterized unit tests in `Html2x.Layout.Test` for style resolution, snapshot fragment comparisons in `Html2x.Pdf.Test`, and a Pdf.TestConsole script that renders the bordered-block grid fixture to visually confirm deterministic output.
+- **Decision**: Introduce parameterized unit tests in `Html2x.LayoutEngine.Test` for style resolution, snapshot fragment comparisons in `Html2x.Renderers.Pdf.Test`, and a Html2x.TestConsole script (under `src/Tests/Html2x.TestConsole`) that renders the bordered-block grid fixture to visually confirm deterministic output.
 - **Rationale**: Satisfies Principle III (behavior-focused tests) and Principle II (deterministic cross-platform guarantees) while keeping coverage close to affected modules.
 - **Alternatives considered**: *(a)* Rely solely on integration tests — rejected because failures would be harder to localize. *(b)* Rely solely on unit tests — rejected because renderer interaction and pagination must be validated end-to-end.

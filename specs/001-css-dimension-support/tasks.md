@@ -7,7 +7,7 @@ description: "Task list for CSS width and height feature delivery"
 **Input**: Design documents from `/specs/001-css-dimension-support/`  
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/schema.md
 
-**Tests**: Follow the single-test TDD loop. Introduce exactly one failing test, implement the minimal passing change/refactor, then proceed to the next scenario once the suite is green. Promote deterministic layout evidence into Html2x.Layout.Test, Html2x.Pdf.Test, and Html2x.TestConsole harness artifacts.
+**Tests**: Follow the single-test TDD loop. Introduce exactly one failing test, implement the minimal passing change/refactor, then proceed to the next scenario once the suite is green. Promote deterministic layout evidence into Html2x.LayoutEngine.Test, Html2x.Renderers.Pdf.Test, and Html2x.TestConsole harness artifacts.
 
 **Organization**: Tasks are grouped by user story to maintain incremental, independently testable delivery.
 
@@ -22,9 +22,9 @@ description: "Task list for CSS width and height feature delivery"
 **Purpose**: Prove the repo is healthy and capture baseline fixtures before touching contracts.
 
 - [X] T001 Run `dotnet restore Html2x.sln` to ensure NuGet dependencies resolve for Html2x.sln.
-- [X] T002 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Layout.Test&&Category=Dimensions"` to record baseline results for `tests/Html2x.Layout.Test`.
-- [X] T003 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Pdf.Test&&Category=BorderedBlocks"` to confirm renderer baseline in `tests/Html2x.Pdf.Test`.
-- [ ] T004 Capture a reference PDF and diagnostics log by running `src/Html2x.TestConsole/Html2x.TestConsole.csproj` against `src/Html2x.TestConsole/html/width-height/grid.html` with output in `build/width-height/grid.pdf`.
+- [X] T002 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.LayoutEngine.Test&&Category=Dimensions"` to record baseline results for `src/Tests/Html2x.LayoutEngine.Test`.
+- [X] T003 Execute `dotnet test Html2x.sln -c Release --filter "Html2x.Renderers.Pdf.Test&&Category=BorderedBlocks"` to confirm renderer baseline in `src/Tests/Html2x.Renderers.Pdf.Test`.
+- [ ] T004 Capture a reference PDF and diagnostics log by running `src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj` against `src/Tests/Html2x.TestConsole/html/width-height/grid.html` with output in `build/width-height/grid.pdf`.
 
 ---
 
@@ -32,10 +32,10 @@ description: "Task list for CSS width and height feature delivery"
 
 **Purpose**: Extend shared contracts and helpers every story depends on.
 
-- [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Core/Dimensions/DimensionContracts.cs` per data-model.md.
-- [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
-- [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.Layout/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
-- [ ] T008 Add failing regression coverage for the contract layer in `tests/Html2x.Layout.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.
+- [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Abstractions/Dimensions/DimensionContracts.cs` per data-model.md.
+- [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Abstractions/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
+- [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.LayoutEngine/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
+- [ ] T008 Add failing regression coverage for the contract layer in `src/Tests/Html2x.LayoutEngine.Test/Dimensions/DimensionContractFacts.cs` referencing the new validation service.
 
 **Checkpoint**: Shared contracts, validation rules, and diagnostics scaffolding are live; user stories can now build specific behavior.
 
@@ -44,24 +44,24 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 3: User Story 1 - Fixed Width Blocks Render Predictably (Priority: P1)  MVP
 
 **Goal**: Block-level containers respect px and pt `width` / `height` declarations end to end.  
-**Independent Test**: Layout diagnostics prove fragment rectangles equal requested dimensions within 1pt tolerance using the grid fixture in `src/Html2x.TestConsole/html/width-height/grid.html`.
+**Independent Test**: Layout diagnostics prove fragment rectangles equal requested dimensions within 1pt tolerance using the grid fixture in `src/Tests/Html2x.TestConsole/html/width-height/grid.html`.
 
 ### Tests for User Story 1
 
-- [ ] T009 [US1] Introduce the first failing px/pt dimension theory in `tests/Html2x.Layout.Test/Dimensions/FixedSizeBlockTests.cs`; keep it the only failing test and unblock T011–T012 immediately afterward.
+- [ ] T009 [US1] Introduce the first failing px/pt dimension theory in `src/Tests/Html2x.LayoutEngine.Test/Dimensions/FixedSizeBlockTests.cs`; keep it the only failing test and unblock T011–T012 immediately afterward.
 - [ ] T009A [US1] After the T009 loop is green, add a failing complementary-dimension theory that supplies only width or height and asserts the missing dimension is derived within 1 pt before moving on.
-- [ ] T010 [US1] Once the T009/T011 loops are green, add the renderer regression in `tests/Html2x.Pdf.Test/Dimensions/FixedBlockSnapshotTests.cs` to inspect fragment rectangles for the grid fixture before starting any new failing tests.
+- [ ] T010 [US1] Once the T009/T011 loops are green, add the renderer regression in `src/Tests/Html2x.Renderers.Pdf.Test/Dimensions/FixedBlockSnapshotTests.cs` to inspect fragment rectangles for the grid fixture before starting any new failing tests.
 - [ ] T010A [US1] After T010/T013 complete, introduce a failing auto-height variance regression (Layout + Pdf snapshot) that forces the engine to detect > 1 pt variance before implementing the fix.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Extend CSS parsing and normalization in `src/Html2x.Layout/Style/CssDimensionResolver.cs` to emit RequestedDimension data for px and pt units.
-- [ ] T011A [US1] Update `src/Html2x.Layout/Style/CssDimensionResolver.cs` (or adjacent helpers) to derive the complementary dimension when only width or height is supplied, emitting the tolerance metadata needed by FR-004.
-- [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.Layout/Fragment/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
-- [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Pdf/PdfRenderer.cs`, ensuring clip behavior for overflow.
-- [ ] T013A [US1] Add variance tracking in `src/Html2x.Layout/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the +/-1 pt tolerance and fail fast when it is exceeded.
-- [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs`.
-- [ ] T015 [US1] Refresh the grid harness sample in `src/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
+- [ ] T011 [US1] Extend CSS parsing and normalization in `src/Html2x.LayoutEngine/Style/CssDimensionResolver.cs` to emit RequestedDimension data for px and pt units.
+- [ ] T011A [US1] Update `src/Html2x.LayoutEngine/Style/CssDimensionResolver.cs` (or adjacent helpers) to derive the complementary dimension when only width or height is supplied, emitting the tolerance metadata needed by FR-004.
+- [ ] T012 [US1] Apply resolved dimensions inside `src/Html2x.LayoutEngine/Fragment/FragmentBuilder.cs` so block fragments honor normalized widths and heights.
+- [ ] T013 [US1] Propagate fragment dimensions through the renderer in `src/Html2x.Renderers.Pdf/Pipeline/PdfRenderer.cs`, ensuring clip behavior for overflow.
+- [ ] T013A [US1] Add variance tracking in `src/Html2x.LayoutEngine/LayoutBuilder.cs` (or equivalent) so auto-height passes enforce the +/-1 pt tolerance and fail fast when it is exceeded.
+- [ ] T014 [US1] Emit structured diagnostics with requested versus resolved measurements in `src/Html2x.Renderers.Pdf/Diagnostics/DimensionLogger.cs`.
+- [ ] T015 [US1] Refresh the grid harness sample in `src/Tests/Html2x.TestConsole/html/width-height/grid.html` plus its run script under `build/width-height/run-grid.ps1` to capture bounding boxes for QA.
 
 **Checkpoint**: Fixed pixel dimensions render deterministically with diagnostics proving dimension lineage.
 
@@ -70,19 +70,19 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 4: User Story 2 - Bordered Blocks Show Consistent Footprints (Priority: P2)
 
 **Goal**: Bordered placeholders accept percentage widths and pixel heights while keeping frame footprints aligned.  
-**Independent Test**: Integration sample `src/Html2x.TestConsole/html/width-height/bordered-grid.html` renders consistent rectangles validated by Html2x.Pdf.Test snapshots.
+**Independent Test**: Integration sample `src/Tests/Html2x.TestConsole/html/width-height/bordered-grid.html` renders consistent rectangles validated by Html2x.Renderers.Pdf.Test snapshots.
 
 ### Tests for User Story 2
 
-- [ ] T016 [US2] Introduce a single failing bordered placeholder regression in `tests/Html2x.Pdf.Test/Dimensions/BorderedPlaceholderTests.cs`, pair it immediately with T018 before adding more tests.
-- [ ] T017 [US2] After the T016/T018 loop is green, add layout theories in `tests/Html2x.Layout.Test/Dimensions/BorderedPercentageTests.cs` covering container width resolution and retry logic, then proceed to T019 only after they pass.
+- [ ] T016 [US2] Introduce a single failing bordered placeholder regression in `src/Tests/Html2x.Renderers.Pdf.Test/Dimensions/BorderedPlaceholderTests.cs`, pair it immediately with T018 before adding more tests.
+- [ ] T017 [US2] After the T016/T018 loop is green, add layout theories in `src/Tests/Html2x.LayoutEngine.Test/Dimensions/BorderedPercentageTests.cs` covering container width resolution and retry logic, then proceed to T019 only after they pass.
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.Layout/Fragment/BorderedBlockBuilder.cs` (create this builder in the `Fragment` folder if it doesn’t exist yet).
-- [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Pdf/QuestPdfFragmentRenderer.cs`.
-- [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Core/Diagnostics/BlockDimensionDiagnostics.cs`.
-- [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Html2x.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
+- [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.LayoutEngine/Fragment/BorderedBlockBuilder.cs` (create this builder in the `Fragment` folder if it doesn’t exist yet).
+- [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Renderers.Pdf/Rendering/QuestPdfFragmentRenderer.cs`.
+- [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Abstractions/Diagnostics/BlockDimensionDiagnostics.cs`.
+- [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Tests/Html2x.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
 
 **Checkpoint**: Percentage-driven bordered blocks align with brand guides and emit deterministic diagnostics.
 
@@ -91,17 +91,17 @@ description: "Task list for CSS width and height feature delivery"
 ## Phase 5: User Story 3 - Invalid Dimension Inputs Fail Gracefully (Priority: P3)
 
 **Goal**: Unsupported units and conflicting constraints fall back to auto sizing while logging actionable diagnostics.  
-**Independent Test**: Negative fixture `src/Html2x.TestConsole/html/width-height/invalid.html` produces warnings captured by Layout tests and console logs.
+**Independent Test**: Negative fixture `src/Tests/Html2x.TestConsole/html/width-height/invalid.html` produces warnings captured by Layout tests and console logs.
 
 ### Tests for User Story 3
 
-- [ ] T022 [US3] Introduce one failing invalid-input test in `tests/Html2x.Layout.Test/Dimensions/InvalidDimensionTests.cs` (negative values or unsupported units) and pair it immediately with T024 before adding the next scenario.
+- [ ] T022 [US3] Introduce one failing invalid-input test in `src/Tests/Html2x.LayoutEngine.Test/Dimensions/InvalidDimensionTests.cs` (negative values or unsupported units) and pair it immediately with T024 before adding the next scenario.
 - [ ] T023 [P] [US3] Script a console regression in `build/width-height/run-invalid-grid.ps1` that asserts warnings in `build/logs/width-height/invalid.json`.
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Build on T007 by adding unsupported-unit and conflicting-constraint fallbacks in `src/Html2x.Layout/Style/DimensionValidator.cs`, emitting warning payloads needed by diagnostics.
-- [ ] T025 [US3] Surface warnings and fallbackReason fields through `src/Html2x.Pdf/Diagnostics/DimensionLogger.cs` and wire them to console output.
+- [ ] T024 [US3] Build on T007 by adding unsupported-unit and conflicting-constraint fallbacks in `src/Html2x.LayoutEngine/Style/DimensionValidator.cs`, emitting warning payloads needed by diagnostics.
+- [ ] T025 [US3] Surface warnings and fallbackReason fields through `src/Html2x.Renderers.Pdf/Diagnostics/DimensionLogger.cs` and wire them to console output.
 - [ ] T026 [US3] Document remediation steps and diagnostics interpretation in `docs/testing-guidelines.md` plus `docs/release-notes.md`.
 
 **Checkpoint**: Invalid inputs fail loudly without crashing layout, and operators have documented remediation paths.
@@ -117,7 +117,7 @@ description: "Task list for CSS width and height feature delivery"
 - [ ] T029 [P] Capture final evidence in `docs/testing-guidelines.md` and archive logs under `build/logs/width-height` for stakeholder review.
 - [ ] T029A Script a timed diagnostics dry run (≤5 minutes) that replays the logged width/height warnings and records elapsed time to `build/logs/width-height/triage.json`.
 - [ ] T029B Record “zero manual PDF edits” by storing the untouched Html2x.TestConsole outputs for the reporting cycle and referencing them in `docs/release-notes.md`.
-- [ ] T030 Verify `dotnet run --project src/Html2x.TestConsole/Html2x.TestConsole.csproj` smoke test uses updated fixtures before merge.
+- [ ] T030 Verify `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj` smoke test uses updated fixtures before merge.
 
 ---
 
@@ -165,7 +165,7 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 3. Close with Phase 6 full test sweeps.
 
 **Rollback Strategy**  
-- If new diagnostics or border handling regressions appear, revert the specific renderer files (`src/Html2x.Pdf/Rendering/*Renderer.cs`) while leaving contracts intact so other stories remain functional.  
+- If new diagnostics or border handling regressions appear, revert the specific renderer files (`src/Html2x.Renderers.Pdf/Rendering/*Renderer.cs`) while leaving contracts intact so other stories remain functional.  
 - Guard percentage retry changes behind feature flags inside `BorderedBlockBuilder.cs` to disable with minimal risk if convergence exceeds limits.  
 - For invalid input handling regressions, toggle warning emission via configuration in `DimensionValidator.cs` to unblock runs while issues are triaged.
 

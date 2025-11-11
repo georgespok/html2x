@@ -37,7 +37,7 @@
   - `BorderThicknessPt` (float, optional) – needed for bordered placeholders.
   - `OverflowBehavior` (enum: Clip, Paginate).
   - `Diagnostics` (object) – mirrors data from Requested/Resolved dimensions for logging.
-- **Relationships**: Consumes ResolvedDimension; referenced by Html2x.Pdf when laying out pages.
+- **Relationships**: Consumes ResolvedDimension; referenced by Html2x.Renderers.Pdf when laying out pages.
 - **State Transitions**:
   1. **Initialized** – receives Requested/Resolved payloads.
   2. **Measured** – accommodates content measurement passes.
