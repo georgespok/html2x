@@ -74,6 +74,12 @@ public static class HtmlCssConstants
         public const string FontStyle = "font-style";
         public const string TextAlign = "text-align";
         public const string Color = "color";
+        public const string Width = "width";
+        public const string Height = "height";
+        public const string MaxWidth = "max-width";
+        public const string MinWidth = "min-width";
+        public const string MaxHeight = "max-height";
+        public const string MinHeight = "min-height";
     }
 
     /// <summary>
