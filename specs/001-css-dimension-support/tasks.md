@@ -32,7 +32,7 @@ description: "Task list for CSS width and height feature delivery"
 
 **Purpose**: Extend shared contracts and helpers every story depends on.
 
-- [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records plus enums under `src/Html2x.Abstractions/Dimensions/DimensionContracts.cs` per data-model.md.
+- [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records in `src/Html2x.Abstractions/Measurements/Dimensions` folder per data-model.md.
 - [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Abstractions/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
 - [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.LayoutEngine/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
 - [ ] T007A [P] Normalize locale-specific decimal separators for width/height parsing inside `src/Html2x.LayoutEngine/Style/CssValueConverter.cs`, logging the normalization for diagnostics.
@@ -146,7 +146,7 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 
 ## Parallel Execution Examples
 
-- **US1**: Keep loops sequential—T009 → T011/T012, T009A → T011A, T010 → T013, T010A → T013A. Never run more than one failing test at a time even though the projects differ.  
+- **US1**: Keep loops sequential—T009 -> T011/T012, T009A -> T011A, T009B -> T011B, T010 -> T013, T010A -> T013A—and never run more than one failing test at a time even though the projects differ. Run the missing-font regression (T010B) only after these loops and the inline-height advisory are green.  
 - **US2**: Teams may own US2 work concurrently, but finish the T016 → T018 loop before starting T017 → T019 to preserve the single-test rule.  
 - **US3**: US3 work can progress alongside other stories, yet each invalid-input scenario (T022 → T024, then T023 → T025) must remain a separate green loop before adding the next failing test.  
 - **Cross Story**: T014 (diagnostics) and T020 (border diagnostics) run in parallel once `BlockDimensionDiagnostics` scaffolding (T006) exists.  
@@ -159,11 +159,13 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 **MVP First (User Story 1)**  
 1. Finish Phases 1 and 2.  
 2. Complete Phase 3 as alternating loops:  
-   - Loop 1: T009 → T011/T012  
-   - Loop 2: T009A → T011A  
-   - Loop 3: T010 → T013  
-   - Loop 4: T010A → T013A  
+   - Loop 1: T009 -> T011/T012
+   - Loop 2: T009A -> T011A
+   - Loop 3: T009B -> T011B
+   - Loop 4: T010 -> T013
+   - Loop 5: T010A -> T013A
    Follow with diagnostics (T014) and harness refresh (T015).  
+   Run the missing-font regression (T010B) and update the console fixtures (T015A) once the five loops are green.
 3. Ship MVP once Pdf snapshots and console logs prove deterministic 1 pt tolerance.  
 
 **Incremental Delivery**  
@@ -180,6 +182,8 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
+
+
 
 
 
