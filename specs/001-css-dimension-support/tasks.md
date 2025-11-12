@@ -33,7 +33,7 @@ description: "Task list for CSS width and height feature delivery"
 **Purpose**: Extend shared contracts and helpers every story depends on.
 
 - [X] T005 Define `RequestedDimension`, `ResolvedDimension`, and `FragmentDimension` records in `src/Html2x.Abstractions/Measurements/Dimensions` folder per data-model.md.
-- [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Abstractions/Diagnostics/BlockDimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
+- [ ] T006 [P] Align `BlockDimensionQuery`, `BlockDimensionResult`, and `BlockDimensionDiagnostics` types in `src/Html2x.Abstractions/Diagnostics/Contracts/DimensionDiagnostics.cs` with `specs/001-css-dimension-support/contracts/schema.md`.
 - [ ] T007 Implement the base px/pt/% validation service inside `src/Html2x.LayoutEngine/Style/DimensionValidator.cs` that enforces Decision 1 from research.md.
 - [ ] T007A [P] Normalize locale-specific decimal separators for width/height parsing inside `src/Html2x.LayoutEngine/Style/CssValueConverter.cs`, logging the normalization for diagnostics.
 - [ ] T007B [P] Introduce `DimensionStyleMapper` under `src/Html2x.LayoutEngine/Style/DimensionStyleMapper.cs` to centralize Requested/Resolved dimension creation.
@@ -88,7 +88,7 @@ description: "Task list for CSS width and height feature delivery"
 
 - [ ] T018 [US2] Compute percentage widths against parent dimensions with single-pass retry inside `src/Html2x.LayoutEngine/Fragment/BorderedBlockBuilder.cs` (create this builder in the `Fragment` folder if it doesn’t exist yet).
 - [ ] T019 [US2] Preserve border thickness when forwarding fragment rectangles in `src/Html2x.Renderers.Pdf/Rendering/QuestPdfFragmentRenderer.cs`.
-- [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Abstractions/Diagnostics/BlockDimensionDiagnostics.cs`.
+- [ ] T020 [US2] Capture border-aware diagnostics fields (requestedWidth, resolvedWidth, borderThickness) in `src/Html2x.Abstractions/Diagnostics/Contracts/DimensionDiagnostics.cs`.
 - [ ] T021 [US2] Author the bordered grid HTML and expected metrics under `src/Tests/Html2x.TestConsole/html/width-height/bordered-grid.html` with a run helper at `build/width-height/run-bordered-grid.ps1`.
 
 **Checkpoint**: Percentage-driven bordered blocks align with brand guides and emit deterministic diagnostics.
@@ -182,6 +182,8 @@ US2 and US3 share Phase 2 assets but do not block each other once US1 logging is
 - Each story has explicit independent test criteria (grid fixture, bordered grid, invalid fixture).  
 - Tasks T009, T016, and T022 ensure failing coverage before code changes.  
 - Console scripts under `build/width-height` double check diagnostics per quickstart.md guidance.
+
+
 
 
 
