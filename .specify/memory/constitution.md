@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-Version change: 1.1.1 -> 1.1.2
-Modified principles: III. Test-First Delivery (plan/task sequencing for single failing test loop)
+Version change: 1.1.2 -> 1.1.3
+Updated file structire from Html2x.Core to Htm2x.Abstractions
 Added sections: none
 Removed sections: none
 Templates requiring updates:
@@ -17,9 +17,9 @@ Follow-up TODOs:
 ## Core Principles
 
 ### I. Staged Layout Discipline
-- Pipeline stages (DOM, style, box, fragment, renderer) MUST communicate only through contracts defined in `Html2x.Core`.
+- Pipeline stages (DOM, style, box, fragment, renderer) MUST communicate only through contracts defined in `Html2x.Abstractions`.
 - Layout and rendering code MUST NOT reach back to DOM or style types once a stage hands off control.
-- Cross-assembly dependencies MUST flow in one direction: Core -> Layout -> Renderers.
+- Cross-assembly dependencies MUST flow in one direction: Abstractions -> EngineLayout -> Renderers.
 Rationale: Preserving stage isolation keeps the system modular, testable, and enables new renderers without regressions.
 
 ### II. Deterministic Rendering Outputs
@@ -72,7 +72,7 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 1.1.2 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-10
+**Version**: 1.1.3 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-11
 
 
 
