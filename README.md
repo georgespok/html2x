@@ -14,12 +14,14 @@ The **primary** target is **PDF**, with an architecture designed to extend to **
 
 ---
 
-## Packages
+## Packages & Modules
 
-* **`Html2x.Layout`** — Parses HTML/CSS and produces a **Fragment Tree**.
-* **`Html2x.Pdf`** — Consumes a Fragment Tree and renders a **PDF** file.
+* **`Html2x.Abstractions`** - Contracts, diagnostics payloads, and shared utilities consumed by every engine and renderer.
+* **`Html2x.LayoutEngine`** - Parses HTML/CSS (via AngleSharp), builds the style/box trees, and emits deterministic fragments.
+* **`Html2x.Renderers.Pdf`** - Consumes fragments and renders PDFs using QuestPDF; owns renderer-side diagnostics.
+* **`Html2x`** - Composition facade for embedding scenarios; wires abstractions, layout, and renderers together.
 
-> Additional renderers (e.g., `Html2x.Svg`, `Html2x.Canvas`) can be added later without changing the parser.
+Additional renderers (for example `Html2x.Renderers.Svg`) can plug into the same abstractions without touching the layout engine.
 
 ---
 
@@ -65,8 +67,8 @@ Renderer (PDF via QuestPDF; future: SVG/Canvas)
 > NuGet packages will be published under the `Html2x.*` namespace.
 
 ```powershell
-dotnet add package Html2x.Layout
-dotnet add package Html2x.Pdf
+dotnet add package Html2x.LayoutEngine
+dotnet add package Html2x.Renderers.Pdf
 ```
 
 ---
@@ -79,9 +81,9 @@ TBD
 
 ## Design Principles
 
-* **Separation of concerns**: `Html2x.Layout` knows HTML/CSS and layout; converts it to Fragment tree.
-* **Extensibility**: add new renderers (SVG/Canvas) without touching the parser.
-* **Deterministic outputs**: inputs + options → stable Fragment Tree → identical PDF across platforms.
+* **Separation of concerns**: `Html2x.LayoutEngine` owns HTML/CSS parsing and layout; `Html2x.Renderers.Pdf` only draws.
+* **Extensibility**: new renderers (SVG, Canvas, etc.) bind to `Html2x.Abstractions` without parser changes.
+* **Deterministic outputs**: inputs plus options produce a stable fragment tree and identical PDFs across platforms.
 * **Pure .NET**: no native GUI stacks or browsers required.
 
 ---
@@ -91,6 +93,26 @@ TBD
 * **.NET**: `net8.0`
 * **OS**: Windows & Linux
 * **Build**: distributed as **NuGet packages**
+
+---
+
+## Repository Layout
+
+```
+src/
+  Html2x/                     (composition + public surface)
+  Html2x.Abstractions/        (contracts, diagnostics, shared utilities)
+  Html2x.LayoutEngine/        (style traversal, box + fragment builders)
+  Html2x.Renderers.Pdf/       (QuestPDF pipeline, mapping, visitors)
+  Tests/
+    Html2x.LayoutEngine.Test/
+    Html2x.Renderers.Pdf.Test/
+    Html2x.Test/              (integration glue + harness helpers)
+    Html2x.TestConsole/       (manual harness, sample html/fonts)
+build/
+  width-height/               (generated artifacts, logs)
+docs/                         (architecture, standards, testing)
+```
 
 ---
 
@@ -105,3 +127,4 @@ TBD
 ## License
 
 MIT License 
+
