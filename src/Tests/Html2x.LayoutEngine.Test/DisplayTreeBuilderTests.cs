@@ -1,6 +1,7 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Style;
 using Shouldly;
 
