@@ -4,15 +4,15 @@
 
 ```
 HTML/CSS
-  ↓
+  |
 DOM + CSSOM (AngleSharp)
-  ↓
+  |
 Style Tree (computed styles)
-  ↓
+  |
 Box Tree (layout model)
-  ↓
+  |
 Fragment Tree (lines/pages)
-  ↓
+  |
 Renderer (PDF via QuestPDF)
 ```
 
@@ -29,76 +29,76 @@ Renderer (PDF via QuestPDF)
 - **Responsibility**: Apply CSS cascade, inheritance, and defaults to produce `ComputedStyle` snapshots per element.
 - **Input**: DOM plus CSSOM from the parser stage.
 - **Output**: Style tree nodes that carry explicit values for layout.
-- **Implementation pattern**: `CssStyleComputer` combines traversal helpers with `UserAgentDefaults`, yielding immutable data structures for predictable processing.
-- **Extension rules**: When introducing new CSS properties, extend the style computer and defaults in `Html2x.Layout`. Keep calculations pure, returning data without mutating downstream stages.
+- **Implementation pattern**: `CssStyleComputer` combines `StyleTraversal`, `DefaultStyleDomFilter`, `CssValueConverter`, and `UserAgentDefaults`, yielding immutable records defined in `Html2x.Abstractions.Layout.Styles`.
+- **Extension rules**: When introducing new CSS properties, extend the style computer and defaults under `Html2x.LayoutEngine.Style`. Keep calculations pure, returning data without mutating downstream stages.
 
 ### Box Tree (Layout Model)
 - **Responsibility**: Translate styled elements into layout boxes that encode formatting contexts, dimensions, and flow.
 - **Input**: Style tree with computed values.
 - **Output**: Box hierarchy representing block and inline flows plus page level metrics.
-- **Implementation pattern**: `BoxTreeBuilder` produces concrete box types and stores pagination hints (break before, break after, avoid) used later.
-- **Extension rules**: Add new formatting contexts by introducing specialized box builders while keeping the resulting model immutable. Share measurement helpers via `Html2x.Core` to prevent duplicated math.
+- **Implementation pattern**: `BoxTreeBuilder` feeds `DisplayTreeBuilder`, `BlockLayoutEngine`, `InlineLayoutEngine`, and friends to produce immutable boxes plus pagination hints.
+- **Extension rules**: Add new formatting contexts by introducing specialized box builders while keeping the resulting model immutable. Share geometry or measurement helpers via `Html2x.Abstractions` to prevent duplicated math.
 
 ### Fragment Tree (Lines and Pages)
 - **Responsibility**: Convert boxes into positioned fragments, paginate content, and assemble `LayoutPage` instances.
 - **Input**: Box tree enriched with geometry and page settings.
 - **Output**: Fragment collection containing `LineBoxFragment`, `TextRun`, `ImageFragment`, and block containers ready for rendering.
-- **Implementation pattern**: `FragmentBuilder` walks the box tree, measures text, and assigns absolute coordinates so every renderer can consume the same artifact.
-- **Extension rules**: Introducing new fragment types requires updating visitor interfaces in `Html2x.Core` and renderer dispatchers. Keep pagination logic self-contained to maintain deterministic outputs.
+- **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) while collaborating with `TextRunFactory`, `DefaultLineHeightStrategy`, and `DefaultTextWidthEstimator`.
+- **Extension rules**: Introducing new fragment types requires updating interfaces and records in `Html2x.Abstractions` plus renderer dispatchers. Keep pagination logic self-contained to maintain deterministic outputs.
 
 ### Renderer (QuestPDF)
 - **Responsibility**: Serialize fragments into the final artifact. The default implementation renders PDF via QuestPDF.
 - **Input**: `HtmlLayout` plus `PdfOptions`.
 - **Output**: Byte array containing the generated PDF.
-- **Implementation pattern**: `PdfRenderer` orchestrates page construction, leverages `IFragmentRendererFactory`, and emits structured logs for diagnostics. `QuestPdfFragmentRenderer` maps fragments to QuestPDF fluent constructs.
+- **Implementation pattern**: `PdfRenderer` coordinates `QuestPdfConfigurator`, `FragmentRenderDispatcher`, and `QuestPdfFragmentRenderer` with help from `PdfRendererLog` and mapper utilities.
 - **Extension rules**: New render targets supply custom `IFragmentRenderer` implementations or alternate factories. Rendering code should never reach back to the DOM; it consumes fragments only.
 
 ## Solution Layout
 
 | Path | Purpose | Primary Entry Points | Extension Notes |
 | --- | --- | --- | --- |
-| `src/Html2x.Core` | Shared contracts and value types for styles, boxes, fragments, units, and colors. | `Fragment`, `BlockFragment`, `LineBoxFragment`, `LayoutPage`, `ComputedStyle`. | Add new fragment or style primitives here first so downstream projects stay aligned. |
-| `src/Html2x.Layout` | Pipeline from DOM + CSS to fragment tree. | `LayoutBuilder`, `AngleSharpDomProvider`, `CssStyleComputer`, `BoxTreeBuilder`, `FragmentBuilder`. | Keep each stage side effect free. New layout features should appear as new box types or fragment builders rather than injected logic elsewhere. |
-| `src/Html2x.Pdf` | QuestPDF backed renderer plus logging helpers. | `PdfRenderer`, `QuestPdfFragmentRendererFactory`, `QuestPdfFragmentRenderer`, `RendererLog`. | Alternate renderers belong in sibling projects that implement the same interfaces. |
-| `src/Html2x` | Orchestration facade consumed by callers. | `HtmlConverter`. | Wire new diagnostics or configuration options here, keeping defaults lightweight. |
-| `src/Html2x.TestConsole` | Manual smoke harness with console logging. | `Program`. | Use for ad hoc validation; keep dependencies minimal. |
-| `src/Html2x.Layout.Test` | Unit tests for DOM, CSS, and layout stages. | xUnit test classes grouped by stage. | When extending layout, add golden tests here first. |
-| `src/Html2x.Pdf.Test` | Renderer tests, PDF validators, recording helpers. | `PdfRendererTests`, `PdfValidator`. | Ensure renderer regressions are caught before integration. |
-| `src/Html2x.Test` | End-to-end and integration coverage using the public API. | `HtmlConverterTests`. | Exercise full pipeline with realistic HTML. |
+| `src/Html2x.Abstractions` | Shared contracts for styles, fragments, diagnostics, measurements, and units. | `HtmlLayout`, `LayoutPage`, `Fragment`, `PageSize`, `ComputedStyle`. | Add or evolve primitives here first so layout and renderers stay in lockstep. |
+| `src/Html2x.LayoutEngine` | DOM + CSS to fragment pipeline plus layout logging. | `LayoutBuilder`, `AngleSharpDomProvider`, `CssStyleComputer`, `BoxTreeBuilder`, `FragmentBuilder`, `LayoutLog`. | Keep stages pure; introduce measurement providers or observers instead of side effects. |
+| `src/Html2x.Renderers.Pdf` | QuestPDF renderer, configuration, and fragment dispatch. | `PdfRenderer`, `QuestPdfConfigurator`, `QuestPdfFragmentRenderer`, `FragmentRenderDispatcher`, `PdfRendererLog`. | Alternate renderers belong in sibling projects that reuse the fragment contract. |
+| `src/Html2x` | Public facade consumed by host applications. | `HtmlConverter`, `LayoutBuilderFactory`. | Add configuration hooks or DI entry points here without embedding layout logic. |
+| `src/Tests/Html2x.LayoutEngine.Test` | Layout unit and snapshot coverage. | `CssStyleComputerTests`, `BoxTreeBuilderTests`, `FragmentBuilderTests`. | Keep fixtures deterministic through builders rather than loose strings. |
+| `src/Tests/Html2x.Renderers.Pdf.Test` | Renderer validation and PDF helpers. | `PdfRendererTests`, `BorderPainterTests`, `PdfWordParser`. | Only persist PDFs or fragment recordings when diagnosing failures. |
+| `src/Tests/Html2x.Test` | End-to-end verification using the public API. | `HtmlConverterTests`, `IntegrationTestBase`. | Run with real fonts/options and capture logs through `TestOutputLoggerProvider`. |
+| `src/Tests/Html2x.TestConsole` | Manual harness with console logging. | `Program`. | Use for ad hoc validation; keep dependencies minimal. |
 
 ## Projects & Responsibilities
 
-### Html2x.Core
+### Html2x.Abstractions
 
-- **Role**: Provide the stable vocabulary for styles, boxes, fragments, geometry, and shared interfaces. The rest of the solution consumes these types.
-- **Key namespaces**: `Html2x.Core.Layout` (fragments and pages), `Html2x.Core.Style` (computed style records), `Html2x.Core.Geometry` (dimensions, rectangles, colors), `Html2x.Core.Services` (interfaces such as `IFontResolver` and `IImageProvider`).
-- **Inputs and outputs**: Exposes immutable records and interfaces. Holds no runtime dependencies so renderers and layout can reference it without pulling extra packages.
+- **Role**: Provide the stable vocabulary for styles, fragments, diagnostics, measurements, and service interfaces so every other project shares the same contracts.
+- **Key namespaces**: `Html2x.Abstractions.Layout` (documents, fragments, styles), `Html2x.Abstractions.Measurements` (units, page sizes, spacing), `Html2x.Abstractions.Diagnostics` (structured log shapes), `Html2x.Abstractions.Utilities` (color helpers).
+- **Inputs and outputs**: Exposes immutable records and light-weight interfaces. Carries zero runtime dependencies so renderers and layout can consume it without pulling extra packages.
 - **Extension guidance**:
-  1. Introduce new fragment or style concepts here before touching other projects.
+  1. Introduce new fragment types, measurement units, or diagnostic contracts here before touching other projects.
   2. Prefer records or readonly structs to keep value semantics obvious.
-  3. Keep the assembly pure; do not add logging, IO, or rendering references.
+  3. Keep the assembly pure; do not add logging, IO, or renderer references.
 
-### Html2x.Layout
+### Html2x.LayoutEngine
 
-- **Role**: Implement the full HTML to fragment pipeline: DOM → Style → Box → Fragment.
+- **Role**: Implement the complete HTML to fragment pipeline: DOM -> Style -> Box -> Fragment.
 - **Components**:
-  - `AngleSharpDomProvider` for DOM loading.
-  - `CssStyleComputer`, `UserAgentDefaults`, `StyleTraversal` for cascade logic.
-  - `BoxTreeBuilder`, inline layout helpers, and pagination utilities.
-  - `FragmentBuilder` plus the `LayoutBuilder` façade (with optional logging).
-- **Inputs and outputs**: Accepts HTML along with `Dimensions`, returns an `HtmlLayout` ready for rendering.
+  - `AngleSharpDomProvider` for DOM loading and normalization.
+  - `CssStyleComputer`, `UserAgentDefaults`, `StyleTraversal`, and `DefaultStyleDomFilter` for cascade logic.
+  - `BoxTreeBuilder`, `DisplayTreeBuilder`, inline/float/table layout engines, and pagination utilities.
+  - `FragmentBuilder` with staged visitors, `TextRunFactory`, `FontMetricsProvider`, `DefaultLineHeightStrategy`, and the `LayoutBuilder`/`LayoutLog` facades.
+- **Inputs and outputs**: Accepts HTML with `PageSize`, returns an `HtmlLayout` ready for rendering.
 - **Extension guidance**:
   1. Keep stage logic deterministic. If a feature needs external data, pass it in through abstractions.
-  2. Add new CSS properties in the style computer first, then propagate to boxes if geometry changes.
-  3. Encapsulate pagination logic near the box to fragment conversion to limit regression scope.
+  2. Add new CSS properties in the style computer first, then propagate to boxes or fragments if geometry changes.
+  3. Encapsulate pagination logic near the box-to-fragment conversion to limit regression scope.
 
-### Html2x.Pdf
+### Html2x.Renderers.Pdf
 
-- **Role**: Render `HtmlLayout` objects to PDF bytes via QuestPDF while emitting diagnostics.
+- **Role**: Render HtmlLayout objects to PDF bytes via QuestPDF while emitting diagnostics.
 - **Components**:
-  - `PdfRenderer` orchestrator and `RendererLog` helper.
-  - `IFragmentRendererFactory` plus `QuestPdfFragmentRendererFactory` for dependency injection.
-  - `QuestPdfFragmentRenderer` and `FragmentRenderDispatcher` for fragment traversal.
+  - `PdfRenderer` orchestrator, `PdfRendererLog`, and `QuestPdfConfigurator`.
+  - `IFragmentRendererFactory` implementations (`QuestPdfFragmentRendererFactory`) plus the dispatcher/visitor pair that walks fragments.
+  - Mapper utilities such as `QuestPdfStyleMapper` and `BorderPainter`.
 - **Inputs and outputs**: Consumes fragment pages with `PdfOptions`; produces PDF byte arrays and structured logs.
 - **Extension guidance**:
   1. Treat fragments as read-only facts. If data is missing, fix the layout stage.
@@ -113,9 +113,9 @@ Renderer (PDF via QuestPDF)
 
 ### Test Projects
 
-- **Html2x.Layout.Test**: Unit and golden tests that guard DOM parsing, style computation, box construction, and fragmentation. Extend these fixtures when introducing new layout logic.
-- **Html2x.Pdf.Test**: Renderer tests that validate `PdfRenderer`, assert PDF structure, and support fragment recording.
-- **Html2x.Test**: End-to-end coverage through `HtmlConverter`, piping logs into `ITestOutputHelper` for diagnostics.
+- **Html2x.LayoutEngine.Test**: Unit and golden tests that guard DOM parsing, style computation, box construction, and fragmentation. Extend these fixtures when introducing new layout logic.
+- **Html2x.Renderers.Pdf.Test**: Renderer tests that validate `PdfRenderer`, assert PDF structure, and support fragment recording.
+- **Html2x.Test**: End-to-end coverage through `HtmlConverter`, piping logs into `TestOutputLoggerProvider` for diagnostics.
 - **Html2x.TestConsole**: Manual harness for exploratory runs. Keep dependencies light and rely on console logging for visibility.
 
 ## Extension Guides
@@ -144,14 +144,14 @@ The pipeline now exposes structured diagnostics across the layout and rendering 
 
 * **Factory wiring:** Pass an `ILoggerFactory` into `HtmlConverter` (or directly into `LayoutBuilderFactory` / `PdfRenderer`) to light up logging. When omitted, the system falls back to `NullLogger` to avoid noisy output.
 * **Severity bands:**
-  * `Information` — layout start/end, renderer layout summaries
-  * `Debug` — per-page renderer metrics, layout stage completion
-  * `Trace` (treat as Verbose) — fragment traversal details in both the renderer dispatcher and nested block rendering
-  * `Warning` — unsupported fragments such as images or unknown block children
-  * `Error` — unhandled exceptions captured in `PdfRenderer.RenderAsync`
+  * `Information` - layout start/end, renderer layout summaries
+  * `Debug` - per-page renderer metrics, layout stage completion
+  * `Trace` (treat as Verbose) - fragment traversal details in both the renderer dispatcher and nested block rendering
+  * `Warning` - unsupported fragments such as images or unknown block children
+  * `Error` - unhandled exceptions captured in `PdfRenderer.RenderAsync`
 * **Correlation data:** Renderer logs include the fragment type, absolute coordinates, and a hash of the active `PdfOptions` so multi-run comparisons stay lightweight.
 * **Performance:** Logging is pay-for-play; `LoggerMessage.Define` avoids allocations when levels are disabled. Verbose/Trace calls guard `IsEnabled` checks so high-volume traces stay dormant until explicitly enabled.
-* **Future hooks:** Layout logging touches only the façade (`LayoutBuilder`). Additional stages (style resolution, pagination heuristics) can extend `LayoutLog.StageComplete` or add new events without constructor churn.
+* **Future hooks:** Layout logging touches only the facade (`LayoutBuilder`). Additional stages (style resolution, pagination heuristics) can extend `LayoutLog.StageComplete` or add new events without constructor churn.
 
 With these hooks you can capture a full breadcrumb trail from HTML ingestion through PDF emission during troubleshooting, then turn it off cleanly for regular runs.
 
@@ -160,7 +160,7 @@ With these hooks you can capture a full breadcrumb trail from HTML ingestion thr
 | Layer | Purpose | Typical Fixtures | Tooling Notes |
 | --- | --- | --- | --- |
 | Core units | Validate geometry math, color conversions, style defaults, and fragment invariants. | Inline data driven tests covering edge cases (zero widths, negative margins, etc.). | Use xUnit `[Theory]` to document edge scenarios. |
-| Layout stage | Guard DOM parsing, cascade, and pagination logic. | HTML snippets in `Html2x.Layout.Test` with approved fragment snapshots or targeted assertions. | Favor deterministic snapshots; when behavior changes intentionally, update fixtures with rationale. |
+| Layout stage | Guard DOM parsing, cascade, and pagination logic. | HTML snippets in `Html2x.LayoutEngine.Test` with approved fragment snapshots or targeted assertions. | Favor deterministic snapshots; when behavior changes intentionally, update fixtures with rationale. |
 | Renderer stage | Ensure QuestPDF translation remains consistent. | Synthetic fragment trees rendered to PDF; assertions via `PdfValidator` and `PdfWordParser`. | Add fragment recording tests when debugging traversal behavior. |
 | Integration | Exercise the full `HtmlConverter` pipeline. | Realistic documents rendered during tests with PDF header and metadata checks. | Plug in `TestOutputLoggerProvider` to capture diagnostics inside the test output. |
 | Manual harness | Provide fast validation during development. | `Html2x.TestConsole` sample HTML files. | Point to local or temporary files; review console logs for layout traces. |
@@ -170,4 +170,5 @@ With these hooks you can capture a full breadcrumb trail from HTML ingestion thr
 2. Add renderer assertions only if fragment output changes do not fully capture the intent.
 3. Update integration coverage once the end-to-end result stabilizes.
 4. Record PDF artifacts sparingly and document the reason in test comments.
+
 

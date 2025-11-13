@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Html2x.TestConsole": {
+      "commandName": "Project",
+      "commandLineArgs": "./html/width-height/grid.html"
+    }
+  }
+}
