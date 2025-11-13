@@ -1,9 +1,8 @@
 using AngleSharp;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Fragment;
-using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Assertions;
 using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;

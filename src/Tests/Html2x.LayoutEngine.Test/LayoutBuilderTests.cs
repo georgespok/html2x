@@ -9,6 +9,7 @@ using Moq;
 using Shouldly;
 
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
 

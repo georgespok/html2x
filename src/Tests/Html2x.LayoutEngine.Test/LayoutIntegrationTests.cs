@@ -8,6 +8,7 @@ using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -177,7 +178,7 @@ public class LayoutIntegrationTests
         }
     }
 
-    //[Fact] - Disabled while width and height is not implemented
+    [Fact(Skip = "Disabled while width and height is not implemented")]
     public async Task LayoutBlockWithPadding_AdjustsContentWidth()
     {
         // Arrange: Block with width: 200px (150pt) and padding: 20px (15pt each side)
@@ -214,7 +215,7 @@ public class LayoutIntegrationTests
         lineBox.Rect.Width.ShouldBe(120f, 1f); // Allow some tolerance for text measurement
     }
 
-    //[Fact] - Disabled while width and height is not implemented
+    [Fact(Skip = "Disabled while width and height is not implemented")]
     public async Task LayoutBlockWithPadding_AdjustsChildPosition()
     {
         // Arrange: Block with padding: 20px (15pt) should offset child content
@@ -281,7 +282,7 @@ public class LayoutIntegrationTests
         lineBox.Rect.Y.ShouldBe(div.Rect.Y + 7.5f, 0.5f);
     }
 
-    //[Fact] - Disabled while width and height is not implemented
+    [Fact(Skip = "Disabled while width and height is not implemented")]
     public async Task LayoutInlineWithPadding_AffectsHorizontalSpacing()
     {
         // Arrange: Inline element with padding: 10px (7.5pt) inside a block

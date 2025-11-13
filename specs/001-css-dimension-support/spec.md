@@ -32,13 +32,13 @@ Template authors need bordered content blocks (used as placeholders for imagery 
 
 **Why this priority**: Marketing reports rely on fixed visual footprints; inconsistent block sizing forces manual editing and delays publication.
 
-**Independent Test**: Add an integration test where sample HTML renders bordered `<div>` elements with percentage widths and pixel heights, then compare resulting fragment rectangles against golden data captured via the layout verifier.
+**Independent Test**: Add an integration test where sample HTML renders bordered `<div>` elements with fixed pixel widths and heights, then compare resulting fragment rectangles against golden data captured via the layout verifier.
 
 **Constitution alignment**: Layout stage resolves container sizes before applying borders, renderer consumes only fragment metrics, and structured logging records requested versus resolved dimensions for later audits.
 
 **Acceptance Scenarios**:
 
-1. **Given** a bordered `<div>` without explicit height but with `width: 40%`, **When** the containing block width is computed, **Then** the fragment width equals 40 percent of that container before pagination and the border aligns with expected guides.
+1. **Given** a bordered `<div>` without explicit height but with `width: 240px`, **When** the containing block width is computed, **Then** the fragment width locks to 240px before pagination, the border aligns with expected guides, and height remains auto after a single measurement pass.
 2. **Given** a bordered `<div>` with `height: 80px` and `width: 200px`, **When** layout resolves the styles, **Then** the engine preserves those dimensions exactly and records the calculated size in the diagnostics stream.
 
 ---
@@ -62,7 +62,8 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 ### Edge Cases
 
-- Percentage widths when parent dimensions depend on content; engine should iterate until constraints stabilize and emit a warning if convergence exceeds one pass.
+- Percentage width requests are unsupported; the parser must warn and fall back to auto sizing without attempting iterative resolution.
+- Height resolution stops after the first measurement pass; if a container still depends on unresolved child metrics, log the limitation and keep the element on auto height.
 - Height specified on inline elements; treat as no-op but log advisory so designers understand why it was ignored.
 - Missing fonts that change text metrics; regression harness compares fragment rectangles rather than glyph counts to keep deterministic assertions valid.
 - Cross-culture numeric formats in inline styles; parser normalizes decimal separators before validation and records failures with locale data.
@@ -71,24 +72,25 @@ Operators require actionable feedback when authors use unsupported units or conf
 
 ### Functional Requirements
 
-- **FR-001**: The style system must parse `width` and `height` declarations (limited to px, pt, and percent units) into normalized layout units before box construction, rejecting unsupported units with actionable warnings.
+- **FR-001**: The style system must parse `width` and `height` declarations (limited to px and pt units) into normalized layout units before box construction, and emit actionable warnings for any other unit, including percentages, before falling back to auto.
 - **FR-002**: The box builder must apply resolved widths and heights to block-level elements (including bordered placeholders) while preserving pipeline ordering; no renderer-specific shortcuts may alter these metrics downstream.
-- **FR-003**: Percentage widths and heights must resolve against the containing block size with a documented fallback when the container lacks an explicit dimension (default to content width and log the assumption).
-- **FR-004**: When only one dimension is provided, the layout engine must derive the complementary measurement from content flow without introducing cross-platform variance greater than 1 pt.
-- **FR-005**: Auto height with fixed width must trigger content measurement passes that cap variance to less than 1 pt between runs; exceeding the threshold marks the run as failed.
+- **FR-003**: Width resolution must honor explicit px/pt declarations and, when the container lacks an explicit dimension, fall back to content-driven auto width while logging the assumption; percentage requests log warnings and default to auto immediately.
+- **FR-004**: When only width is provided, the layout engine may derive height from content flow only for simple block containers (no nested dimension dependencies) and must do so within a single measurement pass while keeping variance below 1 pt.
+- **FR-005**: Auto height with fixed width may perform exactly one measurement pass; if the pass cannot stabilize within 1 pt or requires re-measurement, the engine logs the limitation, keeps the element on auto height, and marks the run as failed.
 - **FR-006**: Validation must handle conflicting constraints (`min/max/explicit`) by applying CSS precedence rules and logging the chosen outcome for audit trails.
 - **FR-007**: Structured diagnostics must include element identifier, resolved width, resolved height, unit source, and any fallback decision so QA can assert behavior using existing harness tooling.
 
 ### Key Entities (include if feature involves data)
 
 - **Requested Dimension**: Captures the raw CSS `width`/`height` declarations (value + unit) plus source metadata coming out of style resolution.
-- **Resolved Dimension**: Holds the final normalized width and height (points), percentage flags, and fallback reasoning consumed by box/fragment builders.
+- **Resolved Dimension**: Holds the final normalized width and height (points), captures the originating unit metadata, and records fallback reasoning (unsupported units, complex height flows) consumed by box/fragment builders.
 - **Fragment Dimension**: Carries the renderable rectangle per element, referencing the Resolved Dimension and exposing overflow behavior for downstream renderers and observers.
 
 ## Assumptions
 
 - Feature scope targets block-level containers (including bordered placeholders); inline height adjustments remain unsupported beyond existing line-height behavior.
-- Supported units are limited to px, pt, and percentages; other units (em, rem, vh, vw, physical units) will raise warnings and fall back to auto until future phases.
+- Supported units are limited to px and pt; percentages and other units (em, rem, vh, vw, physical units) raise warnings and fall back to auto until future phases.
+- Height derivations only cover simple block containers that can be resolved in one measurement pass; any layout needing iterative height solving logs the limitation and keeps the element on auto height.
 - Overflow handling follows existing engine defaults: content clipped unless overflow rules already implemented for the element type.
 
 ## Success Criteria (mandatory)
@@ -96,9 +98,10 @@ Operators require actionable feedback when authors use unsupported units or conf
 ### Measurable Outcomes
 
 - **SC-001**: For each regression fixture, the resolved fragment width **and** height must each stay within +/- 1 pt of the expected measurement on the supported Windows runner in Release test runs (determinism verified via archived Html2x.TestConsole outputs).
-- **SC-002**: Exercise the pixel, percentage, and invalid-input scenarios sequentially: introduce one failing automated test, implement the minimal passing change, refactor, then move to the next scenario only after the suite is green.
+- **SC-002**: Exercise the pixel and invalid-input scenarios sequentially, including a regression that proves percentage units emit warnings and fall back to auto; introduce one failing automated test, implement the minimal passing change, refactor, then move to the next scenario only after the suite is green.
 - **SC-003**: Support engineers can identify dimension-related issues within five minutes using the structured diagnostics, proven by a dry run log review.
 - **SC-004**: Feature-branch runs of `dotnet test Html2x.sln -c Release` plus the Html2x.TestConsole width/height fixtures complete without manual PDF tweaks, proven by archiving the generated PDFs and logs (as-produced) under `build/width-height/`.
+- **SC-005**: Height resolution tests must show the value stabilizing within a single measurement pass; any attempt that would require iterative passes logs the limitation and the test asserts the fallback behavior.
 
 
 
