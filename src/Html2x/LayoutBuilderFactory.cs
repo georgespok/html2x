@@ -1,4 +1,5 @@
 using AngleSharp;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
@@ -10,7 +11,7 @@ namespace Html2x;
 
 public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
 {
-    public LayoutBuilder Create(ILoggerFactory? loggerFactory = null)
+    public LayoutBuilder Create(ILoggerFactory? loggerFactory = null, IDiagnosticSession? diagnosticSession = null)
     {
         var angleSharpConfig = Configuration.Default.WithCss();
         return new LayoutBuilder(
@@ -18,6 +19,7 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
             new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults()),
             new BoxTreeBuilder(),
             new FragmentBuilder(),
-            loggerFactory?.CreateLogger<LayoutBuilder>());
+            loggerFactory?.CreateLogger<LayoutBuilder>(),
+            diagnosticSession);
     }
 }
