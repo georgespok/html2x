@@ -1,0 +1,11 @@
+﻿using Html2x.LayoutEngine.Models;
+
+namespace Html2x.LayoutEngine.Box;
+
+public sealed class FloatLayoutEngine : IFloatLayoutEngine
+{
+    public void PlaceFloats(DisplayNode block, float x, float y, float width)
+    {
+        // MVP: ignore; in future will compute image positions, etc.
+    }
+}

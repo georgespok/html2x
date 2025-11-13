@@ -5,10 +5,9 @@ Html2x is renderer-agnostic: the fragment tree is the contract. This guide expla
 ## Architectural Overview
 
 ```
-HtmlLayout (pages → fragments)
-        │
-        ▼
-IFragmentRendererFactory ──▶ IFragmentRenderer ──▶ FragmentRenderDispatcher ──▶ RenderTarget
+HtmlLayout (pages -> fragments)
+        |
+IFragmentRendererFactory -> IFragmentRenderer -> FragmentRenderDispatcher -> RenderTarget
 ```
 
 - **Factory**: Creates `IFragmentRenderer` instances with renderer-specific dependencies.
@@ -17,7 +16,7 @@ IFragmentRendererFactory ──▶ IFragmentRenderer ──▶ FragmentRenderDis
 
 ## Adding a New Renderer Project
 
-1. **Create a new project** (e.g., `Html2x.Svg`) referencing `Html2x.Core`.
+1. **Create a new project** (e.g., `Html2x.Svg`) referencing `Html2x.Abstractions`.
 2. **Implement `IFragmentRenderer`**:
    - Honor the fragment contract (do not mutate fragments).
    - Handle block, line, image, and rule fragments. If a fragment is unsupported, log a warning.
@@ -31,8 +30,8 @@ IFragmentRendererFactory ──▶ IFragmentRenderer ──▶ FragmentRenderDis
 When enhancing the default PDF renderer:
 
 - Update `QuestPdfFragmentRenderer` cautiously. Group changes behind clearly named helper methods (e.g., `RenderTextDecoration`).
-- Use `RendererLog` for new diagnostics rather than raw `logger.Log...` calls.
-- Keep `PdfRenderer` oblivious to QuestPDF specifics—only the factory and fragment renderer should reference QuestPDF APIs.
+- Use `PdfRendererLog` for new diagnostics rather than raw `logger.Log...` calls.
+- Keep `PdfRenderer` oblivious to QuestPDF specifics-only the factory and fragment renderer should reference QuestPDF APIs.
 
 ## Logging Expectations
 
@@ -77,3 +76,4 @@ For non-PDF outputs, design verification helpers that assert semantic equality (
 - [ ] Optional: console or test harness updated to demo the new renderer.
 
 By following these steps your renderer will plug into the existing pipeline cleanly and remain easy to evolve.
+
