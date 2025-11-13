@@ -47,7 +47,3 @@ bld/
 [Ll]ogs/
 build/
 build/logs/
-
-#.specify/
-#.cursor/
-#AGENTS.md
