@@ -1,12 +1,13 @@
 <!--
 Sync Impact Report
-Version change: 1.1.2 -> 1.1.3
-Updated file structire from Html2x.Core to Htm2x.Abstractions
+Version change: 2.0.0 -> 2.1.0
+Modified sections:
+- Principle II: Deterministic Rendering Outputs (allow best-effort when metadata prevents byte parity)
 Added sections: none
 Removed sections: none
 Templates requiring updates:
-- updated: .specify/templates/plan-template.md
-- updated: .specify/templates/tasks-template.md
+- ✅ .specify/templates/spec-template.md
+- ✅ .specify/templates/plan-template.md
 Runtime guidance updates:
 - none
 Follow-up TODOs:
@@ -23,10 +24,11 @@ Follow-up TODOs:
 Rationale: Preserving stage isolation keeps the system modular, testable, and enables new renderers without regressions.
 
 ### II. Deterministic Rendering Outputs
-- Identical HTML, CSS, options, and fonts MUST produce equivalent outputs across platforms.
-- All randomness, system clock access, and environment-specific dependencies MUST be eliminated or sealed behind deterministic abstractions.
-- Test suites MUST assert fragment equivalence or semantic PDF parity for every new feature.
-Rationale: Deterministic rendering underpins regression safety and cross-platform parity.
+- Identical HTML, CSS, options, and fonts executed within the same runtime profile (OS, architecture, font set, renderer) MUST produce equivalent outputs whenever the pipeline controls metadata that affects determinism.
+- When byte-level parity is impractical (for example, PDF metadata time stamps or host-provided fonts), teams MAY relax the requirement, but they MUST document the variance, mitigation plan, and reference environment in the spec and plan.
+- All randomness, system clock access, and environment-specific dependencies MUST be eliminated or sealed behind deterministic abstractions for the reference environment.
+- Test suites MUST provide best-effort parity checks in the reference environment (e.g., fragment counts, normalized PDF comparison). Byte-for-byte asserts are OPTIONAL when metadata cannot be controlled.
+Rationale: Determinism protects regression safety, but diagnostics and PDFs can include host metadata. Capturing best-effort parity while documenting unavoidable variance keeps the discipline practical.
 
 ### III. Test-First Delivery
 - Tests are first-class and MUST focus on observable behavior, not implementation details.
@@ -72,7 +74,7 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 1.1.3 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-11
+**Version**: 2.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-13
 
 
 

@@ -26,7 +26,7 @@
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 - [ ] Stage isolation maintained (Principle I: Staged Layout Discipline).
-- [ ] Deterministic rendering risks addressed with tests or instrumentation (Principle II).
+- [ ] Deterministic rendering risks addressed with best-effort tests or instrumentation in the reference environment, and any unavoidable variance documented (Principle II).
 - [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
 - [ ] Logging and diagnostics updates planned (Principle IV).
 - [ ] Extension points documented with migration guidance (Principle V).

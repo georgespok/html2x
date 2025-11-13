@@ -7,7 +7,7 @@
 
 ## User Scenarios & Testing (mandatory)
 
-Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and deterministic rendering (Principle II). Include test harness notes and observability hooks required to validate the behavior (Principle IV).
+Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and delivers best-effort deterministic rendering within the reference environment, documenting any unavoidable variance (Principle II). Include test harness notes and observability hooks required to validate the behavior (Principle IV).
 
 <!--
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
@@ -77,7 +77,7 @@ Constitution alignment: describe how each story preserves staged layout discipli
 ### Functional Requirements
 
 - **FR-001**: Implementation MUST respect pipeline contracts; no stage bypassing without new shared abstractions (Principle I).
-- **FR-002**: Feature MUST keep outputs deterministic for identical inputs and document the verification strategy (Principle II).
+- **FR-002**: Feature MUST keep outputs deterministic for identical inputs in the reference environment, document the verification strategy, and record any unavoidable variance (Principle II).
 - **FR-003**: Automated tests MUST be authored first and fail before implementation begins (Principle III).
 - **FR-004**: Structured logging or diagnostics MUST cover the new behavior with actionable metadata (Principle IV).
 - **FR-005**: Public surface changes MUST include migration guidance and docs updates before release (Principle V).
@@ -97,6 +97,6 @@ Constitution alignment: describe how each story preserves staged layout discipli
 ### Measurable Outcomes
 
 - **SC-001**: `dotnet test Html2x.sln -c Release` passes on Windows and Linux for the updated solution.
-- **SC-002**: Integration tests confirm deterministic fragments or PDF parity for new scenarios.
+- **SC-002**: Integration tests confirm deterministic fragments or PDF parity for new scenarios in the designated reference environment, and note any additional environments that were not exercised.
 - **SC-003**: Observability signals (logs or diagnostics) expose the new behavior and are traceable in the harness.
 - **SC-004**: Documentation in `docs/` and release notes capture the change, including migration guidance if contracts moved.
