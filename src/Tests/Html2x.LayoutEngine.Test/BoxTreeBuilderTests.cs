@@ -2,7 +2,7 @@ using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Assertions;
 
 namespace Html2x.LayoutEngine.Test;

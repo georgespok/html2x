@@ -1,28 +1,6 @@
-﻿using AngleSharp.Dom;
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 
-namespace Html2x.LayoutEngine.Style;
-
-public sealed class StyleTree
-{
-    public StyleNode? Root { get; set; }
-    public PageStyle Page { get; init; } = new();
-}
-
-public sealed class StyleNode
-{
-    public IElement Element { get; init; } = null!;
-    public ComputedStyle Style { get; init; } = new();
-    public List<StyleNode> Children { get; } = [];
-}
-
-public sealed class PageStyle
-{
-    public float MarginTopPt { get; set; } = 24;
-    public float MarginRightPt { get; set; } = 24;
-    public float MarginBottomPt { get; set; } = 24;
-    public float MarginLeftPt { get; set; } = 24;
-}
+namespace Html2x.LayoutEngine.Models;
 
 public sealed class ComputedStyle
 {

@@ -1,5 +1,5 @@
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine;
 

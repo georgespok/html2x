@@ -1,5 +1,5 @@
 ﻿using System.Reflection;
-using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Models;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Assertions;
