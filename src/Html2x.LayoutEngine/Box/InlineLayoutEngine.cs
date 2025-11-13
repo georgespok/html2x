@@ -1,3 +1,5 @@
+using Html2x.LayoutEngine.Models;
+
 namespace Html2x.LayoutEngine.Box;
 
 public sealed class InlineLayoutEngine(IFontMetricsProvider metrics, ILineHeightStrategy lineHeightStrategy)
