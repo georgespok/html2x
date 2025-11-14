@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Rendering;
@@ -15,25 +16,28 @@ public class PdfRenderer
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<PdfRenderer> _logger;
     private readonly ILogger<FragmentRenderDispatcher> _dispatcherLogger;
+    private readonly IDiagnosticSession? _diagnosticSession;
 
     public PdfRenderer()
-        : this(new QuestPdfFragmentRendererFactory(), null)
+        : this(new QuestPdfFragmentRendererFactory(), null, null)
     {
     }
 
-    public PdfRenderer(ILoggerFactory? loggerFactory)
-        : this(new QuestPdfFragmentRendererFactory(loggerFactory), loggerFactory)
+    public PdfRenderer(ILoggerFactory? loggerFactory, IDiagnosticSession? diagnosticSession = null)
+        : this(new QuestPdfFragmentRendererFactory(loggerFactory), loggerFactory, diagnosticSession)
     {
     }
 
     public PdfRenderer(
         IFragmentRendererFactory rendererFactory,
-        ILoggerFactory? loggerFactory = null)
+        ILoggerFactory? loggerFactory = null,
+        IDiagnosticSession? diagnosticSession = null)
     {
         _rendererFactory = rendererFactory ?? throw new ArgumentNullException(nameof(rendererFactory));
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = _loggerFactory.CreateLogger<PdfRenderer>();
         _dispatcherLogger = _loggerFactory.CreateLogger<FragmentRenderDispatcher>();
+        _diagnosticSession = diagnosticSession;
     }
 
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null)
@@ -45,6 +49,8 @@ public class PdfRenderer
         {
             throw new ArgumentNullException(nameof(htmlLayout));
         }
+
+        using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, "stage/pdf-render");
 
         try
         {
