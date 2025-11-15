@@ -62,7 +62,7 @@
 ### Tests for User Story 2
 
 - [X] T017 [US2] Add failing dump serialization test `tests/Html2x.Test/Diagnostics/StructuredDumpTests.cs` that asserts layout dumps include stable node counts and identifiers.
-- [ ] T018 [P] [US2] Add failing context emission test `tests/Html2x.Test/Diagnostics/DiagnosticContextTests.cs` verifying disposed contexts raise a `context/detail` event with captured values.
+- [X] T018 [P] [US2] Add failing context emission test `tests/Html2x.Test/Diagnostics/DiagnosticContextTests.cs` verifying disposed contexts raise a `context/detail` event with captured values.
 
 ### Implementation for User Story 2
 
