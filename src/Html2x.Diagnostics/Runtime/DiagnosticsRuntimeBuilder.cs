@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
-using Html2x.Diagnostics.Logging;
 
 namespace Html2x.Diagnostics.Runtime;
 
@@ -8,8 +7,6 @@ public sealed class DiagnosticsRuntimeBuilder
 {
     private readonly Dictionary<string, SinkRegistration> _sinks =
         new(StringComparer.OrdinalIgnoreCase);
-
-    public DiagnosticsLoggerOptions Logger { get; } = new();
 
     public bool PropagateSinkExceptions { get; private set; } = true;
 

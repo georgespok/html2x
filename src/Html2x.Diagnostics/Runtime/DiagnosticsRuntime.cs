@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
-using Html2x.Diagnostics.Logging;
 using Html2x.Diagnostics.Pipeline;
 
 namespace Html2x.Diagnostics.Runtime;
@@ -9,17 +8,14 @@ public sealed class DiagnosticsRuntime : IDiagnosticsRuntime
 {
     private readonly IReadOnlyDictionary<string, DiagnosticsRuntimeBuilder.SinkRegistration> _sinkMap;
     private readonly DiagnosticSessionConfiguration _defaultConfiguration;
-    private readonly DiagnosticsLoggerFactory _loggerFactory;
     private readonly AsyncLocal<IDiagnosticSession?> _currentSession = new();
 
     private DiagnosticsRuntime(
         IReadOnlyDictionary<string, DiagnosticsRuntimeBuilder.SinkRegistration> sinkMap,
-        DiagnosticSessionConfiguration defaultConfiguration,
-        DiagnosticsLoggerOptions loggerOptions)
+        DiagnosticSessionConfiguration defaultConfiguration)
     {
         _sinkMap = sinkMap;
         _defaultConfiguration = defaultConfiguration;
-        _loggerFactory = new DiagnosticsLoggerFactory(GetCurrentSession, loggerOptions);
     }
 
     public static DiagnosticsRuntime Configure(Action<DiagnosticsRuntimeBuilder>? configure = null)
@@ -42,7 +38,7 @@ public sealed class DiagnosticsRuntime : IDiagnosticsRuntime
             descriptors,
             builder.PropagateSinkExceptions);
 
-        return new DiagnosticsRuntime(sinkMap, configuration, builder.Logger);
+        return new DiagnosticsRuntime(sinkMap, configuration);
     }
 
     public bool DiagnosticsEnabled => _defaultConfiguration.Sinks.Count > 0;
