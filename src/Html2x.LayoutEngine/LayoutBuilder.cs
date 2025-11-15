@@ -1,9 +1,12 @@
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Style;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,6 +28,8 @@ public class LayoutBuilder(
     ILogger<LayoutBuilder>? logger = null,
     IDiagnosticSession? diagnosticSession = null)
 {
+    private const string LayoutDumpCategory = "dump/layout";
+
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
@@ -44,6 +49,7 @@ public class LayoutBuilder(
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
         LayoutLog.StageComplete(_logger, "BoxTreeBuilt");
+        PublishLayoutDump(boxTree);
 
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
         LayoutLog.StageComplete(_logger, "FragmentsBuilt");
@@ -78,6 +84,32 @@ public class LayoutBuilder(
     {
         using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, stage);
         action();
+    }
+
+    private void PublishLayoutDump(BoxTree boxTree)
+    {
+        if (_diagnosticSession is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var document = LayoutDiagnosticsDumper.Create(boxTree);
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["summary"] = document.Summary,
+            ["nodeCount"] = document.NodeCount,
+            ["structuredDump"] = document
+        };
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            _diagnosticSession.Descriptor.SessionId,
+            LayoutDumpCategory,
+            LayoutDumpCategory,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        _diagnosticSession.Publish(diagnosticEvent);
     }
 }
 

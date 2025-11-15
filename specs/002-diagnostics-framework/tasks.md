@@ -66,7 +66,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement dump builders and serializers in `src/Html2x.Diagnostics/Dumps/StructuredDumpSerializer.cs` and integrate with stage publishers.
+- [X] T019 [US2] Implement dump builders and serializers in `src/Html2x.Diagnostics/Dumps/StructuredDumpSerializer.cs` and integrate with stage publishers.
 - [ ] T020 [US2] Implement `DiagnosticContext` to emit dedicated events in `src/Html2x.Diagnostics/Context/DiagnosticContext.cs` and ensure shrink-to-fit data is recorded.
 - [ ] T021 [US2] Extend `specs/002-diagnostics-framework/quickstart.md` and `docs/diagnostics.md` with examples for dumps and context events.
 
