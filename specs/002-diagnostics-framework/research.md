@@ -35,3 +35,32 @@
 | Html2x.TestConsole | Program uses `ILogger` only for stdout diagnostics (no direct `ILogger` references today but console output is allowed). | Sole component allowed to print via `ILogger` going forward; all other assemblies must route through diagnostics sinks. |
 
 **Policy**: Html2x.TestConsole retains console printing for operator feedback. All other `ILogger` usages will either be wrapped by diagnostics (T009/T010) or silenced behind the diagnostics runtime to preserve the "no console noise" requirement.
+
+## Backlog - Visualization & Metadata Sinks (T033)
+
+**Goal**: Extend the sink portfolio beyond JSON/console/in-memory so operators can visualize layout decisions and embed diagnostics traces directly inside generated PDFs.
+
+### SVG Visualization Sink
+- **Scope**: Generate a deterministic SVG timeline/graph for each render showing stage durations, layout tree snapshots, and context annotations.
+- **Dependencies**: Requires structured dump schemas for fragments/pagination plus a canonical palette documented in `docs/diagnostics.md`.
+- **Open Questions**:
+  1. How large can the SVG get before it impacts CI artifact limits? (Need benchmark against 200-page renders.)
+  2. Should the sink inline structured dump excerpts or reference external JSON blobs?
+- **Acceptance Signals**:
+  - CLI flag `--diagnostics-svg <path>` flows through `DiagnosticsOptions`.
+  - Contract test ensures SVG output diffable (stable ids, timestamps rounded).
+
+### PDF Metadata Sink
+- **Scope**: Annotate the produced PDF with a diagnostics attachment (XMP metadata or embedded JSON file) so downstream viewers can inspect renders without external artifacts.
+- **Dependencies**: QuestPDF hooks for custom attachments, plus guidance on stripping metadata for privacy-sensitive tenants.
+- **Open Questions**:
+  1. Do we attach the full diagnostics JSON or a summary hash? Needs alignment with compliance.
+  2. How does this interact with incremental PDF streaming (performance impact)?
+- **Acceptance Signals**:
+  - `DiagnosticsOptions.EnablePdfMetadataSink` toggles the behavior.
+  - Regression test asserts PDF metadata contains session id + stage count.
+
+### Next Actions
+- Prototype spike documenting QuestPDF extensibility and a minimal SVG timeline.
+- Update `docs/diagnostics.md` and `specs/002-diagnostics-framework/spec.md` once designs solidify.
+- Track privacy review for both sinks before implementation.

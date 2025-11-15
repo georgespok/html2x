@@ -1,24 +1,20 @@
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Renderers.Pdf.Rendering;
 using Html2x.Renderers.Pdf.Visitors;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Html2x.Renderers.Pdf.Pipeline;
 
 internal sealed class FragmentRenderDispatcher(
-    IFragmentRenderer renderer,
-    ILogger<FragmentRenderDispatcher>? logger = null)
+    IFragmentRenderer renderer)
     : IFragmentVisitor
 {
     private readonly IFragmentRenderer _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
-    private readonly ILogger<FragmentRenderDispatcher> _logger = logger ?? NullLogger<FragmentRenderDispatcher>.Instance;
 
     public void Visit(BlockFragment fragment)
     {
         _renderer.RenderBlock(fragment, (child, childRenderer) =>
         {
-            child.VisitWith(new FragmentRenderDispatcher(childRenderer, _logger));
+            child.VisitWith(new FragmentRenderDispatcher(childRenderer));
         });
     }
 
@@ -37,5 +33,3 @@ internal sealed class FragmentRenderDispatcher(
         _renderer.RenderRule(fragment);
     }
 }
-
-

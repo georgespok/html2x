@@ -87,6 +87,19 @@ A partner team subscribes a custom sink that forwards diagnostics streams to JSO
 - **FR-012**: Diagnostics sessions expose scoped `DiagnosticContext` handles (e.g., `session.Context("ShrinkToFit")`) that allow stages to set key-value pairs like available width or intrinsic width, ensuring reasoning breadcrumbs flow alongside events and dumps without retaining disposable context objects.
 - **FR-013**: Diagnostics capture full, unredacted payloads (including sensitive inputs) by default; sanitization or redaction responsibility lies with downstream sinks or consumers that choose to emit or persist the data.
 
+### Configuration & CLI Guidance
+
+- `DiagnosticsOptions` (owned by the Html2x facade) is the canonical entry point for enabling sinks. The options object exposes toggles such as `EnableConsoleSink`, `JsonOutputPath`, and `EnableInMemorySink`; calling `BuildRuntime()` wires the HTML converter into diagnostics only when a caller explicitly opts in.
+- Html2x.TestConsole binds its `--diagnostics` and `--diagnostics-json <path>` flags to the same options builder. It remains the sole component retaining `ILogger`, and even there `ILogger` is limited to human-readable status lines while structured output flows exclusively through diagnostics sinks.
+- Release validation requires running `dotnet test src/Html2x.sln -c Release` plus `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/example.html build/diagnostics/example.pdf --diagnostics --diagnostics-json build/diagnostics/session.json`. Store command transcripts plus artifact locations inside `build/diagnostics/final.md` for partner review.
+- Advanced scenarios that need bespoke sinks can fall back to `DiagnosticsRuntime.Configure(opts => ...)`, but public documentation should point integrators to `DiagnosticsOptions` so CLI tooling and runtime configuration stay consistent.
+
+### Release Readiness & Backlog
+
+- JSON, console, and test-only in-memory sinks ship in this iteration and are fully controlled by `DiagnosticsOptions`. SVG visualization and PDF metadata sinks remain backlog items referenced in `specs/002-diagnostics-framework/research.md`; add cross-links in docs when those stories activate.
+- Documentation (`docs/diagnostics.md`, `quickstart.md`) must clarify that Html2x, LayoutEngine, and Renderers.Pdf no longer reference `Microsoft.Extensions.Logging`. Operators who previously consumed `ILogger` output should move to diagnostics sinks, with Html2x.TestConsole acting as the migration example.
+- Final release notes should capture which sinks were enabled during validation, the location of the captured JSON/console artifacts, and any known variances. This is the closing requirement for T031 before the feature is declared ship-ready.
+
 ### Key Entities
 
 - **DiagnosticSession**: Represents a scoped capture tied to one render; tracks session id, activation flags, and lifecycle (created, capturing, completed, disposed).
