@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Renderers.Pdf.Mapping;
 using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Pipeline;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -13,12 +15,12 @@ namespace Html2x.Renderers.Pdf.Rendering;
 internal sealed class QuestPdfFragmentRenderer(
     IContainer container,
     PdfOptions options,
-    ILogger<QuestPdfFragmentRenderer>? logger = null)
+    IDiagnosticSession? diagnosticSession)
     : IFragmentRenderer
 {
     private readonly IContainer _container = container ?? throw new ArgumentNullException(nameof(container));
     private readonly PdfOptions _options = options ?? throw new ArgumentNullException(nameof(options));
-    private readonly ILogger<QuestPdfFragmentRenderer> _logger = logger ?? NullLogger<QuestPdfFragmentRenderer>.Instance;
+    private readonly IDiagnosticSession? _diagnosticSession = diagnosticSession;
 
     public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
@@ -65,7 +67,7 @@ internal sealed class QuestPdfFragmentRenderer(
                         break;
                     default:
                         i++;
-                        PdfRendererLog.FragmentStart(_logger, child);
+                        PublishFragmentEvent("render/pdf/fragment", child);
                         inner.Item().MinHeight(childHeight).Element(item =>
                         {
                             item.Row(row =>
@@ -78,7 +80,7 @@ internal sealed class QuestPdfFragmentRenderer(
                                 var childWidth = Math.Max(Math.Min(child.Rect.Width, fragment.Rect.Width - relativeLeft), 0);
                                 row.ConstantItem(childWidth).Element(box =>
                                 {
-                                    var childRenderer = new QuestPdfFragmentRenderer(box, _options, _logger);
+                                    var childRenderer = new QuestPdfFragmentRenderer(box, _options, _diagnosticSession);
                                     renderChild(child, childRenderer);
                                 });
                             });
@@ -98,7 +100,7 @@ internal sealed class QuestPdfFragmentRenderer(
 
     public void RenderImage(ImageFragment fragment)
     {
-        PdfRendererLog.FragmentUnsupported(_logger, fragment);
+        PublishFragmentEvent("render/pdf/fragment-unsupported", fragment);
     }
 
     public void RenderRule(RuleFragment fragment)
@@ -128,7 +130,7 @@ internal sealed class QuestPdfFragmentRenderer(
         {
             if (border.LineStyle is BorderLineStyle.Dashed or BorderLineStyle.Dotted)
             {
-                _logger.LogDebug("Border style {BorderStyle} not supported, rendering as solid.", border.LineStyle);
+                PublishWarning("render/pdf/border-warning", border.LineStyle.ToString());
             }
 
             decorated = decorated.Border(border.Width)
@@ -151,8 +153,53 @@ internal sealed class QuestPdfFragmentRenderer(
             });
         });
     }
+    private void PublishFragmentEvent(string kind, Fragment fragment)
+    {
+        if (_diagnosticSession is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["fragmentType"] = fragment.GetType().Name,
+            ["x"] = fragment.Rect.X,
+            ["y"] = fragment.Rect.Y,
+            ["width"] = fragment.Rect.Width,
+            ["height"] = fragment.Rect.Height
+        };
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            _diagnosticSession.Descriptor.SessionId,
+            "render/pdf",
+            kind,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        _diagnosticSession.Publish(diagnosticEvent);
+    }
+
+    private void PublishWarning(string kind, string? detail)
+    {
+        if (_diagnosticSession is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["detail"] = detail
+        };
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            _diagnosticSession.Descriptor.SessionId,
+            "render/pdf",
+            kind,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        _diagnosticSession.Publish(diagnosticEvent);
+    }
 }
-
-
-
-

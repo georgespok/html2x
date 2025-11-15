@@ -62,13 +62,13 @@
 ### Tests for User Story 2
 
 - [X] T017 [US2] Add failing dump serialization test `tests/Html2x.Test/Diagnostics/StructuredDumpTests.cs` that asserts layout dumps include stable node counts and identifiers.
-- [ ] T018 [P] [US2] Add failing context emission test `tests/Html2x.Test/Diagnostics/DiagnosticContextTests.cs` verifying disposed contexts raise a `context/detail` event with captured values.
+- [X] T018 [P] [US2] Add failing context emission test `tests/Html2x.Test/Diagnostics/DiagnosticContextTests.cs` verifying disposed contexts raise a `context/detail` event with captured values.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement dump builders and serializers in `src/Html2x.Diagnostics/Dumps/StructuredDumpSerializer.cs` and integrate with stage publishers.
-- [ ] T020 [US2] Implement `DiagnosticContext` to emit dedicated events in `src/Html2x.Diagnostics/Context/DiagnosticContext.cs` and ensure shrink-to-fit data is recorded.
-- [ ] T021 [US2] Extend `specs/002-diagnostics-framework/quickstart.md` and `docs/diagnostics.md` with examples for dumps and context events.
+- [X] T019 [US2] Implement dump builders and serializers in `src/Html2x.Diagnostics/Dumps/StructuredDumpSerializer.cs` and integrate with stage publishers.
+- [X] T020 [US2] Implement `DiagnosticContext` to emit dedicated events in `src/Html2x.Diagnostics/Context/DiagnosticContext.cs` and ensure shrink-to-fit data is recorded.
+- [X] T021 [US2] Extend `specs/002-diagnostics-framework/quickstart.md` and `docs/diagnostics.md` with examples for dumps and context events.
 
 **Checkpoint**: User Story 2 delivers structured dumps and reasoning metadata with deterministic identifiers.
 
@@ -81,16 +81,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T022 [US3] Add failing JSON sink contract test `tests/Html2x.Test/Diagnostics/SinkContractTests.cs` asserting persisted payloads contain sessions, events, dumps, reasoning, and raw field values with no redaction.
-- [ ] T023 [P] [US3] Add failing console sink test `tests/Html2x.Test/Diagnostics/ConsoleSinkTests.cs` ensuring console output mirrors JSON payload ordering.
-- [ ] T024 [US3] Add exploratory test `tests/Html2x.Test/Diagnostics/InMemorySinkTests.cs` to determine if an in-memory sink is required for deterministic assertions.
+- [X] T022 [US3] Add failing JSON sink contract test `tests/Html2x.Test/Diagnostics/SinkContractTests.cs` asserting persisted payloads contain sessions, events, dumps, reasoning, and raw field values with no redaction.
+- [X] T023 [P] [US3] Add failing console sink test `tests/Html2x.Test/Diagnostics/ConsoleSinkTests.cs` ensuring console output mirrors JSON payload ordering.
+- [X] T024 [US3] Add exploratory test `tests/Html2x.Test/Diagnostics/InMemorySinkTests.cs` to determine if an in-memory sink is required for deterministic assertions.
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Implement `JsonDiagnosticSink` with deterministic serialization in `src/Html2x.Diagnostics/Sinks/JsonDiagnosticSink.cs` and configuration hooks.
-- [ ] T026 [US3] Implement `ConsoleDiagnosticSink` emitting human-readable stage timelines in `src/Html2x.Diagnostics/Sinks/ConsoleDiagnosticSink.cs`.
-- [ ] T027 [US3] Prototype `InMemoryDiagnosticSink` (if justified by T024) for unit-test assertions in `src/Html2x.Diagnostics/Sinks/InMemoryDiagnosticSink.cs`.
-- [ ] T028 [US3] Wire sink registration via `DiagnosticsOptions` so the existing `--diagnostics` flag in `src/Html2x.TestConsole/diagnostics/run-diagnostics-json.ps1` enables the selected sinks without introducing new toggles.
-- [ ] T029 [US3] Update `docs/diagnostics.md` and `quickstart.md` with sink configuration matrices, console diff instructions, and guidance on sanitizing sinks when raw payloads contain sensitive data.
+- [X] T025 [US3] Implement `JsonDiagnosticSink` with deterministic serialization in `src/Html2x.Diagnostics/Sinks/JsonDiagnosticSink.cs` and configuration hooks.
+- [X] T026 [US3] Implement `ConsoleDiagnosticSink` emitting human-readable stage timelines in `src/Html2x.Diagnostics/Sinks/ConsoleDiagnosticSink.cs`.
+- [X] T027 [US3] Prototype `InMemoryDiagnosticSink` (if justified by T024) for unit-test assertions in `src/Html2x.Diagnostics/Sinks/InMemoryDiagnosticSink.cs`.
+- [X] T028 [US3] Wire sink registration via `DiagnosticsOptions` so the existing `--diagnostics` flag in `src/Html2x.TestConsole/diagnostics/run-diagnostics-json.ps1` enables the selected sinks without introducing new toggles.
+- [X] T029 [US3] Update `docs/diagnostics.md` and `quickstart.md` with sink configuration matrices, console diff instructions, and guidance on sanitizing sinks when raw payloads contain sensitive data.
 
 **Checkpoint**: User Story 3 equips Html2x with pluggable sinks plus documentation for partners and console users.
 
@@ -100,9 +100,9 @@
 
 **Purpose**: Ensure documentation, release readiness, and regression coverage across all stories.
 
-- [ ] T030 Run `dotnet test Html2x.sln -c Release` and `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input sample.html --diagnostics` capturing outputs in `build/diagnostics/final.md`.
-- [ ] T031 [P] Consolidate release notes and migration guidance in `docs/diagnostics.md` and `specs/002-diagnostics-framework/spec.md`.
-- [ ] T033 Record follow-up work for SVG visualization and PDF metadata sinks by adding a backlog entry to `specs/002-diagnostics-framework/research.md` and cross-referencing it in `docs/diagnostics.md`.
+- [X] T030 Run `dotnet test Html2x.sln -c Release` and `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input sample.html --diagnostics` capturing outputs in `build/diagnostics/final.md`.
+- [X] T031 [P] Consolidate release notes and migration guidance in `docs/diagnostics.md` and `specs/002-diagnostics-framework/spec.md`.
+- [X] T033 Record follow-up work for SVG visualization and PDF metadata sinks by adding a backlog entry to `specs/002-diagnostics-framework/research.md` and cross-referencing it in `docs/diagnostics.md`.
 
 ---
 
