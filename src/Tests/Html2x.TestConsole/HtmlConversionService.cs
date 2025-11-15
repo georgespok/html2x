@@ -26,8 +26,8 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         logger.LogInformation("Output: {Output}", outputPath);
 
         var runtime = DiagnosticsFactory.Create(options, loggerFactory, logger);
-        var converter = runtime?.Decorate(new HtmlConverter(loggerFactory: loggerFactory))
-                         ?? new HtmlConverter(loggerFactory: loggerFactory);
+        var converter = runtime?.Decorate(new HtmlConverter())
+                         ?? new HtmlConverter();
 
         try
         {

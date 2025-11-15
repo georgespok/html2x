@@ -1,3 +1,4 @@
+using System.IO;
 using Html2x.Diagnostics.Runtime;
 using Microsoft.Extensions.Logging;
 
@@ -24,14 +25,14 @@ internal static class DiagnosticsFactory
 
         logger.LogInformation("Diagnostics enabled.");
 
-        return DiagnosticsRuntime.Configure(builder =>
+        var diagnosticsOptions = new DiagnosticsOptions
         {
-            builder.AddSink("console", "console", () => new Diagnostics.ConsoleDiagnosticSink(loggerFactory.CreateLogger("Diagnostics")));
+            JsonOutputPath = resolvedJson,
+            EnableConsoleSink = true
+        };
 
-            if (resolvedJson is not null)
-            {
-                builder.AddSink("json-file", "json-file", () => new Diagnostics.JsonFileDiagnosticSink(resolvedJson));
-            }
-        });
+        return diagnosticsOptions.BuildRuntime();
     }
 }
+
+
