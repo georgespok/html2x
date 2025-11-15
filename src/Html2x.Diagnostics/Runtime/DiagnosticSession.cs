@@ -97,7 +97,7 @@ internal sealed class DiagnosticSession : IDiagnosticSession
         var model = new DiagnosticsModel(
             Descriptor,
             diagnosticEvent,
-            Array.Empty<DiagnosticContextSnapshot>());
+            []);
 
         _dispatcher.Dispatch(model);
     }
