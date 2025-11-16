@@ -1,9 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Rendering;
 using Html2x.Renderers.Pdf.Visitors;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using QuestPDF.Fluent;
 using QuestPageSize = QuestPDF.Helpers.PageSize;
 
@@ -12,28 +15,24 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 public class PdfRenderer
 {
     private readonly IFragmentRendererFactory _rendererFactory;
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<PdfRenderer> _logger;
-    private readonly ILogger<FragmentRenderDispatcher> _dispatcherLogger;
+    private readonly IDiagnosticSession? _diagnosticSession;
 
     public PdfRenderer()
-        : this(new QuestPdfFragmentRendererFactory(), null)
+        : this(new QuestPdfFragmentRendererFactory())
     {
     }
 
-    public PdfRenderer(ILoggerFactory? loggerFactory)
-        : this(new QuestPdfFragmentRendererFactory(loggerFactory), loggerFactory)
+    public PdfRenderer(IDiagnosticSession? diagnosticSession)
+        : this(new QuestPdfFragmentRendererFactory(), diagnosticSession)
     {
     }
 
     public PdfRenderer(
         IFragmentRendererFactory rendererFactory,
-        ILoggerFactory? loggerFactory = null)
+        IDiagnosticSession? diagnosticSession = null)
     {
         _rendererFactory = rendererFactory ?? throw new ArgumentNullException(nameof(rendererFactory));
-        _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
-        _logger = _loggerFactory.CreateLogger<PdfRenderer>();
-        _dispatcherLogger = _loggerFactory.CreateLogger<FragmentRenderDispatcher>();
+        _diagnosticSession = diagnosticSession;
     }
 
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null)
@@ -46,6 +45,8 @@ public class PdfRenderer
             throw new ArgumentNullException(nameof(htmlLayout));
         }
 
+        using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, "stage/pdf-render");
+
         try
         {
             var bytes = RenderWithQuestPdf(htmlLayout, options);
@@ -53,14 +54,22 @@ public class PdfRenderer
         }
         catch (Exception ex)
         {
-            PdfRendererLog.Exception(_logger, ex);
+            PublishRenderEvent("render/pdf/error", payload =>
+            {
+                payload["message"] = ex.Message;
+            });
+
             throw;
         }
     }
 
     private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
     {
-        PdfRendererLog.LayoutStart(_logger, layout.Pages.Count, ComputeOptionsHash(options));
+        PublishRenderEvent("render/pdf/layout-start", payload =>
+        {
+            payload["pages"] = layout.Pages.Count;
+            payload["optionsHash"] = ComputeOptionsHash(options);
+        });
 
         using var stream = new MemoryStream();
 
@@ -71,7 +80,12 @@ public class PdfRenderer
                     var page = layout.Pages[pageIndex];
                     var pageSize = page.Size;
 
-                    PdfRendererLog.PageStart(_logger, pageIndex, pageSize.Width, pageSize.Height);
+                    PublishRenderEvent("render/pdf/page-start", payload =>
+                    {
+                        payload["pageIndex"] = pageIndex;
+                        payload["width"] = pageSize.Width;
+                        payload["height"] = pageSize.Height;
+                    });
 
                     doc.Page(p =>
                     {
@@ -87,8 +101,6 @@ public class PdfRenderer
 
                             foreach (var fragment in page.Children)
                             {
-                                PdfRendererLog.FragmentStart(_logger, fragment);
-
                                 var xRel = fragment.Rect.X - page.Margins.Left;
                                 var yRel = fragment.Rect.Y - page.Margins.Top;
 
@@ -112,8 +124,8 @@ public class PdfRenderer
                                             ? box.MinHeight(fragment.Rect.Height)
                                             : box;
 
-                                        var renderer = _rendererFactory.Create(target, options, _loggerFactory);
-                                        var dispatcher = new FragmentRenderDispatcher(renderer, _dispatcherLogger);
+                                        var renderer = _rendererFactory.Create(target, options, _diagnosticSession);
+                                        var dispatcher = new FragmentRenderDispatcher(renderer);
                                         fragment.VisitWith(dispatcher);
                                     });
                                 });
@@ -136,9 +148,24 @@ public class PdfRenderer
             options.LicenseType,
             options.PageSize.GetHashCode());
     }
+    private void PublishRenderEvent(string kind, Action<Dictionary<string, object?>> configure)
+    {
+        if (_diagnosticSession is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
+        configure(payload);
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            _diagnosticSession.Descriptor.SessionId,
+            "render/pdf",
+            kind,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        _diagnosticSession.Publish(diagnosticEvent);
+    }
 }
-
-
-
-
-
