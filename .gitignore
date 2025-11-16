@@ -48,6 +48,6 @@ bld/
 build/
 build/logs/
 
-#.specify/
-#.cursor/
-#AGENTS.md
+# Added by diagnostics automation
+*.tmp
+
