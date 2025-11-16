@@ -1,27 +1,18 @@
 using System.Text;
 using Html2x.Renderers.Pdf.Options;
-using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
 
-public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
+public sealed class HtmlConverterTests : IntegrationTestBase
 {
     private readonly HtmlConverter _htmlConverter;
     private readonly PdfOptions _options = new() { FontPath = Path.Combine("Fonts", "Inter-Regular.ttf") };
-    private readonly ILoggerFactory _loggerFactory;
 
     public HtmlConverterTests(ITestOutputHelper output)
         : base(output)
     {
-        _loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.ClearProviders();
-            builder.SetMinimumLevel(LogLevel.Trace);
-            builder.AddProvider(new TestOutputLoggerProvider(output, LogLevel.Trace));
-        });
-
-        _htmlConverter = new HtmlConverter(loggerFactory: _loggerFactory);
+        _htmlConverter = new HtmlConverter();
     }
 
     [Fact]
@@ -52,9 +43,5 @@ public sealed class HtmlConverterTests : IntegrationTestBase, IDisposable
         Assert.Equal("%PDF", Encoding.ASCII.GetString(pdfBytes, 0, 4));
     }
 
-    public void Dispose()
-    {
-        _loggerFactory.Dispose();
-    }
 }
 
