@@ -1,52 +1,65 @@
-using Microsoft.Extensions.Logging;
-
+using System;
+using System.Collections.Generic;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine;
 
 internal static class LayoutLog
 {
-    private static readonly Action<ILogger, int, int, int, Exception?> BuildStartMessage =
-        LoggerMessage.Define<int, int, int>(
-            LogLevel.Information,
-            new EventId(2000, nameof(BuildStart)),
-            "Building layout for {HtmlLength} characters targeting page {PageWidth}x{PageHeight}");
+    private const string Category = "layout/perf";
 
-    private static readonly Action<ILogger, string, Exception?> StageCompleteMessage =
-        LoggerMessage.Define<string>(
-            LogLevel.Debug,
-            new EventId(2001, nameof(StageComplete)),
-            "Completed layout stage {StageName}");
-
-    private static readonly Action<ILogger, int, Exception?> BuildCompleteMessage =
-        LoggerMessage.Define<int>(
-            LogLevel.Information,
-            new EventId(2002, nameof(BuildComplete)),
-            "Layout produced {BlockCount} block fragments");
-
-    public static void BuildStart(ILogger logger, int htmlLength, PageSize pageSize)
+    public static void BuildStart(IDiagnosticSession? session, int htmlLength, PageSize pageSize)
     {
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            BuildStartMessage(logger, htmlLength, pageSize.Width, pageSize.Height, null);
-        }
+        Publish(
+            session,
+            "layout/build-start",
+            payload =>
+            {
+                payload["htmlLength"] = htmlLength;
+                payload["pageWidth"] = pageSize.Width;
+                payload["pageHeight"] = pageSize.Height;
+            });
     }
 
-    public static void StageComplete(ILogger logger, string stageName)
+    public static void StageComplete(IDiagnosticSession? session, string stageName)
     {
-        if (logger.IsEnabled(LogLevel.Debug))
-        {
-            StageCompleteMessage(logger, stageName, null);
-        }
+        Publish(
+            session,
+            "layout/stage-complete",
+            payload => payload["stage"] = stageName);
     }
 
-    public static void BuildComplete(ILogger logger, int blockCount)
+    public static void BuildComplete(IDiagnosticSession? session, int blockCount)
     {
-        if (logger.IsEnabled(LogLevel.Information))
+        Publish(
+            session,
+            "layout/build-complete",
+            payload => payload["blockCount"] = blockCount);
+    }
+
+    private static void Publish(
+        IDiagnosticSession? session,
+        string kind,
+        Action<Dictionary<string, object?>> configurePayload)
+    {
+        if (session is not { IsEnabled: true })
         {
-            BuildCompleteMessage(logger, blockCount, null);
+            return;
         }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
+        configurePayload(payload);
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            session.Descriptor.SessionId,
+            Category,
+            kind,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        session.Publish(diagnosticEvent);
     }
 }
-
-

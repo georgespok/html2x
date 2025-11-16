@@ -1,51 +1,106 @@
-using System.Globalization;
+using System;
+using System.Collections.Generic;
 using AngleSharp.Dom;
-using Microsoft.Extensions.Logging;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 
 namespace Html2x.LayoutEngine.Style;
 
 internal static class StyleLog
 {
-    private static readonly Action<ILogger, string, string, string, Exception?> InvalidSpacingValueMessage =
-        LoggerMessage.Define<string, string, string>(
-            LogLevel.Warning,
-            new EventId(3000, nameof(InvalidSpacingValue)),
-            "Invalid value '{Value}' for property '{Property}' on element '{ElementTag}'. Using default value 0.");
+    private const string Category = "layout/warning";
 
-    private static readonly Action<ILogger, string, string, string, Exception?> NegativeSpacingValueMessage =
-        LoggerMessage.Define<string, string, string>(
-            LogLevel.Warning,
-            new EventId(3001, nameof(NegativeSpacingValue)),
-            "Negative value '{Value}' for property '{Property}' on element '{ElementTag}'. Using default value 0.");
-
-    private static readonly Action<ILogger, string, string, string, string, Exception?> UnsupportedSpacingUnitMessage =
-        LoggerMessage.Define<string, string, string, string>(
-            LogLevel.Warning,
-            new EventId(3002, nameof(UnsupportedSpacingUnit)),
-            "Unsupported unit '{UnitEnum}' in value '{Value}' for property '{Property}' on element '{ElementTag}'. Only 'px' units are supported. Using default value 0.");
-
-    public static void InvalidSpacingValue(ILogger logger, string property, string value, IElement element)
+    public static void InvalidSpacingValue(
+        IDiagnosticSession? session,
+        string property,
+        string value,
+        IElement element)
     {
-        if (logger.IsEnabled(LogLevel.Warning))
-        {
-            InvalidSpacingValueMessage(logger, value, property, element.TagName, null);
-        }
+        Publish(
+            session,
+            "layout/warning/invalid-spacing",
+            payload =>
+            {
+                payload["property"] = property;
+                payload["value"] = value;
+                payload["element"] = Describe(element);
+            });
     }
 
-    public static void NegativeSpacingValue(ILogger logger, string property, float value, IElement element)
+    public static void NegativeSpacingValue(
+        IDiagnosticSession? session,
+        string property,
+        float value,
+        IElement element)
     {
-        if (logger.IsEnabled(LogLevel.Warning))
-        {
-            NegativeSpacingValueMessage(logger, value.ToString(CultureInfo.InvariantCulture), property, element.TagName, null);
-        }
+        Publish(
+            session,
+            "layout/warning/negative-spacing",
+            payload =>
+            {
+                payload["property"] = property;
+                payload["value"] = value;
+                payload["element"] = Describe(element);
+            });
     }
 
-    public static void UnsupportedSpacingUnit(ILogger logger, string property, string value, string unit, IElement element)
+    public static void UnsupportedSpacingUnit(
+        IDiagnosticSession? session,
+        string property,
+        string value,
+        string unit,
+        IElement element)
     {
-        if (logger.IsEnabled(LogLevel.Warning))
+        Publish(
+            session,
+            "layout/warning/unsupported-spacing-unit",
+            payload =>
+            {
+                payload["property"] = property;
+                payload["value"] = value;
+                payload["unit"] = unit;
+                payload["element"] = Describe(element);
+            });
+    }
+
+    private static void Publish(
+        IDiagnosticSession? session,
+        string kind,
+        Action<Dictionary<string, object?>> configure)
+    {
+        if (session is not { IsEnabled: true })
         {
-            UnsupportedSpacingUnitMessage(logger, unit, value, property, element.TagName, null);
+            return;
         }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal);
+        configure(payload);
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            session.Descriptor.SessionId,
+            Category,
+            kind,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        session.Publish(diagnosticEvent);
+    }
+
+    private static string Describe(IElement element)
+    {
+        var identifier = element.TagName.ToLowerInvariant();
+
+        if (!string.IsNullOrWhiteSpace(element.Id))
+        {
+            identifier += $"#{element.Id}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(element.ClassName))
+        {
+            identifier += "." + element.ClassName.Replace(' ', '.');
+        }
+
+        return identifier;
     }
 }
-
