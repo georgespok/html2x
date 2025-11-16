@@ -1,9 +1,8 @@
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Html2x.LayoutEngine.Style;
 
@@ -14,13 +13,13 @@ public sealed class CssStyleComputer(
     IStyleTraversal traversal,
     IUserAgentDefaults uaDefaults,
     ICssValueConverter converter,
-    ILogger<CssStyleComputer>? logger = null)
+    IDiagnosticSession? diagnosticSession = null)
     : IStyleComputer
 {
     private readonly IStyleTraversal _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
     private readonly IUserAgentDefaults _uaDefaults = uaDefaults ?? throw new ArgumentNullException(nameof(uaDefaults));
     private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-    private readonly ILogger<CssStyleComputer> _logger = logger ?? NullLogger<CssStyleComputer>.Instance;
+    private readonly IDiagnosticSession? _diagnosticSession = diagnosticSession;
 
     public CssStyleComputer()
         : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter())
@@ -164,7 +163,7 @@ public sealed class CssStyleComputer(
                 setLeft(parsedValues[3]);
                 break;
             default:
-                StyleLog.InvalidSpacingValue(_logger, shorthandProperty, shorthandValue, element);
+                StyleLog.InvalidSpacingValue(_diagnosticSession, shorthandProperty, shorthandValue, element);
                 break;
         }
     }
@@ -252,19 +251,19 @@ public sealed class CssStyleComputer(
             var unsupportedUnit = DetectUnsupportedUnit(token);
             if (unsupportedUnit != null)
             {
-                StyleLog.UnsupportedSpacingUnit(_logger, property, shorthandValue, unsupportedUnit, element);
+            StyleLog.UnsupportedSpacingUnit(_diagnosticSession, property, shorthandValue, unsupportedUnit, element);
                 return false;
             }
 
-            if (!_converter.TryGetLengthPt(token, out var points))
-            {
-                StyleLog.InvalidSpacingValue(_logger, property, shorthandValue, element);
+        if (!_converter.TryGetLengthPt(token, out var points))
+        {
+            StyleLog.InvalidSpacingValue(_diagnosticSession, property, shorthandValue, element);
                 return false;
             }
 
             if (points < 0 && !allowNegative)
             {
-                StyleLog.NegativeSpacingValue(_logger, property, points, element);
+                StyleLog.NegativeSpacingValue(_diagnosticSession, property, points, element);
                 return false;
             }
 
@@ -306,7 +305,7 @@ public sealed class CssStyleComputer(
         var unsupportedUnit = DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
-            StyleLog.UnsupportedSpacingUnit(_logger, property, rawValue, unsupportedUnit, element);
+            StyleLog.UnsupportedSpacingUnit(_diagnosticSession, property, rawValue, unsupportedUnit, element);
             return 0;
         }
 
@@ -314,14 +313,14 @@ public sealed class CssStyleComputer(
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
             // Value provided but couldn't be parsed (non-numeric, etc.)
-            StyleLog.InvalidSpacingValue(_logger, property, rawValue, element);
+            StyleLog.InvalidSpacingValue(_diagnosticSession, property, rawValue, element);
             return 0;
         }
 
         // Check for negative values
         if (points < 0 && !allowNegative)
         {
-            StyleLog.NegativeSpacingValue(_logger, property, points, element);
+            StyleLog.NegativeSpacingValue(_diagnosticSession, property, points, element);
             return 0;
         }
 

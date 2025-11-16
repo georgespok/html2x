@@ -1,12 +1,13 @@
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Style;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Spacing = Html2x.Abstractions.Layout.Styles.Spacing;
 
 using Html2x.Abstractions.Measurements.Units;
@@ -22,31 +23,32 @@ public class LayoutBuilder(
     IStyleComputer styleComputer,
     IBoxTreeBuilder boxBuilder,
     IFragmentBuilder fragmentBuilder,
-    ILogger<LayoutBuilder>? logger = null,
     IDiagnosticSession? diagnosticSession = null)
 {
+    private const string LayoutDumpCategory = "dump/layout";
+
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
     private readonly IStyleComputer _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
-    private readonly ILogger<LayoutBuilder> _logger = logger ?? NullLogger<LayoutBuilder>.Instance;
     private readonly IDiagnosticSession? _diagnosticSession = diagnosticSession;
 
     public async Task<HtmlLayout> BuildAsync(string html, PageSize pageSize)
     {
-        LayoutLog.BuildStart(_logger, html.Length, pageSize);
+        LayoutLog.BuildStart(_diagnosticSession, html.Length, pageSize);
 
         var dom = await _domProvider.LoadAsync(html);
-        LayoutLog.StageComplete(_logger, "DomLoaded");
+        LayoutLog.StageComplete(_diagnosticSession, "DomLoaded");
 
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
-        LayoutLog.StageComplete(_logger, "StylesComputed");
+        LayoutLog.StageComplete(_diagnosticSession, "StylesComputed");
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
-        LayoutLog.StageComplete(_logger, "BoxTreeBuilt");
+        LayoutLog.StageComplete(_diagnosticSession, "BoxTreeBuilt");
+        PublishLayoutDump(boxTree);
 
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
-        LayoutLog.StageComplete(_logger, "FragmentsBuilt");
+        LayoutLog.StageComplete(_diagnosticSession, "FragmentsBuilt");
 
         RunStage("stage/fragmentation", () =>
         {
@@ -64,7 +66,7 @@ public class LayoutBuilder(
             return newLayout;
         });
 
-        LayoutLog.BuildComplete(_logger, fragments.Blocks.Count);
+        LayoutLog.BuildComplete(_diagnosticSession, fragments.Blocks.Count);
         return layout;
     }
 
@@ -78,6 +80,32 @@ public class LayoutBuilder(
     {
         using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, stage);
         action();
+    }
+
+    private void PublishLayoutDump(BoxTree boxTree)
+    {
+        if (_diagnosticSession is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var document = LayoutDiagnosticsDumper.Create(boxTree);
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["summary"] = document.Summary,
+            ["nodeCount"] = document.NodeCount,
+            ["structuredDump"] = document
+        };
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            _diagnosticSession.Descriptor.SessionId,
+            LayoutDumpCategory,
+            LayoutDumpCategory,
+            DateTimeOffset.UtcNow,
+            payload);
+
+        _diagnosticSession.Publish(diagnosticEvent);
     }
 }
 

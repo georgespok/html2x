@@ -47,3 +47,7 @@ bld/
 [Ll]ogs/
 build/
 build/logs/
+
+# Added by diagnostics automation
+*.tmp
+
