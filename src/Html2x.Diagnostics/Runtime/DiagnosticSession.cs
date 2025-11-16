@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
+using Html2x.Diagnostics.Dumps;
 using Html2x.Diagnostics.Pipeline;
 
 namespace Html2x.Diagnostics.Runtime;
@@ -30,7 +31,7 @@ internal sealed class DiagnosticSession : IDiagnosticSession
         string name,
         IReadOnlyDictionary<string, object?>? seedValues = null)
     {
-        return new DiagnosticContextScope(name, Descriptor.SessionId, seedValues);
+        return new DiagnosticContextScope(this, name, seedValues);
     }
 
     public void Publish(DiagnosticEvent diagnosticEvent)
@@ -45,9 +46,11 @@ internal sealed class DiagnosticSession : IDiagnosticSession
             return;
         }
 
+        var enrichedEvent = AttachStructuredDump(diagnosticEvent);
+
         var model = new DiagnosticsModel(
             Descriptor,
-            diagnosticEvent,
+            enrichedEvent,
             []);
 
         _dispatcher.Dispatch(model);
@@ -94,8 +97,49 @@ internal sealed class DiagnosticSession : IDiagnosticSession
         var model = new DiagnosticsModel(
             Descriptor,
             diagnosticEvent,
-            Array.Empty<DiagnosticContextSnapshot>());
+            []);
 
         _dispatcher.Dispatch(model);
+    }
+
+    private static DiagnosticEvent AttachStructuredDump(DiagnosticEvent diagnosticEvent)
+    {
+        StructuredDumpDocument? structuredDump = null;
+
+        foreach (var entry in diagnosticEvent.Payload)
+        {
+            if (entry.Value is StructuredDumpDocument document)
+            {
+                structuredDump ??= document;
+                break;
+            }
+        }
+
+        if (structuredDump is null)
+        {
+            return diagnosticEvent;
+        }
+
+        var payload = new Dictionary<string, object?>(diagnosticEvent.Payload.Count, StringComparer.Ordinal);
+
+        foreach (var entry in diagnosticEvent.Payload)
+        {
+            if (entry.Value is StructuredDumpDocument)
+            {
+                continue;
+            }
+
+            payload[entry.Key] = entry.Value;
+        }
+        var metadata = StructuredDumpSerializer.Serialize(structuredDump);
+
+        return new DiagnosticEvent(
+            diagnosticEvent.EventId,
+            diagnosticEvent.SessionId,
+            diagnosticEvent.Category,
+            diagnosticEvent.Kind,
+            diagnosticEvent.Timestamp,
+            payload,
+            metadata);
     }
 }
