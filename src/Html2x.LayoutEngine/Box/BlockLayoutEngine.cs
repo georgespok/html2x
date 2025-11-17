@@ -117,20 +117,41 @@ public sealed class BlockLayoutEngine(
 
         // Content width accounts for padding (for children/inline content)
         var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right);
+        var contentXForChildren = x + padding.Left;
+        var contentYForChildren = y + padding.Top;
 
         // use inline engine for height estimation (use content width)
         floatEngine.PlaceFloats(node, x, y, width);
-        var height = inlineEngine.MeasureHeight(node, contentWidthForChildren);
+        var inlineHeight = inlineEngine.MeasureHeight(node, contentWidthForChildren);
+
+        var nestedBlocksHeight = LayoutChildBlocks(node, contentXForChildren, contentYForChildren, contentWidthForChildren);
+        var contentHeight = Math.Max(inlineHeight, nestedBlocksHeight);
 
         node.X = x;
         node.Y = y;
         node.Width = width; // Total width (for fragment Rect)
-        node.Height = height + padding.Top + padding.Bottom;
+        node.Height = contentHeight + padding.Top + padding.Bottom;
         node.Margin = margin;
         node.Padding = padding;
         node.TextAlign = s.TextAlign ?? "left";
 
         return node;
+    }
+
+    private float LayoutChildBlocks(BlockBox parent, float contentX, float cursorY, float contentWidth)
+    {
+        var currentY = cursorY;
+
+        foreach (var child in parent.Children)
+        {
+            if (child is BlockBox blockChild)
+            {
+                LayoutBlock(blockChild, contentX, currentY, contentWidth);
+                currentY = blockChild.Y + blockChild.Height + blockChild.Margin.Bottom;
+            }
+        }
+
+        return Math.Max(0, currentY - cursorY);
     }
 
     private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth)

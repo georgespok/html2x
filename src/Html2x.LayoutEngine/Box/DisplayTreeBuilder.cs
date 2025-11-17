@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine.Box;
 
@@ -25,6 +26,8 @@ public sealed class DisplayTreeBuilder
         {
             DisplayRole.Block => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.Inline => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.InlineBlock => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.ListItem => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.Float => new FloatBox
             {
                 Element = element,
@@ -37,29 +40,7 @@ public sealed class DisplayTreeBuilder
         };
 
         // Add child boxes recursively
-        if (IsListContainer(element))
-        {
-            foreach (var child in styleNode.Children)
-            {
-                if (!string.Equals(child.Element.TagName, HtmlCssConstants.HtmlTags.Li,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                box.Children.Add(BuildNode(child, box));
-            }
-        }
-        else
-        {
-            foreach (var child in styleNode.Children)
-            {
-                box.Children.Add(BuildNode(child, box));
-            }
-        }
-
-        // Handle inline text content
-        AppendTextRuns(element, box);
+        AppendChildNodes(styleNode, box);
 
         if (string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase) &&
             parent != null)
@@ -108,38 +89,13 @@ public sealed class DisplayTreeBuilder
     private static DisplayRole GetDisplayRole(StyleNode node)
     {
         var el = node.Element;
-        var name = el.LocalName.ToLowerInvariant();
-
-        return name switch
+        if (string.Equals(el.TagName, HtmlCssConstants.HtmlTags.Img, StringComparison.OrdinalIgnoreCase) &&
+            el.ClassList.Contains(HtmlCssConstants.CssClasses.Hero))
         {
-            HtmlCssConstants.HtmlTags.Table => DisplayRole.Table,
+            return DisplayRole.Float;
+        }
 
-            HtmlCssConstants.HtmlTags.Tr => DisplayRole.TableRow,
-
-            HtmlCssConstants.HtmlTags.Td or
-                HtmlCssConstants.HtmlTags.Th => DisplayRole.TableCell,
-
-            HtmlCssConstants.HtmlTags.Img when el.ClassList.Contains(HtmlCssConstants.CssClasses.Hero) => DisplayRole
-                .Float,
-            HtmlCssConstants.HtmlTags.Span => DisplayRole.Inline,
-
-            HtmlCssConstants.HtmlTags.Ul or 
-                HtmlCssConstants.HtmlTags.Ol => DisplayRole.Block,
-
-            HtmlCssConstants.HtmlTags.Li => DisplayRole.Block,
-
-            HtmlCssConstants.HtmlTags.Div or
-                HtmlCssConstants.HtmlTags.P or
-                HtmlCssConstants.HtmlTags.H1 or
-                HtmlCssConstants.HtmlTags.H2 or
-                HtmlCssConstants.HtmlTags.H3 or
-                HtmlCssConstants.HtmlTags.H4 or
-                HtmlCssConstants.HtmlTags.H5 or
-                HtmlCssConstants.HtmlTags.H6 or
-                HtmlCssConstants.HtmlTags.Body => DisplayRole.Block,
-
-            _ => DisplayRole.Inline
-        };
+        return DisplayRoleMap.Resolve(el.LocalName);
     }
 
     private static string ResolveFloatDirection(StyleNode node)
@@ -150,23 +106,76 @@ public sealed class DisplayTreeBuilder
             : HtmlCssConstants.CssValues.Left;
     }
 
-    private static void AppendTextRuns(IElement element, DisplayNode box)
+    private static void AppendChildNodes(StyleNode styleNode, DisplayNode box)
     {
+        var element = styleNode.Element;
+        var styleChildren = styleNode.Children;
+        var styleIndex = 0;
+
         foreach (var child in element.ChildNodes)
         {
             if (child.NodeType == NodeType.Text)
             {
-                var text = child.TextContent.Trim();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    box.Children.Add(new InlineBox
-                    {
-                        TextContent = text,
-                        Parent = box,
-                        Style = box.Style
-                    });
-                }
+                AppendTextRun(child, box);
+                continue;
             }
+
+            if (child is not IElement childElement)
+            {
+                continue;
+            }
+
+            if (IsListContainer(element) &&
+                !string.Equals(childElement.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var styleChild = FindStyleChild(styleChildren, ref styleIndex, childElement);
+            if (styleChild is null)
+            {
+                continue;
+            }
+
+            box.Children.Add(BuildNode(styleChild, box));
         }
+    }
+
+    private static void AppendTextRun(INode node, DisplayNode box)
+    {
+        if (node.NodeType != NodeType.Text)
+        {
+            return;
+        }
+
+        var text = node.TextContent.Trim();
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        box.Children.Add(new InlineBox
+        {
+            TextContent = text,
+            Parent = box,
+            Style = box.Style
+        });
+    }
+
+    private static StyleNode? FindStyleChild(IReadOnlyList<StyleNode> children, ref int styleIndex, IElement element)
+    {
+        for (; styleIndex < children.Count; styleIndex++)
+        {
+            var candidate = children[styleIndex];
+            if (!ReferenceEquals(candidate.Element, element))
+            {
+                continue;
+            }
+
+            styleIndex++;
+            return candidate;
+        }
+
+        return null;
     }
 }
