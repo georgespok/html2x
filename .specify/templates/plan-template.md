@@ -17,7 +17,7 @@
 **Testing**: xUnit via `dotnet test Html2x.sln -c Release`  
 **Target Platform**: Windows and Linux  
 **Project Type**: Modular library (`src/Html2x.*`) with test console harness  
-**Performance Goals**: Preserve deterministic fragment generation; note additional throughput or latency targets  
+**Performance Goals**: Preserve predictable fragment generation; note additional throughput or latency targets  
 **Constraints**: Keep implementation pure managed code; no platform-specific APIs without maintainer approval  
 **Scale/Scope**: Document impacted projects and expected fragment volume or PDF complexity
 
@@ -25,11 +25,12 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- [ ] Stage isolation maintained (Principle I: Staged Layout Discipline).
-- [ ] Deterministic rendering risks addressed with tests or instrumentation (Principle II).
+- [ ] Stage isolation maintained at assembly boundaries (Principle I: Staged Layout Discipline).
+- [ ] Rendering predictability risks documented with `Html2x.Diagnostics` coverage instead of PDF parsing (Principle II).
 - [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
-- [ ] Logging and diagnostics updates planned (Principle IV).
+- [ ] `Html2x.Diagnostics` instrumentation scoped for new behavior (Principle IV).
 - [ ] Extension points documented with migration guidance (Principle V).
+- [ ] Goal-Driven Problem Solving loop captured (Principle VI: state assessment, action decomposition, path planning, adaptive execution, reflection, plus rollback prep).
 
 ## Project Structure
 

@@ -10,6 +10,8 @@ description: "Task list template for feature implementation"
 
 **Tests**: Introduce exactly one failing automated test at a time and list it explicitly for each user story. Pair every failing-test task with the minimal implementation/refactor tasks required to turn the suite green before adding the next test.
 
+**Goal-Driven Cadence**: For each user story capture State Assessment, Action Decomposition, Path Planning (with dependencies + rollback steps), Adaptive Execution checkpoints, and Reflection tasks so Principle VI stays explicit.
+
 **Organization**: Tasks are grouped by user story to keep delivery incremental and independently testable.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -59,8 +61,8 @@ description: "Task list template for feature implementation"
 **Purpose**: Core infrastructure that MUST be complete before any user story starts.
 
 - [ ] T004 Establish stage boundaries or shared contracts required by all stories (e.g., new fragment types in `src/Html2x.Core/`).
-- [ ] T005 [P] Add failing integration test covering deterministic output for the new scenario in `tests/html2x.IntegrationTest/`.
-- [ ] T006 [P] Extend logging helpers (`src/Html2x.Pdf/Logging/`) if new diagnostics are needed.
+- [ ] T005 [P] Add failing integration test capturing predictable fragment semantics (assert via diagnostics) for the new scenario in `tests/html2x.IntegrationTest/`.
+- [ ] T006 [P] Extend `Html2x.Diagnostics` helpers (e.g., shared payload builders) if new instrumentation is needed.
 - [ ] T007 Document operational changes in `docs/` and update quickstart notes if tooling changes.
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
@@ -71,17 +73,22 @@ description: "Task list template for feature implementation"
 
 **Goal**: [Brief description of what this story delivers]  
 **Independent Test**: [How to verify this story works on its own]
+**State Assessment**: [Current behavior, constraints, risk signals]
+**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
+**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Adaptive Checkpoints**: [Criteria for replanning or escalation]
+**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
 ### Tests for User Story 1
 
 - [ ] T010 [P] [US1] Write failing unit test in `tests/Html2x.Layout.Test/` or relevant project.
-- [ ] T011 [P] [US1] Extend integration scenario in `tests/html2x.IntegrationTest/` to assert deterministic fragments or PDF parity.
+- [ ] T011 [P] [US1] Extend integration scenario in `tests/html2x.IntegrationTest/` to assert predictable fragments or diagnostics traces (PDF stays a black box).
 
 ### Implementation for User Story 1
 
 - [ ] T012 [US1] Implement feature code in `src/Html2x.Layout/...` or appropriate project respecting stage contracts.
 - [ ] T013 [US1] Wire renderer changes in `src/Html2x.Pdf/...` if required.
-- [ ] T014 [US1] Add structured logging or diagnostics for the new path.
+- [ ] T014 [US1] Add `Html2x.Diagnostics` instrumentation for the new path.
 - [ ] T015 [US1] Update docs and release notes to describe behavior and migration guidance.
 
 **Checkpoint**: User Story 1 fully functional, independently testable, and observable.
@@ -92,6 +99,11 @@ description: "Task list template for feature implementation"
 
 **Goal**: [Brief description of what this story delivers]  
 **Independent Test**: [How to verify this story works on its own]
+**State Assessment**: [Current behavior, constraints, risk signals]
+**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
+**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Adaptive Checkpoints**: [Criteria for replanning or escalation]
+**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
 ### Tests for User Story 2
 
@@ -102,7 +114,7 @@ description: "Task list template for feature implementation"
 
 - [ ] T022 [US2] Implement layout or renderer updates with stage isolation.
 - [ ] T023 [US2] Extend shared contracts if needed and document the change.
-- [ ] T024 [US2] Ensure deterministic outputs remain validated by updating existing baselines.
+- [ ] T024 [US2] Ensure predictable outputs remain validated by updating diagnostics baselines or fragment assertions.
 
 **Checkpoint**: User Stories 1 and 2 remain independently deliverable.
 
@@ -112,11 +124,16 @@ description: "Task list template for feature implementation"
 
 **Goal**: [Brief description of what this story delivers]  
 **Independent Test**: [How to verify this story works on its own]
+**State Assessment**: [Current behavior, constraints, risk signals]
+**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
+**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Adaptive Checkpoints**: [Criteria for replanning or escalation]
+**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
 ### Tests for User Story 3
 
 - [ ] T025 [P] [US3] Add failing tests capturing the new scenario.
-- [ ] T026 [P] [US3] Validate logging coverage or diagnostics for this story.
+- [ ] T026 [P] [US3] Validate diagnostics coverage for this story.
 
 ### Implementation for User Story 3
 
@@ -162,7 +179,7 @@ description: "Task list template for feature implementation"
 
 - Introduce a single failing test, implement the minimal passing change, refactor, then repeat for the next scenario.
 - Update shared contracts prior to renderer changes.
-- Keep determinism checks and logging tasks visible in the plan.
+- Keep predictability checks and diagnostics tasks visible in the plan.
 - Confirm documentation and release notes before closing the story.
 
 ### Parallel Opportunities
@@ -181,20 +198,20 @@ description: "Task list template for feature implementation"
 1. Complete Phase 1: Setup.
 2. Complete Phase 2: Foundational (blocks all stories).
 3. Complete Phase 3: User Story 1 with passing tests and observability in place.
-4. Stop and validate deterministic outputs before continuing.
+4. Stop and validate predictable fragments/diagnostics before continuing.
 
 ### Incremental Delivery
 
 1. Finish Setup and Foundational.
 2. Deliver User Story 1 (MVP) with smoke tests.
 3. Layer additional stories sequentially or in parallel, each with failing-tests-first workflow.
-4. Merge only after updating docs, logging, and release notes.
+4. Merge only after updating docs, diagnostics notes, and release notes.
 
 ### Parallel Team Strategy
 
 1. Team completes Setup and Foundational together.
 2. Assign stories to different contributors once shared contracts and failing tests exist.
-3. Coordinate through documented interfaces and deterministic baselines.
+3. Coordinate through documented interfaces and diagnostics baselines.
 4. Re-run full test suite and console smoke test before merge.
 
 ---

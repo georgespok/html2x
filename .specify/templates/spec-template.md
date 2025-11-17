@@ -7,7 +7,7 @@
 
 ## User Scenarios & Testing (mandatory)
 
-Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and deterministic rendering (Principle II). Include test harness notes and observability hooks required to validate the behavior (Principle IV).
+Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and rendering predictability through `Html2x.Diagnostics` (Principle II). Include test harness notes and diagnostics hooks required to validate the behavior (Principle IV). Capture how the plan enforces the Goal-Driven Delivery cadence (Principle VI) by stating current state, ordered actions, adaptive checkpoints, reflection items, and rollback preparation.
 
 <!--
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
@@ -69,7 +69,7 @@ Constitution alignment: describe how each story preserves staged layout discipli
 
 ### Edge Cases
 
-- What happens when deterministic assumptions break (missing fonts, culture differences, timestamp usage)?
+- What happens when predictability assumptions break (missing fonts, culture differences, timestamp usage)?
 - How does the system surface errors and structured logs for this feature?
 
 ## Requirements (mandatory)
@@ -77,15 +77,16 @@ Constitution alignment: describe how each story preserves staged layout discipli
 ### Functional Requirements
 
 - **FR-001**: Implementation MUST respect pipeline contracts; no stage bypassing without new shared abstractions (Principle I).
-- **FR-002**: Feature MUST keep outputs deterministic for identical inputs and document the verification strategy (Principle II).
+- **FR-002**: Feature MUST keep fragment semantics predictable for identical inputs and document how `Html2x.Diagnostics` captures deviation signals instead of parsing PDFs (Principle II).
 - **FR-003**: Automated tests MUST be authored first and fail before implementation begins (Principle III).
-- **FR-004**: Structured logging or diagnostics MUST cover the new behavior with actionable metadata (Principle IV).
+- **FR-004**: `Html2x.Diagnostics` instrumentation MUST cover the new behavior with actionable metadata (Principle IV).
 - **FR-005**: Public surface changes MUST include migration guidance and docs updates before release (Principle V).
+- **FR-006**: Specifications MUST articulate the Goal-Driven Delivery cadence (state assessment, ordered actions with dependencies, adaptive checkpoints, rollback plans, reflection tasks) for each user story (Principle VI).
 
 *Example of marking unclear requirements:*
 
-- **FR-006**: Structured logging MUST include [NEEDS CLARIFICATION: event id, metadata requirements]
-- **FR-007**: Deterministic parity MUST hold for [NEEDS CLARIFICATION: platform or renderer list]
+- **FR-007**: Diagnostics capture MUST include [NEEDS CLARIFICATION: payload requirements]
+- **FR-008**: Predictability expectations MUST hold for [NEEDS CLARIFICATION: platform or renderer list]
 
 ### Key Entities (include if feature involves data)
 
@@ -97,6 +98,6 @@ Constitution alignment: describe how each story preserves staged layout discipli
 ### Measurable Outcomes
 
 - **SC-001**: `dotnet test Html2x.sln -c Release` passes on Windows and Linux for the updated solution.
-- **SC-002**: Integration tests confirm deterministic fragments or PDF parity for new scenarios.
+- **SC-002**: Integration tests confirm predictable fragment semantics or expected diagnostics traces for new scenarios (PDF remains a black box).
 - **SC-003**: Observability signals (logs or diagnostics) expose the new behavior and are traceable in the harness.
 - **SC-004**: Documentation in `docs/` and release notes capture the change, including migration guidance if contracts moved.

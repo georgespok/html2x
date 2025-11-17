@@ -1,13 +1,13 @@
 <!--
 Sync Impact Report
-Version change: 1.1.2 -> 1.1.3
-Updated file structire from Html2x.Core to Htm2x.Abstractions
-Added sections: none
-Removed sections: none
+Version change: 2.0.0 -> 2.0.1
+Modified principles:
+- III. Test-First Delivery
+Added sections:
+- none
+Removed sections:
+- none
 Templates requiring updates:
-- updated: .specify/templates/plan-template.md
-- updated: .specify/templates/tasks-template.md
-Runtime guidance updates:
 - none
 Follow-up TODOs:
 - none
@@ -17,39 +17,51 @@ Follow-up TODOs:
 ## Core Principles
 
 ### I. Staged Layout Discipline
-- Pipeline stages (DOM, style, box, fragment, renderer) MUST communicate only through contracts defined in `Html2x.Abstractions`.
-- Layout and rendering code MUST NOT reach back to DOM or style types once a stage hands off control.
-- Cross-assembly dependencies MUST flow in one direction: Abstractions -> EngineLayout -> Renderers.
-Rationale: Preserving stage isolation keeps the system modular, testable, and enables new renderers without regressions.
+- DOM, style, box, and fragment stages may share internal data models inside `Html2x.LayoutEngine`, but any cross-project communication MUST use contracts in `Html2x.Abstractions`.
+- Layout and rendering code MUST NOT reach back to DOM or style types once a stage hands off control outside the layout assembly.
+- Cross-assembly dependencies MUST flow in one direction: `Html2x.Abstractions` -> `Html2x.LayoutEngine` -> `Html2x.Renderers.*`.
 
-### II. Deterministic Rendering Outputs
-- Identical HTML, CSS, options, and fonts MUST produce equivalent outputs across platforms.
-- All randomness, system clock access, and environment-specific dependencies MUST be eliminated or sealed behind deterministic abstractions.
-- Test suites MUST assert fragment equivalence or semantic PDF parity for every new feature.
-Rationale: Deterministic rendering underpins regression safety and cross-platform parity.
+Rationale: Preserving isolation at assembly boundaries keeps the system modular, testable, and enables new renderers without regressions.
+
+### II. Rendering Predictability & Diagnostics
+- Equivalent HTML, CSS, options, and fonts SHOULD converge to the same fragment semantics; small platform-specific differences are acceptable when captured through diagnostics.
+- Sources of nondeterminism (clocks, randomness, environment probes) MUST be isolated behind configuration seams or `Html2x.Diagnostics` instrumentation so behavior can be measured, even if full elimination is deferred.
+- Automated tests MUST assert fragment contracts or diagnostics traces; PDF binaries remain a black box and MUST NOT be parsed for assertions.
+
+Rationale: Diagnostics-first predictability surfaces regressions without over-investing in byte-for-byte parity.
 
 ### III. Test-First Delivery
 - Tests are first-class and MUST focus on observable behavior, not implementation details.
 - Plans and task lists MUST enforce the incremental TDD loop: introduce exactly one failing test, implement the minimal passing change, refactor, then document the next test. Trivial scaffolding (constructors, simple properties, passive DTOs) is exempt.
-- Tests MUST exercise outcomes such as rendered output, pagination results, logging, or API responses and MUST NOT rely on reflection-based contract checks.
-- Reflection APIs (e.g., `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are prohibited in test code.
+- Tests MUST exercise outcomes such as rendered output, pagination results, diagnostics captures, or consumer-visible public classes and MUST NOT rely on reflection-only contract checks.
+- Reflection namespaces (e.g., `System.Reflection` activation helpers such as `Activator.CreateInstance`, `Type.GetType`, `MethodInfo.Invoke`) are prohibited in test code.
 - Prioritize tests for business logic and complex flows, use parameterized tests for multi-scenario logic, and keep tests independent and readable.
 - Each layer/module MUST be testable in isolation.
 - Unit, integration, and scenario tests MUST reside with the affected module and run via `dotnet test Html2x.sln -c Release`.
 - No feature merges without green tests and documented coverage of the exercised path.
+
 Rationale: Incremental TDD with behavior-focused tests keeps the pipeline verifiable, prevents silent regressions, and maintains test independence across layers. Aligning plans with the single-failing-test loop protects this discipline.
 
-### IV. Instrumented Observability
-- Layout and rendering stages MUST emit structured logs using the shared logging helpers with context-rich metadata.
-- Diagnostic toggles (recorders, PDF inspectors) MUST remain available in test consoles for every new capability.
-- Production faults MUST be traceable via correlatable log events without attaching a debugger.
-Rationale: Instrumentation provides auditability, accelerates triage, and keeps the system supportable.
+### IV. Diagnostic Observability
+- Layout and rendering stages MUST emit `Html2x.Diagnostics` traces, payloads, and timelines rich enough to explain their behavior.
+- Diagnostic toggles (recorders, inspectors, sampling controls) MUST remain available in the test console for every new capability.
+- Production faults MUST be triaged via `Html2x.Diagnostics` artifacts without attaching a debugger.
+
+Rationale: Diagnostics provide auditability, accelerate triage, and keep the system supportable without bespoke logging stacks.
 
 ### V. Intentional Extensibility
 - New CSS properties, fragment types, or render targets MUST extend the shared contracts before reaching feature code.
 - Extension points MUST include documentation updates in `docs/` covering intent, usage, and failure modes.
 - Breaking changes MUST provide migration guidance and version notes before release.
+
 Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream consumers.
+
+### VI. Goal-Driven Delivery Cadence
+- Plans, specs, and tasks MUST document the Goal-Driven Problem Solving loop: State Assessment, Action Decomposition, Path Planning, Adaptive Execution, and Reflection Loop.
+- Every delivery artifact MUST capture explicit state transitions (e.g., current coverage -> failing test -> passing refactor), enumerate assumptions/dependencies, and define rollback options before irreversible work begins.
+- Teams MUST log reflection notes and reusable patterns at the end of each increment so subsequent work starts with updated context.
+
+Rationale: Making the delivery loop explicit keeps reasoning transparent, surfaces risk early, and accelerates adaptation when assumptions fail.
 
 ## Operational Guardrails
 
@@ -61,8 +73,9 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 ## Delivery Workflow
 
 - Feature work MUST start with a plan derived from `/speckit.plan` and align with constitution gates before research begins.
-- Specifications MUST enumerate independent user stories, deterministic acceptance criteria, and observability requirements.
-- Task breakdowns MUST keep user stories independently deliverable, call out test-first steps, and include logging tasks where applicable.
+- Plans, specs, and tasks MUST make the Goal-Driven loop explicit with ordered state transitions, dependency/assumption tracking, rollback preparation, and scheduled reflection checkpoints (Principle VI).
+- Specifications MUST enumerate independent user stories, predictability-focused acceptance criteria, and `Html2x.Diagnostics` requirements.
+- Task breakdowns MUST keep user stories independently deliverable, call out test-first steps, and include diagnostics instrumentation tasks where applicable.
 - Feature completion MUST include documentation updates, release notes, and verification that console smoke tests and `dotnet test` succeed.
 
 ## Governance
@@ -72,12 +85,4 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 1.1.3 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-11
-
-
-
-
-
-
-
-
+**Version**: 2.0.1 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-17
