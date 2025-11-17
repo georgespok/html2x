@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Diagnostics.Contracts;
+using Html2x.Abstractions.Diagnostics.Writers;
+using Html2x.Abstractions.Layout.Documents;
 using Html2x.LayoutEngine;
 using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Pipeline;
@@ -32,6 +37,7 @@ public class HtmlConverter : IDiagnosticsHost
                             ?? throw new InvalidOperationException("Layout decorator returned null.");
 
         var layout = await layoutBuilder.BuildAsync(html, options.PageSize);
+        PublishFragmentSnapshot(session, layout);
 
         var renderer = _rendererDecorator(_rendererFactory(session))
                        ?? throw new InvalidOperationException("Renderer decorator returned null.");
@@ -41,6 +47,33 @@ public class HtmlConverter : IDiagnosticsHost
     public void AttachDiagnosticsSession(Func<IDiagnosticSession?> accessor)
     {
         _diagnosticSessionAccessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+    }
+
+    private static void PublishFragmentSnapshot(IDiagnosticSession? session, HtmlLayout layout)
+    {
+        if (session is not { IsEnabled: true })
+        {
+            return;
+        }
+
+        var writer = new FragmentDiagnosticsWriter();
+        var snapshot = writer.Write(layout);
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["snapshot"] = snapshot,
+            ["fragmentCount"] = snapshot.Fragments.Count
+        };
+
+        var diagnosticEvent = new DiagnosticEvent(
+            Guid.NewGuid(),
+            session.Descriptor.SessionId,
+            "diagnostics/fragments",
+            "diagnostics/fragments/snapshot",
+            DateTimeOffset.UtcNow,
+            payload);
+
+        session.Publish(diagnosticEvent);
     }
 }
 

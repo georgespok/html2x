@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using AngleSharp.Dom;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
