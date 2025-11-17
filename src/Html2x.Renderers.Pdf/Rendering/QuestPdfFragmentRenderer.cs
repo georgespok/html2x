@@ -1,12 +1,10 @@
 using System;
-using System.Collections.Generic;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Renderers.Pdf.Mapping;
 using Html2x.Renderers.Pdf.Options;
-using Html2x.Renderers.Pdf.Pipeline;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -50,13 +48,8 @@ internal sealed class QuestPdfFragmentRenderer(
                     case LineBoxFragment line:
                         inner.Item().MinHeight(childHeight).Element(item =>
                         {
-                            item.Row(row =>
+                            RenderRowWithOffset(item, relativeLeft, row =>
                             {
-                                if (relativeLeft > 0)
-                                {
-                                    row.ConstantItem(relativeLeft).Element(_ => { });
-                                }
-
                                 row.RelativeItem().Element(box =>
                                 {
                                     RenderSingleLine(box, line);
@@ -70,13 +63,8 @@ internal sealed class QuestPdfFragmentRenderer(
                         PublishFragmentEvent("render/pdf/fragment", child);
                         inner.Item().MinHeight(childHeight).Element(item =>
                         {
-                            item.Row(row =>
+                            RenderRowWithOffset(item, relativeLeft, row =>
                             {
-                                if (relativeLeft > 0)
-                                {
-                                    row.ConstantItem(relativeLeft).Element(_ => { });
-                                }
-
                                 var childWidth = Math.Max(Math.Min(child.Rect.Width, fragment.Rect.Width - relativeLeft), 0);
                                 row.ConstantItem(childWidth).Element(box =>
                                 {
@@ -144,13 +132,44 @@ internal sealed class QuestPdfFragmentRenderer(
     {
         container.Row(row =>
         {
-            row.AutoItem().Text(text =>
+            row.RelativeItem().Text(text =>
             {
+                ApplyAlignment(text, line.TextAlign);
+
                 foreach (var run in line.Runs)
                 {
                     QuestPdfStyleMapper.ApplyTextStyle(text, run);
                 }
             });
+        });
+    }
+
+    private static void ApplyAlignment(TextDescriptor descriptor, string? align)
+    {
+        var normalized = align?.Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "center":
+                descriptor.AlignCenter();
+                break;
+            case "right":
+                descriptor.AlignRight();
+                break;
+            default:
+                descriptor.AlignLeft();
+                break;
+        }
+    }
+    private static void RenderRowWithOffset(IContainer container, float relativeLeft, Action<RowDescriptor> configureRow)
+    {
+        container.Row(row =>
+        {
+            if (relativeLeft > 0)
+            {
+                row.ConstantItem(relativeLeft).Element(_ => { });
+            }
+
+            configureRow(row);
         });
     }
     private void PublishFragmentEvent(string kind, Fragment fragment)
