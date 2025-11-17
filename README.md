@@ -9,7 +9,7 @@ The **primary** target is **PDF**, with an architecture designed to extend to **
 
 * **Reusable & modular**: clean separation of parsing and rendering.
 * **Cross-platform**: pure .NET (Windows/Linux; no GDI+, no headless Chromium).
-* **Testable & maintainable**: clear boundaries, deterministic outputs, unit/integration test friendly.
+* **Testable & maintainable**: clear boundaries, predictable outputs captured via diagnostics, unit/integration test friendly.
 * **Business-report ready**: supports a practical subset of HTML/CSS commonly used in reporting.
 
 ---
@@ -17,7 +17,7 @@ The **primary** target is **PDF**, with an architecture designed to extend to **
 ## Packages & Modules
 
 * **`Html2x.Abstractions`** - Contracts, diagnostics payloads, and shared utilities consumed by every engine and renderer.
-* **`Html2x.LayoutEngine`** - Parses HTML/CSS (via AngleSharp), builds the style/box trees, and emits deterministic fragments.
+* **`Html2x.LayoutEngine`** - Parses HTML/CSS (via AngleSharp), builds the style/box trees, and emits predictable fragments with diagnostics hooks.
 * **`Html2x.Renderers.Pdf`** - Consumes fragments and renders PDFs using QuestPDF; owns renderer-side diagnostics.
 * **`Html2x`** - Composition facade for embedding scenarios; wires abstractions, layout, and renderers together.
 
@@ -83,7 +83,7 @@ TBD
 
 * **Separation of concerns**: `Html2x.LayoutEngine` owns HTML/CSS parsing and layout; `Html2x.Renderers.Pdf` only draws.
 * **Extensibility**: new renderers (SVG, Canvas, etc.) bind to `Html2x.Abstractions` without parser changes.
-* **Deterministic outputs**: inputs plus options produce a stable fragment tree and identical PDFs across platforms.
+* **Predictable outputs**: inputs plus options produce a stable fragment tree; diagnostics highlight any platform-specific differences without parsing PDFs.
 * **Pure .NET**: no native GUI stacks or browsers required.
 
 ---
