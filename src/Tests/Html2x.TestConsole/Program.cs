@@ -1,16 +1,17 @@
+using Spectre.Console.Cli;
+
 namespace Html2x.TestConsole;
 
 internal static class Program
 {
-    public static async Task<int> Main(string[] args)
+    public static Task<int> Main(string[] args)
     {
-        if (!OptionsParser.TryParse(args, out var options, out var error))
+        var app = new CommandApp<RenderCommand>();
+        app.Configure(config =>
         {
-            OptionsParser.ShowUsage(error);
-            return 1;
-        }
+            config.SetApplicationName("Html2x.TestConsole");
+        });
 
-        var service = new HtmlConversionService(options);
-        return await service.ExecuteAsync();
+        return app.RunAsync(args);
     }
 }

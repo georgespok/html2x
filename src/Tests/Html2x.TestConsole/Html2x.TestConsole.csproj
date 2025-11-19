@@ -11,7 +11,6 @@
     <None Remove="assets\sample-logo.jpg" />
     <None Remove="fonts\Inter-Regular.ttf" />
     <None Remove="html\example.html" />
-    <None Remove="html\width-height\grid.html" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,13 +20,16 @@
     <Content Include="fonts\Inter-Regular.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="html\simple-line-break.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="html\padding.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\example.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="html\width-height\grid.html">
+    <Content Include="html\grid.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -35,6 +37,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageReference Include="Spectre.Console" Version="0.54.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.53.0" />
   </ItemGroup>
 
   <ItemGroup>
