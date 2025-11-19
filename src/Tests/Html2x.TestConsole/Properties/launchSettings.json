@@ -2,7 +2,7 @@
   "profiles": {
     "Html2x.TestConsole": {
       "commandName": "Project",
-      "commandLineArgs": "./html/example.html --diagnostics --diagnostics-json diagnostocs.json"
+      "commandLineArgs": "--diagnostics --diagnostics-json diagnostocs.json"
     }
   }
 }
