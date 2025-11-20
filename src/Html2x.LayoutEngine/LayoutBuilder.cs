@@ -25,7 +25,7 @@ public class LayoutBuilder(
     IFragmentBuilder fragmentBuilder,
     IDiagnosticSession? diagnosticSession = null)
 {
-    private const string LayoutDumpCategory = "dump/layout";
+    private const string LayoutSnapshotCategory = "snapshot/layout";
 
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
@@ -45,7 +45,7 @@ public class LayoutBuilder(
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
         LayoutLog.StageComplete(_diagnosticSession, "BoxTreeBuilt");
-        PublishLayoutDump(boxTree);
+        PublishLayoutSnapshot(boxTree);
 
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
         LayoutLog.StageComplete(_diagnosticSession, "FragmentsBuilt");
@@ -82,26 +82,26 @@ public class LayoutBuilder(
         action();
     }
 
-    private void PublishLayoutDump(BoxTree boxTree)
+    private void PublishLayoutSnapshot(BoxTree boxTree)
     {
         if (_diagnosticSession is not { IsEnabled: true })
         {
             return;
         }
 
-        var document = LayoutDiagnosticsDumper.Create(boxTree);
+        var document = LayoutSnapshotBuilder.Create(boxTree);
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["summary"] = document.Summary,
             ["nodeCount"] = document.NodeCount,
-            ["structuredDump"] = document
+            ["structuredSnapshot"] = document
         };
 
         var diagnosticEvent = new DiagnosticEvent(
             Guid.NewGuid(),
             _diagnosticSession.Descriptor.SessionId,
-            LayoutDumpCategory,
-            LayoutDumpCategory,
+            LayoutSnapshotCategory,
+            LayoutSnapshotCategory,
             DateTimeOffset.UtcNow,
             payload);
 

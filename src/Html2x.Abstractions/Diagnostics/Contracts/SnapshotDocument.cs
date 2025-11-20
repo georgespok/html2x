@@ -1,21 +1,21 @@
 namespace Html2x.Abstractions.Diagnostics.Contracts;
 
-public sealed record StructuredDumpDocument
+public sealed record SnapshotDocument
 {
-    public StructuredDumpDocument(
+    public SnapshotDocument(
         string category,
         string summary,
-        IReadOnlyList<StructuredDumpNode> nodes,
+        IReadOnlyList<SnapshotNode> nodes,
         int nodeCount)
     {
         if (string.IsNullOrWhiteSpace(category))
         {
-            throw new ArgumentException("Dump category is required.", nameof(category));
+            throw new ArgumentException("Metadata category is required.", nameof(category));
         }
 
         if (string.IsNullOrWhiteSpace(summary))
         {
-            throw new ArgumentException("Dump summary is required.", nameof(summary));
+            throw new ArgumentException("Metadata summary is required.", nameof(summary));
         }
 
         if (nodeCount < 0)
@@ -33,7 +33,7 @@ public sealed record StructuredDumpDocument
 
     public string Summary { get; }
 
-    public IReadOnlyList<StructuredDumpNode> Nodes { get; }
+    public IReadOnlyList<SnapshotNode> Nodes { get; }
 
     public int NodeCount { get; }
 }
