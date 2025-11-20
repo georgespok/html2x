@@ -9,62 +9,65 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 {
     private const string HtmlSamplesFolder = "html";
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(settings.Input))
+        var inputPath = settings.Input;
+
+        if (string.IsNullOrWhiteSpace(inputPath))
         {
-            return await ConvertAsync(settings.Input, settings);
+            var resolution = ResolveInputInteractively();
+            if (resolution.Status == InputResolutionStatus.Cancelled)
+            {
+                return Task.FromResult(0);
+            }
+
+            if (resolution.Status == InputResolutionStatus.Failed)
+            {
+                return Task.FromResult(1);
+            }
+
+            inputPath = resolution.Path;
         }
 
-        return await RunInteractiveLoopAsync(settings);
+        var outputPath = settings.Output ?? "output.pdf";
+        var options = new ConsoleOptions(inputPath!, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
+        var service = new HtmlConversionService(options);
+        return service.ExecuteAsync();
     }
 
-    private static async Task<int> RunInteractiveLoopAsync(RenderSettings settings)
+    private static InputResolution ResolveInputInteractively()
     {
         if (Console.IsInputRedirected)
         {
             AnsiConsole.MarkupLine("[red]Input path is required when standard input is redirected.[/]");
-            return 1;
+            return InputResolution.Failed();
         }
 
         var samplesDirectory = Path.Combine(AppContext.BaseDirectory, HtmlSamplesFolder);
         if (!Directory.Exists(samplesDirectory))
         {
             AnsiConsole.MarkupLine($"[red]Sample folder '{samplesDirectory}' not found.[/]");
-            return 1;
+            return InputResolution.Failed();
         }
 
         var samples = EnumerateSamples(samplesDirectory);
         if (samples.Count == 0)
         {
             AnsiConsole.MarkupLine($"[red]No .html files were found under '{samplesDirectory}'.[/]");
-            return 1;
+            return InputResolution.Failed();
         }
 
         AnsiConsole.MarkupLine("[grey]No input file supplied. Choose one of the bundled samples.[/]");
-        AnsiConsole.MarkupLine("[grey]Use ↑/↓ to navigate, Enter to convert, or choose Quit.[/]");
+        AnsiConsole.MarkupLine("Use ↑/↓ to navigate, Enter to convert, or choose Quit (Ctrl+C)");
 
-        while (true)
+        var selection = PromptForSample(samples);
+        if (selection.IsCancel)
         {
-            var selection = PromptForSample(samples);
-            if (selection.IsQuit)
-            {
-                AnsiConsole.MarkupLine("[yellow]Quit selected. Exiting.[/]");
-                return 0;
-            }
-
-            var result = await ConvertAsync(selection.FullPath!, settings);
-            if (result == 0)
-            {
-                AnsiConsole.MarkupLine("[green]Conversion complete.[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine("[red]Conversion failed. Review the logs before retrying.[/]");
-            }
-
-            AnsiConsole.MarkupLine("[grey]Select another file or choose Quit.[/]");
+            AnsiConsole.MarkupLine("[yellow]No file selected. Exiting.[/]");
+            return InputResolution.Cancelled();
         }
+
+        return InputResolution.Success(selection.FullPath!);
     }
 
     private static SampleChoice PromptForSample(IReadOnlyList<SampleChoice> samples)
@@ -78,7 +81,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 
         prompt.UseConverter(sample => sample.DisplayName);
         prompt.AddChoices(samples);
-        prompt.AddChoice(SampleChoice.Quit);
+        prompt.AddChoice(SampleChoice.Cancel);
 
         try
         {
@@ -86,7 +89,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
         }
         catch (OperationCanceledException)
         {
-            return SampleChoice.Quit;
+            return SampleChoice.Cancel;
         }
     }
 
@@ -105,22 +108,22 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
         return results;
     }
 
-    private static async Task<int> ConvertAsync(string inputPath, RenderSettings settings)
+    private sealed record SampleChoice(string DisplayName, string? FullPath, bool IsCancel)
     {
-        var options = BuildOptions(inputPath, settings);
-        var service = new HtmlConversionService(options);
-        return await service.ExecuteAsync();
+        public static SampleChoice Cancel { get; } = new("Quit", null, true);
     }
 
-    private static ConsoleOptions BuildOptions(string inputPath, RenderSettings settings)
+    private sealed record InputResolution(string? Path, InputResolutionStatus Status)
     {
-        var outputPath = settings.Output ?? "output.pdf";
-        var diagnosticsEnabled = settings.Diagnostics || !string.IsNullOrWhiteSpace(settings.DiagnosticsJson);
-        return new ConsoleOptions(inputPath, outputPath, diagnosticsEnabled, settings.DiagnosticsJson);
+        public static InputResolution Success(string path) => new(path, InputResolutionStatus.Success);
+        public static InputResolution Cancelled() => new(null, InputResolutionStatus.Cancelled);
+        public static InputResolution Failed() => new(null, InputResolutionStatus.Failed);
     }
 
-    private sealed record SampleChoice(string DisplayName, string? FullPath, bool IsQuit)
+    private enum InputResolutionStatus
     {
-        public static SampleChoice Quit { get; } = new("Quit", null, true);
+        Success,
+        Cancelled,
+        Failed
     }
 }
