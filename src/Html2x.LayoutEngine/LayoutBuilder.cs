@@ -39,7 +39,7 @@ public class LayoutBuilder(
 
         var dom = await _domProvider.LoadAsync(html);
         LayoutLog.StageComplete(_diagnosticSession, "DomLoaded");
-
+        
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
         LayoutLog.StageComplete(_diagnosticSession, "StylesComputed");
 

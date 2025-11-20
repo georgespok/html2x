@@ -20,5 +20,4 @@ internal sealed class RenderSettings : CommandSettings
     [CommandOption("--diagnostics-json <PATH>")]
     [Description("Optional path for structured diagnostics output.")]
     public string? DiagnosticsJson { get; init; }
-
 }
