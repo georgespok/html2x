@@ -1,4 +1,3 @@
-using System;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fragments;
