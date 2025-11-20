@@ -1,7 +1,7 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
-using Html2x.Diagnostics.Dumps;
 using Html2x.Diagnostics.Pipeline;
+using Html2x.Diagnostics.Snapshot;
 
 namespace Html2x.Diagnostics.Runtime;
 
@@ -46,7 +46,7 @@ internal sealed class DiagnosticSession : IDiagnosticSession
             return;
         }
 
-        var enrichedEvent = AttachStructuredDump(diagnosticEvent);
+        var enrichedEvent = AttachDiagnosticsSnapshot(diagnosticEvent);
 
         var model = new DiagnosticsModel(
             Descriptor,
@@ -102,20 +102,20 @@ internal sealed class DiagnosticSession : IDiagnosticSession
         _dispatcher.Dispatch(model);
     }
 
-    private static DiagnosticEvent AttachStructuredDump(DiagnosticEvent diagnosticEvent)
+    private static DiagnosticEvent AttachDiagnosticsSnapshot(DiagnosticEvent diagnosticEvent)
     {
-        StructuredDumpDocument? structuredDump = null;
+        SnapshotDocument? snapshotDocument = null;
 
         foreach (var entry in diagnosticEvent.Payload)
         {
-            if (entry.Value is StructuredDumpDocument document)
+            if (entry.Value is SnapshotDocument document)
             {
-                structuredDump ??= document;
+                snapshotDocument ??= document;
                 break;
             }
         }
 
-        if (structuredDump is null)
+        if (snapshotDocument is null)
         {
             return diagnosticEvent;
         }
@@ -124,14 +124,14 @@ internal sealed class DiagnosticSession : IDiagnosticSession
 
         foreach (var entry in diagnosticEvent.Payload)
         {
-            if (entry.Value is StructuredDumpDocument)
+            if (entry.Value is SnapshotDocument)
             {
                 continue;
             }
 
             payload[entry.Key] = entry.Value;
         }
-        var metadata = StructuredDumpSerializer.Serialize(structuredDump);
+        var metadata = SnapshotSerializer.Serialize(snapshotDocument);
 
         return new DiagnosticEvent(
             diagnosticEvent.EventId,

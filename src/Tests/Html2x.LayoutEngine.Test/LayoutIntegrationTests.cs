@@ -322,6 +322,36 @@ public class LayoutIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task Build_ShouldReturnBlockFragment()
+    {
+        // Arrange: Inline element with padding: 10px (7.5pt) inside a block
+        const string html = @"
+            <html>
+              <p>first line<br/>second line</p>
+            </html>";
+
+        var config = Configuration.Default.WithCss();
+        var dom = new AngleSharpDomProvider(config);
+        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var boxes = new BoxTreeBuilder();
+        var fragments = new FragmentBuilder();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+
+        // Act
+        var layout = await builder.BuildAsync(html, PaperSizes.A4);
+
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var page = layout.Pages[0];
+        page.Children.Count.ShouldBe(1);
+        var block = page.Children[0] as BlockFragment;
+        block.ShouldNotBeNull();
+
+
+
+    }
+
     private static BlockFragment? FindBlockContainingText(BlockFragment block, string text)
     {
         if (block.Children.OfType<LineBoxFragment>()

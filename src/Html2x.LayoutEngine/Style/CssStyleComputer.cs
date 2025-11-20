@@ -236,7 +236,7 @@ public sealed class CssStyleComputer(
     {
         parsedValues = [];
 
-        var tokens = shorthandValue.Split([' '], StringSplitOptions.RemoveEmptyEntries)
+        var tokens = shorthandValue.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(v => v.Trim())
             .Where(v => !string.IsNullOrWhiteSpace(v))
             .ToArray();

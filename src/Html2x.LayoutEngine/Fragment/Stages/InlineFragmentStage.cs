@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
@@ -52,12 +53,14 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             return;
         }
 
+        var lineBreakPending = false;
+
         foreach (var child in blockBox.Children)
         {
             switch (child)
             {
                 case InlineBox inline:
-                    ProcessInline(inline, fragment, observers);
+                    ProcessInline(inline, fragment, blockBox, ref lineBreakPending, observers);
                     break;
                 case BlockBox childBlock when lookup.TryGetValue(childBlock, out var childFragment):
                     ProcessBlock(childBlock, childFragment, lookup, visited, observers);
@@ -66,18 +69,24 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         }
     }
 
-    private void ProcessInline(InlineBox inline, BlockFragment parentFragment, IReadOnlyList<IFragmentBuildObserver> observers)
+    private void ProcessInline(InlineBox inline, BlockFragment parentFragment, BlockBox blockContext,
+        ref bool lineBreakPending, IReadOnlyList<IFragmentBuildObserver> observers)
     {
+        if (IsLineBreak(inline))
+        {
+            lineBreakPending = true;
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(inline.TextContent))
         {
             var run = _textRunFactory.Create(inline);
             var baselineY = run.Origin.Y + run.Ascent;
             var height = run.Ascent + run.Descent;
 
-            // Find the parent BlockBox to get padding
-            var parentBlockBox = FindParentBlockBox(inline);
-            var paddingLeft = parentBlockBox?.Padding.Left ?? 0f;
-            var paddingTop = parentBlockBox?.Padding.Top ?? 0f;
+            var paddingLeft = blockContext.Padding.Left;
+            var paddingTop = blockContext.Padding.Top;
+            var textAlign = blockContext.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
             // Offset text run position by padding
             var adjustedX = run.Origin.X + paddingLeft;
@@ -88,10 +97,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 Rect = new RectangleF(adjustedX, adjustedY, run.AdvanceWidth, height),
                 BaselineY = baselineY + paddingTop,
                 LineHeight = height,
-                Runs = [run]
+                Runs = [run],
+                TextAlign = textAlign?.ToLowerInvariant()
             };
 
-            var storedLine = TryMergeWithPreviousLine(parentFragment, line) ?? line;
+            var storedLine = TryMergeWithPreviousLine(parentFragment, line, lineBreakPending) ?? line;
+            lineBreakPending = false;
             if (ReferenceEquals(storedLine, line))
             {
                 parentFragment.Children.Add(line);
@@ -105,13 +116,14 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            ProcessInline(childInline, parentFragment, observers);
+            ProcessInline(childInline, parentFragment, blockContext, ref lineBreakPending, observers);
         }
     }
 
-    private static LineBoxFragment? TryMergeWithPreviousLine(BlockFragment parentFragment, LineBoxFragment candidate)
+    private static LineBoxFragment? TryMergeWithPreviousLine(BlockFragment parentFragment, LineBoxFragment candidate,
+        bool lineBreakPending)
     {
-        if (parentFragment.Children.Count == 0)
+        if (lineBreakPending || parentFragment.Children.Count == 0)
         {
             return null;
         }
@@ -149,17 +161,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         return merged;
     }
 
-    private static BlockBox? FindParentBlockBox(InlineBox inline)
-    {
-        var parent = inline.Parent;
-        while (parent != null)
-        {
-            if (parent is BlockBox blockBox)
-            {
-                return blockBox;
-            }
-            parent = parent.Parent;
-        }
-        return null;
-    }
+    private static bool IsLineBreak(InlineBox inline)
+        => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
+
 }
