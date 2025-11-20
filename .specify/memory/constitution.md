@@ -1,14 +1,16 @@
 <!--
 Sync Impact Report
-Version change: 2.0.0 -> 2.0.1
+Version change: 2.0.1 -> 2.1.0
 Modified principles:
-- III. Test-First Delivery
+- VI. Goal-Driven Delivery Cadence
 Added sections:
 - none
 Removed sections:
 - none
 Templates requiring updates:
-- none
+- ✅ .specify/templates/plan-template.md
+- ✅ .specify/templates/spec-template.md
+- ✅ .specify/templates/tasks-template.md
 Follow-up TODOs:
 - none
 -->
@@ -58,7 +60,7 @@ Rationale: Deliberate extensibility avoids ad hoc growth and protects downstream
 
 ### VI. Goal-Driven Delivery Cadence
 - Plans, specs, and tasks MUST document the Goal-Driven Problem Solving loop: State Assessment, Action Decomposition, Path Planning, Adaptive Execution, and Reflection Loop.
-- Every delivery artifact MUST capture explicit state transitions (e.g., current coverage -> failing test -> passing refactor), enumerate assumptions/dependencies, and define rollback options before irreversible work begins.
+- Every delivery artifact MUST capture explicit state transitions (e.g., current coverage -> failing test -> passing refactor) and enumerate assumptions/dependencies before irreversible work begins.
 - Teams MUST log reflection notes and reusable patterns at the end of each increment so subsequent work starts with updated context.
 
 Rationale: Making the delivery loop explicit keeps reasoning transparent, surfaces risk early, and accelerates adaptation when assumptions fail.
@@ -73,7 +75,7 @@ Rationale: Making the delivery loop explicit keeps reasoning transparent, surfac
 ## Delivery Workflow
 
 - Feature work MUST start with a plan derived from `/speckit.plan` and align with constitution gates before research begins.
-- Plans, specs, and tasks MUST make the Goal-Driven loop explicit with ordered state transitions, dependency/assumption tracking, rollback preparation, and scheduled reflection checkpoints (Principle VI).
+- Plans, specs, and tasks MUST make the Goal-Driven loop explicit with ordered state transitions, dependency/assumption tracking, and scheduled reflection checkpoints (Principle VI).
 - Specifications MUST enumerate independent user stories, predictability-focused acceptance criteria, and `Html2x.Diagnostics` requirements.
 - Task breakdowns MUST keep user stories independently deliverable, call out test-first steps, and include diagnostics instrumentation tasks where applicable.
 - Feature completion MUST include documentation updates, release notes, and verification that console smoke tests and `dotnet test` succeed.
@@ -85,4 +87,4 @@ Rationale: Making the delivery loop explicit keeps reasoning transparent, surfac
 - Compliance reviews MUST accompany feature PRs, referencing the relevant principles in the plan checklist.
 - Maintain a TODO register inside this constitution for unresolved data (e.g., ratification date) and track closure in subsequent amendments.
 
-**Version**: 2.0.1 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-17
+**Version**: 2.1.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-21

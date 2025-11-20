@@ -30,7 +30,7 @@
 - [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
 - [ ] `Html2x.Diagnostics` instrumentation scoped for new behavior (Principle IV).
 - [ ] Extension points documented with migration guidance (Principle V).
-- [ ] Goal-Driven Problem Solving loop captured (Principle VI: state assessment, action decomposition, path planning, adaptive execution, reflection, plus rollback prep).
+- [ ] Goal-Driven Problem Solving loop captured (Principle VI: state assessment, action decomposition, path planning, adaptive execution, and reflection).
 
 ## Project Structure
 
@@ -42,7 +42,6 @@ specs/[###-feature]/
     research.md
     data-model.md
     quickstart.md
-    contracts/
     tasks.md
 ```
 
@@ -51,13 +50,14 @@ specs/[###-feature]/
 ```
 src/
     Html2x.Core/
-    Html2x.Layout/
-    Html2x.Pdf/
+    Html2x.LayoutEngine/
+    Html2x.Renderers.Pdf/
     Html2x/
+    Html2x.Diagnostics/
 tests/
-    Html2x.Layout.Test/
-    Html2x.Pdf.Test/
-    html2x.IntegrationTest/
+    Html2x.LayoutEngine.Test/
+    Html2x.Renderers.Pdf.Test/
+    html2x.Test/
 src/Html2x.TestConsole/
 ```
 

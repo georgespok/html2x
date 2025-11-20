@@ -6,11 +6,11 @@ description: "Task list template for feature implementation"
 # Tasks: [FEATURE NAME]
 
 **Input**: Design documents from `/specs/[###-feature-name]/`  
-**Prerequisites**: plan.md (required), spec.md (user stories), research.md, data-model.md, contracts/
+**Prerequisites**: plan.md (required), spec.md (user stories), research.md, data-model.md
 
 **Tests**: Introduce exactly one failing automated test at a time and list it explicitly for each user story. Pair every failing-test task with the minimal implementation/refactor tasks required to turn the suite green before adding the next test.
 
-**Goal-Driven Cadence**: For each user story capture State Assessment, Action Decomposition, Path Planning (with dependencies + rollback steps), Adaptive Execution checkpoints, and Reflection tasks so Principle VI stays explicit.
+**Goal-Driven Cadence**: For each user story capture State Assessment, Action Decomposition, Path Planning (with dependencies), Adaptive Execution checkpoints, and Reflection tasks so Principle VI stays explicit.
 
 **Organization**: Tasks are grouped by user story to keep delivery incremental and independently testable.
 
@@ -35,7 +35,6 @@ description: "Task list template for feature implementation"
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
-  - Contracts from contracts/
 
   Tasks MUST be organized by user story so each story can be:
   - Implemented independently
@@ -75,7 +74,7 @@ description: "Task list template for feature implementation"
 **Independent Test**: [How to verify this story works on its own]
 **State Assessment**: [Current behavior, constraints, risk signals]
 **Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Path Planning & Risks**: [Dependencies, contingency triggers]
 **Adaptive Checkpoints**: [Criteria for replanning or escalation]
 **Reflection Hook**: [Where to capture learnings and reusable patterns]
 
@@ -101,7 +100,7 @@ description: "Task list template for feature implementation"
 **Independent Test**: [How to verify this story works on its own]
 **State Assessment**: [Current behavior, constraints, risk signals]
 **Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Path Planning & Risks**: [Dependencies, contingency triggers]
 **Adaptive Checkpoints**: [Criteria for replanning or escalation]
 **Reflection Hook**: [Where to capture learnings and reusable patterns]
 
@@ -126,7 +125,7 @@ description: "Task list template for feature implementation"
 **Independent Test**: [How to verify this story works on its own]
 **State Assessment**: [Current behavior, constraints, risk signals]
 **Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, rollback plan, contingency triggers]
+**Path Planning & Risks**: [Dependencies, contingency triggers]
 **Adaptive Checkpoints**: [Criteria for replanning or escalation]
 **Reflection Hook**: [Where to capture learnings and reusable patterns]
 

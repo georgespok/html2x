@@ -7,7 +7,7 @@
 
 ## User Scenarios & Testing (mandatory)
 
-Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and rendering predictability through `Html2x.Diagnostics` (Principle II). Include test harness notes and diagnostics hooks required to validate the behavior (Principle IV). Capture how the plan enforces the Goal-Driven Delivery cadence (Principle VI) by stating current state, ordered actions, adaptive checkpoints, reflection items, and rollback preparation.
+Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and rendering predictability through `Html2x.Diagnostics` (Principle II). Include test harness notes and diagnostics hooks required to validate the behavior (Principle IV). Capture how the plan enforces the Goal-Driven Delivery cadence (Principle VI) by stating current state, ordered actions, adaptive checkpoints, and reflection items.
 
 <!--
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
@@ -81,7 +81,7 @@ Constitution alignment: describe how each story preserves staged layout discipli
 - **FR-003**: Automated tests MUST be authored first and fail before implementation begins (Principle III).
 - **FR-004**: `Html2x.Diagnostics` instrumentation MUST cover the new behavior with actionable metadata (Principle IV).
 - **FR-005**: Public surface changes MUST include migration guidance and docs updates before release (Principle V).
-- **FR-006**: Specifications MUST articulate the Goal-Driven Delivery cadence (state assessment, ordered actions with dependencies, adaptive checkpoints, rollback plans, reflection tasks) for each user story (Principle VI).
+- **FR-006**: Specifications MUST articulate the Goal-Driven Delivery cadence (state assessment, ordered actions with dependencies, adaptive checkpoints, reflection tasks) for each user story (Principle VI).
 
 *Example of marking unclear requirements:*
 
@@ -93,11 +93,6 @@ Constitution alignment: describe how each story preserves staged layout discipli
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
-## Success Criteria (mandatory)
+## Success Criteria
 
-### Measurable Outcomes
-
-- **SC-001**: `dotnet test Html2x.sln -c Release` passes on Windows and Linux for the updated solution.
-- **SC-002**: Integration tests confirm predictable fragment semantics or expected diagnostics traces for new scenarios (PDF remains a black box).
-- **SC-003**: Observability signals (logs or diagnostics) expose the new behavior and are traceable in the harness.
-- **SC-004**: Documentation in `docs/` and release notes capture the change, including migration guidance if contracts moved.
+[List the observable outcomes or validation steps that confirm the feature meets stakeholder expectations. Keep them qualitative if quantitative metrics are not required.]
