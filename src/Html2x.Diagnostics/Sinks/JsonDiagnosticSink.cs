@@ -84,10 +84,10 @@ public sealed class JsonDiagnosticSink : IDiagnosticSink
     {
         var eventPayload = model.Event;
 
-        if (eventPayload.Dump is not null)
+        if (eventPayload.Metadata is not null)
         {
-            using var document = JsonDocument.Parse(eventPayload.Dump.Body);
-            var dumpBody = document.RootElement.Clone();
+            using var document = JsonDocument.Parse(eventPayload.Metadata.Body);
+            var snapshotBody = document.RootElement.Clone();
 
             return new
             {
@@ -100,12 +100,12 @@ public sealed class JsonDiagnosticSink : IDiagnosticSink
                     eventPayload.Kind,
                     eventPayload.Timestamp,
                     eventPayload.Payload,
-                    dump = new
+                    snapshot = new
                     {
-                        eventPayload.Dump.Format,
-                        eventPayload.Dump.Summary,
-                        eventPayload.Dump.NodeCount,
-                        body = dumpBody
+                        eventPayload.Metadata.Format,
+                        eventPayload.Metadata.Summary,
+                        eventPayload.Metadata.NodeCount,
+                        body = snapshotBody
                     }
                 },
                 contexts = _options.IncludeContexts ? model.ActiveContexts : []

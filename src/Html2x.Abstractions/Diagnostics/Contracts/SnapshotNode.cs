@@ -1,13 +1,13 @@
 namespace Html2x.Abstractions.Diagnostics.Contracts;
 
-public sealed record StructuredDumpNode
+public sealed record SnapshotNode
 {
-    public StructuredDumpNode(
+    public SnapshotNode(
         string id,
         string type,
         string? name,
         IReadOnlyDictionary<string, object?> attributes,
-        IReadOnlyList<StructuredDumpNode> children)
+        IReadOnlyList<SnapshotNode> children)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -34,5 +34,5 @@ public sealed record StructuredDumpNode
 
     public IReadOnlyDictionary<string, object?> Attributes { get; }
 
-    public IReadOnlyList<StructuredDumpNode> Children { get; }
+    public IReadOnlyList<SnapshotNode> Children { get; }
 }

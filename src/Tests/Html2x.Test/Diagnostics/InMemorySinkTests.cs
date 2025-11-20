@@ -31,7 +31,7 @@ public sealed class InMemorySinkTests
                 ["note"] = "determinism"
             });
 
-        var model = new DiagnosticsModel(session, diagnosticEvent, Array.Empty<DiagnosticContextSnapshot>());
+        var model = new DiagnosticsModel(session, diagnosticEvent, []);
 
         sink.Publish(model);
 

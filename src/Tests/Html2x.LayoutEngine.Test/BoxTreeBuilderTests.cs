@@ -178,9 +178,9 @@ public class BoxTreeBuilderTests
             .WithPageMargins(0, 0, 0, 0)
             .AddChild(outerDiv, divNode => divNode
                 .AddChild(outerSpan)
-                .AddChild(paragraph, pNode => pNode
-                    .AddChild(nestedDiv, nestedDivNode => nestedDivNode
-                        .AddChild(nestedSpan))));
+                .AddChild(paragraph)
+                .AddChild(nestedDiv, nestedDivNode => nestedDivNode
+                    .AddChild(nestedSpan)));
 
         var actual = CreateBoxTreeBuilder().Build(styles);
 
@@ -190,11 +190,11 @@ public class BoxTreeBuilderTests
                 .Inline(i => i.Element(outerSpan)
                     .Inline(child => child.Text("Span inside Div")))
                 .Block(paragraphBlock => paragraphBlock.Element(paragraph)
-                    .Block(nestedBlock => nestedBlock.Element(nestedDiv)
-                        .Inline(i => i.Element(nestedSpan)
-                            .Inline(child => child.Text("Nested Span inside nested Div")))
-                        .Inline(i => i.Text("Nested Div inside Paragraph")))
-                    .Inline(i => i.Text("Paragraph inside Div")))));
+                    .Inline(i => i.Text("Paragraph inside Div")))
+                .Block(nestedBlock => nestedBlock.Element(nestedDiv)
+                    .Inline(i => i.Text("Nested Div inside Paragraph"))
+                    .Inline(i => i.Element(nestedSpan)
+                        .Inline(child => child.Text("Nested Span inside nested Div"))))));
     }
 
     private static BoxTreeBuilder CreateBoxTreeBuilder()
