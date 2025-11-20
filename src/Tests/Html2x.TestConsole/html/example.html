@@ -1,33 +1,93 @@
 ﻿<!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Invoice</title>
-    <style>
-      body {
-        font-family: "Arial";
-        font-size: 12pt;
-        margin: 24pt;
-      }
+    <head>
+        <meta charset="utf-8" />
+        <title>Invoice</title>
+        <style>
+            h1 {
+                font-size: 18pt;
+                margin-bottom: 8pt;
+            }
 
-      h1 {
-        font-size: 18pt;
-        margin-bottom: 8pt;
-      }
+            body {
+                font-family: Arial, sans-serif;
+                margin: 32px;
+            }
+            p {
+                color: #05078c;
+                line-height: 1.4;
+                text-align: left;
+                margin-bottom: 12px;
+            }
+            .highlight {
+                background-color: #ffcc00;
+            }
+            .logo {
+                max-width: 220px;
+                border: 2px solid #00ff00;
+            }
+            .callout {
+                border-top: 4px solid #be123c;
+                border-right: 12px dashed #1d4ed8;
+                border-bottom: 6px dotted #0f172a;
+                border-left: 2px solid #16a34a;
+                padding: 12px;
+                margin-top: 16px;
+            }
+            ul.feature-list {
+                padding-top: 10px;
+                border: 1px solid #ff0000;
+            }
+            ul.feature-list li {
+                margin-bottom: 10px;
+            }
+        </style>
+    </head>
+    <body>
+    <h1>Basic Html2x Diagnostics Sample</h1>
+    <h2>Headline 2</h2>
+    <h3>Headline 2</h3>
+    <h4>Headline 2</h4>
+    <h5>Headline 2</h5>
+    <h6>Headline 2</h6>
+        <p>
+            This paragraph renders two lines via line brakes (br): first line<br />second
+            line with intentional diagnostics-friendly spacing.
+        </p>
 
-      p {
-        margin: 4pt 0;
-      }
+        <p class="highlight">
+            Inline styles validate color and background behavior. Line-height
+            and text-align targets match FR requirements.
+        </p>
 
-      .total {
-        text-align: right;
-        font-weight: bold;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>Demo Report</h1>
-    <p>Hello, Html2x!</p>
-    <p class="total">Total: $123.45</p>
-  </body>
+        <div>
+            <img class="logo"
+                 src="../assets/sample-logo.jpg"
+                 width="200"
+                 alt="Sample Logo" />
+        </div>
+
+
+        <div class="callout">
+            Complex border case mixes thickness per side to exercise clamping
+            and diagnostics metadata capture.
+        </div>
+
+        <ol>
+            <li>Item 1</li>
+            <li>Item 2</li>
+            <li>Item 3</li>
+        </ol>
+        <ul class="feature-list">
+            <li>Default list-item display role</li>
+        <li>
+            Inline block handling via spans
+            <span style="display: inline-block; width: 120px"
+                >Inline Block</span
+            >
+        </li>
+        <li>Background color coverage</li>
+    </ul>
+    
+    </body>
 </html>
