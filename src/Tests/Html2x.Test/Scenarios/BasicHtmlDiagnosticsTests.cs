@@ -1,11 +1,7 @@
-using System.IO;
-using System.Linq;
-using Html2x;
 using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Diagnostics.Runtime;
 using Html2x.Diagnostics.Sinks;
 using Html2x.Renderers.Pdf.Options;
-using Xunit;
 
 namespace Html2x.Test.Scenarios;
 

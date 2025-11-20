@@ -9,11 +9,11 @@
 
 ### User Story 1 - Single Session Capture (Priority: P1)
 
-As a pipeline owner I want each Html2x run to emit a single diagnostics envelope that records state transitions of every stage so I can inspect one authoritative artifact per execution. This preserves staged layout discipline (Principle I) because the collector only records when a stage begins or ends, and it protects rendering predictability (Principle II) by logging diagnostics instead of inspecting rendered assets. The plan follows Goal-Driven Delivery by declaring the current flat-session gap, the ordered action of building a per-run collector, adaptive checkpoints at each stage boundary, and a rollback of re-enabling the legacy dump if the envelope fails.
+As a pipeline owner I want each Html2x run to emit a single diagnostics envelope that records state transitions of every stage so I can inspect one authoritative artifact per execution. This preserves staged layout discipline (Principle I) because the collector only records when a stage begins or ends, and it protects rendering predictability (Principle II) by logging diagnostics instead of inspecting rendered assets. The plan follows Goal-Driven Delivery by declaring the current flat-session gap, the ordered action of building a per-run collector, and adaptive checkpoints at each stage boundary.
 
 **Why this priority**: Without the envelope we continue shipping redundant payloads that mask ordering bugs; fixing that unlocks every downstream consumer.
 
-**Independent Test**: Add `Html2x.Diagnostics.Tests.SessionEnvelopeTests.RunProducesSingleDocument` that fails until the collector produces exactly one envelope with the requested metadata.
+**Independent Test**: Add `Html2x.Diagnostics.Tests.DiagnosticsSessionEnvelopeTests.RunProducesSingleDocument` that fails until the collector produces exactly one envelope with the requested metadata.
 
 **Acceptance Scenarios**:
 
@@ -24,11 +24,11 @@ As a pipeline owner I want each Html2x run to emit a single diagnostics envelope
 
 ### User Story 2 - Failure Flush Discipline (Priority: P2)
 
-As a developer investigating failures I need the collector to flush the full document even when a stage throws so I never lose the terminal diagnostics needed for reflection and rollback planning (Principles IV and VI).
+As a developer investigating failures I need the collector to flush the full document even when a stage throws so I never lose the terminal diagnostics needed for reflection (Principles IV and VI).
 
 **Why this priority**: Failure telemetry is currently fractured across multiple dumps, turning every outage into a forensic exercise.
 
-**Independent Test**: Add `Html2x.Diagnostics.Tests.SessionEnvelopeTests.FailureFlushesEnvelope` that forces a stage exception and asserts the envelope contains the failure event and session end markers.
+**Independent Test**: Add `Html2x.Diagnostics.Tests.DiagnosticsSessionEnvelopeTests.FailureFlushesEnvelope` that forces a stage exception and asserts the envelope contains the failure event and session end markers.
 
 **Acceptance Scenarios**:
 
@@ -40,7 +40,7 @@ As a developer investigating failures I need the collector to flush the full doc
 
 As a diagnostics consumer I need storage and telemetry sinks to expose only the new hierarchical schema so I can query one document per run, link audits by session identifiers, and capture reflection notes without syncing multiple resources (Principles II and VI).
 
-**Why this priority**: Unified output lets tooling flag regressions, estimate payload shrinkage, and monitor adaptive checkpoints automatically.
+**Why this priority**: Unified output lets tooling flag regressions and monitor adaptive checkpoints automatically without stitching multiple resources.
 
 **Independent Test**: Add an integration test in `Html2x.TestConsole` that runs the harness, captures the saved envelope, and verifies storage contains a single document with environment markers and audit trail.
 
@@ -63,31 +63,37 @@ As a diagnostics consumer I need storage and telemetry sinks to expose only the 
 
 ### Functional Requirements
 
-- **FR-001**: Each pipeline execution MUST create exactly one `SessionDiagnosticsEnvelope` containing session-level identifiers, pipeline metadata, environment markers, and lifecycle timestamps, and the envelope MUST show start, stage transition, and completion states.  
-- **FR-002**: The envelope MUST include an ordered `DiagnosticEvent` collection where each event carries its own timestamp, severity, category, payload, and optional overrides without duplicating session metadata.  
+- **FR-001**: Each pipeline execution MUST create exactly one `DiagnosticsSessionEnvelope` containing session-level identifiers, pipeline metadata, environment markers, and lifecycle timestamps, and the envelope MUST show start, stage transition, and completion states.  
+- **FR-002**: The envelope MUST include an ordered `DiagnosticEvent` collection where each event carries its own timestamp, severity, category, payload (stored in full without redaction), and optional overrides without duplicating session metadata.  
 - **FR-003**: A session-scoped collector MUST manage event capture across stages, enforce stage ordering, and flush on completion, failure, or timeout so no event batch is lost.  
 - **FR-004**: Storage writers and telemetry emitters MUST persist and broadcast only the new hierarchical schema; all StructuredDump DTOs, serializers, and writers are deleted or redirected to the new shape.  
 - **FR-005**: Automated tests across unit, integration, and harness layers MUST assert run-level uniqueness, ordered events, failure flush discipline, and schema invariants before implementation merges.  
-- **FR-006**: Developer documentation MUST describe the envelope schema, provide sample JSON, explain state transitions, and outline rollback guidance for re-enabling the legacy serializer if necessary.  
+- **FR-006**: Developer documentation MUST describe the envelope schema, provide sample JSON, and explain collector state transitions for the new lifecycle.  
 - **FR-007**: Instrumentation MUST capture observability metrics for collector lifecycle events (initialized, event accepted, flush success, flush failure) so Principle IV coverage remains auditable.
 
 ### Key Entities
 
-- **SessionDiagnosticsEnvelope**: Represents a single pipeline run diagnostic artifact with fields for sessionId, correlationId, pipeline name, version, environment markers, startTimestamp, endTimestamp, status, and `Events`.  
-- **DiagnosticEventRecord**: Represents an individual event with timestamp, severity, category, payload, optional stage identifier, and flags for whether it overrides session defaults.  
-- **SessionCollectorLifecycle**: Conceptual controller that tracks state transitions (initialized, active, flushing, completed, failed) and enforces one-way progression with rollback hooks.
+- **DiagnosticsSessionEnvelope**: Represents a single pipeline run diagnostic artifact with fields for sessionId, correlationId, pipeline name, version, environment markers, startTimestamp, endTimestamp, status, and `Events`.  
+- **DiagnosticEvent Entry**: Reuses the existing `DiagnosticEvent` contract to represent individual events with timestamp, severity, category, payload, optional stage identifier, and flags for session-default overrides.  
+- **SessionCollectorLifecycle**: Conceptual controller that tracks state transitions (initialized, active, flushing, completed, failed) and enforces one-way progression.
 
 ## Assumptions
 
 - All Html2x pipeline stages already expose diagnostics hooks that can be routed through the new collector without redesigning stage contracts.  
 - Telemetry consumers are not yet in production, so breaking schema changes carry no external migration risk.  
 - Storage limits allow one aggregated document per run without exceeding existing retention quotas, so no sharding is required initially.
+- Diagnostics envelopes are short-lived troubleshooting artifacts; they are captured for immediate analysis and are not preserved or versioned for long-term auditing.
 
 ## Success Criteria (mandatory)
 
-### Measurable Outcomes
+### Success Signals
 
-- **SC-001**: One hundred percent of Html2x pipeline executions emit exactly one diagnostics envelope per run during regression testing across Windows and Linux agents.  
-- **SC-002**: Average diagnostics payload size per run decreases by at least thirty percent compared to the legacy multi-dump approach, demonstrating deduplicated metadata.  
-- **SC-003**: Ninety five percent of runs record complete lifecycle timestamps (start, last event, end) and pass automated order verification, proving chronological integrity.  
-- **SC-004**: Documentation and release notes describing the new schema are published before code merge, and onboarding surveys confirm stakeholders can interpret the envelope without engineering assistance.
+- **SC-001**: Test and harness runs consistently emit a single diagnostics envelope per pipeline execution, showing the new collector is active end-to-end.  
+- **SC-002**: Lifecycle timestamps (start, last event, end) remain present in emitted envelopes so analysts can reconstruct execution flow without inspecting PDFs.  
+- **SC-003**: Documentation and release notes describe the schema change well enough that contributors can read envelopes without additional guidance.
+
+## Clarifications
+
+### Session 2025-11-20
+
+- Q: Should DiagnosticEvent payloads be redacted before storing them in the envelope? → A: Always retain full payload contents.
