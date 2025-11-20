@@ -12,9 +12,9 @@ using Html2x.Renderers.Pdf.Options;
 
 namespace Html2x.Test.Diagnostics;
 
-public sealed class StructuredDumpTests
+public sealed class LayoutSnapshotTests
 {
-    private const string LayoutDumpCategory = "dump/layout";
+    private const string LayoutSnapshotCategory = "snapshot/layout";
 
     private const string SampleHtml = """
         <!DOCTYPE html>
@@ -22,7 +22,7 @@ public sealed class StructuredDumpTests
             <body>
                 <section id="article">
                     <header id="article-header">
-                        <h1>Structured dump sample</h1>
+                        <h1>Structured snapshot sample</h1>
                     </header>
                     <article id="article-body">
                         <p data-node="lead">First paragraph.</p>
@@ -42,29 +42,29 @@ public sealed class StructuredDumpTests
     };
 
     [Fact]
-    public async Task LayoutDump_ShouldExposeStableNodeCountAndIdentifiers()
+    public async Task LayoutSnapshot_ShouldExposeStableNodeCountAndIdentifiers()
     {
         var sink = new InMemorySink();
         var runtime = DiagnosticsRuntime.Configure(builder =>
         {
-            builder.AddSink("memory", "structured-dump", () => sink);
+            builder.AddSink("memory", "layout-snapshot", () => sink);
         });
 
-        var firstDump = await CaptureLayoutDumpAsync(runtime, sink, "layout-dump-first");
-        var secondDump = await CaptureLayoutDumpAsync(runtime, sink, "layout-dump-second");
+        var firstSnapshot = await CaptureLayoutSnapshotAsync(runtime, sink, "layout-snapshot-first");
+        var secondSnapshot = await CaptureLayoutSnapshotAsync(runtime, sink, "layout-snapshot-second");
 
-        Assert.NotNull(firstDump);
-        Assert.NotNull(secondDump);
-        Assert.True(firstDump!.NodeCount > 0);
-        Assert.Equal(firstDump.NodeCount, secondDump!.NodeCount);
+        Assert.NotNull(firstSnapshot);
+        Assert.NotNull(secondSnapshot);
+        Assert.True(firstSnapshot!.NodeCount > 0);
+        Assert.Equal(firstSnapshot.NodeCount, secondSnapshot!.NodeCount);
 
-        var firstIdentifiers = ExtractNodeIdentifiers(firstDump.Body);
-        var secondIdentifiers = ExtractNodeIdentifiers(secondDump.Body);
+        var firstIdentifiers = ExtractNodeIdentifiers(firstSnapshot.Body);
+        var secondIdentifiers = ExtractNodeIdentifiers(secondSnapshot.Body);
 
         Assert.Equal(firstIdentifiers, secondIdentifiers);
     }
 
-    private static async Task<StructuredDumpMetadata> CaptureLayoutDumpAsync(
+    private static async Task<SnapshotMetadata> CaptureLayoutSnapshotAsync(
         IDiagnosticsRuntime runtime,
         InMemorySink sink,
         string sessionName)
@@ -78,14 +78,14 @@ public sealed class StructuredDumpTests
         var layoutBuilder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, session);
         await layoutBuilder.BuildAsync(SampleHtml, DefaultOptions.PageSize);
 
-        var dumpEvent = sink.Events
+        var snapshotEvent = sink.Events
             .Select(model => model.Event)
-            .FirstOrDefault(evt => evt.Category == LayoutDumpCategory && evt.Dump is not null);
+            .FirstOrDefault(evt => evt.Category == LayoutSnapshotCategory && evt.Metadata is not null);
 
-        Assert.NotNull(dumpEvent);
-        Assert.NotNull(dumpEvent!.Dump);
+        Assert.NotNull(snapshotEvent);
+        Assert.NotNull(snapshotEvent!.Metadata);
 
-        return dumpEvent.Dump!;
+        return snapshotEvent.Metadata!;
     }
 
     private static IReadOnlyList<string> ExtractNodeIdentifiers(string body)
@@ -93,7 +93,7 @@ public sealed class StructuredDumpTests
         using var document = JsonDocument.Parse(body);
         Assert.True(
             document.RootElement.TryGetProperty("nodes", out var nodesElement),
-            "Layout dump must provide a nodes array.");
+            "Layout snapshot must provide a nodes array.");
 
         var identifiers = new List<string>();
 
@@ -117,7 +117,7 @@ public sealed class StructuredDumpTests
 
     private sealed class InMemorySink : IDiagnosticSink
     {
-        public string SinkId => "structured-dump-sink";
+        public string SinkId => "structured-snapshot-sink";
 
         public List<DiagnosticsModel> Events { get; } = [];
 
