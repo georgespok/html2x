@@ -4,16 +4,16 @@ using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
-internal static class LayoutDiagnosticsDumper
+internal static class LayoutSnapshotBuilder
 {
-    public static StructuredDumpDocument Create(BoxTree boxTree)
+    public static SnapshotDocument Create(BoxTree boxTree)
     {
         if (boxTree is null)
         {
             throw new ArgumentNullException(nameof(boxTree));
         }
 
-        var nodes = new List<StructuredDumpNode>(boxTree.Blocks.Count);
+        var nodes = new List<SnapshotNode>(boxTree.Blocks.Count);
         var nodeCount = 0;
 
         for (var i = 0; i < boxTree.Blocks.Count; i++)
@@ -23,10 +23,10 @@ internal static class LayoutDiagnosticsDumper
         }
 
         var summary = $"BoxTree nodes={nodeCount}";
-        return new StructuredDumpDocument("dump/layout", summary, nodes, nodeCount);
+        return new SnapshotDocument("snapshot/layout", summary, nodes, nodeCount);
     }
 
-    private static StructuredDumpNode CreateNode(
+    private static SnapshotNode CreateNode(
         DisplayNode node,
         string nodeId,
         ref int nodeCount)
@@ -34,14 +34,14 @@ internal static class LayoutDiagnosticsDumper
         nodeCount++;
 
         var attributes = BuildAttributes(node);
-        var children = new List<StructuredDumpNode>(node.Children.Count);
+        var children = new List<SnapshotNode>(node.Children.Count);
 
         for (var i = 0; i < node.Children.Count; i++)
         {
             children.Add(CreateNode(node.Children[i], $"{nodeId}.{i}", ref nodeCount));
         }
 
-        return new StructuredDumpNode(
+        return new SnapshotNode(
             nodeId,
             node.GetType().Name,
             ResolveName(node.Element),

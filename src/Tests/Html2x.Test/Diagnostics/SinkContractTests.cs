@@ -10,7 +10,7 @@ public sealed class SinkContractTests
     private const string JsonSinkOptionsType = "Html2x.Diagnostics.Sinks.JsonDiagnosticSinkOptions, Html2x.Diagnostics";
 
     [Fact]
-    public void JsonSink_ShouldPersistSessionsEventsDumpsAndContexts()
+    public void JsonSink_ShouldPersistSessionsSnapshotEventsAndContexts()
     {
         using var temp = new TempDirectory();
         var outputPath = Path.Combine(temp.Path, "session.json");
@@ -28,9 +28,9 @@ public sealed class SinkContractTests
                 ["tenant"] = "alpha"
             });
 
-        var dumpBody = JsonSerializer.Serialize(new
+        var snapshotBody = JsonSerializer.Serialize(new
         {
-            category = "dump/layout",
+            category = "snapshot/layout",
             summary = "BoxTree nodes=3",
             nodeCount = 3,
             nodes = new[]
@@ -53,8 +53,8 @@ public sealed class SinkContractTests
         var diagnosticEvent = new DiagnosticEvent(
             Guid.NewGuid(),
             sessionDescriptor.SessionId,
-            "dump/layout",
-            "dump/layout",
+            "snapshot/layout",
+            "snapshot/layout",
             DateTimeOffset.UtcNow,
             new Dictionary<string, object?>(StringComparer.Ordinal)
             {
@@ -62,7 +62,7 @@ public sealed class SinkContractTests
                 ["nodeCount"] = 3,
                 ["reason"] = "Regression capture"
             },
-            new StructuredDumpMetadata("json", "BoxTree nodes=3", 3, dumpBody));
+            new SnapshotMetadata("json", "BoxTree nodes=3", 3, snapshotBody));
 
         var contexts = new List<DiagnosticContextSnapshot>
         {
@@ -96,15 +96,15 @@ public sealed class SinkContractTests
         Assert.Equal("alpha", sessionElement.GetProperty("metadata").GetProperty("tenant").GetString());
 
         Assert.True(entry.TryGetProperty("event", out var eventElement));
-        Assert.Equal("dump/layout", eventElement.GetProperty("category").GetString());
+        Assert.Equal("snapshot/layout", eventElement.GetProperty("category").GetString());
         Assert.Equal("Regression capture", eventElement.GetProperty("payload").GetProperty("reason").GetString());
 
-        var dumpElement = eventElement.GetProperty("dump");
-        Assert.Equal("json", dumpElement.GetProperty("format").GetString());
-        Assert.Equal(3, dumpElement.GetProperty("nodeCount").GetInt32());
-        Assert.Equal(JsonValueKind.Object, dumpElement.GetProperty("body").ValueKind);
+        var snapshotElement = eventElement.GetProperty("snapshot");
+        Assert.Equal("json", snapshotElement.GetProperty("format").GetString());
+        Assert.Equal(3, snapshotElement.GetProperty("nodeCount").GetInt32());
+        Assert.Equal(JsonValueKind.Object, snapshotElement.GetProperty("body").ValueKind);
 
-        var nodes = dumpElement.GetProperty("body").GetProperty("nodes");
+        var nodes = snapshotElement.GetProperty("body").GetProperty("nodes");
         Assert.Equal(JsonValueKind.Array, nodes.ValueKind);
         Assert.Equal("layout.0", nodes[0].GetProperty("id").GetString());
 

@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
@@ -8,6 +5,7 @@ using Html2x.Renderers.Pdf.Options;
 using Html2x.Renderers.Pdf.Rendering;
 using Html2x.Renderers.Pdf.Visitors;
 using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 using QuestPageSize = QuestPDF.Helpers.PageSize;
 
 namespace Html2x.Renderers.Pdf.Pipeline;
@@ -65,80 +63,84 @@ public class PdfRenderer
 
     private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
     {
-        PublishRenderEvent("render/pdf/layout-start", payload =>
-        {
-            payload["pages"] = layout.Pages.Count;
-            payload["optionsHash"] = ComputeOptionsHash(options);
-        });
+        PublishLayoutStart(layout, options);
 
         using var stream = new MemoryStream();
 
-        Document.Create(doc =>
-            {
-                for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
-                {
-                    var page = layout.Pages[pageIndex];
-                    var pageSize = page.Size;
-
-                    PublishRenderEvent("render/pdf/page-start", payload =>
-                    {
-                        payload["pageIndex"] = pageIndex;
-                        payload["width"] = pageSize.Width;
-                        payload["height"] = pageSize.Height;
-                    });
-
-                    doc.Page(p =>
-                    {
-                        p.Size(new QuestPageSize(pageSize.Width, pageSize.Height));
-                        p.MarginTop(page.Margins.Top);
-                        p.MarginRight(page.Margins.Right);
-                        p.MarginBottom(page.Margins.Bottom);
-                        p.MarginLeft(page.Margins.Left);
-
-                        p.Content().Column(col =>
-                        {
-                            var currentY = 0f;
-
-                            foreach (var fragment in page.Children)
-                            {
-                                var xRel = fragment.Rect.X - page.Margins.Left;
-                                var yRel = fragment.Rect.Y - page.Margins.Top;
-
-                                var deltaY = Math.Max(0, yRel - currentY);
-                                if (deltaY > 0)
-                                {
-                                    col.Item().Height(deltaY);
-                                    currentY += deltaY;
-                                }
-
-                                col.Item().Row(row =>
-                                {
-                                    if (xRel > 0)
-                                    {
-                                        row.ConstantItem(xRel).Element(_ => { });
-                                    }
-
-                                    row.ConstantItem(fragment.Rect.Width).Element(box =>
-                                    {
-                                        var target = fragment.Rect.Height > 0
-                                            ? box.MinHeight(fragment.Rect.Height)
-                                            : box;
-
-                                        var renderer = _rendererFactory.Create(target, options, _diagnosticSession);
-                                        var dispatcher = new FragmentRenderDispatcher(renderer);
-                                        fragment.VisitWith(dispatcher);
-                                    });
-                                });
-
-                                currentY = Math.Max(currentY, yRel + fragment.Rect.Height);
-                            }
-                        });
-                    });
-                }
-            })
+        Document.Create(doc => ConfigureDocument(doc, layout, options))
             .GeneratePdf(stream);
 
         return stream.ToArray();
+    }
+
+    private void ConfigureDocument(IDocumentContainer document, HtmlLayout layout, PdfOptions options)
+    {
+        for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
+        {
+            var page = layout.Pages[pageIndex];
+            PublishPageStart(pageIndex, page);
+
+            document.Page(descriptor => ConfigurePage(descriptor, page, options));
+        }
+    }
+
+    private void ConfigurePage(PageDescriptor pageDescriptor, LayoutPage page, PdfOptions options)
+    {
+        var pageSize = page.Size;
+
+        pageDescriptor.Size(new QuestPageSize(pageSize.Width, pageSize.Height));
+        pageDescriptor.MarginTop(page.Margins.Top);
+        pageDescriptor.MarginRight(page.Margins.Right);
+        pageDescriptor.MarginBottom(page.Margins.Bottom);
+        pageDescriptor.MarginLeft(page.Margins.Left);
+
+        pageDescriptor.Content().Column(column => WriteFragments(column, page, options));
+    }
+
+    private void WriteFragments(ColumnDescriptor column, LayoutPage page, PdfOptions options)
+    {
+        var currentY = 0f;
+
+        foreach (var fragment in page.Children)
+        {
+            var xRel = fragment.Rect.X - page.Margins.Left;
+            var yRel = fragment.Rect.Y - page.Margins.Top;
+
+            InsertVerticalSpacer(column, ref currentY, yRel);
+
+            column.Item().Row(row =>
+            {
+                if (xRel > 0)
+                {
+                    row.ConstantItem(xRel).Element(_ => { });
+                }
+
+                row.ConstantItem(fragment.Rect.Width).Element(box =>
+                {
+                    var target = fragment.Rect.Height > 0
+                        ? box.MinHeight(fragment.Rect.Height)
+                        : box;
+
+                    var renderer = _rendererFactory.Create(target, options, _diagnosticSession);
+                    var dispatcher = new FragmentRenderDispatcher(renderer);
+                    fragment.VisitWith(dispatcher);
+                });
+            });
+
+            currentY = Math.Max(currentY, yRel + fragment.Rect.Height);
+        }
+    }
+
+    private static void InsertVerticalSpacer(ColumnDescriptor column, ref float currentY, float targetY)
+    {
+        var deltaY = Math.Max(0, targetY - currentY);
+        if (deltaY <= 0)
+        {
+            return;
+        }
+
+        column.Item().Height(deltaY);
+        currentY += deltaY;
     }
 
     private static int ComputeOptionsHash(PdfOptions options)
@@ -147,6 +149,27 @@ public class PdfRenderer
             options.FontPath is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(options.FontPath),
             options.LicenseType,
             options.PageSize.GetHashCode());
+    }
+
+    private void PublishLayoutStart(HtmlLayout layout, PdfOptions options)
+    {
+        PublishRenderEvent("render/pdf/layout-start", payload =>
+        {
+            payload["pages"] = layout.Pages.Count;
+            payload["optionsHash"] = ComputeOptionsHash(options);
+        });
+    }
+
+    private void PublishPageStart(int pageIndex, LayoutPage page)
+    {
+        var pageSize = page.Size;
+
+        PublishRenderEvent("render/pdf/page-start", payload =>
+        {
+            payload["pageIndex"] = pageIndex;
+            payload["width"] = pageSize.Width;
+            payload["height"] = pageSize.Height;
+        });
     }
     private void PublishRenderEvent(string kind, Action<Dictionary<string, object?>> configure)
     {

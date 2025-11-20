@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Measurements.Units;

@@ -11,7 +11,8 @@ public sealed record TextRun(
     float AdvanceWidth, // measured width used during line-breaking
     float Ascent, // font metrics for baseline alignment
     float Descent,
-    TextDecorations Decorations = TextDecorations.None
+    TextDecorations Decorations = TextDecorations.None,
+    string? ColorHex = null
 );
 
 [Flags]
