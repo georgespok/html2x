@@ -2,9 +2,9 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Html2x.Abstractions.Diagnostics.Contracts;
 
-namespace Html2x.Diagnostics.Dumps;
+namespace Html2x.Diagnostics.Snapshot;
 
-internal static class StructuredDumpSerializer
+internal static class SnapshotSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -14,7 +14,7 @@ internal static class StructuredDumpSerializer
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public static StructuredDumpMetadata Serialize(StructuredDumpDocument document)
+    public static SnapshotMetadata Serialize(SnapshotDocument document)
     {
         if (document is null)
         {
@@ -31,7 +31,7 @@ internal static class StructuredDumpSerializer
 
         var body = JsonSerializer.Serialize(payload, SerializerOptions);
 
-        return new StructuredDumpMetadata(
+        return new SnapshotMetadata(
             "json",
             document.Summary,
             document.NodeCount,
