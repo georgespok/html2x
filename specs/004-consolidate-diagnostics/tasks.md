@@ -58,7 +58,7 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [US1] Add failing `RunProducesSingleDocument` test in `tests/Html2x.Test/Diagnostics/DiagnosticsSessionEnvelopeTests.cs` asserting a single persisted envelope per pipeline run.
+- [X] T007 [US1] Add failing `ToPdfAsync_SingleRun_CreatesOneEnvelope` test in `tests/Html2x.Test/Diagnostics/DiagnosticsSessionEnvelopeTests.cs` asserting a single persisted envelope per pipeline run.
 - [ ] T008 [P] [US1] Extend `src/Tests/Html2x.TestConsole/Scenarios/DiagnosticsSessionEnvelopeScenario.cs` to fail when multiple JSON files are produced for one execution.
 - [ ] T009 [US1] Extend `tests/Html2x.Test/Diagnostics/DiagnosticsSessionEnvelopeTests.cs` to assert lifecycle metrics/logs for collector initialization, event acceptance, and flush outcomes.
 - [ ] T010 [US1] Add failing timestamp completeness assertions in `tests/Html2x.Test/Diagnostics/DiagnosticsSessionEnvelopeTests.cs` to enforce start, last-event, and end timestamps on every envelope.
