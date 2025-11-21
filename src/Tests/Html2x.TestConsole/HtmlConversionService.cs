@@ -1,5 +1,5 @@
-using Html2x.Diagnostics.Runtime;
-using Html2x.Renderers.Pdf.Options;
+using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;
@@ -25,17 +25,27 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         logger.LogInformation("Input: {Input}", inputPath);
         logger.LogInformation("Output: {Output}", outputPath);
 
-        var runtime = DiagnosticsFactory.Create(options, loggerFactory, logger);
-        var converter = runtime?.Decorate(new HtmlConverter())
-                         ?? new HtmlConverter();
+        var converter = new HtmlConverter();
 
         try
         {
             var htmlContent = await File.ReadAllTextAsync(inputPath);
-            var pdfBytes = await RenderPdfAsync(converter, htmlContent, runtime, inputPath, outputPath);
+            var result = await RenderPdfAsync(converter, htmlContent, options);
 
-            await File.WriteAllBytesAsync(outputPath, pdfBytes);
-            logger.LogInformation("PDF created successfully. Size {FileSize:N0} bytes", pdfBytes.Length);
+            await File.WriteAllBytesAsync(outputPath, result.PdfBytes);
+            logger.LogInformation("PDF created successfully. Size {FileSize:N0} bytes", result.PdfBytes.Length);
+
+            if (!string.IsNullOrWhiteSpace(options.DiagnosticsJson) && result.Diagnostics is { } session)
+            {
+                var diagnosticsPath = Path.GetFullPath(options.DiagnosticsJson);
+                Directory.CreateDirectory(Path.GetDirectoryName(diagnosticsPath)!);
+
+                var json = DiagnosticsSessionSerializer.ToJson(session);
+                await File.WriteAllTextAsync(diagnosticsPath, json);
+
+                logger.LogInformation("Diagnostics written to {DiagnosticsPath}", diagnosticsPath);
+            }
+
             return 0;
         }
         catch (Exception ex)
@@ -68,31 +78,26 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         return Path.Combine(tempDir, requestedPath);
     }
 
-    private static async Task<byte[]> RenderPdfAsync(
+    private static async Task<Html2PdfResult> RenderPdfAsync(
         HtmlConverter converter,
         string htmlContent,
-        DiagnosticsRuntime? runtime,
-        string inputPath,
-        string outputPath)
+        ConsoleOptions consoleOptions)
     {
-        var pdfOptions = new PdfOptions
+        var options = new HtmlConverterOptions
         {
-            FontPath = "\\fonts\\Inter-Regular.ttf",
-            EnableDebugging = true
+            Pdf = new PdfOptions
+            {
+                FontPath = "\\fonts\\Inter-Regular.ttf",
+                EnableDebugging = true
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = consoleOptions.DiagnosticsEnabled ||
+                                    !string.IsNullOrWhiteSpace(consoleOptions.DiagnosticsJson)
+            }
         };
 
-        var metadata = runtime is null
-            ? null
-            : new Dictionary<string, object?>
-            {
-                ["input"] = inputPath,
-                ["output"] = outputPath
-            };
-
-        using var session = runtime?.StartSession(
-            $"console-{Path.GetFileNameWithoutExtension(inputPath)}",
-            metadata: metadata);
-
-        return await converter.ToPdfAsync(htmlContent, pdfOptions);
+        var result = await converter.ToPdfAsync(htmlContent, options);
+        return result; 
     }
 }

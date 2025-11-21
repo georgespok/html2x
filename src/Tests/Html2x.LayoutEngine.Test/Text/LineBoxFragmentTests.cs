@@ -1,6 +1,7 @@
 using AngleSharp;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
@@ -22,8 +23,12 @@ public class LineBoxFragmentTests
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
         var layoutBuilder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder);
+        var options = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
 
-        var layout = await layoutBuilder.BuildAsync(html, PaperSizes.A4);
+        var layout = await layoutBuilder.BuildAsync(html, options);
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(1);

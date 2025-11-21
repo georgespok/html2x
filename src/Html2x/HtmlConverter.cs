@@ -1,77 +1,97 @@
 using Html2x.Abstractions.Diagnostics;
-using Html2x.Abstractions.Diagnostics.Contracts;
-using Html2x.Abstractions.Diagnostics.Writers;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.LayoutEngine;
-using Html2x.Renderers.Pdf.Options;
+using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
 
 namespace Html2x;
 
-public class HtmlConverter : IDiagnosticsHost
+public class HtmlConverter
 {
-    private readonly ILayoutBuilderFactory _layoutBuilderFactory;
-    private readonly Func<LayoutBuilder, LayoutBuilder> _layoutDecorator;
-    private readonly Func<PdfRenderer, PdfRenderer> _rendererDecorator;
-    private readonly Func<IDiagnosticSession?, PdfRenderer> _rendererFactory;
-    private Func<IDiagnosticSession?>? _diagnosticSessionAccessor;
+    private readonly ILayoutBuilderFactory _layoutBuilderFactory = new LayoutBuilderFactory();
 
-    public HtmlConverter(
-        ILayoutBuilderFactory? layoutBuilderFactory = null,
-        Func<LayoutBuilder, LayoutBuilder>? layoutDecorator = null,
-        Func<PdfRenderer, PdfRenderer>? rendererDecorator = null)
+    public async Task<Html2PdfResult> ToPdfAsync(string html, HtmlConverterOptions options)
     {
-        _layoutBuilderFactory = layoutBuilderFactory ?? new LayoutBuilderFactory();
-        _rendererFactory = session => new PdfRenderer(session);
+        if (html is null)
+        {
+            throw new ArgumentNullException(nameof(html));
+        }
 
-        _layoutDecorator = layoutDecorator ?? (builder => builder);
-        _rendererDecorator = rendererDecorator ?? (renderer => renderer);
+        options ??= new HtmlConverterOptions();
+
+        DiagnosticsSession? session = null;
+        if (options.Diagnostics.EnableDiagnostics)
+        {
+            session = new DiagnosticsSession
+            {
+                StartTime = DateTimeOffset.UtcNow,
+                Options = options
+            };
+        }
+
+        AddDiagnosticsEvent(
+            session,
+            DiagnosticsEventType.StartStage,
+            "LayoutBuild",
+            new HtmlPayload { Html = html.Trim() });
+
+        var layoutBuilder = _layoutBuilderFactory.Create()
+                            ?? throw new InvalidOperationException("Layout factory returned null.");
+
+        var layout = await layoutBuilder.BuildAsync(html, options.Layout, session);
+
+        AddDiagnosticsEvent(
+            session,
+            DiagnosticsEventType.EndStage,
+            "LayoutBuild",
+            new LayoutSnapshotPayload
+            {
+                Snapshot = LayoutSnapshotMapper.From(layout)
+            });
+
+        var renderer = new PdfRenderer();
+
+        AddDiagnosticsEvent(
+            session,
+            DiagnosticsEventType.StartStage,
+            "PdfRender",
+            null);
+
+        var pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session);
+
+        AddDiagnosticsEvent(
+            session,
+            DiagnosticsEventType.EndStage,
+            "PdfRender", new RenderSummaryPayload()
+            {
+                PdfSize = pdfBytes.Length,
+                PageCount = layout.Pages.Count
+            });
+
+        return new Html2PdfResult(pdfBytes)
+        {
+            Diagnostics = session
+        };
     }
 
-    public async Task<byte[]> ToPdfAsync(string html, PdfOptions options)
+    private static void AddDiagnosticsEvent(
+        DiagnosticsSession? session,
+        DiagnosticsEventType type,
+        string name,
+        IDiagnosticsPayload? payload)
     {
-        var session = _diagnosticSessionAccessor?.Invoke();
-        var layoutBuilder = _layoutDecorator(_layoutBuilderFactory.Create(session))
-                            ?? throw new InvalidOperationException("Layout decorator returned null.");
-
-        var layout = await layoutBuilder.BuildAsync(html, options.PageSize);
-        PublishFragmentSnapshot(session, layout);
-
-        var renderer = _rendererDecorator(_rendererFactory(session))
-                       ?? throw new InvalidOperationException("Renderer decorator returned null.");
-        return await renderer.RenderAsync(layout, options);
-    }
-
-    public void AttachDiagnosticsSession(Func<IDiagnosticSession?> accessor)
-    {
-        _diagnosticSessionAccessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
-    }
-
-    private static void PublishFragmentSnapshot(IDiagnosticSession? session, HtmlLayout layout)
-    {
-        if (session is not { IsEnabled: true })
+        if (session is null)
         {
             return;
         }
 
-        var writer = new FragmentDiagnosticsWriter();
-        var snapshot = writer.Write(layout);
-
-        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        session.Events.Add(new DiagnosticsEvent
         {
-            ["snapshot"] = snapshot,
-            ["fragmentCount"] = snapshot.Fragments.Count
-        };
-
-        var diagnosticEvent = new DiagnosticEvent(
-            Guid.NewGuid(),
-            session.Descriptor.SessionId,
-            "diagnostics/fragments",
-            "diagnostics/fragments/snapshot",
-            DateTimeOffset.UtcNow,
-            payload);
-
-        session.Publish(diagnosticEvent);
+            Type = type,
+            Name = name,
+            Timestamp = DateTimeOffset.UtcNow,
+            Payload = payload
+        });
     }
 }
 
