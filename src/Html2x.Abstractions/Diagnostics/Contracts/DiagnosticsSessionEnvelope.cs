@@ -26,7 +26,7 @@ public sealed record DiagnosticsSessionEnvelope
         StartTimestamp = startTimestamp;
         EndTimestamp = endTimestamp;
         Status = status;
-        Events = events ?? Array.Empty<DiagnosticEvent>();
+        Events = events ?? [];
     }
 
     public Guid SessionId { get; }
