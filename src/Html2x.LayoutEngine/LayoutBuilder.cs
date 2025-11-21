@@ -1,16 +1,12 @@
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
-using Html2x.Abstractions.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
-using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Style;
 using Spacing = Html2x.Abstractions.Layout.Styles.Spacing;
-
-using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine;
 
@@ -22,8 +18,7 @@ public class LayoutBuilder(
     IDomProvider domProvider,
     IStyleComputer styleComputer,
     IBoxTreeBuilder boxBuilder,
-    IFragmentBuilder fragmentBuilder,
-    IDiagnosticSession? diagnosticSession = null)
+    IFragmentBuilder fragmentBuilder)
 {
     private const string LayoutSnapshotCategory = "snapshot/layout";
 
@@ -31,25 +26,54 @@ public class LayoutBuilder(
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
     private readonly IStyleComputer _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
-    private readonly IDiagnosticSession? _diagnosticSession = diagnosticSession;
-
-    public async Task<HtmlLayout> BuildAsync(string html, PageSize pageSize)
+    
+    public async Task<HtmlLayout> BuildAsync(string html, 
+        LayoutOptions options, DiagnosticsSession? diagnosticsSession = null)
     {
-        LayoutLog.BuildStart(_diagnosticSession, html.Length, pageSize);
+        if (html is null)
+        {
+            throw new ArgumentNullException(nameof(html));
+        }
+
+        if (options is null)
+        {
+            throw new ArgumentNullException(nameof(options));
+        }
 
         var dom = await _domProvider.LoadAsync(html);
-        LayoutLog.StageComplete(_diagnosticSession, "DomLoaded");
-        
-        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
-        LayoutLog.StageComplete(_diagnosticSession, "StylesComputed");
 
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.EndStage,
+            Name = "stage/dom",
+            Description = "DOM loaded",
+
+        });
+
+        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
+
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.EndStage,
+            Name = "stage/style"
+        });
+        
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
-        LayoutLog.StageComplete(_diagnosticSession, "BoxTreeBuilt");
-        PublishLayoutSnapshot(boxTree);
+        
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.EndStage,
+            Name = "stage/layout"
+        });
 
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
-        LayoutLog.StageComplete(_diagnosticSession, "FragmentsBuilt");
 
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.EndStage,
+            Name = "stage/inline-measurement"
+        });
+        
         RunStage("stage/fragmentation", () =>
         {
             // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
@@ -58,7 +82,7 @@ public class LayoutBuilder(
         var layout = RunStage("stage/pagination", () =>
         {
             var newLayout = new HtmlLayout();
-            var page = new LayoutPage(new SizeF(pageSize.Width, pageSize.Height),
+            var page = new LayoutPage(new SizeF(options.PageSize.Width, options.PageSize.Height),
                 new Spacing(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
                     boxTree.Page.MarginLeftPt),
                 fragments.Blocks);
@@ -66,46 +90,23 @@ public class LayoutBuilder(
             return newLayout;
         });
 
-        LayoutLog.BuildComplete(_diagnosticSession, fragments.Blocks.Count);
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.EndStage,
+            Name = "stage/pagination"
+        });
+
         return layout;
     }
 
     private T RunStage<T>(string stage, Func<T> action)
     {
-        using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, stage);
         return action();
     }
 
     private void RunStage(string stage, Action action)
     {
-        using var scope = DiagnosticsStageScope.Begin(_diagnosticSession, stage);
         action();
-    }
-
-    private void PublishLayoutSnapshot(BoxTree boxTree)
-    {
-        if (_diagnosticSession is not { IsEnabled: true })
-        {
-            return;
-        }
-
-        var document = LayoutSnapshotBuilder.Create(boxTree);
-        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
-        {
-            ["summary"] = document.Summary,
-            ["nodeCount"] = document.NodeCount,
-            ["structuredSnapshot"] = document
-        };
-
-        var diagnosticEvent = new DiagnosticEvent(
-            Guid.NewGuid(),
-            _diagnosticSession.Descriptor.SessionId,
-            LayoutSnapshotCategory,
-            LayoutSnapshotCategory,
-            DateTimeOffset.UtcNow,
-            payload);
-
-        _diagnosticSession.Publish(diagnosticEvent);
     }
 }
 

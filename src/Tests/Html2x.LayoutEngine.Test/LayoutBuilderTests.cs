@@ -1,6 +1,8 @@
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Measurements.Units;
+using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
@@ -8,7 +10,6 @@ using Html2x.LayoutEngine.Style;
 using Moq;
 using Shouldly;
 
-using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
@@ -62,8 +63,13 @@ public class LayoutBuilderTests
         _boxTreeBuilder.Setup(x => x.Build(styleTree)).Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree)).Returns(fragmentTree);
 
+        var options = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
         // Act
-        var layout = await _builder.BuildAsync(html, PaperSizes.Letter);
+        var layout = await _builder.BuildAsync(html, options);
 
         // Assert
         Assert.NotNull(layout);
