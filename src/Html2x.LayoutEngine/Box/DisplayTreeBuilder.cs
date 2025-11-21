@@ -14,10 +14,10 @@ public sealed class DisplayTreeBuilder
         }
 
         // Create root box for <body>
-        return BuildNode(styleTree.Root, null);
+        return BuildNode(styleTree.Root, null, new TextNormalizationState());
     }
 
-    private static DisplayNode BuildNode(StyleNode styleNode, DisplayNode? parent)
+    private static DisplayNode BuildNode(StyleNode styleNode, DisplayNode? parent, TextNormalizationState textState)
     {
         var element = styleNode.Element;
         var display = GetDisplayRole(styleNode);
@@ -40,7 +40,7 @@ public sealed class DisplayTreeBuilder
         };
 
         // Add child boxes recursively
-        AppendChildNodes(styleNode, box);
+        AppendChildNodes(styleNode, box, textState);
 
         if (string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase) &&
             parent != null)
@@ -106,7 +106,7 @@ public sealed class DisplayTreeBuilder
             : HtmlCssConstants.CssValues.Left;
     }
 
-    private static void AppendChildNodes(StyleNode styleNode, DisplayNode box)
+    private static void AppendChildNodes(StyleNode styleNode, DisplayNode box, TextNormalizationState textState)
     {
         var element = styleNode.Element;
         var styleChildren = styleNode.Children;
@@ -116,7 +116,7 @@ public sealed class DisplayTreeBuilder
         {
             if (child.NodeType == NodeType.Text)
             {
-                AppendTextRun(child, box);
+                AppendTextRun(child, box, textState);
                 continue;
             }
 
@@ -137,26 +137,36 @@ public sealed class DisplayTreeBuilder
                 continue;
             }
 
-            box.Children.Add(BuildNode(styleChild, box));
+            var role = GetDisplayRole(styleChild);
+            var childState = role is DisplayRole.Inline or DisplayRole.InlineBlock
+                ? textState
+                : new TextNormalizationState();
+
+            box.Children.Add(BuildNode(styleChild, box, childState));
+
+            if (string.Equals(childElement.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase))
+            {
+                textState.MarkLineBreak();
+            }
         }
     }
 
-    private static void AppendTextRun(INode node, DisplayNode box)
+    private static void AppendTextRun(INode node, DisplayNode box, TextNormalizationState textState)
     {
         if (node.NodeType != NodeType.Text)
         {
             return;
         }
 
-        var text = node.TextContent.Trim();
-        if (string.IsNullOrEmpty(text))
+        var normalized = TextNormalizer.NormalizeWhiteSpaceNormal(node.TextContent, textState);
+        if (string.IsNullOrEmpty(normalized))
         {
             return;
         }
 
         box.Children.Add(new InlineBox
         {
-            TextContent = text,
+            TextContent = normalized,
             Parent = box,
             Style = box.Style
         });
