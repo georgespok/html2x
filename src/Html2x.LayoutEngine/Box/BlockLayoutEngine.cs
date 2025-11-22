@@ -1,4 +1,6 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using System.Collections.Generic;
+using System.Linq;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
@@ -22,18 +24,11 @@ public sealed class BlockLayoutEngine(
         var contentY = page.MarginTopPt;
         var contentWidth = page.PageWidthPt - page.MarginLeftPt - page.MarginRightPt;
 
-        // iterate over block-level children only
-        foreach (var child in displayRoot.Children)
-        {
-            if (child is InlineBox inline)
-            {
-                // Treat inline text runs that appear directly under the root (e.g. <body>text</body>)
-                var block = LayoutInlineText(inline, contentX, contentY, contentWidth);
-                tree.Blocks.Add(block);
-                contentY = block.Y + block.Height + block.Margin.Bottom;
-                continue;
-            }
+        NormalizeChildrenForBlock(displayRoot);
+        var normalizedRootChildren = displayRoot.Children;
 
+        foreach (var child in normalizedRootChildren)
+        {
             if (child is not BlockBox && child is not TableBox)
             {
                 // still skip floats or other unsupported types for now
@@ -56,41 +51,6 @@ public sealed class BlockLayoutEngine(
 
         return tree;
     }
-
-    private BlockBox LayoutInlineText(InlineBox inline, float contentX, float cursorY, float contentWidth)
-    {
-        var s = inline.Style;
-        var margin = new Spacing
-        {
-            Top = Safe(s.MarginTopPt),
-            Right = Safe(s.MarginRightPt),
-            Bottom = Safe(s.MarginBottomPt),
-            Left = Safe(s.MarginLeftPt)
-        };
-
-        var x = contentX + margin.Left;
-        var y = cursorY + margin.Top;
-        var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
-
-        // Use inline engine to estimate height
-        var height = inlineEngine.MeasureHeight(inline, width);
-
-        // Create a pseudo-block wrapper to represent this text run in BoxTree
-        var block = new BlockBox
-        {
-            Element = inline.Element,
-            Style = s,
-            X = x,
-            Y = y,
-            Width = width,
-            Height = height,
-            Margin = margin,
-            TextAlign = s.TextAlign ?? HtmlCssConstants.Defaults.TextAlign
-        };
-
-        return block;
-    }
-
 
     private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)
     {
@@ -141,6 +101,8 @@ public sealed class BlockLayoutEngine(
     private float LayoutChildBlocks(BlockBox parent, float contentX, float cursorY, float contentWidth)
     {
         var currentY = cursorY;
+
+        NormalizeChildrenForBlock(parent);
 
         foreach (var child in parent.Children)
         {
@@ -198,5 +160,111 @@ public sealed class BlockLayoutEngine(
         target.MarginRightPt = source.MarginRightPt;
         target.MarginBottomPt = source.MarginBottomPt;
         target.MarginLeftPt = source.MarginLeftPt;
+    }
+
+    private static void NormalizeChildrenForBlock(DisplayNode parent)
+    {
+        if (parent is BlockBox { IsAnonymous: true })
+        {
+            return;
+        }
+
+        var hasInline = parent.Children.Any(c => c is InlineBox);
+        var hasNonInline = parent.Children.Any(c => c is not InlineBox);
+
+        // Only create anonymous blocks when inline and block-level nodes coexist.
+        if (!hasInline || !hasNonInline)
+        {
+            return;
+        }
+
+        var normalized = new List<DisplayNode>(parent.Children.Count);
+        var inlineBuffer = new List<InlineBox>();
+
+        foreach (var child in parent.Children)
+        {
+            if (child is InlineBox inline)
+            {
+                inlineBuffer.Add(inline);
+                continue;
+            }
+
+            if (inlineBuffer.Count > 0)
+            {
+                normalized.Add(CreateAnonymousBlock(parent, inlineBuffer));
+                inlineBuffer.Clear();
+            }
+
+            normalized.Add(child);
+        }
+
+        if (inlineBuffer.Count > 0)
+        {
+            normalized.Add(CreateAnonymousBlock(parent, inlineBuffer));
+        }
+
+        parent.Children.Clear();
+        parent.Children.AddRange(normalized);
+    }
+
+    private static BlockBox CreateAnonymousBlock(DisplayNode parent, List<InlineBox> inlines)
+    {
+        var anon = new BlockBox
+        {
+            IsAnonymous = true,
+            Parent = parent,
+            Element = parent.Element,
+            Style = CreateAnonymousStyle(parent.Style),
+            TextAlign = parent.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign
+        };
+
+        foreach (var inline in inlines)
+        {
+            var cloned = CloneInline(inline, anon);
+            anon.Children.Add(cloned);
+        }
+
+        return anon;
+    }
+
+    private static InlineBox CloneInline(InlineBox source, DisplayNode parent)
+    {
+        var clone = new InlineBox
+        {
+            TextContent = source.TextContent,
+            Element = source.Element,
+            Style = source.Style,
+            Parent = parent
+        };
+
+        foreach (var child in source.Children.OfType<InlineBox>())
+        {
+            var childClone = CloneInline(child, clone);
+            clone.Children.Add(childClone);
+        }
+
+        return clone;
+    }
+
+    private static ComputedStyle CreateAnonymousStyle(ComputedStyle parentStyle)
+    {
+        return new ComputedStyle
+        {
+            FontFamily = parentStyle.FontFamily,
+            FontSizePt = parentStyle.FontSizePt,
+            Bold = parentStyle.Bold,
+            Italic = parentStyle.Italic,
+            TextAlign = parentStyle.TextAlign,
+            Color = parentStyle.Color,
+            MarginTopPt = 0,
+            MarginRightPt = 0,
+            MarginBottomPt = 0,
+            MarginLeftPt = 0,
+            PaddingTopPt = 0,
+            PaddingRightPt = 0,
+            PaddingBottomPt = 0,
+            PaddingLeftPt = 0,
+            Borders = parentStyle.Borders
+        };
     }
 }
