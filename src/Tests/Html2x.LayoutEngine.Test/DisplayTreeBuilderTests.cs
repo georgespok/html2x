@@ -96,9 +96,142 @@ public class DisplayTreeBuilderTests
         textInline.TextContent.ShouldBe("Test");
     }
 
+    [Fact]
+    public async Task Build_WithBrAndIndentedText_ShouldCollapseIndent()
+    {
+        const string html =
+            "<html><body><p>first line<br />second\r\n            line with spacing</p></body></html>";
+
+        var document = await ParseHtml(html);
+        var paragraph = document.QuerySelector("p")!;
+
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = paragraph,
+                        Style = new ComputedStyle()
+                    }
+                }
+            }
+        };
+
+        var builder = new DisplayTreeBuilder();
+
+        var root = builder.Build(styleTree);
+
+        var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
+        paragraphBlock.Children.Count.ShouldBe(2);
+
+        var firstInline = paragraphBlock.Children[0].ShouldBeOfType<InlineBox>();
+        firstInline.TextContent.ShouldBe("first line");
+
+        var secondInline = paragraphBlock.Children[1].ShouldBeOfType<InlineBox>();
+        secondInline.TextContent.ShouldBe("second line with spacing");
+        secondInline.TextContent!.StartsWith(' ').ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Build_WithSeparatedTextNodes_ShouldKeepSingleSpaceBetweenRuns()
+    {
+        const string html = "<html><body><p>one <span> two</span></p></body></html>";
+        var document = await ParseHtml(html);
+        var paragraph = document.QuerySelector("p")!;
+        var span = document.QuerySelector("span")!;
+
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = paragraph,
+                        Style = new ComputedStyle(),
+                        Children =
+                        {
+                            new StyleNode
+                            {
+                                Element = span,
+                                Style = new ComputedStyle()
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var builder = new DisplayTreeBuilder();
+        var root = builder.Build(styleTree);
+
+        var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
+
+        var textRuns = new List<string>();
+        CollectInlineText(paragraphBlock, textRuns);
+
+        textRuns.Count.ShouldBe(2);
+        textRuns[0].ShouldBe("one");
+        textRuns[1].ShouldBe(" two");
+        string.Join(string.Empty, textRuns).ShouldBe("one two");
+    }
+
+    [Fact]
+    public async Task Build_WithMultipleSpacesInsideRun_ShouldCollapseToSingleSpace()
+    {
+        const string html = "<html><body><p>foo    bar</p></body></html>";
+        var document = await ParseHtml(html);
+        var paragraph = document.QuerySelector("p")!;
+
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = paragraph,
+                        Style = new ComputedStyle()
+                    }
+                }
+            }
+        };
+
+        var builder = new DisplayTreeBuilder();
+        var root = builder.Build(styleTree);
+
+        var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
+        var inline = paragraphBlock.Children[0].ShouldBeOfType<InlineBox>();
+        inline.TextContent.ShouldBe("foo bar");
+    }
+
     private static async Task<IDocument> ParseHtml(string html)
     {
         return await BrowsingContext.New(Configuration.Default)
             .OpenAsync(req => req.Content(html));
+    }
+
+    private static void CollectInlineText(DisplayNode node, IList<string> collector)
+    {
+        if (node is InlineBox inline && inline.TextContent is not null)
+        {
+            collector.Add(inline.TextContent);
+        }
+
+        foreach (var child in node.Children)
+        {
+            CollectInlineText(child, collector);
+        }
     }
 }

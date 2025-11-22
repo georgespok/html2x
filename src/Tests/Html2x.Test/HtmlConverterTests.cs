@@ -1,5 +1,5 @@
 using System.Text;
-using Html2x.Renderers.Pdf.Options;
+using Html2x.Abstractions.Options;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
@@ -7,7 +7,13 @@ namespace Html2x.Test;
 public sealed class HtmlConverterTests : IntegrationTestBase
 {
     private readonly HtmlConverter _htmlConverter;
-    private readonly PdfOptions _options = new() { FontPath = Path.Combine("Fonts", "Inter-Regular.ttf") };
+    private readonly HtmlConverterOptions _options = new()
+    {
+        Pdf = new PdfOptions
+        {
+            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+        }
+    };
 
     public HtmlConverterTests(ITestOutputHelper output)
         : base(output)
@@ -33,14 +39,14 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             </html>";
 
         // Act
-        var pdfBytes = await _htmlConverter.ToPdfAsync(html, _options);
+        var result = await _htmlConverter.ToPdfAsync(html, _options);
 
-        await SavePdfForInspectionAsync(pdfBytes);
+        await SavePdfForInspectionAsync(result.PdfBytes);
 
         // Assert
-        Assert.NotNull(pdfBytes);
-        Assert.NotEmpty(pdfBytes);
-        Assert.Equal("%PDF", Encoding.ASCII.GetString(pdfBytes, 0, 4));
+        Assert.NotNull(result);
+        Assert.NotEmpty(result.PdfBytes);
+        Assert.Equal("%PDF", Encoding.ASCII.GetString(result.PdfBytes, 0, 4));
     }
 
 }
