@@ -6,7 +6,7 @@ public class DiagnosticsEvent
     
     public string Name { get; init; } = null!;
 
-    public string Description { get; init; } = null!;
+    public string? Description { get; init; } = null!;
 
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.Now;
 
