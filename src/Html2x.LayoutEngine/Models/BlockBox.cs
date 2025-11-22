@@ -11,4 +11,5 @@ public sealed class BlockBox : DisplayNode
     public Spacing Margin { get; set; } = new();
     public Spacing Padding { get; set; } = new();
     public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
+    public bool IsAnonymous { get; init; }
 }
