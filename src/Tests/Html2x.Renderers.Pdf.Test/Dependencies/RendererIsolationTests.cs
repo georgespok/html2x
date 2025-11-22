@@ -1,5 +1,4 @@
 using System.Reflection;
-using Html2x.Renderers.Pdf.Mapping;
 using Html2x.Renderers.Pdf.Rendering;
 using Shouldly;
 

@@ -1,4 +1,4 @@
-﻿using Html2x.Renderers.Pdf.Options;
+using Html2x.Abstractions.Options;
 using Xunit.Abstractions;
 
 
@@ -7,10 +7,17 @@ namespace Html2x.Test.Scenarios
     public class HtmlRenderedToPdfTests(ITestOutputHelper output) : IntegrationTestBase(output)
     {
 
-        public PdfOptions DefaultOptions => new()
+        public HtmlConverterOptions DefaultOptions => new()
         {
-            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf"),
-            EnableDebugging = true
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true
+            },
+            Pdf = new PdfOptions
+            {
+                FontPath = Path.Combine("Fonts", "Inter-Regular.ttf"),
+                EnableDebugging = true
+            }
         };
 
         [Fact]
@@ -20,18 +27,18 @@ namespace Html2x.Test.Scenarios
                 <!DOCTYPE html>
                 <html>
                     <body>
-                        <ul>
-                            <li>Item 1</li>
-                            <li>Item 2</li>
-                        </ul>
+                        <p>
+                        First line<br />Second
+                        line
+                        </p>
                     </body>
                 </html>
                 """;
 
             var converter = new HtmlConverter();
-            var bytes = await converter.ToPdfAsync(html, DefaultOptions);
+            var result = await converter.ToPdfAsync(html, DefaultOptions);
 
-            await this.SavePdfForInspectionAsync(bytes);
+            await this.SavePdfForInspectionAsync(result.PdfBytes);
         }
     }
 }

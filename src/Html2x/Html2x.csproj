@@ -7,9 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
     <ProjectReference Include="..\Html2x.Renderers.Pdf\Html2x.Renderers.Pdf.csproj" />
-    <ProjectReference Include="..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,3 @@
-using System;
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
