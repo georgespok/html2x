@@ -31,11 +31,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Html2x\Html2x.csproj" />
-    <ProjectReference Include="..\..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Diagnostics\" />
   </ItemGroup>
 
 </Project>

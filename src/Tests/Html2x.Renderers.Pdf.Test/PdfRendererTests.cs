@@ -4,7 +4,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Shouldly;
 using Html2x.Abstractions.Measurements.Units;
-using Html2x.Renderers.Pdf.Options;
+using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Pipeline;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -41,9 +41,10 @@ public class PdfRendererTests
         // Arrange
         var layout = CreateLayoutWithOffsetBlock();
         var renderer = new PdfRenderer();
+        var options = new PdfOptions { FontPath = string.Empty };
 
         // Act
-        var pdfBytes = await renderer.RenderAsync(layout, new PdfOptions { FontPath = string.Empty });
+        var pdfBytes = await renderer.RenderAsync(layout, options);
 
         // Assert
         PdfValidator.Validate(pdfBytes).ShouldBeTrue();
