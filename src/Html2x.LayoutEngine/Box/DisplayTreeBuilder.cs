@@ -158,7 +158,7 @@ public sealed class DisplayTreeBuilder
             return;
         }
 
-        var normalized = TextNormalizer.NormalizeWhiteSpaceNormal(node.TextContent, textState);
+        var normalized = StringNormalizer.NormalizeWhiteSpaceNormal(node.TextContent, textState);
         if (string.IsNullOrEmpty(normalized))
         {
             return;
