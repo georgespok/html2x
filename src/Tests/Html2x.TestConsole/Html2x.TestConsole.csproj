@@ -43,7 +43,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Html2x\Html2x.csproj" />
-    <ProjectReference Include="..\..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Options\" />
   </ItemGroup>
 
 </Project>
