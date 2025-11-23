@@ -70,6 +70,12 @@ public sealed class PageBoxExpectationBuilder(PageBox page)
 
 public sealed class BlockExpectationBuilder(BlockBox block)
 {
+    public BlockExpectationBuilder IsAnonymous(bool value)
+    {
+        InitPropertySetter.SetIsAnonymous(block, value);
+        return this;
+    }
+
     public BlockExpectationBuilder Element(IElement element)
     {
         InitPropertySetter.SetElement(block, element);
@@ -175,6 +181,10 @@ internal static class InitPropertySetter
         typeof(BlockBox).GetProperty(nameof(BlockBox.Style)) ??
         throw new InvalidOperationException("BlockBox.Style property not found.");
 
+    private static readonly PropertyInfo IsAnonymousProperty =
+        typeof(BlockBox).GetProperty(nameof(BlockBox.IsAnonymous)) ??
+        throw new InvalidOperationException("BlockBox.IsAnonymous property not found.");
+
     public static void SetElement(DisplayNode node, IElement element)
     {
         ElementProperty.SetValue(node, element);
@@ -188,6 +198,11 @@ internal static class InitPropertySetter
     public static void SetStyle(BlockBox block, ComputedStyle style)
     {
         StyleProperty.SetValue(block, style);
+    }
+
+    public static void SetIsAnonymous(BlockBox block, bool value)
+    {
+        IsAnonymousProperty.SetValue(block, value);
     }
 }
 

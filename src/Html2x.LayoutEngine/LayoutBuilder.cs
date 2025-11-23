@@ -42,43 +42,20 @@ public class LayoutBuilder(
 
         var dom = await _domProvider.LoadAsync(html);
 
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.EndStage,
-            Name = "stage/dom",
-            Description = "DOM loaded",
-
-        });
+        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, "stage/dom", "DOM loaded");
 
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
 
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.EndStage,
-            Name = "stage/style"
-        });
-        
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
         
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.EndStage,
-            Name = "stage/layout"
-        });
-
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
 
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.EndStage,
-            Name = "stage/inline-measurement"
-        });
-        
         RunStage("stage/fragmentation", () =>
         {
             // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
         });
 
+        
         var layout = RunStage("stage/pagination", () =>
         {
             var newLayout = new HtmlLayout();
@@ -90,23 +67,28 @@ public class LayoutBuilder(
             return newLayout;
         });
 
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.EndStage,
-            Name = "stage/pagination"
-        });
-
         return layout;
     }
 
-    private T RunStage<T>(string stage, Func<T> action)
+    private static void PublishEvent(DiagnosticsSession? diagnosticsSession, DiagnosticsEventType eventType, string eventName, string? eventDescription = null) =>
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = eventType,
+            Name = eventName,
+            Description = eventDescription
+        });
+
+    private T RunStage<T>(string stage, Func<T> action, DiagnosticsSession? diagnosticsSession = null)
     {
-        return action();
+        var result = action();
+        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, stage);
+        return result;
     }
 
-    private void RunStage(string stage, Action action)
+    private void RunStage(string stage, Action action, DiagnosticsSession? diagnosticsSession = null)
     {
         action();
+        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, stage);
     }
 }
 
