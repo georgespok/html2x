@@ -4,6 +4,7 @@ using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Assertions;
+using Html2x.LayoutEngine.Test.Builders;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -199,18 +200,6 @@ public class BoxTreeBuilderTests
                         .Inline(child => child.Text("Nested Span inside nested Div"))))));
     }
 
-    private static BoxTreeBuilder CreateBoxTreeBuilder()
-    {
-        return new BoxTreeBuilder();
-    }
-
-    private static async Task<IDocument> ParseHtml(string html)
-    {
-        return await BrowsingContext
-            .New(Configuration.Default)
-            .OpenAsync(req => req.Content(html));
-    }
-
     [Fact]
     public async Task BlockBoxWithPadding_ReducesContentArea()
     {
@@ -233,9 +222,12 @@ public class BoxTreeBuilderTests
                 .Padding(15f, 11.25f, 7.5f, 3.75f)));
     }
 
-    private static StyleTreeBuilder BuildStyleTree(IElement body)
-    {
-        return new StyleTreeBuilder(body);
-    }
+    private static StyleTreeBuilder BuildStyleTree(IElement body) => new(body);
 
+    private static BoxTreeBuilder CreateBoxTreeBuilder() => new();
+
+    private static async Task<IDocument> ParseHtml(string html) =>
+        await BrowsingContext
+            .New(Configuration.Default)
+            .OpenAsync(req => req.Content(html));
 }
