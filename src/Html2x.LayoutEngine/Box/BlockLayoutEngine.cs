@@ -25,31 +25,51 @@ public sealed class BlockLayoutEngine(
         var contentWidth = page.PageWidthPt - page.MarginLeftPt - page.MarginRightPt;
 
         NormalizeChildrenForBlock(displayRoot);
-        var normalizedRootChildren = displayRoot.Children;
 
-        foreach (var child in normalizedRootChildren)
+        var candidates = SelectTopLevelCandidates(displayRoot);
+
+        foreach (var child in candidates)
         {
-            if (child is not BlockBox && child is not TableBox)
+            switch (child)
             {
-                // still skip floats or other unsupported types for now
-                continue;
-            }
-
-            if (child is BlockBox box)
-            {
-                var block = LayoutBlock(box, contentX, contentY, contentWidth);
-                tree.Blocks.Add(block);
-                contentY = block.Y + block.Height + block.Margin.Bottom;
-            }
-            else if (child is TableBox table)
-            {
-                var tableBlock = LayoutTable(table, contentX, contentY, contentWidth);
-                tree.Blocks.Add(tableBlock);
-                contentY = tableBlock.Y + tableBlock.Height + tableBlock.Margin.Bottom;
+                case BlockBox box:
+                {
+                    var block = LayoutBlock(box, contentX, contentY, contentWidth);
+                    tree.Blocks.Add(block);
+                    contentY = block.Y + block.Height + block.Margin.Bottom;
+                    break;
+                }
+                case TableBox table:
+                {
+                    var tableBlock = LayoutTable(table, contentX, contentY, contentWidth);
+                    tree.Blocks.Add(tableBlock);
+                    contentY = tableBlock.Y + tableBlock.Height + tableBlock.Margin.Bottom;
+                    break;
+                }
             }
         }
 
         return tree;
+    }
+
+    private static IReadOnlyList<DisplayNode> SelectTopLevelCandidates(DisplayNode displayRoot)
+    {
+        if (displayRoot is BlockBox rootBlock)
+        {
+            var hasInline = rootBlock.Children.Any(c => c is InlineBox);
+            var hasBlockOrTable = rootBlock.Children.Any(c => c is BlockBox or TableBox);
+
+            // If the root contains only inline content, treat the root itself as the block to layout
+            // so inline-only documents still render without introducing anonymous blocks.
+            if (hasInline && !hasBlockOrTable)
+            {
+                return new[] { rootBlock };
+            }
+
+            return rootBlock.Children;
+        }
+
+        return new[] { displayRoot };
     }
 
     private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)

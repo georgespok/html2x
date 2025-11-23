@@ -4,6 +4,7 @@ using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Assertions;
+using Html2x.LayoutEngine.Test.Builders;
 using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -16,7 +17,9 @@ public class FragmentBuilderTests
     {
         // Arrange
         var boxTree = BuildBoxTree()
-            .AddBlock(10, 20, 100, 50);
+            .Block(10, 20, 100, 50)
+            .Up()
+            .BuildTree();
 
         // Act
         var fragments = CreateFragmentBuilder().Build(boxTree);
@@ -34,10 +37,13 @@ public class FragmentBuilderTests
     {
         // Arrange
         var boxTree = BuildBoxTree()
-            .AddBlock(10, 20, 100, 50, style: new ComputedStyle
+            .Block(10, 20, 100, 50, style: new ComputedStyle
             {
-                Borders = BorderEdges.Uniform(new(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid ))
-            });
+                Borders = BorderEdges.Uniform(
+                    new(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid ))
+            })
+            .Up()
+            .BuildTree();
 
         // Act
         var fragments = CreateFragmentBuilder().Build(boxTree);
@@ -55,10 +61,14 @@ public class FragmentBuilderTests
     {
         // Arrange: Div with inline span (text) and block paragraph (text)
         var boxTree = BuildBoxTree()
-            .AddBlock(0, 0, 595, 200, configure: div =>
-                div.AddInline("Span inside Div")
-                    .AddBlock(0, 50, 595, 40, configure: p =>
-                        p.AddInline("Paragraph inside Div")));
+            .Block(0, 0, 595, 200)
+                .Inline("Span inside Div")
+                .Block(0, 50, 595, 40)
+                    .Inline("Paragraph inside Div")
+                    .Up()
+                .Up()
+            .Up()
+            .BuildTree();
 
         // Act
         var fragments = CreateFragmentBuilder().Build(boxTree);
@@ -84,12 +94,17 @@ public class FragmentBuilderTests
     {
         // Arrange: Div → span + P → text + nested Div → nested span
         var boxTree = BuildBoxTree()
-            .AddBlock(0, 0, 595, 300, configure: outerDiv =>
-                outerDiv.AddInline("Span inside Div")
-                    .AddBlock(0, 50, 595, 200, configure: p =>
-                        p.AddInline("Paragraph inside Div")
-                            .AddBlock(0, 100, 595, 80, configure: nestedDiv =>
-                                nestedDiv.AddInline("Nested Span inside nested Div"))));
+            .Block(0, 0, 595, 300)
+                .Inline("Span inside Div")
+                .Block(0, 50, 595, 200)
+                    .Inline("Paragraph inside Div")
+                    .Block(0, 100, 595, 80)
+                        .Inline("Nested Span inside nested Div")
+                        .Up()
+                    .Up()
+                .Up()
+            .Up()
+            .BuildTree();
 
         // Act
         var fragments = CreateFragmentBuilder().Build(boxTree);
@@ -161,10 +176,7 @@ public class FragmentBuilderTests
         return new FragmentBuilder();
     }
 
-    private static BoxTreeTestBuilder BuildBoxTree()
-    {
-        return new BoxTreeTestBuilder();
-    }
+    private static BlockBoxBuilder BuildBoxTree() => new BlockBoxBuilder();
 
     private static FragmentTreeAssertion AssertFragmentTree(FragmentTree tree)
     {
