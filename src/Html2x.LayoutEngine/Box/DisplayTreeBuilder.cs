@@ -65,18 +65,12 @@ public sealed class DisplayTreeBuilder
     private static string ResolveListMarker(DisplayNode listContainer, DisplayNode listItem)
     {
         var tag = listContainer.Element?.TagName.ToLowerInvariant();
-        if (tag == HtmlCssConstants.HtmlTags.Ul)
+        return tag switch
         {
-            return "• ";
-        }
-
-        if (tag == HtmlCssConstants.HtmlTags.Ol)
-        {
-            var index = listContainer.Children.IndexOf(listItem);
-            return index >= 0 ? $"{index + 1}. " : "1. ";
-        }
-
-        return string.Empty;
+            HtmlCssConstants.HtmlTags.Ul => "• ",
+            HtmlCssConstants.HtmlTags.Ol => $"{listContainer.Children.Count + 1}. ",
+            _ => string.Empty
+        };
     }
 
     private static bool IsListContainer(IElement element)

@@ -1,0 +1,72 @@
+# Implementation Plan: [FEATURE]
+
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]  
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+
+## Summary
+
+[Extract from feature spec: primary requirement + technical approach from research]
+
+## Technical Context
+
+**Language/Version**: .NET 8 (override if feature targets a different framework)  
+**Primary Dependencies**: AngleSharp, QuestPDF, Html2x shared libraries  
+**Storage**: In-memory unless the feature introduces persistence (document rationale)  
+**Testing**: xUnit via `dotnet test Html2x.sln -c Release`  
+**Target Platform**: Windows and Linux  
+**Project Type**: Modular library (`src/Html2x.*`) with test console harness  
+**Performance Goals**: Preserve predictable fragment generation; note additional throughput or latency targets  
+**Constraints**: Keep implementation pure managed code; no platform-specific APIs without maintainer approval  
+**Scale/Scope**: Document impacted projects and expected fragment volume or PDF complexity
+
+## Constitution Check
+
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+- [ ] Stage isolation maintained at assembly boundaries (Principle I: Staged Layout Discipline).
+- [ ] Rendering predictability risks documented with `Html2x.Diagnostics` coverage instead of PDF parsing (Principle II).
+- [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
+- [ ] `Html2x.Diagnostics` instrumentation scoped for new behavior (Principle IV).
+- [ ] Extension points documented with migration guidance (Principle V).
+- [ ] Goal-Driven Problem Solving loop captured (Principle VI: state assessment, action decomposition, path planning, adaptive execution, and reflection).
+
+## Project Structure
+
+### Documentation (this feature)
+
+```
+specs/[###-feature]/
+    plan.md
+    research.md
+    data-model.md
+    quickstart.md
+    tasks.md
+```
+
+### Source Code (repository root)
+
+```
+src/
+    Html2x.Core/
+    Html2x.LayoutEngine/
+    Html2x.Renderers.Pdf/
+    Html2x/
+    Html2x.Diagnostics/
+tests/
+    Html2x.LayoutEngine.Test/
+    Html2x.Renderers.Pdf.Test/
+    html2x.Test/
+src/Html2x.TestConsole/
+```
+
+**Structure Decision**: [Record affected projects, new folders, and justification]
+
+## Complexity Tracking
+
+> Fill ONLY if Constitution Check has violations that must be justified.
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|---------------------------------------|
+| | | |
