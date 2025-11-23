@@ -153,8 +153,9 @@ public class BoxTreeBuilderTests
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
             .Block(b => b.Element(div)
-                .Inline(i => i.Element(span)
-                    .Inline(child => child.Text("Span inside Div")))
+                .Block(anon => anon.IsAnonymous(true)
+                    .Inline(i => i.Element(span)
+                        .Text("Span inside Div")))
                 .Block(child => child.Element(p)
                     .Inline(i => i.Text("Paragraph inside Div")))));
     }
@@ -187,8 +188,9 @@ public class BoxTreeBuilderTests
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
             .Block(b => b.Element(outerDiv)
-                .Inline(i => i.Element(outerSpan)
-                    .Inline(child => child.Text("Span inside Div")))
+                .Block(anon => anon.IsAnonymous(true)
+                    .Inline(i => i.Element(outerSpan)
+                        .Text("Span inside Div")))
                 .Block(paragraphBlock => paragraphBlock.Element(paragraph)
                     .Inline(i => i.Text("Paragraph inside Div")))
                 .Block(nestedBlock => nestedBlock.Element(nestedDiv)
