@@ -79,7 +79,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         if (!string.IsNullOrWhiteSpace(inline.TextContent))
         {
-            var run = _textRunFactory.Create(inline);
+            var run = _textRunFactory.Create(inline, blockContext);
             var baselineY = run.Origin.Y + run.Ascent;
             var height = run.Ascent + run.Descent;
 
