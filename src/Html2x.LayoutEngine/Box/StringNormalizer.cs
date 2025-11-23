@@ -2,7 +2,7 @@ using System.Text;
 
 namespace Html2x.LayoutEngine.Box;
 
-internal static class TextNormalizer
+internal static class StringNormalizer
 {
     public static string NormalizeWhiteSpaceNormal(string text, TextNormalizationState state)
     {
