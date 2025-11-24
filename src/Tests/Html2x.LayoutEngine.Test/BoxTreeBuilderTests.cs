@@ -66,7 +66,7 @@ public class BoxTreeBuilderTests
         var styles = BuildStyleTree(doc.Body!)
             .WithPageMargins(0, 0, 0, 0)
             .AddChild(div, divNode => divNode
-                .WithBorders(BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid))));
+                .WithBorders(BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))));
 
         // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
@@ -74,7 +74,7 @@ public class BoxTreeBuilderTests
         // Assert
         actual.ShouldMatch(tree => tree
             .Block(b => b.Element(div)
-                .Style(new ComputedStyle { Borders = BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid )) })
+                .Style(new ComputedStyle { Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid)) })
                 .Inline(i => i.Text("Hello"))
             )
         );

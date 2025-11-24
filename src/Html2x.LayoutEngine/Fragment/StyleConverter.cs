@@ -10,6 +10,7 @@ public static class StyleConverter
         var hasBorders = s.Borders?.HasAny == true;
 
         return new VisualStyle(
+            BackgroundColor: s.BackgroundColor,
             Borders: hasBorders ? s.Borders : null
         );
     }
@@ -21,29 +22,4 @@ public static class StyleConverter
         return new FontKey(s.FontFamily, weight, style);
     }
 
-    public static ColorRgba ParseColor(string hex)
-    {
-        // Support #RRGGBB or #RRGGBBAA
-        if (string.IsNullOrWhiteSpace(hex))
-        {
-            return new ColorRgba(0, 0, 0, 255);
-        }
-
-        hex = hex.TrimStart('#');
-
-        byte r = 0, g = 0, b = 0, a = 255;
-        if (hex.Length >= 6)
-        {
-            r = Convert.ToByte(hex.Substring(0, 2), 16);
-            g = Convert.ToByte(hex.Substring(2, 2), 16);
-            b = Convert.ToByte(hex.Substring(4, 2), 16);
-        }
-
-        if (hex.Length == 8)
-        {
-            a = Convert.ToByte(hex.Substring(6, 2), 16);
-        }
-
-        return new ColorRgba(r, g, b, a);
-    }
 }
