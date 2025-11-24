@@ -216,6 +216,55 @@ public class DisplayTreeBuilderTests
         inline.TextContent.ShouldBe("foo bar");
     }
 
+    [Fact]
+    public async Task Build_WithOrderedList_ShouldAssignIncrementingMarkers()
+    {
+        const string html = "<html><body><ol><li>First</li><li>Second</li><li>Third</li></ol></body></html>";
+        var document = await ParseHtml(html);
+        var ol = document.QuerySelector("ol")!;
+        var liNodes = document.QuerySelectorAll("li");
+
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = ol,
+                        Style = new ComputedStyle(),
+                        Children =
+                        {
+                            new StyleNode { Element = liNodes[0], Style = new ComputedStyle() },
+                            new StyleNode { Element = liNodes[1], Style = new ComputedStyle() },
+                            new StyleNode { Element = liNodes[2], Style = new ComputedStyle() }
+                        }
+                    }
+                }
+            }
+        };
+
+        var builder = new DisplayTreeBuilder();
+
+        var root = builder.Build(styleTree);
+
+        var olBlock = root.Children[0].ShouldBeOfType<BlockBox>();
+        olBlock.Element.ShouldBe(ol);
+        olBlock.Children.Count.ShouldBe(3);
+
+        olBlock.Children[0].Children[0].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("1. ");
+        olBlock.Children[0].Children[1].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("First");
+
+        olBlock.Children[1].Children[0].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("2. ");
+        olBlock.Children[1].Children[1].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("Second");
+
+        olBlock.Children[2].Children[0].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("3. ");
+        olBlock.Children[2].Children[1].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("Third");
+    }
+
     private static async Task<IDocument> ParseHtml(string html)
     {
         return await BrowsingContext.New(Configuration.Default)
