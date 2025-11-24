@@ -27,8 +27,8 @@ public class BorderPainterTests
         // Arrange
         var edges = new BorderEdges
         {
-            Top = new BorderSide(1f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid),
-            Bottom = new BorderSide(2f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid)
+            Top = new BorderSide(1f, ColorRgba.Black, BorderLineStyle.Solid),
+            Bottom = new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid)
         };
 
         // Act
