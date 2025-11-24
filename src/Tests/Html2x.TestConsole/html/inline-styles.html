@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Inline Styles</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 32px;
+            }
+            p {
+                color: #05078c;
+                line-height: 1.4;
+                text-align: left;
+                margin-bottom: 12px;
+            }
+            .highlight {
+                background-color: #ffcc00;
+            }            
+        </style>
+    </head>
+    <body>
+        <h2>Line Breaks</h2>
+        <p>
+            This paragraph renders two lines via line brakes (br): first line<br />second
+            line with intentional diagnostics-friendly spacing.
+        </p>
+        <h2>Inline Styles</h2>
+        <p class="highlight">
+            Inline styles validate color and background behavior. Line-height
+            and text-align targets match requirements. This is <b>bold</b> text.
+            This is <i>italic</i> text. This is <u>underlined</u> text. This is
+            <s>strikethrough</s> text.
+        </p>
+        
+    </body>
+</html>
