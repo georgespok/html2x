@@ -10,7 +10,13 @@
   <ItemGroup>
     <None Remove="assets\sample-logo.jpg" />
     <None Remove="fonts\Inter-Regular.ttf" />
+    <None Remove="html\borders.html" />
     <None Remove="html\example.html" />
+    <None Remove="html\headlines.html" />
+    <None Remove="html\images.html" />
+    <None Remove="html\inline-styles.html" />
+    <None Remove="html\lists.html" />
+    <None Remove="html\text-alingment.html" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,6 +24,21 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="fonts\Inter-Regular.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\borders.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\headlines.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\images.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\inline-styles.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\lists.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\simple-line-break.html">
@@ -30,6 +51,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\grid.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\text-alingment.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
