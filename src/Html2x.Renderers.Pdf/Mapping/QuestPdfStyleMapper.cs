@@ -24,9 +24,9 @@ internal static class QuestPdfStyleMapper
             textSpanDescriptor.Bold();
         }
 
-        if (!string.IsNullOrWhiteSpace(run.ColorHex))
+        if (run.Color is { } color)
         {
-            textSpanDescriptor.FontColor(Map(run.ColorHex!));
+            textSpanDescriptor.FontColor(Map(color));
         }
     }
 
@@ -36,34 +36,4 @@ internal static class QuestPdfStyleMapper
             .WithAlpha(color.A / 255f);
     }
 
-    private static Color Map(string hex)
-    {
-        if (string.IsNullOrWhiteSpace(hex))
-        {
-            return Color.FromRGB(0, 0, 0);
-        }
-
-        var trimmed = hex.Trim();
-        if (!trimmed.StartsWith("#", StringComparison.Ordinal))
-        {
-            return Color.FromRGB(0, 0, 0);
-        }
-
-        var value = trimmed.TrimStart('#');
-        byte r = 0, g = 0, b = 0, a = 255;
-
-        if (value.Length >= 6)
-        {
-            r = Convert.ToByte(value[..2], 16);
-            g = Convert.ToByte(value.Substring(2, 2), 16);
-            b = Convert.ToByte(value.Substring(4, 2), 16);
-        }
-
-        if (value.Length == 8)
-        {
-            a = Convert.ToByte(value.Substring(6, 2), 16);
-        }
-
-        return Color.FromRGB(r, g, b).WithAlpha(a / 255f);
-    }
 }

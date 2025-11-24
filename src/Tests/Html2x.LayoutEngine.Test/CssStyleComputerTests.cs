@@ -15,7 +15,7 @@ public class CssStyleComputerTests
     {
         // Arrange
 
-        const string redRgba = "rgba(255, 0, 0, 1)"; // red #ff0000
+        var red = new ColorRgba(255, 0, 0, 255); // red #ff0000
         const float bodyFontSize = 18f; // 18pt
         const string fontHelvetica = "Helvetica"; 
 
@@ -34,16 +34,52 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new ("body",
-            new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = redRgba},
+            new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red},
             [
                 new ("h1", new()
                 {
-                    FontFamily = fontHelvetica, FontSizePt = 30, Color = redRgba,
+                    FontFamily = fontHelvetica, FontSizePt = 30, Color = red,
                     TextAlign = "right", Bold = true
                 }),
-                new ("p", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = redRgba }),
-                new ("div", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = redRgba })
+                new ("p", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red }),
+                new ("div", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red })
             ]));
+    }
+
+    [Fact]
+    public async Task Compute_WithLineHeightMultiplier_ParsesUnitlessValue()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html>
+              <body style='line-height: 1.4;'>
+                <p>Paragraph</p>
+              </body>
+            </html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", new() { LineHeightMultiplier = 1.4f }, [
+            new("p", new() { LineHeightMultiplier = 1.4f })
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_WithLineHeightNormal_ShouldNotInheritParentMultiplier()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html>
+              <body style='line-height: 1.8;'>
+                <p style='line-height: normal;'>Paragraph</p>
+              </body>
+            </html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", new() { LineHeightMultiplier = 1.8f }, [
+            new("p", new() { LineHeightMultiplier = null })
+        ]));
     }
 
     [Fact]
@@ -78,6 +114,44 @@ public class CssStyleComputerTests
                 ]),
                 new("p")       // Empty <p> created by parser after closing div
             ])
+        ]));
+    }
+
+    [Theory]
+    [InlineData("blue", 0, 0, 255, 255)]
+    [InlineData("rgba(255, 0, 0, 0.5)", 255, 0, 0, 127)]
+    public async Task Compute_ColorVariants_ResolvesToRgba(string cssColor, byte r, byte g, byte b, byte a)
+    {
+        var document = await CreateHtmlDocument($@"
+            <html><body>
+                <p style='color: {cssColor};'>Text</p>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", null, [
+            new("p", new() { Color = new ColorRgba(r, g, b, a) })
+        ]));
+    }
+
+    [Theory]
+    [InlineData("#00FF00", 0, 255, 0, 255)]
+    [InlineData("rgba(0, 0, 255, 0.25)", 0, 0, 255, 63)]
+    [InlineData("yellow", 255, 255, 0, 255)]
+    [InlineData("transparent", 0, 0, 0, 0)]
+    public async Task Compute_BackgroundColor_ResolvesToRgba(string cssColor, byte r, byte g, byte b, byte a)
+    {
+        var document = await CreateHtmlDocument($@"
+            <html><body>
+                <div style='background-color: {cssColor};'>Box</div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", null, [
+            new("div", new() { BackgroundColor = new ColorRgba(r, g, b, a) })
         ]));
     }
 
@@ -131,7 +205,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Borders = BorderEdges.Uniform(new BorderSide(0.75f, new(0, 0, 0, 255), BorderLineStyle.Dashed))
+                Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed))
             })
         ]));
     }

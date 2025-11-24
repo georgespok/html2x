@@ -9,65 +9,79 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 {
     private const string HtmlSamplesFolder = "html";
 
-    public override Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
     {
-        var inputPath = settings.Input;
-
-        if (string.IsNullOrWhiteSpace(inputPath))
+        if (!string.IsNullOrWhiteSpace(settings.Input))
         {
-            var resolution = ResolveInputInteractively();
-            if (resolution.Status == InputResolutionStatus.Cancelled)
-            {
-                return Task.FromResult(0);
-            }
-
-            if (resolution.Status == InputResolutionStatus.Failed)
-            {
-                return Task.FromResult(1);
-            }
-
-            inputPath = resolution.Path;
+            return await RunConversionAsync(settings, settings.Input!);
         }
 
-        var outputPath = settings.Output ?? "output.pdf";
-        var options = new ConsoleOptions(inputPath!, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
-        var service = new HtmlConversionService(options);
-        return service.ExecuteAsync();
+        return await RunInteractiveLoopAsync(settings, cancellationToken);
     }
 
-    private static InputResolution ResolveInputInteractively()
+    private static async Task<int> RunConversionAsync(RenderSettings settings, string inputPath)
+    {
+        var outputPath = ResolveOutputPath(settings, inputPath);
+        var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
+        var service = new HtmlConversionService(options);
+
+        return await service.ExecuteAsync().ConfigureAwait(false);
+    }
+
+    private static async Task<int> RunInteractiveLoopAsync(RenderSettings settings, CancellationToken cancellationToken)
     {
         if (Console.IsInputRedirected)
         {
             AnsiConsole.MarkupLine("[red]Input path is required when standard input is redirected.[/]");
-            return InputResolution.Failed();
+            return 1;
         }
 
         var samplesDirectory = Path.Combine(AppContext.BaseDirectory, HtmlSamplesFolder);
         if (!Directory.Exists(samplesDirectory))
         {
             AnsiConsole.MarkupLine($"[red]Sample folder '{samplesDirectory}' not found.[/]");
-            return InputResolution.Failed();
+            return 1;
         }
 
         var samples = EnumerateSamples(samplesDirectory);
         if (samples.Count == 0)
         {
             AnsiConsole.MarkupLine($"[red]No .html files were found under '{samplesDirectory}'.[/]");
-            return InputResolution.Failed();
+            return 1;
         }
 
         AnsiConsole.MarkupLine("[grey]No input file supplied. Choose one of the bundled samples.[/]");
         AnsiConsole.MarkupLine("Use ↑/↓ to navigate, Enter to convert, or choose Quit (Ctrl+C)");
 
-        var selection = PromptForSample(samples);
-        if (selection.IsCancel)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            AnsiConsole.MarkupLine("[yellow]No file selected. Exiting.[/]");
-            return InputResolution.Cancelled();
+            var selection = PromptForSample(samples);
+            if (selection.IsCancel)
+            {
+                AnsiConsole.MarkupLine("[yellow]No file selected. Exiting.[/]");
+                return 0;
+            }
+
+            var result = await RunConversionAsync(settings, selection.FullPath!).ConfigureAwait(false);
+            if (result != 0)
+            {
+                return result;
+            }
         }
 
-        return InputResolution.Success(selection.FullPath!);
+        return 0;
+    }
+
+    private static string ResolveOutputPath(RenderSettings settings, string? inputPath)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.Output))
+        {
+            return settings.Output;
+        }
+
+        var fileName = Path.GetFileNameWithoutExtension(inputPath);
+        var safeName = string.IsNullOrWhiteSpace(fileName) ? "output" : fileName;
+        return $"{safeName}.pdf";
     }
 
     private static SampleChoice PromptForSample(IReadOnlyList<SampleChoice> samples)
@@ -111,19 +125,5 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
     private sealed record SampleChoice(string DisplayName, string? FullPath, bool IsCancel)
     {
         public static SampleChoice Cancel { get; } = new("Quit", null, true);
-    }
-
-    private sealed record InputResolution(string? Path, InputResolutionStatus Status)
-    {
-        public static InputResolution Success(string path) => new(path, InputResolutionStatus.Success);
-        public static InputResolution Cancelled() => new(null, InputResolutionStatus.Cancelled);
-        public static InputResolution Failed() => new(null, InputResolutionStatus.Failed);
-    }
-
-    private enum InputResolutionStatus
-    {
-        Success,
-        Cancelled,
-        Failed
     }
 }
