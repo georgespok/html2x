@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Styles;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
@@ -116,12 +117,12 @@ public static class PdfWordParser
         {
             var colorString = color.ToString();
             if (colorString?.StartsWith("RGB:") != true)
-            {
-                return DefaultBlackColor;
-            }
-
-            return ParseRgbString(colorString);
+        {
+            return DefaultBlackColor;
         }
+
+        return ParseRgbString(colorString);
+    }
         catch
         {
             return DefaultBlackColor;
@@ -149,7 +150,7 @@ public static class PdfWordParser
         var green = (int)(g * 255);
         var blue = (int)(b * 255);
 
-        return $"#{red:X2}{green:X2}{blue:X2}";
+        return new ColorRgba((byte)red, (byte)green, (byte)blue, 255).ToHex(includeAlpha: false);
     }
 
     private static bool IsBold(Word word)

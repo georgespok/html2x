@@ -1,9 +1,34 @@
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Html2x.Abstractions.Layout.Styles;
 
 public readonly record struct ColorRgba(byte R, byte G, byte B, byte A)
 {
+    public static readonly ColorRgba Black = new(0, 0, 0, 255);
+    public static readonly ColorRgba Transparent = new(0, 0, 0, 0);
+
+    private static readonly IReadOnlyDictionary<string, ColorRgba> NamedColors =
+        new Dictionary<string, ColorRgba>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["black"] = Black,
+            ["silver"] = new(0xC0, 0xC0, 0xC0, 0xFF),
+            ["gray"] = new(0x80, 0x80, 0x80, 0xFF),
+            ["white"] = new(0xFF, 0xFF, 0xFF, 0xFF),
+            ["maroon"] = new(0x80, 0x00, 0x00, 0xFF),
+            ["red"] = new(0xFF, 0x00, 0x00, 0xFF),
+            ["purple"] = new(0x80, 0x00, 0x80, 0xFF),
+            ["fuchsia"] = new(0xFF, 0x00, 0xFF, 0xFF),
+            ["green"] = new(0x00, 0x80, 0x00, 0xFF),
+            ["lime"] = new(0x00, 0xFF, 0x00, 0xFF),
+            ["olive"] = new(0x80, 0x80, 0x00, 0xFF),
+            ["yellow"] = new(0xFF, 0xFF, 0x00, 0xFF),
+            ["navy"] = new(0x00, 0x00, 0x80, 0xFF),
+            ["blue"] = new(0x00, 0x00, 0xFF, 0xFF),
+            ["teal"] = new(0x00, 0x80, 0x80, 0xFF),
+            ["aqua"] = new(0x00, 0xFF, 0xFF, 0xFF)
+        };
+
     public static ColorRgba FromCss(string? value, ColorRgba fallback)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -26,6 +51,11 @@ public readonly record struct ColorRgba(byte R, byte G, byte B, byte A)
         if (string.Equals(trimmed, "transparent", StringComparison.OrdinalIgnoreCase))
         {
             return new ColorRgba(0, 0, 0, 0);
+        }
+
+        if (NamedColors.TryGetValue(trimmed, out var named))
+        {
+            return named;
         }
 
         return fallback;
@@ -115,5 +145,12 @@ public readonly record struct ColorRgba(byte R, byte G, byte B, byte A)
         }
 
         return false;
+    }
+
+    public string ToHex(bool includeAlpha = true)
+    {
+        return includeAlpha && A != 255
+            ? $"#{R:X2}{G:X2}{B:X2}{A:X2}"
+            : $"#{R:X2}{G:X2}{B:X2}";
     }
 }

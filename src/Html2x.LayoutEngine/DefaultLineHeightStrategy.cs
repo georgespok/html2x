@@ -10,11 +10,21 @@ public sealed class DefaultLineHeightStrategy(float minimumMultiplier = 1.2f) : 
         var intrinsic = metrics.ascent + metrics.descent;
         var minimum = fontSizePt * minimumMultiplier;
 
-        if (!float.IsFinite(intrinsic) || intrinsic <= 0)
+        var baseline = !float.IsFinite(intrinsic) || intrinsic <= 0
+            ? minimum
+            : Math.Max(intrinsic, minimum);
+
+        if (style.LineHeightMultiplier.HasValue)
         {
-            return minimum;
+            var candidate = style.LineHeightMultiplier.Value * fontSizePt;
+            if (!float.IsFinite(candidate) || candidate <= 0)
+            {
+                return baseline;
+            }
+
+            return Math.Max(candidate, baseline);
         }
 
-        return intrinsic < minimum ? minimum : intrinsic;
+        return baseline;
     }
 }
