@@ -20,11 +20,16 @@ public sealed class TextRunFactory
         _widthEstimator = widthEstimator ?? new DefaultTextWidthEstimator(_metrics);
     }
 
-    public TextRun Create(InlineBox inline)
+    public TextRun Create(InlineBox inline, BlockBox blockContext)
     {
         if (inline is null)
         {
             throw new ArgumentNullException(nameof(inline));
+        }
+
+        if (blockContext is null)
+        {
+            throw new ArgumentNullException(nameof(blockContext));
         }
 
         var font = _metrics.GetFontKey(inline.Style);
@@ -35,9 +40,9 @@ public sealed class TextRunFactory
         var (ascent, descent) = _metrics.GetMetrics(font, size);
         var width = _widthEstimator.MeasureWidth(font, size, text);
 
-        var origin = inline.Parent is BlockBox block
-            ? new PointF(block.X, block.Y)
-            : PointF.Empty;
+        // Use the caller-provided layout context to anchor inline runs.
+        // This keeps the factory agnostic of display hierarchies (inline-block, flex, etc.).
+        var origin = new PointF(blockContext.X, blockContext.Y);
 
         return new TextRun(text, font, size, origin, width, ascent, descent, TextDecorations.None, color);
     }
