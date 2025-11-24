@@ -89,7 +89,7 @@ internal sealed class QuestPdfFragmentRenderer(
     public void RenderRule(RuleFragment fragment)
     {
         var color = QuestPdfStyleMapper.Map(
-            fragment.Style?.Borders?.Top?.Color ?? new ColorRgba(0, 0, 0, 255));
+            fragment.Style?.Borders?.Top?.Color ?? ColorRgba.Black);
         var width = fragment.Style?.Borders?.Top?.Width ?? 1f;
 
         _container.LineHorizontal(width).LineColor(color);

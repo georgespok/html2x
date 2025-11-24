@@ -51,7 +51,7 @@ public class FragmentBuilderTests
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
         fragment.Style.Borders.ShouldBeEquivalentTo(
-            BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(0, 0, 0, 255), BorderLineStyle.Solid))
+            BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         );
 
     }

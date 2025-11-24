@@ -1,3 +1,4 @@
+using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
@@ -188,8 +189,41 @@ public sealed class CssStyleComputer(
             _converter.GetString(css, HtmlCssConstants.CssProperties.TextAlign),
             parentStyle?.TextAlign ?? HtmlCssConstants.Defaults.TextAlign);
 
-        style.Color = _converter.GetString(css, HtmlCssConstants.CssProperties.Color,
-            parentStyle?.Color ?? HtmlCssConstants.Defaults.Color);
+        style.LineHeightMultiplier = ResolveLineHeightMultiplier(css, parentStyle);
+
+        style.Color = ColorRgba.FromCss(
+            _converter.GetString(css, HtmlCssConstants.CssProperties.Color),
+            parentStyle?.Color ?? ColorRgba.Black);
+
+        var background = _converter.GetString(css, HtmlCssConstants.CssProperties.BackgroundColor);
+        style.BackgroundColor = string.IsNullOrWhiteSpace(background)
+            ? null
+            : ColorRgba.FromCss(background, ColorRgba.Transparent);
+    }
+
+    private static float? ResolveLineHeightMultiplier(ICssStyleDeclaration css, ComputedStyle? parentStyle)
+    {
+        var raw = css.GetPropertyValue(HtmlCssConstants.CssProperties.LineHeight);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return parentStyle?.LineHeightMultiplier;
+        }
+
+        var trimmed = raw.Trim();
+
+        if (string.Equals(trimmed, "normal", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (string.Equals(trimmed, "inherit", StringComparison.OrdinalIgnoreCase))
+        {
+            return parentStyle?.LineHeightMultiplier;
+        }
+
+        return float.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var multiplier) && multiplier > 0
+            ? multiplier
+            : parentStyle?.LineHeightMultiplier;
     }
 
     private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyle style)
@@ -277,7 +311,7 @@ public sealed class CssStyleComputer(
             return;
         }
 
-        var color = ColorRgba.FromCss(style.Color, new ColorRgba(0, 0, 0, 255));
+        var color = style.Color;
         var side = new BorderSide(widthPt, color, lineStyle);
         style.Borders = BorderEdges.Uniform(side);
     }

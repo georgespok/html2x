@@ -9,7 +9,9 @@ public sealed class ComputedStyle
     public bool Bold { get; set; }
     public bool Italic { get; set; }
     public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
-    public string Color { get; set; } = HtmlCssConstants.Defaults.Color;
+    public float? LineHeightMultiplier { get; set; }
+    public ColorRgba Color { get; set; } = ColorRgba.Black;
+    public ColorRgba? BackgroundColor { get; set; }
     public float MarginTopPt { get; set; }
     public float MarginRightPt { get; set; }
     public float MarginBottomPt { get; set; }
