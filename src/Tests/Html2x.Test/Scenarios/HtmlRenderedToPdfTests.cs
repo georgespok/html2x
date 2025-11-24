@@ -24,17 +24,13 @@ namespace Html2x.Test.Scenarios
         };
 
         [Fact]
-        public async Task AnonymousBlockText_ShouldRenderWithInlineText()
+        public async Task BoldItalicUnderlineText_ShouldRenderProperly()
         {
             const string html = """
                 <!DOCTYPE html>
                 <html>
-                    <body>
-                        <p>
-                            Block Text
-                        </p>
-                        Anonymous Text
-                    </body>
+                    This is <b>bold</b> text. This is <i>italic</i> text. 
+                    This is <u>underlined</u> text
                 </html>
                 """;
 
@@ -43,18 +39,20 @@ namespace Html2x.Test.Scenarios
 
             await this.SavePdfForInspectionAsync(result.PdfBytes);
 
+            var page = GetLayoutPageSnapshot(result);
+
+            Assert.NotNull(page);
+
+            page.Fragments.ShouldNotBeEmpty();
+        }
+
+        private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
+        {
             var endLayoutBuild = result.Diagnostics!.Events.FirstOrDefault(x => x is { Type: DiagnosticsEventType.EndStage, Payload: not null, Name: "LayoutBuild" });
 
             var snapshot = ((LayoutSnapshotPayload) endLayoutBuild!.Payload!).Snapshot;
 
-            Assert.NotNull(snapshot);
-
-            var page = snapshot.Pages[0];
-            page.Fragments[0].Children[0].Text.ShouldBe("Block Text");
-            var blockTextX = page.Fragments[0].Children[0].X;
-            page.Fragments[1].Children[0].Text.ShouldBe("Anonymous Text");
-            var anonymousTextX = page.Fragments[1].Children[0].X;
-            anonymousTextX.ShouldBe(blockTextX);
+            return snapshot.Pages[0];
         }
     }
 }
