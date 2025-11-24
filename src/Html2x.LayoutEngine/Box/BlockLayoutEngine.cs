@@ -276,6 +276,7 @@ public sealed class BlockLayoutEngine(
             Italic = parentStyle.Italic,
             TextAlign = parentStyle.TextAlign,
             Color = parentStyle.Color,
+            BackgroundColor = parentStyle.BackgroundColor,
             MarginTopPt = 0,
             MarginRightPt = 0,
             MarginBottomPt = 0,

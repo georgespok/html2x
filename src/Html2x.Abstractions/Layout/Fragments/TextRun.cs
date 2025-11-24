@@ -12,7 +12,7 @@ public sealed record TextRun(
     float Ascent, // font metrics for baseline alignment
     float Descent,
     TextDecorations Decorations = TextDecorations.None,
-    string? ColorHex = null
+    ColorRgba? Color = null
 );
 
 [Flags]
