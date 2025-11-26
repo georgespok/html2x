@@ -78,7 +78,23 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new("body", new() { LineHeightMultiplier = 1.8f }, [
-            new("p", new() { LineHeightMultiplier = null })
+            new("p", new() { LineHeightMultiplier = 1.2f })
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_WithNegativePadding_ClampsToZero()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='padding: -20px;'>Text</div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", null, [
+            new("div", new() { PaddingTopPt = 0, PaddingRightPt = 0, PaddingBottomPt = 0, PaddingLeftPt = 0 })
         ]));
     }
 
@@ -209,6 +225,28 @@ public class CssStyleComputerTests
             })
         ]));
     }
+
+    [Fact]
+    public async Task Compute_WithBorderShorthand_ProducesExpectedTree()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='border: 1px dashed;'>
+                    Text
+                </div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", null, [
+            new("div", new()
+            {
+                Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed))
+            })
+        ]));
+    }   
 
     [Fact]
     public async Task Compute_WithIndividualPaddingProperties_ParsesCorrectPointValues()

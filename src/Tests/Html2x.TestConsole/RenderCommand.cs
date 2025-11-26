@@ -9,25 +9,51 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 {
     private const string HtmlSamplesFolder = "html";
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(settings.Input))
+        public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
         {
-            return await RunConversionAsync(settings, settings.Input!);
+            if (!string.IsNullOrWhiteSpace(settings.Input))
+            {
+                return await RunConversionAsync(settings, settings.Input!);
+            }
+    
+            return await RunInteractiveLoopAsync(settings, cancellationToken);
         }
-
-        return await RunInteractiveLoopAsync(settings, cancellationToken);
-    }
-
-    private static async Task<int> RunConversionAsync(RenderSettings settings, string inputPath)
-    {
-        var outputPath = ResolveOutputPath(settings, inputPath);
-        var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
-        var service = new HtmlConversionService(options);
-
-        return await service.ExecuteAsync().ConfigureAwait(false);
-    }
-
+    
+        private static async Task<int> RunConversionAsync(RenderSettings settings, string inputPath)
+        {
+            var outputPath = ResolveOutputPath(settings, inputPath);
+            var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
+            var service = new HtmlConversionService(options);
+    
+            var (result, actualOutputPath) = await service.ExecuteAsync().ConfigureAwait(false);
+            
+            if (result == 0)
+            {
+                OpenInBrowser(inputPath); // inputPath is already absolute due to ConsoleOptions
+                if (actualOutputPath != null) // Ensure actualOutputPath is not null
+                {
+                    OpenInBrowser(actualOutputPath);
+                }
+            }
+            
+            return result;
+        }
+    
+        private static void OpenInBrowser(string path)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Could not open '{path}': {ex.Message}[/]");
+            }
+        }
     private static async Task<int> RunInteractiveLoopAsync(RenderSettings settings, CancellationToken cancellationToken)
     {
         if (Console.IsInputRedirected)
