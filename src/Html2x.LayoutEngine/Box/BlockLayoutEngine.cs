@@ -93,7 +93,13 @@ public sealed class BlockLayoutEngine(
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
-        var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
+        
+        var availableWidth = Math.Max(0, contentWidth - margin.Left - margin.Right);
+        var maxWidth = s.MaxWidthPt;
+        
+        var width = maxWidth.HasValue && maxWidth.Value < availableWidth
+            ? maxWidth.Value
+            : availableWidth;
 
         // Content width accounts for padding (for children/inline content)
         var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right);
