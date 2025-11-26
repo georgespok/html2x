@@ -16,6 +16,7 @@
     <None Remove="html\images.html" />
     <None Remove="html\inline-styles.html" />
     <None Remove="html\lists.html" />
+    <None Remove="html\max-width.html" />
     <None Remove="html\text-alingment.html" />
   </ItemGroup>
 
@@ -39,6 +40,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\lists.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\max-width.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\simple-line-break.html">
