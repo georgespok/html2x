@@ -1,25 +1,25 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Models;
 
-public sealed class ComputedStyle
+public sealed record ComputedStyle
 {
-    public string FontFamily { get; set; } = HtmlCssConstants.Defaults.FontFamily;
-    public float FontSizePt { get; set; } = 12;
-    public bool Bold { get; set; }
-    public bool Italic { get; set; }
-    public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
-    public float? LineHeightMultiplier { get; set; }
-    public ColorRgba Color { get; set; } = ColorRgba.Black;
-    public ColorRgba? BackgroundColor { get; set; }
-    public float MarginTopPt { get; set; }
-    public float MarginRightPt { get; set; }
-    public float MarginBottomPt { get; set; }
-    public float MarginLeftPt { get; set; }
-    public float PaddingTopPt { get; set; }
-    public float PaddingRightPt { get; set; }
-    public float PaddingBottomPt { get; set; }
-    public float PaddingLeftPt { get; set; }
-    public float? MaxWidthPt { get; set; }
-    public BorderEdges Borders { get; set; } = BorderEdges.None;
+    public string FontFamily { get; init; } = HtmlCssConstants.Defaults.FontFamily;
+    public float FontSizePt { get; init; } = 12;
+    public bool Bold { get; init; }
+    public bool Italic { get; init; }
+    public string TextAlign { get; init; } = HtmlCssConstants.Defaults.TextAlign;
+    public float LineHeightMultiplier { get; init; }
+    public ColorRgba Color { get; init; } = ColorRgba.Black;
+    public ColorRgba? BackgroundColor { get; init; }
+    public float MarginTopPt { get; init; }
+    public float MarginRightPt { get; init; }
+    public float MarginBottomPt { get; init; }
+    public float MarginLeftPt { get; init; }
+    public float PaddingTopPt { get; init; }
+    public float PaddingRightPt { get; init; }
+    public float PaddingBottomPt { get; init; }
+    public float PaddingLeftPt { get; init; }
+    public float? MaxWidthPt { get; init; }
+    public BorderEdges Borders { get; init; } = BorderEdges.None;
 }

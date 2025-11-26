@@ -62,7 +62,7 @@ Renderer (PDF via QuestPDF)
 | `src/Html2x.Renderers.Pdf` | QuestPDF renderer, configuration, and fragment dispatch. | `PdfRenderer`, `QuestPdfConfigurator`, `QuestPdfFragmentRenderer`, `FragmentRenderDispatcher`, `PdfRendererLog`. | Alternate renderers belong in sibling projects that reuse the fragment contract. |
 | `src/Html2x` | Public facade consumed by host applications. | `HtmlConverter`, `LayoutBuilderFactory`. | Add configuration hooks or DI entry points here without embedding layout logic. |
 | `src/Tests/Html2x.LayoutEngine.Test` | Layout unit and snapshot coverage. | `CssStyleComputerTests`, `BoxTreeBuilderTests`, `FragmentBuilderTests`. | Keep fixtures deterministic through builders rather than loose strings. |
-| `src/Tests/Html2x.Renderers.Pdf.Test` | Renderer validation and PDF helpers. | `PdfRendererTests`, `BorderPainterTests`, `PdfWordParser`. | Only persist PDFs or fragment recordings when diagnosing failures. |
+| `src/Tests/Html2x.Renderers.Pdf.Test` | Renderer validation and PDF helpers. | `PdfRendererTests`, `BorderShapeDrawerTests`, `PdfWordParser`. | Only persist PDFs or fragment recordings when diagnosing failures. |
 | `src/Tests/Html2x.Test` | End-to-end verification using the public API. | `HtmlConverterTests`, `IntegrationTestBase`. | Run with real fonts/options and capture logs through `TestOutputLoggerProvider`. |
 | `src/Tests/Html2x.TestConsole` | Manual harness with console logging. | `Program`. | Use for ad hoc validation; keep dependencies minimal. |
 
@@ -98,7 +98,8 @@ Renderer (PDF via QuestPDF)
 - **Components**:
   - `PdfRenderer` orchestrator, `PdfRendererLog`, and `QuestPdfConfigurator`.
   - `IFragmentRendererFactory` implementations (`QuestPdfFragmentRendererFactory`) plus the dispatcher/visitor pair that walks fragments.
-  - Mapper utilities such as `QuestPdfStyleMapper` and `BorderPainter`.
+  - Mapper utilities such as `QuestPdfStyleMapper`.
+  - `BorderShapeDrawer` for custom independent border rendering via SkiaSharp.
 - **Inputs and outputs**: Consumes fragment pages with `PdfOptions`; produces PDF byte arrays and structured logs.
 - **Extension guidance**:
   1. Treat fragments as read-only facts. If data is missing, fix the layout stage.

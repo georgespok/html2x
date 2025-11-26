@@ -28,10 +28,13 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder WithPadding(float top = 0, float right = 0, float bottom = 0, float left = 0)
     {
-        _block.Style.PaddingTopPt = top;
-        _block.Style.PaddingRightPt = right;
-        _block.Style.PaddingBottomPt = bottom;
-        _block.Style.PaddingLeftPt = left;
+        _block.Style = _block.Style with
+        {
+            PaddingTopPt = top,
+            PaddingRightPt = right,
+            PaddingBottomPt = bottom,
+            PaddingLeftPt = left
+        };
         return this;
     }
 
@@ -46,23 +49,20 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder WithMargin(float top = 0, float right = 0, float bottom = 0, float left = 0)
     {
-        _block.Style.MarginTopPt = top;
-        _block.Style.MarginRightPt = right;
-        _block.Style.MarginBottomPt = bottom;
-        _block.Style.MarginLeftPt = left;
+        _block.Style = _block.Style with
+        {
+            MarginTopPt = top,
+            MarginRightPt = right,
+            MarginBottomPt = bottom,
+            MarginLeftPt = left
+        };
         return this;
     }
 
     public BlockBoxBuilder WithTextAlign(string textAlign)
     {
         _block.TextAlign = textAlign;
-        _block.Style.TextAlign = textAlign;
-        return this;
-    }
-
-    public BlockBoxBuilder WithStyle(Action<ComputedStyle> configure)
-    {
-        configure?.Invoke(_block.Style);
+        _block.Style = _block.Style with { TextAlign = textAlign };
         return this;
     }
 

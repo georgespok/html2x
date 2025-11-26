@@ -91,6 +91,11 @@ public sealed class BlockLayoutEngine(
             Left = Safe(s.PaddingLeftPt)
         };
 
+        var borderTop = Safe(s.Borders?.Top?.Width ?? 0);
+        var borderRight = Safe(s.Borders?.Right?.Width ?? 0);
+        var borderBottom = Safe(s.Borders?.Bottom?.Width ?? 0);
+        var borderLeft = Safe(s.Borders?.Left?.Width ?? 0);
+
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
         
@@ -101,10 +106,10 @@ public sealed class BlockLayoutEngine(
             ? maxWidth.Value
             : availableWidth;
 
-        // Content width accounts for padding (for children/inline content)
-        var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right);
-        var contentXForChildren = x + padding.Left;
-        var contentYForChildren = y + padding.Top;
+        // Content width accounts for padding and borders
+        var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right - borderLeft - borderRight);
+        var contentXForChildren = x + padding.Left + borderLeft;
+        var contentYForChildren = y + padding.Top + borderTop;
 
         // use inline engine for height estimation (use content width)
         floatEngine.PlaceFloats(node, x, y, width);
@@ -116,7 +121,7 @@ public sealed class BlockLayoutEngine(
         node.X = x;
         node.Y = y;
         node.Width = width; // Total width (for fragment Rect)
-        node.Height = contentHeight + padding.Top + padding.Bottom;
+        node.Height = contentHeight + padding.Top + padding.Bottom + borderTop + borderBottom;
         node.Margin = margin;
         node.Padding = padding;
         node.TextAlign = s.TextAlign ?? "left";

@@ -1,9 +1,12 @@
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Options;
+using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Mapping;
+using Html2x.Renderers.Pdf.SkiaSharpIntegration;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
+using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Rendering;
 
@@ -14,65 +17,98 @@ internal sealed class QuestPdfFragmentRenderer(
 {
     private readonly IContainer _container = container ?? throw new ArgumentNullException(nameof(container));
     private readonly PdfOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    private readonly BorderShapeDrawer _borderShapeDrawer = new();
     
     public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
-        var blockContainer = ApplyBlockDecorations(_container, fragment.Style);
-
-        blockContainer.Column(inner =>
+        _container.Layers(layers =>
         {
-            var cursorY = 0f;
-            var children = fragment.Children;
-
-            for (var i = 0; i < children.Count;)
+            // 1. Primary Layer (Background + Content)
+            layers.PrimaryLayer().Element(primary =>
             {
-                var child = children[i];
-                var relativeTop = child.Rect.Y - fragment.Rect.Y;
-                var topSpacing = relativeTop - cursorY;
-                if (topSpacing > 0)
+                var blockContainer = ApplyBlockDecorations(primary, fragment.Style);
+
+                blockContainer.Column(inner =>
                 {
-                    inner.Item().Height(topSpacing);
-                    cursorY += topSpacing;
-                }
+                    RenderChildren(inner, fragment, renderChild);
+                });
+            });
 
-                var childHeight = Math.Max(child.Rect.Height, 0);
-                var relativeLeft = child.Rect.X - fragment.Rect.X;
-
-                switch (child)
+            // 2. Custom Borders Layer
+            if (fragment.Style?.Borders != null)
+            {
+                layers.Layer().SkiaSharpSvgCanvas((canvas, size) =>
                 {
-                    case LineBoxFragment line:
-                        inner.Item().MinHeight(childHeight).Element(item =>
-                        {
-                            RenderRowWithOffset(item, relativeLeft, row =>
-                            {
-                                row.RelativeItem().Element(box =>
-                                {
-                                    RenderSingleLine(box, line);
-                                });
-                            });
-                        });
-                        i++;
-                        break;
-                    default:
-                        i++;
-                        PublishFragmentEvent("render/pdf/fragment", child);
-                        inner.Item().MinHeight(childHeight).Element(item =>
-                        {
-                            RenderRowWithOffset(item, relativeLeft, row =>
-                            {
-                                var childWidth = Math.Max(Math.Min(child.Rect.Width, fragment.Rect.Width - relativeLeft), 0);
-                                row.ConstantItem(childWidth).Element(box =>
-                                {
-                                    var childRenderer = new QuestPdfFragmentRenderer(box, _options);
-                                    renderChild(child, childRenderer);
-                                });
-                            });
-                        });
-                        break;
-                }
-
-                cursorY = Math.Max(cursorY, relativeTop + childHeight);
+                    _borderShapeDrawer.Draw(canvas, new SKSize(size.Width, size.Height), fragment.Style.Borders);
+                });
             }
+        });
+    }
+
+    private void RenderChildren(ColumnDescriptor inner, BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
+    {
+        var cursorY = 0f;
+        var children = fragment.Children;
+
+        foreach (var child in children)
+        {
+            var relativeTop = child.Rect.Y - fragment.Rect.Y;
+            var topSpacing = relativeTop - cursorY;
+            if (topSpacing > 0)
+            {
+                inner.Item().Height(topSpacing);
+                cursorY += topSpacing;
+            }
+
+            var childHeight = Math.Max(child.Rect.Height, 0);
+            var relativeLeft = child.Rect.X - fragment.Rect.X;
+
+            if (child is LineBoxFragment line)
+            {
+                RenderLineBoxChild(inner, line, childHeight, relativeLeft);
+            }
+            else
+            {
+                RenderBlockChild(inner, child, childHeight, relativeLeft, fragment.Rect.Width, renderChild);
+            }
+
+            cursorY = Math.Max(cursorY, relativeTop + childHeight);
+        }
+    }
+
+    private static void RenderLineBoxChild(ColumnDescriptor inner, LineBoxFragment line, float height, float relativeLeft)
+    {
+        inner.Item().MinHeight(height).Element(item =>
+        {
+            RenderRowWithOffset(item, relativeLeft, row =>
+            {
+                row.RelativeItem().Element(box =>
+                {
+                    RenderSingleLine(box, line);
+                });
+            });
+        });
+    }
+
+    private void RenderBlockChild(
+        ColumnDescriptor inner,
+        Fragment child,
+        float height,
+        float relativeLeft,
+        float parentWidth,
+        Action<Fragment, IFragmentRenderer> renderChild)
+    {
+        inner.Item().MinHeight(height).Element(item =>
+        {
+            RenderRowWithOffset(item, relativeLeft, row =>
+            {
+                var childWidth = Math.Max(Math.Min(child.Rect.Width, parentWidth - relativeLeft), 0);
+                row.ConstantItem(childWidth).Element(box =>
+                {
+                    var childRenderer = new QuestPdfFragmentRenderer(box, _options);
+                    renderChild(child, childRenderer);
+                });
+            });
         });
     }
 
@@ -83,7 +119,7 @@ internal sealed class QuestPdfFragmentRenderer(
 
     public void RenderImage(ImageFragment fragment)
     {
-        PublishFragmentEvent("render/pdf/fragment-unsupported", fragment);
+        // Image rendering not yet supported
     }
 
     public void RenderRule(RuleFragment fragment)
@@ -95,7 +131,7 @@ internal sealed class QuestPdfFragmentRenderer(
         _container.LineHorizontal(width).LineColor(color);
     }
 
-    private IContainer ApplyBlockDecorations(IContainer container, VisualStyle? style)
+    private static IContainer ApplyBlockDecorations(IContainer container, VisualStyle? style)
     {
         if (style is null)
         {
@@ -107,17 +143,6 @@ internal sealed class QuestPdfFragmentRenderer(
         if (style.BackgroundColor is { } background)
         {
             decorated = decorated.Background(QuestPdfStyleMapper.Map(background));
-        }
-
-        if (BorderPainter.GetUniformBorder(style.Borders) is { } border)
-        {
-            if (border.LineStyle is BorderLineStyle.Dashed or BorderLineStyle.Dotted)
-            {
-                PublishWarning("render/pdf/border-warning", border.LineStyle.ToString());
-            }
-
-            decorated = decorated.Border(border.Width)
-                .BorderColor(QuestPdfStyleMapper.Map(border.Color));
         }
 
         return decorated;
@@ -166,31 +191,5 @@ internal sealed class QuestPdfFragmentRenderer(
 
             configureRow(row);
         });
-    }
-    private void PublishFragmentEvent(string kind, Fragment fragment)
-    {
-        
-
-        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
-        {
-            ["fragmentType"] = fragment.GetType().Name,
-            ["x"] = fragment.Rect.X,
-            ["y"] = fragment.Rect.Y,
-            ["width"] = fragment.Rect.Width,
-            ["height"] = fragment.Rect.Height
-        };
-
-        
-    }
-
-    private void PublishWarning(string kind, string? detail)
-    {
-        
-        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
-        {
-            ["detail"] = detail
-        };
-
-        
     }
 }

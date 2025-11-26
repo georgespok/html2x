@@ -23,16 +23,19 @@ internal sealed class StyleNodeBuilder(StyleNode node)
 
     public StyleNodeBuilder WithBorders(BorderEdges borders)
     {
-        node.Style.Borders = borders;
+        node.Style = node.Style with { Borders = borders };
         return this;
     }
 
     public StyleNodeBuilder WithPadding(float top, float right, float bottom, float left)
     {
-        node.Style.PaddingTopPt = top;
-        node.Style.PaddingRightPt = right;
-        node.Style.PaddingBottomPt = bottom;
-        node.Style.PaddingLeftPt = left;
+        node.Style = node.Style with
+        {
+            PaddingTopPt = top,
+            PaddingRightPt = right,
+            PaddingBottomPt = bottom,
+            PaddingLeftPt = left
+        };
         return this;
     }
 
@@ -41,12 +44,12 @@ internal sealed class StyleNodeBuilder(StyleNode node)
         var style = new ComputedStyle { FontSizePt = fontSize };
         if (marginTop.HasValue)
         {
-            style.MarginTopPt = marginTop.Value;
+            style = style with { MarginTopPt = marginTop.Value };
         }
 
         if (marginLeft.HasValue)
         {
-            style.MarginLeftPt = marginLeft.Value;
+            style = style with { MarginLeftPt = marginLeft.Value };
         }
 
         return new StyleNode { Element = el, Style = style };
