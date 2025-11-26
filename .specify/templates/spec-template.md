@@ -5,15 +5,13 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
-## User Scenarios & Testing (mandatory)
-
-Constitution alignment: describe how each story preserves staged layout discipline (Principle I) and rendering predictability through `Html2x.Diagnostics` (Principle II). Include test harness notes and diagnostics hooks required to validate the behavior (Principle IV). Capture how the plan enforces the Goal-Driven Delivery cadence (Principle VI) by stating current state, ordered actions, adaptive checkpoints, and reflection items.
+## User Scenarios & Testing *(mandatory)*
 
 <!--
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
   Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
   you should still have a viable MVP (Minimum Viable Product) that delivers value.
-
+  
   Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
   Think of each story as a standalone slice of functionality that can be:
   - Developed independently
@@ -28,7 +26,7 @@ Constitution alignment: describe how each story preserves staged layout discipli
 
 **Why this priority**: [Explain the value and why it has this priority level]
 
-**Independent Test**: [Describe how this can be tested independently - reference the failing test to add first]
+**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
 
 **Acceptance Scenarios**:
 
@@ -69,30 +67,49 @@ Constitution alignment: describe how each story preserves staged layout discipli
 
 ### Edge Cases
 
-- What happens when predictability assumptions break (missing fonts, culture differences, timestamp usage)?
-- How does the system surface errors and structured logs for this feature?
+<!--
+  ACTION REQUIRED: The content in this section represents placeholders.
+  Fill them out with the right edge cases.
+-->
 
-## Requirements (mandatory)
+- What happens when [boundary condition]?
+- How does system handle [error scenario]?
+
+## Requirements *(mandatory)*
+
+<!--
+  ACTION REQUIRED: The content in this section represents placeholders.
+  Fill them out with the right functional requirements.
+-->
 
 ### Functional Requirements
 
-- **FR-001**: Implementation MUST respect pipeline contracts; no stage bypassing without new shared abstractions (Principle I).
-- **FR-002**: Feature MUST keep fragment semantics predictable for identical inputs and document how `Html2x.Diagnostics` captures deviation signals instead of parsing PDFs (Principle II).
-- **FR-003**: Automated tests MUST be authored first and fail before implementation begins (Principle III).
-- **FR-004**: `Html2x.Diagnostics` instrumentation MUST cover the new behavior with actionable metadata (Principle IV).
-- **FR-005**: Public surface changes MUST include migration guidance and docs updates before release (Principle V).
-- **FR-006**: Specifications MUST articulate the Goal-Driven Delivery cadence (state assessment, ordered actions with dependencies, adaptive checkpoints, reflection tasks) for each user story (Principle VI).
+- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
+- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
+- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
+- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
+- **FR-005**: System MUST [behavior, e.g., "log all security events"]
 
 *Example of marking unclear requirements:*
 
-- **FR-007**: Diagnostics capture MUST include [NEEDS CLARIFICATION: payload requirements]
-- **FR-008**: Predictability expectations MUST hold for [NEEDS CLARIFICATION: platform or renderer list]
+- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
+- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
 
-### Key Entities (include if feature involves data)
+### Key Entities *(include if feature involves data)*
 
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
-## Success Criteria
+## Success Criteria *(mandatory)*
 
-[List the observable outcomes or validation steps that confirm the feature meets stakeholder expectations. Keep them qualitative if quantitative metrics are not required.]
+<!--
+  ACTION REQUIRED: Define measurable success criteria.
+  These must be technology-agnostic and measurable.
+-->
+
+### Measurable Outcomes
+
+- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
+- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
+- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
+- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]

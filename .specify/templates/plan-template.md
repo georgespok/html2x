@@ -1,6 +1,6 @@
 # Implementation Plan: [FEATURE]
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]  
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
@@ -11,62 +11,94 @@
 
 ## Technical Context
 
-**Language/Version**: .NET 8 (override if feature targets a different framework)  
-**Primary Dependencies**: AngleSharp, QuestPDF, Html2x shared libraries  
-**Storage**: In-memory unless the feature introduces persistence (document rationale)  
-**Testing**: xUnit via `dotnet test Html2x.sln -c Release`  
-**Target Platform**: Windows and Linux  
-**Project Type**: Modular library (`src/Html2x.*`) with test console harness  
-**Performance Goals**: Preserve predictable fragment generation; note additional throughput or latency targets  
-**Constraints**: Keep implementation pure managed code; no platform-specific APIs without maintainer approval  
-**Scale/Scope**: Document impacted projects and expected fragment volume or PDF complexity
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- [ ] Stage isolation maintained at assembly boundaries (Principle I: Staged Layout Discipline).
-- [ ] Rendering predictability risks documented with `Html2x.Diagnostics` coverage instead of PDF parsing (Principle II).
-- [ ] TDD approach defined, explicitly sequencing one failing test at a time (introduce a single failing test, implement minimal pass, then refactor) per Principle III.
-- [ ] `Html2x.Diagnostics` instrumentation scoped for new behavior (Principle IV).
-- [ ] Extension points documented with migration guidance (Principle V).
-- [ ] Goal-Driven Problem Solving loop captured (Principle VI: state assessment, action decomposition, path planning, adaptive execution, and reflection).
+[Gates determined based on constitution file]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
-```
+```text
 specs/[###-feature]/
-    plan.md
-    research.md
-    data-model.md
-    quickstart.md
-    tasks.md
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
-```
+```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-    Html2x.Core/
-    Html2x.LayoutEngine/
-    Html2x.Renderers.Pdf/
-    Html2x/
-    Html2x.Diagnostics/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
 tests/
-    Html2x.LayoutEngine.Test/
-    Html2x.Renderers.Pdf.Test/
-    html2x.Test/
-src/Html2x.TestConsole/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: [Record affected projects, new folders, and justification]
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
-> Fill ONLY if Constitution Check has violations that must be justified.
+> **Fill ONLY if Constitution Check has violations that must be justified**
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|---------------------------------------|
-| | | |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

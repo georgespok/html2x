@@ -5,14 +5,12 @@ description: "Task list template for feature implementation"
 
 # Tasks: [FEATURE NAME]
 
-**Input**: Design documents from `/specs/[###-feature-name]/`  
-**Prerequisites**: plan.md (required), spec.md (user stories), research.md, data-model.md
+**Input**: Design documents from `/specs/[###-feature-name]/`
+**Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: Introduce exactly one failing automated test at a time and list it explicitly for each user story. Pair every failing-test task with the minimal implementation/refactor tasks required to turn the suite green before adding the next test.
+**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
 
-**Goal-Driven Cadence**: For each user story capture State Assessment, Action Decomposition, Path Planning (with dependencies), Adaptive Execution checkpoints, and Reflection tasks so Principle VI stays explicit.
-
-**Organization**: Tasks are grouped by user story to keep delivery incremental and independently testable.
+**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -22,125 +20,125 @@ description: "Task list template for feature implementation"
 
 ## Path Conventions
 
-- Source: `src/Html2x.*`
-- Tests: `tests/Html2x.*` (`html2x.IntegrationTest` for end-to-end)
-- Console harness: `src/Html2x.TestConsole/`
-- Samples and fonts: `src/Html2x.TestConsole/html/`, `src/Html2x.TestConsole/fonts/`
+- **Single project**: `src/`, `tests/` at repository root
+- **Web app**: `backend/src/`, `frontend/src/`
+- **Mobile**: `api/src/`, `ios/src/` or `android/src/`
+- Paths shown below assume single project - adjust based on plan.md structure
 
-<!--
+<!-- 
   ============================================================================
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
-
+  
   The /speckit.tasks command MUST replace these with actual tasks based on:
   - User stories from spec.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
-
+  - Endpoints from contracts/
+  
   Tasks MUST be organized by user story so each story can be:
   - Implemented independently
   - Tested independently
   - Delivered as an MVP increment
-
+  
   DO NOT keep these sample tasks in the generated tasks.md file.
   ============================================================================
 -->
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Confirm baseline project health before feature work begins.
+**Purpose**: Project initialization and basic structure
 
-- [ ] T001 Run `dotnet restore Html2x.sln` and capture dependency notes.
-- [ ] T002 Verify analyzer and formatting configuration (`.editorconfig`, Directory.Build.props).
-- [ ] T003 [P] Update plan.md and checklist with constitution gates.
+- [ ] T001 Create project structure per implementation plan
+- [ ] T002 Initialize [language] project with [framework] dependencies
+- [ ] T003 [P] Configure linting and formatting tools
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Core infrastructure that MUST be complete before any user story starts.
+**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
-- [ ] T004 Establish stage boundaries or shared contracts required by all stories (e.g., new fragment types in `src/Html2x.Core/`).
-- [ ] T005 [P] Add failing integration test capturing predictable fragment semantics (assert via diagnostics) for the new scenario in `tests/html2x.IntegrationTest/`.
-- [ ] T006 [P] Extend `Html2x.Diagnostics` helpers (e.g., shared payload builders) if new instrumentation is needed.
-- [ ] T007 Document operational changes in `docs/` and update quickstart notes if tooling changes.
+**⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-**Checkpoint**: Foundation ready - user story implementation can now begin.
+Examples of foundational tasks (adjust based on your project):
+
+- [ ] T004 Setup database schema and migrations framework
+- [ ] T005 [P] Implement authentication/authorization framework
+- [ ] T006 [P] Setup API routing and middleware structure
+- [ ] T007 Create base models/entities that all stories depend on
+- [ ] T008 Configure error handling and logging infrastructure
+- [ ] T009 Setup environment configuration management
+
+**Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
 ---
 
-## Phase 3: User Story 1 - [Title] (Priority: P1)  MVP
+## Phase 3: User Story 1 - [Title] (Priority: P1) 🎯 MVP
 
-**Goal**: [Brief description of what this story delivers]  
+**Goal**: [Brief description of what this story delivers]
+
 **Independent Test**: [How to verify this story works on its own]
-**State Assessment**: [Current behavior, constraints, risk signals]
-**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, contingency triggers]
-**Adaptive Checkpoints**: [Criteria for replanning or escalation]
-**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
-### Tests for User Story 1
+### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T010 [P] [US1] Write failing unit test in `tests/Html2x.Layout.Test/` or relevant project.
-- [ ] T011 [P] [US1] Extend integration scenario in `tests/html2x.IntegrationTest/` to assert predictable fragments or diagnostics traces (PDF stays a black box).
+> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+
+- [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement feature code in `src/Html2x.Layout/...` or appropriate project respecting stage contracts.
-- [ ] T013 [US1] Wire renderer changes in `src/Html2x.Pdf/...` if required.
-- [ ] T014 [US1] Add `Html2x.Diagnostics` instrumentation for the new path.
-- [ ] T015 [US1] Update docs and release notes to describe behavior and migration guidance.
+- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
+- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
+- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
+- [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T016 [US1] Add validation and error handling
+- [ ] T017 [US1] Add logging for user story 1 operations
 
-**Checkpoint**: User Story 1 fully functional, independently testable, and observable.
+**Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
 ---
 
 ## Phase 4: User Story 2 - [Title] (Priority: P2)
 
-**Goal**: [Brief description of what this story delivers]  
+**Goal**: [Brief description of what this story delivers]
+
 **Independent Test**: [How to verify this story works on its own]
-**State Assessment**: [Current behavior, constraints, risk signals]
-**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, contingency triggers]
-**Adaptive Checkpoints**: [Criteria for replanning or escalation]
-**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
-### Tests for User Story 2
+### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T020 [P] [US2] Add failing tests for new behavior (unit or integration as appropriate).
-- [ ] T021 [P] [US2] Capture observability assertions (log events, metrics) in tests.
+- [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Implement layout or renderer updates with stage isolation.
-- [ ] T023 [US2] Extend shared contracts if needed and document the change.
-- [ ] T024 [US2] Ensure predictable outputs remain validated by updating diagnostics baselines or fragment assertions.
+- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
+- [ ] T021 [US2] Implement [Service] in src/services/[service].py
+- [ ] T022 [US2] Implement [endpoint/feature] in src/[location]/[file].py
+- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
 
-**Checkpoint**: User Stories 1 and 2 remain independently deliverable.
+**Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
 ---
 
 ## Phase 5: User Story 3 - [Title] (Priority: P3)
 
-**Goal**: [Brief description of what this story delivers]  
+**Goal**: [Brief description of what this story delivers]
+
 **Independent Test**: [How to verify this story works on its own]
-**State Assessment**: [Current behavior, constraints, risk signals]
-**Action Decomposition**: [Ordered steps/tasks required to move from state to goal]
-**Path Planning & Risks**: [Dependencies, contingency triggers]
-**Adaptive Checkpoints**: [Criteria for replanning or escalation]
-**Reflection Hook**: [Where to capture learnings and reusable patterns]
 
-### Tests for User Story 3
+### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
 
-- [ ] T025 [P] [US3] Add failing tests capturing the new scenario.
-- [ ] T026 [P] [US3] Validate diagnostics coverage for this story.
+- [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
+- [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement code changes respecting pipeline contracts.
-- [ ] T028 [US3] Update renderer or layout integrations as required.
-- [ ] T029 [US3] Refresh docs or samples illustrating the capability.
+- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
+- [ ] T027 [US3] Implement [Service] in src/services/[service].py
+- [ ] T028 [US3] Implement [endpoint/feature] in src/[location]/[file].py
 
-**Checkpoint**: All user stories function independently with passing tests and observability hooks.
+**Checkpoint**: All user stories should now be independently functional
 
 ---
 
@@ -150,12 +148,14 @@ description: "Task list template for feature implementation"
 
 ## Phase N: Polish & Cross-Cutting Concerns
 
-**Purpose**: Improvements that affect multiple user stories.
+**Purpose**: Improvements that affect multiple user stories
 
-- [ ] T030 [P] Documentation updates in `docs/` and release notes.
-- [ ] T031 Harden performance or memory hotspots while preserving determinism.
-- [ ] T032 [P] Expand regression coverage or golden files if justified.
-- [ ] T033 Validate `dotnet test Html2x.sln -c Release` and console smoke test.
+- [ ] TXXX [P] Documentation updates in docs/
+- [ ] TXXX Code cleanup and refactoring
+- [ ] TXXX Performance optimization across all stories
+- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX Security hardening
+- [ ] TXXX Run quickstart.md validation
 
 ---
 
@@ -163,30 +163,49 @@ description: "Task list template for feature implementation"
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies - can start immediately.
-- **Foundational (Phase 2)**: Depends on Setup completion - blocks all user stories.
-- **User Stories (Phase 3+)**: Depend on Foundational completion; can proceed in parallel once their tests exist.
-- **Polish (Final Phase)**: Depends on chosen user stories being complete.
+- **Setup (Phase 1)**: No dependencies - can start immediately
+- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
+- **User Stories (Phase 3+)**: All depend on Foundational phase completion
+  - User stories can then proceed in parallel (if staffed)
+  - Or sequentially in priority order (P1 → P2 → P3)
+- **Polish (Final Phase)**: Depends on all desired user stories being complete
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Can start after Foundational; no dependency on other stories.
-- **User Story 2 (P2)**: Can start after Foundational; may reuse US1 artifacts but must stay independently testable.
-- **User Story 3 (P3)**: Can start after Foundational; coordinate with earlier stories only through shared contracts.
+- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories
+- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - May integrate with US1 but should be independently testable
+- **User Story 3 (P3)**: Can start after Foundational (Phase 2) - May integrate with US1/US2 but should be independently testable
 
 ### Within Each User Story
 
-- Introduce a single failing test, implement the minimal passing change, refactor, then repeat for the next scenario.
-- Update shared contracts prior to renderer changes.
-- Keep predictability checks and diagnostics tasks visible in the plan.
-- Confirm documentation and release notes before closing the story.
+- Tests (if included) MUST be written and FAIL before implementation
+- Models before services
+- Services before endpoints
+- Core implementation before integration
+- Story complete before moving to next priority
 
 ### Parallel Opportunities
 
-- Setup and Foundational tasks marked [P] can run in parallel.
-- Once Foundational completes, individual user stories can progress concurrently.
-- Tests marked [P] can be developed in parallel provided they touch separate files.
-- Documentation and release note tasks can run alongside polish work.
+- All Setup tasks marked [P] can run in parallel
+- All Foundational tasks marked [P] can run in parallel (within Phase 2)
+- Once Foundational phase completes, all user stories can start in parallel (if team capacity allows)
+- All tests for a user story marked [P] can run in parallel
+- Models within a story marked [P] can run in parallel
+- Different user stories can be worked on in parallel by different team members
+
+---
+
+## Parallel Example: User Story 1
+
+```bash
+# Launch all tests for User Story 1 together (if tests requested):
+Task: "Contract test for [endpoint] in tests/contract/test_[name].py"
+Task: "Integration test for [user journey] in tests/integration/test_[name].py"
+
+# Launch all models for User Story 1 together:
+Task: "Create [Entity1] model in src/models/[entity1].py"
+Task: "Create [Entity2] model in src/models/[entity2].py"
+```
 
 ---
 
@@ -194,29 +213,39 @@ description: "Task list template for feature implementation"
 
 ### MVP First (User Story 1 Only)
 
-1. Complete Phase 1: Setup.
-2. Complete Phase 2: Foundational (blocks all stories).
-3. Complete Phase 3: User Story 1 with passing tests and observability in place.
-4. Stop and validate predictable fragments/diagnostics before continuing.
+1. Complete Phase 1: Setup
+2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
+3. Complete Phase 3: User Story 1
+4. **STOP and VALIDATE**: Test User Story 1 independently
+5. Deploy/demo if ready
 
 ### Incremental Delivery
 
-1. Finish Setup and Foundational.
-2. Deliver User Story 1 (MVP) with smoke tests.
-3. Layer additional stories sequentially or in parallel, each with failing-tests-first workflow.
-4. Merge only after updating docs, diagnostics notes, and release notes.
+1. Complete Setup + Foundational → Foundation ready
+2. Add User Story 1 → Test independently → Deploy/Demo (MVP!)
+3. Add User Story 2 → Test independently → Deploy/Demo
+4. Add User Story 3 → Test independently → Deploy/Demo
+5. Each story adds value without breaking previous stories
 
 ### Parallel Team Strategy
 
-1. Team completes Setup and Foundational together.
-2. Assign stories to different contributors once shared contracts and failing tests exist.
-3. Coordinate through documented interfaces and diagnostics baselines.
-4. Re-run full test suite and console smoke test before merge.
+With multiple developers:
+
+1. Team completes Setup + Foundational together
+2. Once Foundational is done:
+   - Developer A: User Story 1
+   - Developer B: User Story 2
+   - Developer C: User Story 3
+3. Stories complete and integrate independently
 
 ---
 
 ## Notes
 
-- Mark tasks complete when code, tests, and docs update together.
-- Include references to relevant principles when exceptions are required.
-- Capture follow-up actions or debt in the plan if a principle is temporarily violated.
+- [P] tasks = different files, no dependencies
+- [Story] label maps task to specific user story for traceability
+- Each user story should be independently completable and testable
+- Verify tests fail before implementing
+- Commit after each task or logical group
+- Stop at any checkpoint to validate story independently
+- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence
