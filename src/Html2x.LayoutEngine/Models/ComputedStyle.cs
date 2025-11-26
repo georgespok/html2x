@@ -20,5 +20,6 @@ public sealed class ComputedStyle
     public float PaddingRightPt { get; set; }
     public float PaddingBottomPt { get; set; }
     public float PaddingLeftPt { get; set; }
+    public float? MaxWidthPt { get; set; }
     public BorderEdges Borders { get; set; } = BorderEdges.None;
 }

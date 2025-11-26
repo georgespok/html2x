@@ -371,13 +371,17 @@ public class CssStyleComputerTests
         ]));
     }
 
-    [Fact]
-    public async Task ParsePaddingShorthand_SingleValue_SetsAllSides()
+    [Theory]
+    [InlineData("10px", 7.5f, 7.5f, 7.5f, 7.5f)]
+    [InlineData("10px 20px", 7.5f, 15f, 7.5f, 15f)]
+    [InlineData("10px 20px 15px", 7.5f, 15f, 11.25f, 15f)]
+    [InlineData("10px 20px 15px 5px", 7.5f, 15f, 11.25f, 3.75f)]
+    public async Task ParsePaddingShorthand_ResolvesToPoints(string shorthand, float top, float right, float bottom, float left)
     {
         // Arrange
         var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding: 10px;'>
+            $@"<html><body>
+                <div style='padding: {shorthand};'>
                     Content
                 </div>
             </body></html>");
@@ -388,105 +392,13 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         // Assert
-        // Conversion: 1px = 0.75pt
-        // padding: 10px should set all sides to 7.5pt (10 * 0.75)
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 7.5f,
-                PaddingRightPt = 7.5f,
-                PaddingBottomPt = 7.5f,
-                PaddingLeftPt = 7.5f
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParsePaddingShorthand_TwoValues_SetsVerticalAndHorizontal()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding: 10px 20px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding: 10px 20px → top/bottom=7.5pt (10 * 0.75), left/right=15pt (20 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                PaddingTopPt = 7.5f,
-                PaddingRightPt = 15f,
-                PaddingBottomPt = 7.5f,
-                PaddingLeftPt = 15f
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParsePaddingShorthand_ThreeValues_SetsTopHorizontalBottom()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding: 10px 20px 15px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding: 10px 20px 15px → top=7.5pt (10 * 0.75), left/right=15pt (20 * 0.75), bottom=11.25pt (15 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                PaddingTopPt = 7.5f,
-                PaddingRightPt = 15f,
-                PaddingBottomPt = 11.25f,
-                PaddingLeftPt = 15f
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParsePaddingShorthand_FourValues_SetsAllSidesIndividually()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding: 10px 20px 15px 5px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding: 10px 20px 15px 5px → top=7.5pt (10 * 0.75), right=15pt (20 * 0.75), bottom=11.25pt (15 * 0.75), left=3.75pt (5 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                PaddingTopPt = 7.5f,
-                PaddingRightPt = 15f,
-                PaddingBottomPt = 11.25f,
-                PaddingLeftPt = 3.75f
+                PaddingTopPt = top,
+                PaddingRightPt = right,
+                PaddingBottomPt = bottom,
+                PaddingLeftPt = left
             })
         ]));
     }
@@ -518,6 +430,29 @@ public class CssStyleComputerTests
                 PaddingBottomPt = 7.5f,
                 PaddingLeftPt = 7.5f
             })
+        ]));
+    }
+
+    [Theory]
+    [InlineData("100px", 75f)]
+    [InlineData("50pt", 50f)]
+    [InlineData("-10px", null)]
+    [InlineData("none", null)]
+    public async Task ParseMaxWidth_ResolvesCorrectly(string value, float? expectedPt)
+    {
+        // Arrange
+        var document = await CreateHtmlDocument(
+            $@"<html><body>
+                <div style='max-width: {value};'>Box</div>
+            </body></html>");
+
+        // Act
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        // Assert
+        actual.ShouldMatch(new("body", null, [
+            new("div", new() { MaxWidthPt = expectedPt })
         ]));
     }
 

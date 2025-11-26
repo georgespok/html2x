@@ -53,10 +53,56 @@ public sealed class CssStyleComputer(
 
         ApplyTypography(css, style, parentStyle);
         ApplySpacing(css, element, style);
+        ApplyDimensions(css, element, style);
 
         _uaDefaults.Apply(element, style, parentStyle);
         ApplyBorders(css, style);
         return style;
+    }
+
+    private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyle style)
+    {
+        var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element);
+        if (maxWidth.HasValue)
+        {
+            style.MaxWidthPt = maxWidth.Value;
+        }
+    }
+
+    private float? GetDimensionWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    {
+        var rawValue = css.GetPropertyValue(property);
+
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        var trimmed = rawValue.Trim();
+
+        // Special case: "none" is valid for max-width
+        if (string.Equals(trimmed, HtmlCssConstants.CssValues.None, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var unsupportedUnit = DetectUnsupportedUnit(trimmed);
+        if (unsupportedUnit != null)
+        {
+            return null;
+        }
+
+        if (!_converter.TryGetLengthPt(rawValue, out var points))
+        {
+            return null;
+        }
+
+        if (points < 0)
+        {
+            return null;
+        }
+
+        return points;
     }
 
     private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles, IElement element)
