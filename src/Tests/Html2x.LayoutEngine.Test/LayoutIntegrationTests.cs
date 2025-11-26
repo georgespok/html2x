@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Styles;
 using AngleSharp;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
@@ -153,6 +154,61 @@ public class LayoutIntegrationTests
                                 h5Block.Rect.Height + 5 * rowGapPt, 5);
     }
 
+    [Fact]
+    public async Task Build_WithIndependentBorderSides_ProducesExpectedFragmentsAsync()
+    {
+        // Arrange: Block with border: 1px solid red and padding: 10px
+        // Expected: Content width = 100px - 10px (left) - 10px (right) = 80px
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 200px; padding: 20px; border-left: 1px solid red; border-right: 1px solid blue; border-top: 1px solid green; border-bottom: 1px solid yellow;'>Content</div>
+              </body>
+            </html>";
+
+        var config = Configuration.Default.WithCss();
+        var dom = new AngleSharpDomProvider(config);
+        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var boxes = new BoxTreeBuilder();
+        var fragments = new FragmentBuilder();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
+        // Act
+        var layout = await builder.BuildAsync(html, layoutOptions);
+        
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var page = layout.Pages[0];
+        page.Children.Count.ShouldBe(1);
+
+        var div = (BlockFragment)page.Children[0];
+
+        div.Style.Borders.ShouldNotBeNull();
+        
+        // Assert border widths (1px at 96 DPI is 0.75pt)
+        div.Style.Borders.Left!.Width.ShouldBe(0.75f);
+        div.Style.Borders.Right!.Width.ShouldBe(0.75f);
+        div.Style.Borders.Top!.Width.ShouldBe(0.75f);
+        div.Style.Borders.Bottom!.Width.ShouldBe(0.75f);
+
+        // Assert border colors
+        div.Style.Borders.Left.Color.ShouldBe(new ColorRgba(255, 0, 0, 255));
+        div.Style.Borders.Right.Color.ShouldBe(new ColorRgba(0, 0, 255, 255));
+        div.Style.Borders.Top.Color.ShouldBe(new ColorRgba(0, 128, 0, 255));
+        div.Style.Borders.Bottom.Color.ShouldBe(new ColorRgba(255, 255, 0, 255));
+
+        // Assert border styles
+        div.Style.Borders.Left.LineStyle.ShouldBe(BorderLineStyle.Solid);
+        div.Style.Borders.Right.LineStyle.ShouldBe(BorderLineStyle.Solid);
+        div.Style.Borders.Top.LineStyle.ShouldBe(BorderLineStyle.Solid);
+        div.Style.Borders.Bottom.LineStyle.ShouldBe(BorderLineStyle.Solid);
+    }
+
+    
     private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
     {
         foreach (var fragment in fragments)

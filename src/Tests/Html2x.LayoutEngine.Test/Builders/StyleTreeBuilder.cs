@@ -43,12 +43,12 @@ internal sealed class StyleTreeBuilder(IElement body)
         var style = new ComputedStyle { FontSizePt = fontSize };
         if (marginTop.HasValue)
         {
-            style.MarginTopPt = marginTop.Value;
+            style = style with { MarginTopPt = marginTop.Value };
         }
 
         if (marginLeft.HasValue)
         {
-            style.MarginLeftPt = marginLeft.Value;
+            style = style with { MarginLeftPt = marginLeft.Value };
         }
 
         return new StyleNode { Element = el, Style = style };

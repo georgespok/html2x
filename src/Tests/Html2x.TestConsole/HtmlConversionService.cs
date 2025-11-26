@@ -6,13 +6,13 @@ namespace Html2x.TestConsole;
 
 internal sealed class HtmlConversionService(ConsoleOptions options)
 {
-    public async Task<int> ExecuteAsync()
+    public async Task<(int result, string? outputPath)> ExecuteAsync()
     {
         var inputPath = Path.GetFullPath(options.InputPath);
         if (!File.Exists(inputPath))
         {
             Console.WriteLine($"Error: Input file '{inputPath}' not found.");
-            return 1;
+            return (1, null);
         }
 
         var outputPath = ResolveOutputPath(options.OutputPath);
@@ -46,12 +46,12 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
                 logger.LogInformation("Diagnostics written to {DiagnosticsPath}", diagnosticsPath);
             }
 
-            return 0;
+            return (0, outputPath);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Rendering failed.");
-            return 1;
+            return (1, null);
         }
     }
 

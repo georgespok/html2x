@@ -49,7 +49,7 @@ public sealed class CssStyleComputer(
     {
         var css = element.ComputeCurrentStyle();
 
-        var style = new ComputedStyle();
+        var style = new ComputedStyleBuilder();
 
         ApplyTypography(css, style, parentStyle);
         ApplySpacing(css, element, style);
@@ -57,10 +57,10 @@ public sealed class CssStyleComputer(
 
         _uaDefaults.Apply(element, style, parentStyle);
         ApplyBorders(css, style);
-        return style;
+        return style.Build();
     }
 
-    private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyle style)
+    private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
     {
         var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element);
         if (maxWidth.HasValue)
@@ -114,7 +114,6 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            allowNegative: true,
             element,
             value => tree.Page.MarginTopPt = value,
             value => tree.Page.MarginRightPt = value,
@@ -129,26 +128,24 @@ public sealed class CssStyleComputer(
         string rightProperty,
         string bottomProperty,
         string leftProperty,
-        bool allowNegative,
         IElement element,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        ApplySpacingShorthand(css, shorthandProperty, element, setTop, setRight, setBottom, setLeft, allowNegative);
-        OverrideSpacingSide(css, topProperty, element, setTop, allowNegative);
-        OverrideSpacingSide(css, rightProperty, element, setRight, allowNegative);
-        OverrideSpacingSide(css, bottomProperty, element, setBottom, allowNegative);
-        OverrideSpacingSide(css, leftProperty, element, setLeft, allowNegative);
+        ApplySpacingShorthand(css, shorthandProperty, element, setTop, setRight, setBottom, setLeft);
+        OverrideSpacingSide(css, topProperty, element, setTop);
+        OverrideSpacingSide(css, rightProperty, element, setRight);
+        OverrideSpacingSide(css, bottomProperty, element, setBottom);
+        OverrideSpacingSide(css, leftProperty, element, setLeft);
     }
 
     private void OverrideSpacingSide(
         ICssStyleDeclaration css,
         string property,
         IElement element,
-        Action<float> setter,
-        bool allowNegative)
+        Action<float> setter)
     {
         var raw = css.GetPropertyValue(property);
         if (string.IsNullOrWhiteSpace(raw))
@@ -156,7 +153,7 @@ public sealed class CssStyleComputer(
             return;
         }
 
-        setter(GetSpacingWithLogging(css, property, element, allowNegative));
+        setter(GetSpacingWithLogging(css, property, element));
     }
 
     private void ApplySpacingShorthand(
@@ -166,8 +163,7 @@ public sealed class CssStyleComputer(
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
-        Action<float> setLeft,
-        bool allowNegative)
+        Action<float> setLeft)
     {
         var shorthandValue = css.GetPropertyValue(shorthandProperty);
         if (string.IsNullOrWhiteSpace(shorthandValue))
@@ -175,7 +171,7 @@ public sealed class CssStyleComputer(
             return;
         }
 
-        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, allowNegative, out var parsedValues))
+        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, out var parsedValues))
         {
             return;
         }
@@ -211,7 +207,7 @@ public sealed class CssStyleComputer(
         }
     }
 
-    private void ApplyTypography(ICssStyleDeclaration css, ComputedStyle style, ComputedStyle? parentStyle)
+    private void ApplyTypography(ICssStyleDeclaration css, ComputedStyleBuilder style, ComputedStyle? parentStyle)
     {
         style.FontFamily = _converter.GetString(css, HtmlCssConstants.CssProperties.FontFamily,
             parentStyle?.FontFamily ?? HtmlCssConstants.Defaults.FontFamily);
@@ -272,7 +268,7 @@ public sealed class CssStyleComputer(
             : parentStyle?.LineHeightMultiplier;
     }
 
-    private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyle style)
+    private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
     {
         ApplySpacingWithOverrides(
             css,
@@ -281,7 +277,6 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            allowNegative: true,
             element,
             value => style.MarginTopPt = value,
             value => style.MarginRightPt = value,
@@ -295,7 +290,6 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.PaddingRight,
             HtmlCssConstants.CssProperties.PaddingBottom,
             HtmlCssConstants.CssProperties.PaddingLeft,
-            allowNegative: false,
             element,
             value => style.PaddingTopPt = value,
             value => style.PaddingRightPt = value,
@@ -307,7 +301,6 @@ public sealed class CssStyleComputer(
         string property,
         string shorthandValue,
         IElement element,
-        bool allowNegative,
         out List<float> parsedValues)
     {
         parsedValues = [];
@@ -330,12 +323,7 @@ public sealed class CssStyleComputer(
                 return false;
             }
 
-        if (!_converter.TryGetLengthPt(token, out var points))
-        {
-                return false;
-            }
-
-            if (points < 0 && !allowNegative)
+            if (!_converter.TryGetLengthPt(token, out var points))
             {
                 return false;
             }
@@ -346,23 +334,50 @@ public sealed class CssStyleComputer(
         return true;
     }
 
-    private void ApplyBorders(ICssStyleDeclaration css, ComputedStyle style)
+    private void ApplyBorders(ICssStyleDeclaration css, ComputedStyleBuilder style)
     {
-        var hasWidth = _converter.TryGetLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.BorderWidth), out var widthPt);
-        var lineStyle = ParseBorderStyle(css.GetPropertyValue(HtmlCssConstants.CssProperties.BorderStyle));
-
-        if (!hasWidth || widthPt <= 0 || lineStyle == BorderLineStyle.None)
-        {
-            style.Borders = BorderEdges.None;
-            return;
-        }
-
-        var color = style.Color;
-        var side = new BorderSide(widthPt, color, lineStyle);
-        style.Borders = BorderEdges.Uniform(side);
+        ApplyBorderSide(css, "top", 
+            w => style.Borders.TopWidth = w, 
+            s => style.Borders.TopStyle = s, 
+            c => style.Borders.TopColor = c);
+        
+        ApplyBorderSide(css, "right", 
+            w => style.Borders.RightWidth = w, 
+            s => style.Borders.RightStyle = s, 
+            c => style.Borders.RightColor = c);
+        
+        ApplyBorderSide(css, "bottom", 
+            w => style.Borders.BottomWidth = w, 
+            s => style.Borders.BottomStyle = s, 
+            c => style.Borders.BottomColor = c);
+        
+        ApplyBorderSide(css, "left", 
+            w => style.Borders.LeftWidth = w, 
+            s => style.Borders.LeftStyle = s, 
+            c => style.Borders.LeftColor = c);
     }
 
-    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element, bool allowNegative)
+    private void ApplyBorderSide(
+        ICssStyleDeclaration css, 
+        string side, 
+        Action<float> setWidth, 
+        Action<BorderLineStyle> setStyle, 
+        Action<ColorRgba?> setColor)
+    {
+        var widthRaw = css.GetPropertyValue($"border-{side}-width");
+        if (_converter.TryGetLengthPt(widthRaw, out var widthPt))
+        {
+            setWidth(widthPt);
+        }
+
+        var styleRaw = css.GetPropertyValue($"border-{side}-style");
+        setStyle(ParseBorderStyle(styleRaw));
+
+        var colorRaw = css.GetPropertyValue($"border-{side}-color");
+        setColor(ParseBorderColor(colorRaw));
+    }
+
+    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element)
     {
         var rawValue = css.GetPropertyValue(property);
         
@@ -385,12 +400,6 @@ public sealed class CssStyleComputer(
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
             // Value provided but couldn't be parsed (non-numeric, etc.)
-            return 0;
-        }
-
-        // Check for negative values
-        if (points < 0 && !allowNegative)
-        {
             return 0;
         }
 
@@ -449,5 +458,14 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssValues.Dotted => BorderLineStyle.Dotted,
             _ => BorderLineStyle.None
         };
+    }
+
+    private static ColorRgba? ParseBorderColor(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+        return ColorRgba.FromCss(raw.Trim(), ColorRgba.Black);
     }
 }

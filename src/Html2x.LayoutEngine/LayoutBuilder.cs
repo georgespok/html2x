@@ -20,8 +20,6 @@ public class LayoutBuilder(
     IBoxTreeBuilder boxBuilder,
     IFragmentBuilder fragmentBuilder)
 {
-    private const string LayoutSnapshotCategory = "snapshot/layout";
-
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
@@ -30,20 +28,11 @@ public class LayoutBuilder(
     public async Task<HtmlLayout> BuildAsync(string html, 
         LayoutOptions options, DiagnosticsSession? diagnosticsSession = null)
     {
-        if (html is null)
-        {
-            throw new ArgumentNullException(nameof(html));
-        }
+        ArgumentNullException.ThrowIfNull(html);
+        ArgumentNullException.ThrowIfNull(options);
 
-        if (options is null)
-        {
-            throw new ArgumentNullException(nameof(options));
-        }
-
-        var dom = await _domProvider.LoadAsync(html);
-
-        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, "stage/dom", "DOM loaded");
-
+        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html));
+        
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
@@ -54,20 +43,21 @@ public class LayoutBuilder(
         {
             // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
         });
-
         
-        var layout = RunStage("stage/pagination", () =>
-        {
-            var newLayout = new HtmlLayout();
-            var page = new LayoutPage(new SizeF(options.PageSize.Width, options.PageSize.Height),
-                new Spacing(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
-                    boxTree.Page.MarginLeftPt),
-                fragments.Blocks);
-            newLayout.Pages.Add(page);
-            return newLayout;
-        });
+        var layout = RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments));
 
         return layout;
+    }
+
+    private static HtmlLayout CreateHtmlLayout(LayoutOptions options, Models.BoxTree boxTree, FragmentTree fragments)
+    {
+        var newLayout = new HtmlLayout();
+        var page = new LayoutPage(new SizeF(options.PageSize.Width, options.PageSize.Height),
+            new Spacing(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
+                boxTree.Page.MarginLeftPt),
+            fragments.Blocks);
+        newLayout.Pages.Add(page);
+        return newLayout;
     }
 
     private static void PublishEvent(DiagnosticsSession? diagnosticsSession, DiagnosticsEventType eventType, string eventName, string? eventDescription = null) =>

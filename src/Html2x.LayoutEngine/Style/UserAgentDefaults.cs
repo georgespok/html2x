@@ -8,8 +8,8 @@ namespace Html2x.LayoutEngine.Style;
 /// </summary>
 public sealed class UserAgentDefaults : IUserAgentDefaults
 {
-    private static readonly IReadOnlyDictionary<string, Action<ComputedStyle>> FontSizeDefaults =
-        new Dictionary<string, Action<ComputedStyle>>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, Action<ComputedStyleBuilder>> FontSizeDefaults =
+        new Dictionary<string, Action<ComputedStyleBuilder>>(StringComparer.OrdinalIgnoreCase)
         {
             [HtmlCssConstants.HtmlTags.H1] = s => s.FontSizePt = 18,
             [HtmlCssConstants.HtmlTags.H2] = s => s.FontSizePt = 16,
@@ -21,7 +21,7 @@ public sealed class UserAgentDefaults : IUserAgentDefaults
 
     private const float HeadingGapPt = 5f;
 
-    public void Apply(IElement element, ComputedStyle style, ComputedStyle? inheritedStyle)
+    public void Apply(IElement element, ComputedStyleBuilder style, ComputedStyle? inheritedStyle)
     {
         if (element is null)
         {
