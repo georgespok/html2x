@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        .box {
+            background-color: #e0e0e0;
+            border: 1px solid #999;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .max-300 {
+            max-width: 300px;
+            background-color: #cce5ff;
+        }
+        .max-100 {
+            max-width: 100px;
+            background-color: #d4edda;
+        }
+        .max-huge {
+            max-width: 1000px; /* Larger than page */
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>Max-Width Test</h1>
+
+    <div class="container">
+        <h2>Default Block (Full Width)</h2>
+        <div class="box">
+            This box should stretch to fill the container width (approx page width minus margins).
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Max-Width: 300px</h2>
+        <div class="box max-300">
+            This box should be capped at 300px wide (225pt). The background should stop early.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Max-Width: 100px</h2>
+        <div class="box max-100">
+            Narrow box (100px / 75pt). Text should wrap heavily.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Max-Width: 1000px (Overflow)</h2>
+        <div class="box max-huge">
+            This box has max-width: 1000px. Since the page is narrower, it should just fill the available space and not overflow or look weird.
+        </div>
+    </div>
+</body>
+</html>
