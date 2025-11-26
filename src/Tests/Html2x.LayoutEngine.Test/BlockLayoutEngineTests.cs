@@ -92,6 +92,25 @@ public class BlockLayoutEngineTests
         result.Blocks[1].IsAnonymous.ShouldBeFalse();
     }
     
+    [Theory]
+    [InlineData(150f, 150f)] // Smaller than page (200) -> Clamped
+    [InlineData(300f, 200f)] // Larger than page (200) -> Page limited
+    [InlineData(null, 200f)] // No max width -> Page limited
+    public void Layout_RespectsMaxWidth_ClampingToAvailableWidth(float? maxWidthPt, float expectedWidth)
+    {
+        // Arrange
+        var root = new BlockBoxBuilder()
+            .Block(style: new ComputedStyle { MaxWidthPt = maxWidthPt })
+            .BuildRoot();
+
+        // Act
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        // Assert
+        result.Blocks.ShouldHaveSingleItem()
+            .Width.ShouldBe(expectedWidth);
+    }
+    
     private BlockLayoutEngine CreateBlockLayoutEngine() => 
         new(_inlineEngine.Object, _tableLayoutEngine.Object, _floatLayoutEngine.Object);
 }
