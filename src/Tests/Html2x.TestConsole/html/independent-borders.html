@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Independent Borders Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .box {
+            width: 200px;
+            height: 100px;
+            background-color: #f0f0f0;
+            margin: 50px;
+            padding: 20px;
+            
+            border-top: 5px solid red;
+            border-right: 10px dashed blue;
+            border-bottom: 15px dotted green;
+            border-left: 20px solid black;
+        }
+        .another-box {
+            width: 150px;
+            height: 75px;
+            background-color: #e0e0e0;
+            margin: 30px;
+            padding: 10px;
+            border-top: 2px solid #ff9900;
+            border-left: 7px dashed purple;
+        }
+    </style>
+</head>
+<body>
+    <h1>Independent Borders Test</h1>
+    <p>This document tests rendering of independent border styles (width, color, style) for each side of a block element.</p>
+
+    <div class="box">
+        Box with distinct borders on all sides.
+    </div>
+
+    <div class="another-box">
+        Another box with top and left borders.
+    </div>
+</body>
+</html>

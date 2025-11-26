@@ -1,4 +1,4 @@
-# Html2x Context for Gemini
+﻿# Html2x Context for Gemini
 
 ## Project Overview
 

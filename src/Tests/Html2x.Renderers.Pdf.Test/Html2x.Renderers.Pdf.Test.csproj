@@ -22,6 +22,11 @@
     </PackageReference>
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="PdfPig" Version="0.1.11" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <!-- Linux Assets: Use NoDependencies variant for Azure Functions/Alpine compatibility -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
+    <!-- Windows Assets: Required for local dev and Windows environments -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
   </ItemGroup>
 
   <ItemGroup>
