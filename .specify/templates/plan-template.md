@@ -31,7 +31,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- [ ] **[I. Staged Layout]** Does the plan respect the Abstractions -> Layout -> Renderers dependency flow?
+- [ ] **[II. Predictability]** Are sources of nondeterminism isolated?
+- [ ] **[III. Test-First]** Does the plan prioritize behavior-focused tests over implementation details?
+- [ ] **[IV. Diagnostics]** Is `Html2x.Diagnostics` instrumentation included?
+- [ ] **[V. Extensibility]** Are new extension points documented in `docs/`?
+- [ ] **[VI. Goal-Driven]** Are state transitions and assumptions explicitly tracked?
+- [ ] **[VII. Accessible Docs]** Is the plan written in plain English with code sketches for complex logic?
+- [ ] **[Delivery]** Does the plan include a task to create a new HTML sample in `src/Tests/Html2x.TestConsole/html/`?
 
 ## Project Structure
 

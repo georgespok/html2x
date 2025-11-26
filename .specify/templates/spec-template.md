@@ -5,6 +5,13 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+<!--
+  CONSTITUTION NOTE (Principle VII):
+  - Write in plain, simple English suitable for a junior developer.
+  - Illustrate key architectural or logic points with short code sketches.
+  - Avoid jargon where simple explanations suffice.
+-->
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
