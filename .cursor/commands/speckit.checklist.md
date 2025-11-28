@@ -89,7 +89,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 5. **Generate checklist** - Create "Unit Tests for Requirements":
    - Create `FEATURE_DIR/checklists/` directory if it doesn't exist
    - Generate unique checklist filename:
-     - Use short, descriptive name based on domain (e.g., `ux.md`, `api.md`, `security.md`)
+     - Use short, descriptive name based on domain (e.g., `ux.md`, `integration.md`, `security.md`)
      - Format: `[domain].md`
      - If file exists, append to existing file
    - Number items sequentially starting from CHK001
@@ -232,7 +232,7 @@ Sample items (testing the requirements, NOT the implementation):
 - "Is fallback behavior defined when images fail to load? [Edge Case, Gap]"
 - "Can 'prominent display' be objectively measured? [Measurability, Spec §FR-4]"
 
-**API Requirements Quality:** `api.md`
+**External Integration Quality:** `integration.md`
 
 Sample items:
 

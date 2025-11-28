@@ -12,6 +12,17 @@
   - Avoid jargon where simple explanations suffice.
 -->
 
+## Clarifications
+
+### Session 2025-11-28
+
+- Q: What should the renderer show when an image fails to load? -> A: Show an inline placeholder box sized to expected dimensions with a missing-image icon; also log a warning.
+- Q: How should the renderer handle overly large images? -> A: Reject oversize images and render a placeholder; log a warning.
+- Q: What thresholds trigger oversize handling? -> A: Cap by file size (MaxImageSizeMb, default 10 MB) with rejection and placeholder.
+- Q: How should relative image paths be resolved? -> A: Resolve relative `src` paths against the directory of the input HTML file; allow absolute paths as-is.
+- Q: Should we set performance targets for image rendering? -> A: No explicit performance targets; rely on size caps to control cost.
+- Q: What file paths are allowed for image sources? -> A: Allow data URIs and file paths under the input HTML directory (and subfolders); block others.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -66,17 +77,17 @@ Editors want documents to remain readable even if an image source is missing or 
 
 **Acceptance Scenarios**:
 
-1. **Given** an `<img>` whose source cannot be retrieved, **When** rendered, **Then** a placeholder or empty inline-box of expected size appears and the rest of the text remains correctly positioned.
+1. **Given** an `<img>` whose source cannot be retrieved, **When** rendered, **Then** an inline placeholder box of expected size with a missing-image icon appears and the rest of the text remains correctly positioned.
 
 ---
 
 ### Edge Cases
 - Missing or empty `src` attribute.
 - Image resource exceeds page or container bounds; must scale down while keeping aspect ratio.
+- Image resource exceeds configured size threshold (MaxImageSizeMb, default 10 MB); reject, warn, and render placeholder at expected size.
 - Unsupported or corrupted image format.
 - Local file path not found or inaccessible.
 - Conflicting width and height attributes that do not match the intrinsic aspect ratio.
-- High-DPI images that require density-aware sizing to avoid oversized rendering.
 
 ## Requirements *(mandatory)*
 
@@ -87,9 +98,14 @@ Editors want documents to remain readable even if an image source is missing or 
 - **FR-003**: System MUST preserve image aspect ratio when only one dimension is provided; the unspecified dimension is derived from the intrinsic ratio.
 - **FR-004**: System MUST behave as inline-block for `<img>` elements by default, allowing text to flow on the same line until wrapping, with baseline alignment consistent with inline replaced elements.
 - **FR-005**: System MUST scale images down to fit within page or container bounds while keeping aspect ratio; scaling up beyond intrinsic size is optional per rendering quality settings.
-- **FR-006**: System MUST expose a visible or logged indication when an image fails to load while keeping the surrounding layout intact.
-- **FR-007**: System MUST handle images with density metadata (e.g., DPI) so that rendered size reflects the declared CSS pixel intent rather than raw pixel count.
-- **FR-008**: System MUST, when both `width` and `height` are provided and conflict with intrinsic aspect ratio, honor the authored `width` and adjust `height` to preserve aspect ratio (no distortion).
+- **FR-006**: System MUST render an inline placeholder box at the expected dimensions with a missing-image icon and log a warning when an image fails to load, while keeping the surrounding layout intact.
+- **FR-007**: System MUST, when both `width` and `height` are provided and conflict with intrinsic aspect ratio, honor the authored `width` and adjust `height` to preserve aspect ratio (no distortion).
+- **FR-008**: System MUST reject images that exceed a configurable byte cap (`MaxImageSizeMb`, default 10 MB); log a warning and render the placeholder at expected size instead of the image.
+
+### Non-Functional Requirements
+
+- Performance: No explicit performance targets for this feature; rely on the configurable MaxImageSizeMb cap (default 10 MB) with rejection and placeholder to keep rendering cost bounded.
+- Diagnostics: Each rendered image MUST emit a diagnostics entry with status (ok/missing/oversize), rendered size, and any warning so tests can assert predictable behavior.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -101,4 +117,10 @@ Editors want documents to remain readable even if an image source is missing or 
 - Allowed image schemes: data URIs and local file paths only; HTTP(S) or other network schemes are not supported in this feature.
 - Supported formats include JPEG, PNG, GIF (static), and SVG; others may fail gracefully without blocking rendering.
 - When no `width` or `height` is specified, the intrinsic dimensions map directly to CSS pixels unless constrained by container bounds.
+- Relative image `src` paths resolve against the directory of the input HTML file; absolute paths remain unchanged.
+- Default size thresholds: reject when an image exceeds the configurable `MaxImageSizeMb` (default 10 MB); warn when applied.
+- File access scope: allow data URIs and file paths within the input HTML directory and its subfolders; block any other paths.
+
+
+
 

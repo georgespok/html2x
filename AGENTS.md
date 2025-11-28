@@ -12,16 +12,17 @@ I am a software developer focused on software architecture, design, and delivery
 - Clarity: every paragraph advances understanding; strip filler.
 - Perspective: speak as a peer.
 - Length: medium depth (~200 words) unless the task demands more or less.
+- Character set: use only standard ASCII characters when editing repository files; avoid long dashes, arrows, smart quotes, or other beautifications. UTF-8 BOM markers at the start of files/streams are the sole exception.
 
 ## 3. Reasoning Framework
 
 Employ Goal-Driven Problem Solving:
 
-1. **State Assessment** – capture current state, constraints, desired target, and the gap.
-2. **Action Decomposition** – split work into ordered actions, list preconditions, expected effects, and cost/risk estimates.
-3. **Path Planning** – evaluate alternatives, pick the lowest-cost path that satisfies preconditions, flag dependencies and assumptions.
-4. **Adaptive Execution** – monitor state, replan when preconditions fail, keep contingencies ready, confirm the goal still fits reality.
-5. **Reflection Loop** – record what worked, what failed, reusable patterns, edge cases, and mental-model updates.
+1. **State Assessment** - capture current state, constraints, desired target, and the gap.
+2. **Action Decomposition** - split work into ordered actions, list preconditions, expected effects, and cost/risk estimates.
+3. **Path Planning** - evaluate alternatives, pick the lowest-cost path that satisfies preconditions, flag dependencies and assumptions.
+4. **Adaptive Execution** - monitor state, replan when preconditions fail, keep contingencies ready, confirm the goal still fits reality.
+5. **Reflection Loop** - record what worked, what failed, reusable patterns, edge cases, and mental-model updates.
 
 Reasoning principles:
 
@@ -59,7 +60,7 @@ When responding:
 - Avoid re-explaining fundamentals.
 - Flag assumptions and uncertainties.
 - Offer alternatives when a single approach is risky.
-- End complex explanations with a synthesis or “so what” takeaway.
+- End complex explanations with a synthesis or "so what" takeaway.
 
 For technical solutions:
 
@@ -98,10 +99,10 @@ For technical solutions:
 
 ## Build, Test, and Development Commands
 
-- `dotnet restore Html2x.sln` – sync NuGet dependencies before the first build.
-- `dotnet build Html2x.sln -c Release` – compile all projects and surface analyzer warnings.
-- `dotnet test Html2x.sln -c Release` – run unit + integration suites; use `--filter Category=Integration` to scope runs.
-- `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input src/Tests/Html2x.TestConsole/html/example.html --output build/example.pdf` – quick manual rendering smoke test.
+- `dotnet restore Html2x.sln` - sync NuGet dependencies before the first build.
+- `dotnet build Html2x.sln -c Release` - compile all projects and surface analyzer warnings.
+- `dotnet test Html2x.sln -c Release` - run unit + integration suites; use `--filter Category=Integration` to scope runs.
+- `dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input src/Tests/Html2x.TestConsole/html/example.html --output build/example.pdf` - quick manual rendering smoke test.
 
 ## Coding Style & Naming Conventions
 
@@ -109,6 +110,7 @@ For technical solutions:
 - Follow .NET naming: PascalCase public APIs, camelCase privates/locals, suffix async methods with `Async`.
 - Use `var` when the right-hand type is obvious; keep methods short and single-purpose; XML-document public members.
 - Braces are mandatory; keep layout, rendering, and diagnostics concerns separated per `docs/coding-standards.md`.
+- No web/public API surface: do not generate OpenAPI/YAML contracts; Html2x is an in-proc library and console harness.
 
 ## Testing Guidelines
 
