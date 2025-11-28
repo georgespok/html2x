@@ -25,7 +25,6 @@ Cross-layer calls must always travel forward (Abstractions -> LayoutEngine -> Re
 ### Constructors & Options
 
 - Provide guard clauses for required dependencies and use optional parameters for feature toggles.
-- Constructors should accept interfaces (or the minimal abstraction) and prefer `ILogger<T>` when the consumer knows the category. Use `ILoggerFactory` only when you must create multiple categories.
 - Expose configuration via option objects (`PdfOptions`) or factories instead of static state.
 
 ### Logging
