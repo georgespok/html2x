@@ -14,17 +14,12 @@ public sealed class DefaultLineHeightStrategy(float minimumMultiplier = 1.2f) : 
             ? minimum
             : Math.Max(intrinsic, minimum);
 
-        if (style.LineHeightMultiplier.HasValue)
+        var candidate = style.LineHeightMultiplier * fontSizePt;
+        if (!float.IsFinite(candidate) || candidate <= 0)
         {
-            var candidate = style.LineHeightMultiplier.Value * fontSizePt;
-            if (!float.IsFinite(candidate) || candidate <= 0)
-            {
-                return baseline;
-            }
-
-            return Math.Max(candidate, baseline);
+            return baseline;
         }
 
-        return baseline;
+        return Math.Max(candidate, baseline);
     }
 }

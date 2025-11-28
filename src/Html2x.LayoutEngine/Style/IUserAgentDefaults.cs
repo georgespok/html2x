@@ -8,5 +8,5 @@ namespace Html2x.LayoutEngine.Style;
 /// </summary>
 public interface IUserAgentDefaults
 {
-    void Apply(IElement element, ComputedStyle style, ComputedStyle? inheritedStyle);
+    void Apply(IElement element, ComputedStyleBuilder style, ComputedStyle? inheritedStyle);
 }

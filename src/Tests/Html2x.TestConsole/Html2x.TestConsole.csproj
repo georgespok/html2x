@@ -14,9 +14,11 @@
     <None Remove="html\example.html" />
     <None Remove="html\headlines.html" />
     <None Remove="html\images.html" />
+    <None Remove="html\independent-borders.html" />
     <None Remove="html\inline-styles.html" />
     <None Remove="html\lists.html" />
     <None Remove="html\max-width.html" />
+    <None Remove="html\single-side-border.html" />
     <None Remove="html\text-alingment.html" />
   </ItemGroup>
 
@@ -34,6 +36,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\images.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\independent-borders.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\inline-styles.html">
@@ -57,6 +62,9 @@
     <Content Include="html\grid.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="html\single-side-border.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="html\text-alingment.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -67,14 +75,15 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.53.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <!-- Linux Assets: Use NoDependencies variant for Azure Functions/Alpine compatibility -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
+    <!-- Windows Assets: Required for local dev and Windows environments -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Html2x\Html2x.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Options\" />
   </ItemGroup>
 
 </Project>

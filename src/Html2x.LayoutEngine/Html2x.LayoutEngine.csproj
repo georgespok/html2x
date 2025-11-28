@@ -16,8 +16,4 @@
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Options\" />
-  </ItemGroup>
-
 </Project>
