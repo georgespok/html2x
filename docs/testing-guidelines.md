@@ -33,16 +33,19 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 
 ## PDF Validation Guidance
 
-- Use `PdfWordParser` to read text content and attributes; verify font usage, positions, and styling.
-- `PdfValidator` should back structural assertions (valid PDF, page count). Do not assert binary equality; prefer semantic checks.
-- For regression debugging, store PDFs temporarily using `SavePdfForInspectionAsync` and link the temp path in test output.
+- Treat rendered PDFs as black boxes. Do not parse low-level structures or assert raw content streams; prefer higher-level signals.
+- Default to diagnostics-driven checks. Extend diagnostics payloads when a new feature needs verification and assert against the emitted JSON rather than PDF internals.
+- Use `PdfWordParser` only for coarse text extraction when a semantic check is unavoidable; avoid brittle coordinate-level parsing.
+- `PdfValidator` should back structural assertions (valid PDF, page count). Never assert binary equality; prefer semantic checks.
+- For regression debugging, store PDFs temporarily using `SavePdfForInspectionAsync` and link the temp path in test output; keep artifacts out of source control.
 
 ## Integration Strategy
 
 1. Cover the same user journey once. Avoid duplicating the same checks across multiple integration tests.
 2. Use real options and fonts shipped with the repo to catch platform-specific issues.
-3. Capture logging output via the `TestOutputLoggerProvider` when verifying diagnostics or error flows.
-4. Validate error propagation; assert the thrown exception type and that logs surface the failure.
+3. Capture diagnostics JSON and console logging via `TestOutputLoggerProvider`; assert rendering outcomes through diagnostics payloads instead of parsing PDFs.
+4. When a new feature needs assertions that PDFs cannot express cleanly, first add a diagnostics payload that surfaces the fact, then assert that payload in integration tests.
+5. Validate error propagation; assert the thrown exception type and that logs surface the failure.
 
 ## Continuous Improvement
 
