@@ -25,23 +25,6 @@ IFragmentRendererFactory -> IFragmentRenderer -> FragmentRenderDispatcher -> Ren
    - Ensure factory methods are idempotent; do not cache stateful renderer instances unless thread-safe.
 4. **Provide a facade** similar to `PdfRenderer` if the renderer needs orchestration beyond fragment traversal.
 
-## Extending QuestPDF Renderer
-
-When enhancing the default PDF renderer:
-
-- Update `QuestPdfFragmentRenderer` cautiously. Group changes behind clearly named helper methods (e.g., `RenderTextDecoration`).
-- Use `PdfRendererLog` for new diagnostics rather than raw `logger.Log...` calls.
-- Keep `PdfRenderer` oblivious to QuestPDF specifics-only the factory and fragment renderer should reference QuestPDF APIs.
-
-## Logging Expectations
-
-- Accept `ILogger<T>` where the component knows its category; use `ILoggerFactory` only when additional categories are required.
-- Emit:
-  - `Information` for high-level progress (page rendering).
-  - `Debug` for layout decisions (skipped whitespace, spacing adjustments).
-  - `Trace` for fragment-level traversal when helpful.
-  - `Warning` when encountering unsupported fragments or styles.
-  - `Error` when rendering fails. Re-throw the exception after logging.
 
 ## Testing Strategy
 
