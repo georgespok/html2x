@@ -109,7 +109,7 @@ Renderer (PDF via QuestPDF)
 ### Html2x (Facade)
 
 - **Role**: Provide the developer facing `HtmlConverter` API that wires layout, rendering, and diagnostics.
-- **Inputs and outputs**: Accepts HTML and `PdfOptions`, returns PDF bytes. Optionally accepts `ILoggerFactory` to illuminate the pipeline.
+- **Inputs and outputs**: Accepts HTML and `PdfOptions`, returns PDF bytes. 
 - **Extension guidance**: Keep this layer thin; add configuration knobs or logging hooks but redirect substantive behavior to the pipeline projects.
 
 ### Test Projects
@@ -141,20 +141,13 @@ Renderer (PDF via QuestPDF)
 5. **Observable by default**: When adding complex logic, add structured logging hooks at the same time so future debugging is easier.
 ## Diagnostics Logging
 
-The pipeline now exposes structured diagnostics across the layout and rendering layers.
+Diagnostics can be switched on per call by setting `HtmlConverterOptions.Diagnostics.EnableDiagnostics = true`. When enabled, `HtmlConverter` builds a `DiagnosticsSession` that collects time-stamped events plus payloads describing what happened.
 
-* **Factory wiring:** Pass an `ILoggerFactory` into `HtmlConverter` (or directly into `LayoutBuilderFactory` / `PdfRenderer`) to light up logging. When omitted, the system falls back to `NullLogger` to avoid noisy output.
-* **Severity bands:**
-  * `Information` - layout start/end, renderer layout summaries
-  * `Debug` - per-page renderer metrics, layout stage completion
-  * `Trace` (treat as Verbose) - fragment traversal details in both the renderer dispatcher and nested block rendering
-  * `Warning` - unsupported fragments such as images or unknown block children
-  * `Error` - unhandled exceptions captured in `PdfRenderer.RenderAsync`
-* **Correlation data:** Renderer logs include the fragment type, absolute coordinates, and a hash of the active `PdfOptions` so multi-run comparisons stay lightweight.
-* **Performance:** Logging is pay-for-play; `LoggerMessage.Define` avoids allocations when levels are disabled. Verbose/Trace calls guard `IsEnabled` checks so high-volume traces stay dormant until explicitly enabled.
-* **Future hooks:** Layout logging touches only the facade (`LayoutBuilder`). Additional stages (style resolution, pagination heuristics) can extend `LayoutLog.StageComplete` or add new events without constructor churn.
-
-With these hooks you can capture a full breadcrumb trail from HTML ingestion through PDF emission during troubleshooting, then turn it off cleanly for regular runs.
+- Event flow: `StartStage/LayoutBuild` (stores trimmed HTML), `EndStage/LayoutBuild` (stores a `layout.snapshot` built by `LayoutSnapshotMapper`), `StartStage/PdfRender`, `EndStage/PdfRender` (stores a `render.summary` with `pageCount` and `pdfSize` in bytes).
+- Payload contracts: `HtmlPayload`, `LayoutSnapshotPayload` (pages, margins, fragment rectangles and text), and `RenderSummaryPayload` implement `IDiagnosticsPayload` with a `Kind` marker so serializers can discriminate.
+- JSON export: `Html2x.Diagnostics.DiagnosticsSessionSerializer.ToJson(session)` produces indented, camelCase JSON with relaxed escaping. The TestConsole accepts `--diagnostics` and `--diagnostics-json <path>` or you can run `src/Tests/Html2x.TestConsole/diagnostics/run-diagnostics-json.ps1` to render a PDF and write `build/diagnostics/session.json`.
+- Consumption: `Html2PdfResult.Diagnostics` returns the session so hosts can persist it, diff snapshots between runs, or feed it into visualization tools.
+- Extensibility: emit new payloads by implementing `IDiagnosticsPayload` and adding a mapper entry in `DiagnosticsSessionSerializer`. Stage-level markers can be added in pipeline stages by passing the `DiagnosticsSession` through.
 
 ## Testing Strategy
 
