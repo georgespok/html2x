@@ -48,6 +48,8 @@ public static class HtmlCssConstants
         public const string Style = "style";
         public const string Class = "class";
         public const string Src = "src";
+        public const string Width = "width";
+        public const string Height = "height";
     }
 
     /// <summary>

@@ -1,33 +1,29 @@
-﻿namespace Html2x.Abstractions.Layout.Fragments;
+namespace Html2x.Abstractions.Layout.Fragments;
 
-// Replaced element (img)
+/// <summary>
+/// Represents an HTML &lt;img&gt; element after style resolution and basic validation.
+/// Values are immutable and passed to layout/rendering stages.
+/// </summary>
 public sealed class ImageFragment : Fragment
 {
-    public required ImageRef Image { get; init; } // logical reference; renderer resolves bytes/handle
-    public ObjectFit ObjectFit { get; init; } // Contain, Cover, Fill, ScaleDown, None
-    public Alignment Align { get; init; } // for contain/cover anchoring
-}
+    /// <summary>Original src attribute value (data URI or file path relative to input HTML).</summary>
+    public required string Src { get; init; }
 
-public sealed record ImageRef(string Id); // maps to image bytes in a doc-level resource cache
+    /// <summary>Author-specified width in CSS pixels, if present.</summary>
+    public double? AuthoredWidthPx { get; init; }
 
-public enum ObjectFit
-{
-    Fill,
-    Contain,
-    Cover,
-    ScaleDown,
-    None
-}
+    /// <summary>Author-specified height in CSS pixels, if present.</summary>
+    public double? AuthoredHeightPx { get; init; }
 
-public enum Alignment
-{
-    Center,
-    TopLeft,
-    Top,
-    TopRight,
-    Right,
-    BottomRight,
-    Bottom,
-    BottomLeft,
-    Left
+    /// <summary>Intrinsic image width in CSS pixels (0 if unknown at fragment creation).</summary>
+    public double IntrinsicWidthPx { get; init; }
+
+    /// <summary>Intrinsic image height in CSS pixels (0 if unknown at fragment creation).</summary>
+    public double IntrinsicHeightPx { get; init; }
+
+    /// <summary>True when the image failed validation or loading (e.g., out-of-scope path).</summary>
+    public bool IsMissing { get; init; }
+
+    /// <summary>True when the image exceeded size caps and will be rendered as a placeholder.</summary>
+    public bool IsOversize { get; init; }
 }
