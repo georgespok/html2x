@@ -1,6 +1,7 @@
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace Html2x.TestConsole;
 
@@ -88,7 +89,9 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
             Pdf = new PdfOptions
             {
                 FontPath = "\\fonts\\Inter-Regular.ttf",
-                EnableDebugging = true
+                EnableDebugging = true,
+                HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
+                                Directory.GetCurrentDirectory()
             },
             Diagnostics = new DiagnosticsOptions
             {
