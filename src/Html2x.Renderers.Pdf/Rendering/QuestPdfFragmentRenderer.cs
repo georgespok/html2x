@@ -18,6 +18,7 @@ internal sealed class QuestPdfFragmentRenderer(
     private readonly IContainer _container = container ?? throw new ArgumentNullException(nameof(container));
     private readonly PdfOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     private readonly BorderShapeDrawer _borderShapeDrawer = new();
+    private readonly ImageRenderer _imageRenderer = new(options);
     
     public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
@@ -119,7 +120,7 @@ internal sealed class QuestPdfFragmentRenderer(
 
     public void RenderImage(ImageFragment fragment)
     {
-        // Image rendering not yet supported
+        _imageRenderer.Render(_container, fragment);
     }
 
     public void RenderRule(RuleFragment fragment)
