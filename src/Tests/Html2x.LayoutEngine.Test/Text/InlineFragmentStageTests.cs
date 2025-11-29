@@ -1,4 +1,3 @@
-using System.Linq;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Fragment.Stages;
