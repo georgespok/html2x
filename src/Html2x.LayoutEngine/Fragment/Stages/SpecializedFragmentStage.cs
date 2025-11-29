@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Globalization;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 
@@ -33,35 +34,12 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
     {
         foreach (var child in blockBox.Children)
         {
-            var tag = child.Element?.TagName?.ToLowerInvariant();
+            var fragment = CreateSpecialFragment(child, blockBox);
 
-            switch (tag)
+            if (fragment is not null)
             {
-                case HtmlCssConstants.HtmlTags.Hr:
-                {
-                    var rule = new RuleFragment
-                    {
-                        Rect = new RectangleF(blockBox.X, blockBox.Y + blockBox.Height / 2, blockBox.Width, 1),
-                        Style = StyleConverter.FromComputed(child.Style)
-                    };
-                    blockFragment.Children.Add(rule);
-                    NotifySpecial(child, rule, observers);
-                    break;
-                }
-                case HtmlCssConstants.HtmlTags.Img:
-                {
-                    var img = new ImageFragment
-                    {
-                        Rect = new RectangleF(blockBox.X, blockBox.Y, 100, 80),
-                        Image = new ImageRef(child.Element?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty),
-                        ObjectFit = ObjectFit.Contain,
-                        Align = Alignment.Center,
-                        Style = StyleConverter.FromComputed(child.Style)
-                    };
-                    blockFragment.Children.Add(img);
-                    NotifySpecial(child, img, observers);
-                    break;
-                }
+                blockFragment.Children.Add(fragment);
+                NotifySpecial(child, fragment, observers);
             }
 
             if (child is BlockBox nested && lookup.TryGetValue(nested, out var nestedFragment))
@@ -71,6 +49,47 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         }
     }
 
+    private static Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent)
+    {
+        var tag = child.Element?.TagName?.ToLowerInvariant();
+
+        return tag switch
+        {
+            HtmlCssConstants.HtmlTags.Hr => CreateRuleFragment(parent),
+            HtmlCssConstants.HtmlTags.Img => CreateImageFragment(child, parent),
+            _ => null
+        };
+    }
+
+    private static RuleFragment CreateRuleFragment(BlockBox box) =>
+        new()
+        {
+            Rect = new RectangleF(box.X, box.Y + box.Height / 2, box.Width, 1),
+            Style = StyleConverter.FromComputed(box.Style)
+        };
+
+    private static ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent)
+    {
+        var el = child.Element;
+        var src = el?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty;
+        var authoredWidth = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Width);
+        var authoredHeight = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Height);
+
+        return new ImageFragment
+        {
+            Src = src,
+            AuthoredWidthPx = authoredWidth,
+            AuthoredHeightPx = authoredHeight,
+            IntrinsicWidthPx = authoredWidth ?? 0,
+            IntrinsicHeightPx = authoredHeight ?? 0,
+            IsMissing = false,
+            IsOversize = false,
+            // Sizing will be refined later in box/fragment layout; keep placeholder rect for now.
+            Rect = new RectangleF(parent.X, parent.Y, 0, 0),
+            Style = StyleConverter.FromComputed(child.Style)
+        };
+    }
+
     private static void NotifySpecial(DisplayNode source, Abstractions.Layout.Fragments.Fragment fragment,
         IReadOnlyList<IFragmentBuildObserver> observers)
     {
@@ -78,5 +97,15 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         {
             observer.OnSpecialFragmentCreated(source, fragment);
         }
+    }
+
+    private static double? ParsePxAttr(AngleSharp.Dom.IElement? el, string attr)
+    {
+        var value = el?.GetAttribute(attr);
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var d))
+        {
+            return d;
+        }
+        return null;
     }
 }

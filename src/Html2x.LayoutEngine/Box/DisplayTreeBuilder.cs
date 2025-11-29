@@ -26,7 +26,7 @@ public sealed class DisplayTreeBuilder
         {
             DisplayRole.Block => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.Inline => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.InlineBlock => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.InlineBlock => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.ListItem => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.Float => new FloatBox
             {
