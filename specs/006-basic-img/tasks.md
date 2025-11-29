@@ -5,19 +5,19 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Create `src/Html2x.Renderers.Pdf/Images` folder to host image rendering helpers (ensures a dedicated place for code and placeholder asset).
+- [X] T001 Create `src/Html2x.Renderers.Pdf/Images` folder to host image rendering helpers (ensures a dedicated place for code and placeholder asset).
   - Why: keeps image assets separate from logic so code stays clean.
   - How: in your file explorer or via `mkdir` create that path. No coding.
-- [ ] T002 Add placeholder PNG (small missing-image icon) to `src/Html2x.Renderers.Pdf/Images/placeholder.png` for use when loads fail.
+- [X] T002 Add placeholder PNG (small missing-image icon) to `src/Html2x.Renderers.Pdf/Images/placeholder.png` for use when loads fail.
   - Why: renderer needs a visible fallback when an image is missing or blocked.
   - How: save a 64x64 PNG with an “X” icon; ensure file name matches. Size is small to avoid bloat.
-- [ ] T003 Ensure `dotnet restore Html2x.sln` succeeds and dependencies (QuestPDF) are available; document command in `specs/006-basic-img/quickstart.md`.
-  - Command: `dotnet restore Html2x.sln`
+- [X] T003 Ensure `dotnet restore src/Html2x.sln` succeeds and dependencies (QuestPDF) are available; document command in `specs/006-basic-img/quickstart.md`.
+  - Command: `dotnet restore src/Html2x.sln`
   - If it succeeds, copy the command and its success note into quickstart.md so newcomers know the first step.
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T004 Define image fragment contracts in `src/Html2x.Abstractions/Layout/Fragments/ImageFragment.cs` to carry src, computed size, and failure state; keep fields readonly and XML documented.
+- [X] T004 Define image fragment contracts in `src/Html2x.Abstractions/Layout/Fragments/ImageFragment.cs` to carry src, computed size, and failure state; keep fields readonly and XML documented.
   - Add properties: `string Src`, `double? AuthoredWidthPx`, `double? AuthoredHeightPx`, `double IntrinsicWidthPx`, `double IntrinsicHeightPx`, `bool IsMissing`, `bool IsOversize`.
   - Code sketch:
     ```csharp
@@ -32,7 +32,7 @@
         public bool IsOversize { get; }
     }
     ```
-- [ ] T005 Add image diagnostics payload fields in `src/Html2x.Diagnostics/HtmlPayload.cs` for image load result (enum), applied scale, and warning; update factory methods.
+- [X] T005 Add image diagnostics payload fields in `src/Html2x.Diagnostics/HtmlPayload.cs` for image load result (enum), applied scale, and warning; update factory methods.
   - Add enum `ImageStatus { Ok, Missing, Oversize }` in diagnostics namespace; store the enum value, not a string.
   - Code sketch:
     ```csharp
@@ -43,7 +43,7 @@
     payload.AppliedScale = scale;
     if (fragment.IsOversize) payload.Warning = "Image rejected: >10MB";
     ```
-- [ ] T006 Wire image fragment construction in layout pipeline: update `src/Html2x.LayoutEngine/Fragment/FragmentBuilder.cs` to emit `ImageFragment` with authored width/height, provisional intrinsic size, and oversize flags.
+- [X] T006 Wire image fragment construction in layout pipeline: update `src/Html2x.LayoutEngine/Fragment/FragmentBuilder.cs` to emit `ImageFragment` with authored width/height, provisional intrinsic size, and oversize flags.
   - Without an image decoder in layout, set `intrinsicW/H` to authored values when present, otherwise 0; renderer will re-validate size against bytes and apply caps.
   - Code sketch:
     ```csharp
@@ -52,7 +52,7 @@
     var frag = new ImageFragment(src, authoredWidth, authoredHeight, iw, ih, isMissing, isOversize);
     fragments.Add(frag);
     ```
-- [ ] T007 Add inline-block handling for images in `src/Html2x.LayoutEngine/Box/DisplayTreeBuilder.cs` to ensure images create inline boxes with baseline alignment metadata.
+- [X] T007 Add inline-block handling for images in `src/Html2x.LayoutEngine/Box/DisplayTreeBuilder.cs` to ensure images create inline boxes with baseline alignment metadata.
   - Create an inline `Box` with width/height from fragment, set `BaselineOffset = height` for now or a simple `height * 0.8` if font metrics unavailable.
   - Code sketch:
     ```csharp
@@ -60,7 +60,7 @@
     box.Fragment = imageFragment;
     currentLine.Add(box);
     ```
-- [ ] T008 Add configurable max image size (MB) to the options layer (`PdfOptions` in `src/Html2x.Abstractions/Options/PdfOptions.cs`, default 10) and thread it through to the renderer.
+- [X] T008 Add configurable max image size (MB) to the options layer (`PdfOptions` in `src/Html2x.Abstractions/Options/PdfOptions.cs`, default 10) and thread it through to the renderer.
   - Add property: `public double MaxImageSizeMb { get; set; } = 10;`
   - Convert once to bytes and pass via existing options plumbing into the renderer.
   - Code sketch:
@@ -70,7 +70,7 @@
     // later in renderer creation
     renderer.MaxImageSizeBytes = options.MaxImageSizeBytes;
     ```
-- [ ] T009 Implement image byte loading helper in `src/Html2x.Renderers.Pdf/ImageLoader.cs` to read local files and data URIs with path-scope check.
+- [X] T009 Implement image byte loading helper in `src/Html2x.Renderers.Pdf/ImageLoader.cs` to read local files and data URIs with path-scope check.
   - Steps: if `src` starts with `data:`, decode base64; else combine with input HTML directory and read bytes; reject if outside allowed scope.
   - Code sketch:
     ```csharp
@@ -85,7 +85,7 @@
 **Goal**: Render images at authored width or height while preserving aspect ratio.
 **Independent Test**: Render HTML with width-only and height-only images; verify sizes match expectations without distortion.
 
-- [ ] T010 [US1] Implement size resolution logic in `src/Html2x.LayoutEngine/Fragment/StyleConverter.cs` to compute missing dimension from intrinsic aspect ratio when only one is provided.
+- [X] T010 [US1] Implement size resolution logic in `src/Html2x.LayoutEngine/Fragment/StyleConverter.cs` to compute missing dimension from intrinsic aspect ratio when only one is provided.
   - Formula: `missing = given * intrinsicOther / intrinsicGiven`.
   - Code sketch:
     ```csharp
@@ -97,14 +97,14 @@
         return (iw, ih);
     }
     ```
-- [ ] T011 [US1] Enforce container/page fitting in `src/Html2x.LayoutEngine/Box/BoxTreeBuilder.cs`: cap box size to available inline space and page bounds while preserving aspect ratio.
+- [X] T011 [US1] Enforce container/page fitting in `src/Html2x.LayoutEngine/Box/BoxTreeBuilder.cs`: cap box size to available inline space and page bounds while preserving aspect ratio.
   - Steps: compute availableWidth; if image width > availableWidth, scale both width/height by factor `availableWidth / width`.
   - Code sketch:
     ```csharp
     var scale = Math.Min(1.0, availableWidth / width);
     width *= scale; height *= scale;
     ```
-- [ ] T011a [US1] Add layout unit test in `src/Tests/Html2x.LayoutEngine.Test/BoxTreeBuilderTests.cs` to verify container fitting: given 200px available width and image target 300x150, expect final 200x100.
+- [X] T011a [US1] Add layout unit test in `src/Tests/Html2x.LayoutEngine.Test/BoxTreeBuilderTests.cs` to verify container fitting: given 200px available width and image target 300x150, expect final 200x100.
   - Use layout test helper to simulate available inline width.
   - Code sketch:
     ```csharp
@@ -112,7 +112,7 @@
     box.Width.Should().BeApproximately(200,1);
     box.Height.Should().BeApproximately(100,1);
     ```
-- [ ] T012 [US1] Render images in PDF: add a renderer helper `src/Html2x.Renderers.Pdf/ImageRenderer.cs` that accepts `ImageFragment`, sets QuestPDF `Image` with computed width/height, and preserves aspect ratio.
+- [X] T012 [US1] Render images in PDF: add a renderer helper `src/Html2x.Renderers.Pdf/ImageRenderer.cs` that accepts `ImageFragment`, sets QuestPDF `Image` with computed width/height, and preserves aspect ratio.
   - Guard size caps and missing flag:
     ```csharp
     if (fragment.IsMissing || fragment.IsOversize)
@@ -122,7 +122,7 @@
     page.Element().Width(width).Height(height).Image(imgBytes);
     ```
   - `RenderPlaceholder` will be implemented in US3 tasks.
-- [ ] T013 [US1] Add sample HTML with explicit width and height cases to `src/Tests/Html2x.TestConsole/html/img-explicit-size.html` demonstrating P1 scenarios.
+- [X] T013 [US1] Add sample HTML with explicit width and height cases to `src/Tests/Html2x.TestConsole/html/img-explicit-size.html` demonstrating P1 scenarios.
   - Include examples:
     ```html
     <p>Width only: <img src="images/cat.png" width="120" /></p>

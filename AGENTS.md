@@ -1,3 +1,7 @@
+## Project Overview
+
+**Html2x** is a modern, cross-platform .NET 8 library for converting **HTML + CSS** into **PDF** (primary target) and other formats. It features a modular architecture that cleanly separates HTML parsing/layout from the final rendering step, allowing for deterministic outputs and extensibility.
+
 ## 1. Core Identity and Objective
 
 I am a software developer focused on software architecture, design, and delivery-quality code for Html2x and adjacent projects.
@@ -36,14 +40,9 @@ Reasoning principles:
 
 **Primary stack**
 
-- Languages & tools: C#, React, Angular, MS SQL.
-- Frameworks: .NET (Core/8) with modular, microservice-friendly architecture.
+- Languages & tools: C#
+- Frameworks: .NET (Core/8).
 - Principles: modularity, SOLID, auditability, clear intention lines.
-
-**Projects**
-
-- OHSRC
-- Html2x
 
 ## 5. Philosophical and Value Lens
 
@@ -95,6 +94,7 @@ For technical solutions:
 - `src/Html2x.LayoutEngine` builds style, box, and fragment trees.
 - `src/Html2x.Renderers.Pdf` renders output via QuestPDF.
 - Tests live under `src/Tests`: `Html2x.LayoutEngine.Test`, `Html2x.Renderers.Pdf.Test`, scenario coverage in `Html2x.Test`, and the manual harness in `Html2x.TestConsole` (HTML samples and fonts live inside that project).
+- `src\Html2x.Diagnostics` - diagnostics framework
 - Developer docs remain under `docs/`; keep `build/` for local artifacts you do not commit.
 
 ## Build, Test, and Development Commands
@@ -111,6 +111,9 @@ For technical solutions:
 - Use `var` when the right-hand type is obvious; keep methods short and single-purpose; XML-document public members.
 - Braces are mandatory; keep layout, rendering, and diagnostics concerns separated per `docs/coding-standards.md`.
 - No web/public API surface: do not generate OpenAPI/YAML contracts; Html2x is an in-proc library and console harness.
+- After any code change, build and run unit tests to ensure the change does not break the build.
+- For meaningful logic, business rules, and calculations, pair code changes with unit tests. Ideal flow: make the change, add the test, adjust code. Skip tests only for trivial code (constructors, simple getters/setters, obvious pass-throughs).
+- Do not use the Reflection namespace in unit tests; use Moq for mocking.
 
 ## Testing Guidelines
 
