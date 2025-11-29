@@ -74,18 +74,25 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         var src = el?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty;
         var authoredWidth = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Width);
         var authoredHeight = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Height);
+        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, 0, 0);
+
+        if (parent.Width > 0 && width > parent.Width)
+        {
+            var scale = parent.Width / width;
+            width *= scale;
+            height *= scale;
+        }
 
         return new ImageFragment
         {
             Src = src,
             AuthoredWidthPx = authoredWidth,
             AuthoredHeightPx = authoredHeight,
-            IntrinsicWidthPx = authoredWidth ?? 0,
-            IntrinsicHeightPx = authoredHeight ?? 0,
+            IntrinsicWidthPx = width,
+            IntrinsicHeightPx = height,
             IsMissing = false,
             IsOversize = false,
-            // Sizing will be refined later in box/fragment layout; keep placeholder rect for now.
-            Rect = new RectangleF(parent.X, parent.Y, 0, 0),
+            Rect = new RectangleF(parent.X, parent.Y, (float)width, (float)height),
             Style = StyleConverter.FromComputed(child.Style)
         };
     }
