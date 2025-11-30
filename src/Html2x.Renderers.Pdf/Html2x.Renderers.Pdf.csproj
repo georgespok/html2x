@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
   </ItemGroup>
 
 </Project>

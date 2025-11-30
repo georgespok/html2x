@@ -62,6 +62,14 @@ public static class DiagnosticsSessionSerializer
                 summary.PageCount,
                 summary.PdfSize
             },
+            ImageRenderPayload image => new
+            {
+                image.Kind,
+                image.Src,
+                image.RenderedWidth,
+                image.RenderedHeight,
+                image.Status
+            },
             null => null,
             _ => new { payload.Kind }
         };
