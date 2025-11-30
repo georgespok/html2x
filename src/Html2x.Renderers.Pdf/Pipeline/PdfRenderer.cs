@@ -1,8 +1,10 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Rendering;
 using Html2x.Renderers.Pdf.Visitors;
+using Html2x.Diagnostics;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPageSize = QuestPDF.Helpers.PageSize;
@@ -38,7 +40,7 @@ public class PdfRenderer
         
         try
         {
-            var bytes = RenderWithQuestPdf(htmlLayout, options);
+            var bytes = RenderWithQuestPdf(htmlLayout, options, diagnosticsSession);
             return Task.FromResult(bytes);
         }
         catch (Exception ex)
@@ -48,11 +50,13 @@ public class PdfRenderer
         }
     }
 
-    private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
+    private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
     {
         PublishLayoutStart(layout, options);
 
         using var stream = new MemoryStream();
+
+        PublishImageDiagnostics(layout, diagnosticsSession);
 
         Document.Create(doc => ConfigureDocument(doc, layout, options))
             .GeneratePdf(stream);
@@ -149,5 +153,52 @@ public class PdfRenderer
 
         
     }
-    
+
+    private static void PublishImageDiagnostics(HtmlLayout layout, DiagnosticsSession? diagnosticsSession)
+    {
+        if (diagnosticsSession is null || layout.Pages.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var page in layout.Pages)
+        {
+            foreach (var fragment in page.Children)
+            {
+                PublishImageDiagnostics(fragment, diagnosticsSession);
+            }
+        }
+    }
+
+    private static void PublishImageDiagnostics(Fragment fragment, DiagnosticsSession diagnosticsSession)
+    {
+        switch (fragment)
+        {
+            case ImageFragment image:
+                diagnosticsSession.Events.Add(new DiagnosticsEvent
+                {
+                    Type = DiagnosticsEventType.Trace,
+                    Name = "ImageRender",
+                    Timestamp = DateTimeOffset.UtcNow,
+                    Payload = new ImageRenderPayload
+                    {
+                        Src = image.Src,
+                        RenderedWidth = image.Rect.Width,
+                        RenderedHeight = image.Rect.Height,
+                        Status = image.IsMissing
+                            ? ImageStatus.Missing
+                            : image.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok
+                    }
+                });
+                break;
+            case BlockFragment block:
+                foreach (var child in block.Children)
+                {
+                    PublishImageDiagnostics(child, diagnosticsSession);
+                }
+                break;
+            default:
+                break;
+        }
+    }
 }
