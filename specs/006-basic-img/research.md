@@ -8,14 +8,14 @@
 - Alternatives considered: Use process working directory; require absolute paths only.
 
 ### Oversized image handling
-- Decision: Downscale images when larger than 10 MP or 10 MB; log a warning.
-- Rationale: Bounded memory/CPU cost while still rendering the asset.
-- Alternatives considered: Reject over-threshold images; no limits.
+- Decision: Flag oversize (>10 MB) in the image provider during layout and render a placeholder; no downscaling.
+- Rationale: Keeps layout IO centralized and deterministic; avoids renderer-specific byte checks.
+- Alternatives considered: Downscale in renderer; defer decision to renderer IO.
 
 ### Missing image behavior
-- Decision: Render an inline placeholder box at expected size with a missing-image icon and log a warning.
-- Rationale: Keeps layout stable and signals the issue to users and diagnostics.
-- Alternatives considered: Silent empty box; collapse layout.
+- Decision: Image provider marks missing during layout (bad path/data URI), renderer draws placeholder at expected size and logs a warning.
+- Rationale: Stabilizes layout early and keeps renderer IO-free.
+- Alternatives considered: Detect missing only at render time; silent empty box.
 
 ### Performance targets
 - Decision: No explicit performance targets; rely on size caps and downscaling.
@@ -23,6 +23,6 @@
 - Alternatives considered: Per-image or per-document timing targets.
 
 ### Rendering pipeline (QuestPDF only)
-- Decision: Pass supported image bytes/streams directly to QuestPDF `Image` element; reject images over 10 MP or 10 MB instead of downscaling; generate a small built-in placeholder PNG for failures.
-- Rationale: Keeps dependencies minimal; QuestPDF supports required formats (JPEG/PNG/GIF/SVG) and preserves aspect ratio; rejecting oversize files avoids extra tooling and complexity.
-- Alternatives considered: Add SkiaSharp for pre-downscale/format normalization (not needed given rejection policy); always downscale (more work with little benefit under current caps).
+- Decision: Renderer consumes layout-marked image status and draws image or placeholder; no renderer IO or size checks.
+- Rationale: IO centralized in provider; renderer stays QuestPDF-only paint logic.
+- Alternatives considered: Renderer loads bytes directly; mixed concerns.

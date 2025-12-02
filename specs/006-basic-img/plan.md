@@ -66,8 +66,9 @@ src/
 
 ## Rendering Approach (QuestPDF only)
 
+- Image IO/validation happens before rendering via an `IImageProvider` scoped to the input HTML directory; the renderer consumes flags and does no IO.
 - Pass supported image bytes/streams directly to QuestPDF `Image`; rely on QuestPDF for aspect preservation and inline layout.
-- Reject images over the configurable `MaxImageSizeMb` (default 10 MB); emit warning and render placeholder box (no downscaling step).
+- Reject images over the configurable `MaxImageSizeMb` (default 10 MB); emit warning and render placeholder box (no downscaling step) — the provider/layout marks oversize.
 - Baseline alignment: maintain inline-block layout in the layout stage; renderer uses QuestPDF inline container with baseline offset from layout metadata.
 - Failure cases: when load fails or is rejected, use a small built-in placeholder PNG at expected size with missing-image icon and log warning.
 

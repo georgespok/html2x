@@ -180,15 +180,7 @@
     bool allowed = isDataUri || path.StartsWith(htmlDir, StringComparison.OrdinalIgnoreCase);
     fragment.IsMissing = !allowed;
     ```
-- [ ] T031 [US3] Add oversize rejection (>10 MB) before rendering in `src/Html2x.Renderers.Pdf/ImageRenderer.cs`; log warning via Diagnostics payload.
-  - Use options: if `bytes.Length > MaxImageSizeBytes`, set `IsOversize = true`, skip image draw.
-  - Code sketch:
-    ```csharp
-    if (bytes.Length > maxImageSizeBytes) {
-        payload.Warning = "Image rejected: oversize";
-        return placeholder;
-    }
-    ```
+- [ ] T031 [US3] Mark oversize (>10 MB) during layout via the image provider; renderer should respect `IsOversize` and log warning/placeholder only.
 - [ ] T032 [US3] Implement placeholder rendering in `src/Html2x.Renderers.Pdf/ImageRenderer.cs` using the embedded placeholder PNG when load fails or is rejected; keep box size equal to expected dimensions.
   - Load placeholder bytes once (static) and draw with same width/height as requested.
   - Code sketch:
