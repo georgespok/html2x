@@ -3,6 +3,7 @@ using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Fragment.Stages;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
+using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Text;
@@ -19,11 +20,12 @@ public class InlineFragmentStageTests
                 .Inline("bold", new ComputedStyle { FontSizePt = 12, Bold = true })
                 .Inline(" and ", new ComputedStyle { FontSizePt = 12 })
                 .Inline("italic", new ComputedStyle { FontSizePt = 12, Italic = true })
-                .Inline(" text.", new ComputedStyle { FontSizePt = 12 })
-                .Up()
+            .Inline(" text.", new ComputedStyle { FontSizePt = 12 })
+            .Up()
             .BuildTree();
 
-        var state = new FragmentBuildState(boxTree);
+        var context = new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024));
+        var state = new FragmentBuildState(boxTree, context);
         
         // Act
         state = new BlockFragmentStage().Execute(state);

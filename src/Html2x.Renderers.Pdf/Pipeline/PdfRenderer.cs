@@ -1,8 +1,10 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Rendering;
 using Html2x.Renderers.Pdf.Visitors;
+using Html2x.Diagnostics;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using QuestPageSize = QuestPDF.Helpers.PageSize;
@@ -12,6 +14,7 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 public class PdfRenderer
 {
     private readonly IFragmentRendererFactory _rendererFactory;
+    private DiagnosticsSession? _diagnosticsSession;
 
     public PdfRenderer()
         : this(new QuestPdfFragmentRendererFactory())
@@ -29,6 +32,7 @@ public class PdfRenderer
     {
         options ??= new PdfOptions();
         QuestPdfConfigurator.Configure(options.FontPath, options.LicenseType, options.EnableDebugging);
+        _diagnosticsSession = diagnosticsSession;
 
         if (htmlLayout is null)
         {
@@ -38,7 +42,7 @@ public class PdfRenderer
         
         try
         {
-            var bytes = RenderWithQuestPdf(htmlLayout, options);
+            var bytes = RenderWithQuestPdf(htmlLayout, options, diagnosticsSession);
             return Task.FromResult(bytes);
         }
         catch (Exception ex)
@@ -48,7 +52,7 @@ public class PdfRenderer
         }
     }
 
-    private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options)
+    private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
     {
         PublishLayoutStart(layout, options);
 
@@ -108,7 +112,7 @@ public class PdfRenderer
                         ? box.MinHeight(fragment.Rect.Height)
                         : box;
 
-                    var renderer = _rendererFactory.Create(target, options);
+                    var renderer = _rendererFactory.Create(target, options, _diagnosticsSession);
                     var dispatcher = new FragmentRenderDispatcher(renderer);
                     fragment.VisitWith(dispatcher);
                 });
@@ -149,5 +153,5 @@ public class PdfRenderer
 
         
     }
-    
+
 }

@@ -5,14 +5,6 @@ namespace Html2x.LayoutEngine.Fragment;
 
 public sealed class FragmentBuilder(IEnumerable<IFragmentBuildObserver> observers) : IFragmentBuilder
 {
-    private readonly IReadOnlyList<IFragmentBuildStage> _stages =
-    [
-        new BlockFragmentStage(),
-        new InlineFragmentStage(),
-        new SpecializedFragmentStage(),
-        new ZOrderStage()
-    ];
-
     private readonly IReadOnlyList<IFragmentBuildObserver> _observers = observers?.ToArray() ?? [];
 
     public FragmentBuilder()
@@ -20,14 +12,15 @@ public sealed class FragmentBuilder(IEnumerable<IFragmentBuildObserver> observer
     {
     }
 
-    public FragmentTree Build(BoxTree boxes)
+    public FragmentTree Build(BoxTree boxes, FragmentBuildContext context)
     {
-        var state = new FragmentBuildState(boxes).WithObservers(_observers);
+        var state = new FragmentBuildState(boxes, context)
+            .WithObservers(_observers);
 
-        foreach (var stage in _stages)
-        {
-            state = stage.Execute(state);
-        }
+        state = new BlockFragmentStage().Execute(state);
+        state = new InlineFragmentStage().Execute(state);
+        state = new SpecializedFragmentStage().Execute(state);
+        state = new ZOrderStage().Execute(state);
 
         return state.Fragments;
     }
