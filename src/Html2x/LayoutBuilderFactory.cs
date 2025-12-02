@@ -12,11 +12,13 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
     public LayoutBuilder Create()
     {
         var angleSharpConfig = Configuration.Default.WithCss();
+        var imageProvider = new FileSystemImageProvider();
 
         return new LayoutBuilder(
             new AngleSharpDomProvider(angleSharpConfig),
             new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter()),
             new BoxTreeBuilder(),
-            new FragmentBuilder());
+            new FragmentBuilder(),
+            imageProvider);
     }
 }

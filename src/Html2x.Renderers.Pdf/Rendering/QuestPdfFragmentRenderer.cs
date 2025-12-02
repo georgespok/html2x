@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Options;
@@ -12,13 +13,15 @@ namespace Html2x.Renderers.Pdf.Rendering;
 
 internal sealed class QuestPdfFragmentRenderer(
     IContainer container,
-    PdfOptions options)
+    PdfOptions options,
+    DiagnosticsSession? diagnosticsSession)
     : IFragmentRenderer
 {
     private readonly IContainer _container = container ?? throw new ArgumentNullException(nameof(container));
     private readonly PdfOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+    private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
     private readonly BorderShapeDrawer _borderShapeDrawer = new();
-    private readonly ImageRenderer _imageRenderer = new(options);
+    private readonly ImageRenderer _imageRenderer = new(options, diagnosticsSession);
     
     public void RenderBlock(BlockFragment fragment, Action<Fragment, IFragmentRenderer> renderChild)
     {
@@ -106,7 +109,7 @@ internal sealed class QuestPdfFragmentRenderer(
                 var childWidth = Math.Max(Math.Min(child.Rect.Width, parentWidth - relativeLeft), 0);
                 row.ConstantItem(childWidth).Element(box =>
                 {
-                    var childRenderer = new QuestPdfFragmentRenderer(box, _options);
+                    var childRenderer = new QuestPdfFragmentRenderer(box, _options, _diagnosticsSession);
                     renderChild(child, childRenderer);
                 });
             });

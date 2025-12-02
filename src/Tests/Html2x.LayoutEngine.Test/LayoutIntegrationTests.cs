@@ -1,5 +1,6 @@
-using Html2x.Abstractions.Layout.Styles;
 using AngleSharp;
+using Html2x.Abstractions.Images;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
@@ -7,7 +8,9 @@ using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
+using System.IO;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 using Html2x.LayoutEngine.Models;
 
@@ -32,7 +35,8 @@ public class LayoutIntegrationTests
         var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
-        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -65,12 +69,13 @@ public class LayoutIntegrationTests
         var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
-        var builder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
 
         var document = await domProvider.LoadAsync(html);
         var styleTree = styleComputer.Compute(document);
         var boxTree = boxBuilder.Build(styleTree);
-        var fragmentTree = fragmentBuilder.Build(boxTree);
+        var fragmentTree = fragmentBuilder.Build(boxTree, new FragmentBuildContext(imageProvider, Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -124,12 +129,13 @@ public class LayoutIntegrationTests
         var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
-        var builder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
 
         var document = await domProvider.LoadAsync(html);
         var styleTree = styleComputer.Compute(document);
         var boxTree = boxBuilder.Build(styleTree);
-        var fragmentTree = fragmentBuilder.Build(boxTree);
+        var fragmentTree = fragmentBuilder.Build(boxTree, new FragmentBuildContext(imageProvider, Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.Letter
@@ -171,7 +177,8 @@ public class LayoutIntegrationTests
         var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
-        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.Letter
@@ -263,7 +270,8 @@ public class LayoutIntegrationTests
         var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
-        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -300,7 +308,8 @@ public class LayoutIntegrationTests
         var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
-        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -342,7 +351,8 @@ public class LayoutIntegrationTests
         var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
-        var builder = new LayoutBuilder(dom, style, boxes, fragments);
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4

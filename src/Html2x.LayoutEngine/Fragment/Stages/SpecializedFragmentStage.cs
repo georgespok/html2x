@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Globalization;
+using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 
@@ -23,18 +24,18 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
         foreach (var binding in state.BlockBindings)
         {
-            AppendSpecializedFragments(binding.Source, binding.Fragment, lookup, state.Observers);
+            AppendSpecializedFragments(binding.Source, binding.Fragment, lookup, state.Observers, state.Context);
         }
 
         return state;
     }
 
-    private static void AppendSpecializedFragments(BlockBox blockBox, BlockFragment blockFragment,
-        IReadOnlyDictionary<BlockBox, BlockFragment> lookup, IReadOnlyList<IFragmentBuildObserver> observers)
+    private void AppendSpecializedFragments(BlockBox blockBox, BlockFragment blockFragment,
+        IReadOnlyDictionary<BlockBox, BlockFragment> lookup, IReadOnlyList<IFragmentBuildObserver> observers, FragmentBuildContext context)
     {
         foreach (var child in blockBox.Children)
         {
-            var fragment = CreateSpecialFragment(child, blockBox);
+            var fragment = CreateSpecialFragment(child, blockBox, context);
 
             if (fragment is not null)
             {
@@ -44,19 +45,19 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
             if (child is BlockBox nested && lookup.TryGetValue(nested, out var nestedFragment))
             {
-                AppendSpecializedFragments(nested, nestedFragment, lookup, observers);
+                AppendSpecializedFragments(nested, nestedFragment, lookup, observers, context);
             }
         }
     }
 
-    private static Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent)
+    private Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent, FragmentBuildContext context)
     {
         var tag = child.Element?.TagName?.ToLowerInvariant();
 
         return tag switch
         {
             HtmlCssConstants.HtmlTags.Hr => CreateRuleFragment(parent),
-            HtmlCssConstants.HtmlTags.Img => CreateImageFragment(child, parent),
+            HtmlCssConstants.HtmlTags.Img => CreateImageFragment(child, parent, context),
             _ => null
         };
     }
@@ -68,13 +69,18 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             Style = StyleConverter.FromComputed(box.Style)
         };
 
-    private static ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent)
+    private ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent, FragmentBuildContext context)
     {
         var el = child.Element;
         var src = el?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty;
         var authoredWidth = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Width);
         var authoredHeight = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Height);
-        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, 0, 0);
+        var loadResult = context.ImageProvider.Load(src, context.HtmlDirectory, context.MaxImageSizeBytes);
+
+        var intrinsicW = loadResult.IntrinsicWidth > 0 ? loadResult.IntrinsicWidth : 0;
+        var intrinsicH = loadResult.IntrinsicHeight > 0 ? loadResult.IntrinsicHeight : 0;
+
+        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, intrinsicW, intrinsicH);
 
         if (parent.Width > 0 && width > parent.Width)
         {
@@ -90,8 +96,8 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             AuthoredHeightPx = authoredHeight,
             IntrinsicWidthPx = width,
             IntrinsicHeightPx = height,
-            IsMissing = false,
-            IsOversize = false,
+            IsMissing = loadResult.Status == ImageLoadStatus.Missing,
+            IsOversize = loadResult.Status == ImageLoadStatus.Oversize,
             Rect = new RectangleF(parent.X, parent.Y, (float)width, (float)height),
             Style = StyleConverter.FromComputed(child.Style)
         };
