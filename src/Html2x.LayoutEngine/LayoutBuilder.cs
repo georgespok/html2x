@@ -1,5 +1,6 @@
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
@@ -18,12 +19,14 @@ public class LayoutBuilder(
     IDomProvider domProvider,
     IStyleComputer styleComputer,
     IBoxTreeBuilder boxBuilder,
-    IFragmentBuilder fragmentBuilder)
+    IFragmentBuilder fragmentBuilder,
+    IImageProvider imageProvider)
 {
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
     private readonly IStyleComputer _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
+    private readonly IImageProvider _imageProvider = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
     
     public async Task<HtmlLayout> BuildAsync(string html, 
         LayoutOptions options, DiagnosticsSession? diagnosticsSession = null)
@@ -37,7 +40,12 @@ public class LayoutBuilder(
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
         
-        var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(boxTree));
+        var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(
+            boxTree,
+            new FragmentBuildContext(
+                _imageProvider,
+                options.HtmlDirectory,
+                options.MaxImageSizeBytes)));
 
         RunStage("stage/fragmentation", () =>
         {

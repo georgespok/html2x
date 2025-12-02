@@ -6,6 +6,7 @@ using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Text;
@@ -22,7 +23,8 @@ public class LineBoxFragmentTests
         var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
-        var layoutBuilder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder);
+        var imageProvider = new NoopImageProvider();
+        var layoutBuilder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
         var options = new LayoutOptions
         {
             PageSize = PaperSizes.A4

@@ -14,6 +14,7 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 public class PdfRenderer
 {
     private readonly IFragmentRendererFactory _rendererFactory;
+    private DiagnosticsSession? _diagnosticsSession;
 
     public PdfRenderer()
         : this(new QuestPdfFragmentRendererFactory())
@@ -31,6 +32,7 @@ public class PdfRenderer
     {
         options ??= new PdfOptions();
         QuestPdfConfigurator.Configure(options.FontPath, options.LicenseType, options.EnableDebugging);
+        _diagnosticsSession = diagnosticsSession;
 
         if (htmlLayout is null)
         {
@@ -55,8 +57,6 @@ public class PdfRenderer
         PublishLayoutStart(layout, options);
 
         using var stream = new MemoryStream();
-
-        PublishImageDiagnostics(layout, diagnosticsSession);
 
         Document.Create(doc => ConfigureDocument(doc, layout, options))
             .GeneratePdf(stream);
@@ -112,7 +112,7 @@ public class PdfRenderer
                         ? box.MinHeight(fragment.Rect.Height)
                         : box;
 
-                    var renderer = _rendererFactory.Create(target, options);
+                    var renderer = _rendererFactory.Create(target, options, _diagnosticsSession);
                     var dispatcher = new FragmentRenderDispatcher(renderer);
                     fragment.VisitWith(dispatcher);
                 });
@@ -154,51 +154,4 @@ public class PdfRenderer
         
     }
 
-    private static void PublishImageDiagnostics(HtmlLayout layout, DiagnosticsSession? diagnosticsSession)
-    {
-        if (diagnosticsSession is null || layout.Pages.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var page in layout.Pages)
-        {
-            foreach (var fragment in page.Children)
-            {
-                PublishImageDiagnostics(fragment, diagnosticsSession);
-            }
-        }
-    }
-
-    private static void PublishImageDiagnostics(Fragment fragment, DiagnosticsSession diagnosticsSession)
-    {
-        switch (fragment)
-        {
-            case ImageFragment image:
-                diagnosticsSession.Events.Add(new DiagnosticsEvent
-                {
-                    Type = DiagnosticsEventType.Trace,
-                    Name = "ImageRender",
-                    Timestamp = DateTimeOffset.UtcNow,
-                    Payload = new ImageRenderPayload
-                    {
-                        Src = image.Src,
-                        RenderedWidth = image.Rect.Width,
-                        RenderedHeight = image.Rect.Height,
-                        Status = image.IsMissing
-                            ? ImageStatus.Missing
-                            : image.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok
-                    }
-                });
-                break;
-            case BlockFragment block:
-                foreach (var child in block.Children)
-                {
-                    PublishImageDiagnostics(child, diagnosticsSession);
-                }
-                break;
-            default:
-                break;
-        }
-    }
 }
