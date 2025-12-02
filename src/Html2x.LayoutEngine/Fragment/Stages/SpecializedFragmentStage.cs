@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Globalization;
+using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 
@@ -7,6 +8,13 @@ namespace Html2x.LayoutEngine.Fragment.Stages;
 
 public sealed class SpecializedFragmentStage : IFragmentBuildStage
 {
+    private readonly FragmentBuildContext _context;
+
+    public SpecializedFragmentStage(FragmentBuildContext context)
+    {
+        _context = context;
+    }
+
     public FragmentBuildState Execute(FragmentBuildState state)
     {
         if (state is null)
@@ -29,7 +37,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         return state;
     }
 
-    private static void AppendSpecializedFragments(BlockBox blockBox, BlockFragment blockFragment,
+    private void AppendSpecializedFragments(BlockBox blockBox, BlockFragment blockFragment,
         IReadOnlyDictionary<BlockBox, BlockFragment> lookup, IReadOnlyList<IFragmentBuildObserver> observers)
     {
         foreach (var child in blockBox.Children)
@@ -49,7 +57,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         }
     }
 
-    private static Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent)
+    private Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent)
     {
         var tag = child.Element?.TagName?.ToLowerInvariant();
 
@@ -68,13 +76,18 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             Style = StyleConverter.FromComputed(box.Style)
         };
 
-    private static ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent)
+    private ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent)
     {
         var el = child.Element;
         var src = el?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty;
         var authoredWidth = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Width);
         var authoredHeight = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Height);
-        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, 0, 0);
+        var loadResult = _context.ImageProvider.Load(src, _context.HtmlDirectory, _context.MaxImageSizeBytes);
+
+        var intrinsicW = loadResult.IntrinsicWidth > 0 ? loadResult.IntrinsicWidth : 0;
+        var intrinsicH = loadResult.IntrinsicHeight > 0 ? loadResult.IntrinsicHeight : 0;
+
+        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, intrinsicW, intrinsicH);
 
         if (parent.Width > 0 && width > parent.Width)
         {
@@ -90,8 +103,8 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             AuthoredHeightPx = authoredHeight,
             IntrinsicWidthPx = width,
             IntrinsicHeightPx = height,
-            IsMissing = false,
-            IsOversize = false,
+            IsMissing = loadResult.Status == ImageLoadStatus.Missing,
+            IsOversize = loadResult.Status == ImageLoadStatus.Oversize,
             Rect = new RectangleF(parent.X, parent.Y, (float)width, (float)height),
             Style = StyleConverter.FromComputed(child.Style)
         };

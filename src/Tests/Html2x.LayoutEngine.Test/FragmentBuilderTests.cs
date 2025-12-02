@@ -3,9 +3,11 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.Assertions;
 using Html2x.LayoutEngine.Test.Builders;
 using Shouldly;
+using System.IO;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test;
@@ -22,7 +24,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree);
+        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -46,7 +48,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree);
+        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -71,7 +73,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree);
+        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
 
         // Assert: One top-level BlockFragment for div
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -107,7 +109,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree);
+        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
 
         // Assert: One top-level BlockFragment
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -159,7 +161,7 @@ public class FragmentBuilderTests
 
         boxTree.Blocks.Add(ulBlock);
 
-        var fragments = CreateFragmentBuilder().Build(boxTree);
+        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
 
         var ulFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
@@ -171,10 +173,7 @@ public class FragmentBuilderTests
     }
 
     // Helpers
-    private static FragmentBuilder CreateFragmentBuilder()
-    {
-        return new FragmentBuilder();
-    }
+    private static FragmentBuilder CreateFragmentBuilder() => new FragmentBuilder();
 
     private static BlockBoxBuilder BuildBoxTree() => new BlockBoxBuilder();
 

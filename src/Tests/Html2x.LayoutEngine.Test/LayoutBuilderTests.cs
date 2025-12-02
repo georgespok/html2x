@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
@@ -22,6 +23,7 @@ public class LayoutBuilderTests
     private readonly Mock<IDomProvider> _domProvider;
     private readonly Mock<IFragmentBuilder> _fragmentBuilder;
     private readonly Mock<IStyleComputer> _styleComputer;
+    private readonly Mock<IImageProvider> _imageProvider;
 
     public LayoutBuilderTests()
     {
@@ -29,9 +31,10 @@ public class LayoutBuilderTests
         _styleComputer = new Mock<IStyleComputer>();
         _boxTreeBuilder = new Mock<IBoxTreeBuilder>();
         _fragmentBuilder = new Mock<IFragmentBuilder>();
+        _imageProvider = new Mock<IImageProvider>();
 
         _builder = new LayoutBuilder(_domProvider.Object, _styleComputer.Object, _boxTreeBuilder.Object,
-            _fragmentBuilder.Object);
+            _fragmentBuilder.Object, _imageProvider.Object);
     }
 
     [Fact]
@@ -61,7 +64,8 @@ public class LayoutBuilderTests
         _domProvider.Setup(x => x.LoadAsync(html)).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
         _boxTreeBuilder.Setup(x => x.Build(styleTree)).Returns(boxTree);
-        _fragmentBuilder.Setup(x => x.Build(boxTree)).Returns(fragmentTree);
+        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
+            .Returns(fragmentTree);
 
         var options = new LayoutOptions
         {
@@ -84,7 +88,7 @@ public class LayoutBuilderTests
         _domProvider.Verify(x => x.LoadAsync(html), Times.Once);
         _styleComputer.Verify(x => x.Compute(document), Times.Once);
         _boxTreeBuilder.Verify(x => x.Build(styleTree), Times.Once);
-        _fragmentBuilder.Verify(x => x.Build(boxTree), Times.Once);
+        _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
 
     

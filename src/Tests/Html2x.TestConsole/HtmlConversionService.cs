@@ -93,6 +93,12 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
                 HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
                                 Directory.GetCurrentDirectory()
             },
+            Layout = new LayoutOptions
+            {
+                HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
+                                Directory.GetCurrentDirectory(),
+                MaxImageSizeBytes = (long)(10 * 1024 * 1024)
+            },
             Diagnostics = new DiagnosticsOptions
             {
                 EnableDiagnostics = consoleOptions.DiagnosticsEnabled ||

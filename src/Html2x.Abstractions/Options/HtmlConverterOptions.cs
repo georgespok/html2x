@@ -2,9 +2,9 @@ namespace Html2x.Abstractions.Options;
 
 public sealed class HtmlConverterOptions
 {
-    public LayoutOptions Layout { get; init; } = new();
+    public LayoutOptions Layout { get; set; } = new();
 
-    public PdfOptions Pdf { get; init; } = new();
+    public PdfOptions Pdf { get; set; } = new();
 
-    public DiagnosticsOptions Diagnostics { get; init; } = new();
+    public DiagnosticsOptions Diagnostics { get; set; } = new();
 }
