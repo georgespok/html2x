@@ -128,7 +128,7 @@
     <p>Width only: <img src="images/cat.png" width="120" /></p>
     <p>Height only: <img src="images/cat.png" height="80" /></p>
     ```
-- [ ] T014 [US1] Add a renderer unit test in `src/Tests/Html2x.Renderers.Pdf.Test/ImageRenderingTests.cs` that renders the width-only/height-only sample and asserts diagnostics report `ImageStatus.Ok` and sizes within ±1px of expected.
+- [X] T014 [US1] Add a renderer unit test in `src/Tests/Html2x.Renderers.Pdf.Test/ImageRenderingTests.cs` that renders the width-only/height-only sample and asserts diagnostics report `ImageStatus.Ok` and sizes within ±1px of expected.
   - Use TestConsole pipeline or a minimal render helper to produce diagnostics without persisting PDF.
   - Code sketch:
     ```csharp
