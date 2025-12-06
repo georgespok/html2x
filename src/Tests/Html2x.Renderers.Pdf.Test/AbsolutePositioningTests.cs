@@ -1,5 +1,4 @@
 ﻿using SkiaSharp;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -25,8 +24,8 @@ public class AbsolutePositioningTests(ITestOutputHelper output)
         using var document = SKDocument.CreatePdf(pdfStream);
 
         // A4: 595×842 points
-        float width = 595;
-        float height = 842;
+        const float width = 595;
+        const float height = 842;
 
         using (var canvas = document.BeginPage(width, height))
         {
