@@ -1,46 +1,41 @@
 # Data Model: SkiaSharp Renderer
 
-## Fragment (from LayoutEngine)
-- id: string/Guid
-- type: enum {Text, Image, Shape}
-- x, y, width, height: double (absolute, page coordinates)
-- zIndex: int (stack order)
-- content:
-  - Text: string text, fontFamily, fontSize, fontStyle, fontWeight, color, letterSpacing, lineHeight, alignment
-  - Image: uri or blob id, intrinsicWidth, intrinsicHeight, mimeType, objectFit
-  - Shape: path commands, stroke, fill, opacity, clip
-- diagnostics: list of diagnostic items (missing asset, oversized asset, font fallback)
-- pageNumber: int (zero-based)
+## Fragment hierarchy (current + planned adjustments)
+- **Fragment (abstract)**: `Rect: RectangleF` (absolute page coords), `ZOrder: int`, `Style: VisualStyle`, **add** `FragmentId: int` (global sequence per render), **add** `PageNumber: int`.
+- **BlockFragment**: `IList<Fragment> Children`.
+- **LineBoxFragment**: `BaselineY`, `LineHeight`, `IReadOnlyList<TextRun> Runs`, `TextAlign`.
+- **ImageFragment**: `Src`, `AuthoredWidthPx`, `AuthoredHeightPx`, `IntrinsicWidthPx`, `IntrinsicHeightPx`, `IsMissing`, `IsOversize`.
+- **RuleFragment**: horizontal rule/line (no extra fields).
+- **TextRun (record)**: `Text`, `FontKey`, `FontSizePt`, `Origin` (baseline absolute), `AdvanceWidth`, `Ascent`, `Descent`, `TextDecorations`, `ColorRgba?`.
 
 Validation rules:
-- width, height >= 0; NaN/Infinity rejected
-- coordinates must fit target page bounds; clipping handled by renderer but geometry must be finite
-- content must be non-null for given type
+- `Rect.Width/Height >= 0`, not NaN/Infinity; `PageNumber >= 0`.
+- `FragmentId` stable, monotonic within a render pass (single global counter).
 
-## RenderInstruction (renderer input)
-- fragmentId: string
-- pageNumber: int
-- command: enum {DrawText, DrawImage, DrawPath}
-- geometry: x, y, width, height, zIndex
-- payload:
-  - DrawText: font, size, color, text spans
-  - DrawImage: bitmap source id, scaling mode
-  - DrawPath: path data, stroke/fill paints, opacity
-- diagnostics: propagated from fragment
+## RenderInstruction (renderer input / mapping target)
+- `FragmentId: int`
+- `PageNumber: int`
+- `Command: DrawText | DrawImage | DrawRule`
+- `Geometry: x, y, width, height, zIndex`
+- `Payload`:
+  - Text: `TextRun` data, color, paints
+  - Image: bitmap source id, intrinsic size, object fit
+  - Rule: stroke width/color/length
 
 State transitions:
-1. LayoutEngine emits Fragment list with absolute geometry.
-2. Renderer maps each Fragment to a RenderInstruction without changing geometry.
-3. Instructions streamed to `SKCanvas` per page; failures log fragmentId, pageNumber, command.
+1. LayoutEngine builds `FragmentTree` (Blocks + All list) assigning `Id` and `PageNumber`.
+2. Renderer maps each `Fragment` to `RenderInstruction` without geometry changes.
+3. Renderer iterates per page, emits diagnostics/logs on failures with `FragmentId`.
 
-## Diagnostics Payload
-- sourceFragmentId: string
-- code: enum {ImageMissing, ImageOversize, FontFallback, RenderFailure}
-- message: string
-- data: key/value metadata (e.g., requestedSize, availableFonts)
-- severity: enum {Info, Warning, Error}
+## Diagnostics Payload (renderer-visible, separate stream from fragments)
+- `FragmentId: int`
+- `SourcePath: string?` (optional DOM path/node id for traceability)
+- `Code: ImageMissing | ImageOversize | FontFallback | RenderFailure`
+- `Message: string`
+- `Data: key/value` (e.g., requestedSize, asset path)
+- `Severity: Info | Warning | Error`
 
 Relationships:
-- Fragment -> Diagnostics (one-to-many)
-- Fragment -> RenderInstruction (one-to-one per fragment, immutable geometry)
-- RenderInstruction -> Diagnostics (contains forwarded diagnostics)
+- `BlockFragment` aggregates `Fragment` children.
+- `LineBoxFragment.Runs` composed of `TextRun`.
+- `Fragment` -> `RenderInstruction` one-to-one.

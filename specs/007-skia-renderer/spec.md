@@ -75,7 +75,6 @@ As a QA lead, I want the migration to allow temporary disabling of failing rende
 
 - Successive renders of the same HTML render visually identical output in controlled environments for the existing Html2x feature set (single page, Latin fonts, text, images, shapes).
 - No QuestPdf assemblies or namespaces remain in source, binaries, or package outputs.
-- Skia renderer performance remains broadly comparable to the previous QuestPdf path on current max test cases, without introducing noticeable slowdowns in regular use.
 - Migration skips are tracked with reasons and are cleared before declaring the feature complete.
 
 ### Key Entities
