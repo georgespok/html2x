@@ -31,10 +31,16 @@
       public VisualStyle Style { get; init; } = null!;
   }
   ```
+- [ ] T003A Wire fragment id assignment: add a render-pass counter in `src/Html2x.LayoutEngine/LayoutBuilder.cs` (or the shared fragment factory) that stamps unique, monotonic `FragmentId` values and sets `PageNumber` as pages are produced. Counter resets per conversion.
 - [ ] T004 Ensure renderer project references diagnostics/layout assemblies for Skia path in `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj`
   ```xml
   <ProjectReference Include="..\\Html2x.Diagnostics\\Html2x.Diagnostics.csproj" />
   <ProjectReference Include="..\\Html2x.LayoutEngine\\Html2x.LayoutEngine.csproj" />
+  ```
+- [ ] T004A [P] Remove QuestPDF package reference and usings from `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj` and code; leave SkiaSharp only.
+  ```xml
+  <!-- remove -->
+  <!-- <PackageReference Include="QuestPDF" /> -->
   ```
 
 ---
@@ -60,23 +66,34 @@
   diag.Message.ShouldContain("missing.png");
   diag.SourcePath.ShouldBe("/html/body/img[1]");
   ```
+- [ ] T007A [P] [US1] Add layout test proving `FragmentId` uniqueness and monotonic order in `src/Tests/Html2x.LayoutEngine.Test/Fragments/FragmentIdTests.cs`; build a multi-fragment document, assert ids start at 1, increase without gaps, and repeat runs yield the same sequence.
 - [ ] T008 [P] [US1] Add Fragment->RenderInstruction mapping unit test in `src/Tests/Html2x.Renderers.Pdf.Test/RenderInstructionMappingTests.cs` (Why: enforce geometry/id integrity and command type correctness; How: map sample LineBox/Image fragments, assert geometry and IDs preserved, commands are DrawText/DrawImage, and diagnostics are observable when present)
   ```csharp
   var instructions = mapper.Map(fragments);
   instructions.ShouldContain(i => i.Command == DrawCommand.Text && i.FragmentId == frag.FragmentId);
   instructions.ShouldContain(i => i.Command == DrawCommand.Image && i.Geometry.Width == frag.Rect.Width);
   ```
-- [ ] T008 [US1] Implement `SkiaPdfRenderer` drawing fragments to `SKDocument` without layout fixes in `src/Html2x.Renderers.Pdf/SkiaPdfRenderer.cs`
+- [ ] T008D [US1] Implement `SkiaPdfRenderer` drawing fragments to `SKDocument` without layout fixes in `src/Html2x.Renderers.Pdf/SkiaPdfRenderer.cs`
   ```csharp
   using var doc = SKDocument.CreatePdf(outputStream);
   using var canvas = doc.BeginPage(page.Width, page.Height);
   foreach (var fragment in fragments) drawer.Draw(canvas, fragment);
   ```
-- [ ] T009 [P] [US1] Implement deterministic text/image/path drawers with explicit paints and disposal in `src/Html2x.Renderers.Pdf/ImageRenderer.cs` and `src/Html2x.Renderers.Pdf/TextRenderer.cs`
+- [ ] T008A [US1] Implement `RenderInstructionMapper` that flattens fragments into per-page instructions (text/image/rule) preserving `FragmentId`, `PageNumber`, and geometry in `src/Html2x.Renderers.Pdf/Mapping/RenderInstructionMapper.cs`; no layout mutation.
+  ```csharp
+  var instructions = mapper.Map(layout.Pages[pageIndex].Children);
+  ```
+- [ ] T008B [US1] Implement Skia drawers (`TextRenderer`, `ImageRenderer`, `RuleRenderer`) under `src/Html2x.Renderers.Pdf/Drawing/` to render instructions onto an `SKCanvas`; include deterministic paints, font selection, and proper disposal.
   ```csharp
   using var paint = new SKPaint { IsAntialias = true, Color = color };
-  canvas.DrawText(text, (float)x, (float)y, paint);
+  canvas.DrawText(run.Text, x, y, paint);
   ```
+- [ ] T008C [US1] Replace `Pipeline/PdfRenderer.cs` with a Skia-only pipeline: map fragments -> instructions -> draw to `SKDocument`; delete QuestPDF-specific helpers (`QuestPdfFragmentRenderer`, `FragmentRenderDispatcher`, `QuestPdfConfigurator`).
+  ```csharp
+  var instructions = mapper.Map(page.Children);
+  foreach (var instruction in instructions) drawer.Draw(canvas, instruction);
+  ```
+- [ ] T009 [P] [US1] Folded into T008B: deterministic text/image/path drawers live in the new Skia `Drawing/` classes; ensure no QuestPDF renderers remain.
 - [ ] T010 [US1] Instrument renderer to forward diagnostics and log render failures in `src/Html2x.Renderers.Pdf/SkiaPdfRenderer.cs` and helpers (emit Html2x.Diagnostics events, avoid renderer-side validation; depends on T007)
   ```csharp
   _recorder.Record(new DiagnosticsEvent
@@ -132,10 +149,10 @@
   [Fact] // no SkippableFact
   public void Renderer_test() { /* ... */ }
   ```
-- [ ] T016 [US3] Delete config flags/environment switches related to skipping renderer tests; test startup should always execute the Skia path.
+- [ ] T016 [US3] Confirm there are no skip flags/env switches for renderer tests; if any remnants exist from earlier drafts, remove them so test startup always executes the Skia path.
 - [ ] T017 [US3] Update `specs/007-skia-renderer/quickstart.md` to state there is no compatibility or skip mode—Skia is the default and only renderer path.
 
-**Checkpoint**: Skipped tests are explicit, reversible, and reported.
+**Checkpoint**: No renderer tests are skipped; Skia path is always active.
 
 ---
 
@@ -151,4 +168,4 @@
 
 ## Implementation Strategy
 
-MVP = complete US1 (deterministic Skia renderer) after Setup and Foundational, then validate determinism test before proceeding. Deliver US2 (QuestPdf removal) next, followed by US3 (skip posture). Polish documents the runbook and quickstart verification.
+MVP = complete US1 (deterministic Skia renderer) after Setup and Foundational, then validate determinism test before proceeding. Deliver US2 (QuestPdf removal) next, followed by US3 (always-on posture). Polish documents the runbook and quickstart verification.
