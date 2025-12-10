@@ -87,9 +87,10 @@
   try { drawer.Draw(canvas, fragment); }
   catch (Exception ex) { _recorder.Record(RenderFailure(fragment.FragmentId, fragment.SourcePath, ex)); throw; }
   ```
-- [ ] T011 [US1] Wire Skia renderer into composition/entry point so HtmlConverter uses it by default in `src/Html2x/HtmlConverter.cs`
+- [ ] T011 [US1] Wire Skia renderer into composition/entry point so HtmlConverter uses it by default in `src/Html2x/HtmlConverter.cs` without dependency injection (instantiate on demand alongside the existing layout factory pattern).
   ```csharp
-  services.AddSingleton<IPdfRenderer, SkiaPdfRenderer>();
+  var renderer = new SkiaPdfRenderer();
+  var pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session);
   ```
 
 **Checkpoint**: Skia renderer produces repeatable output; determinism test passes.
@@ -123,46 +124,26 @@
 
 ## Phase 5: User Story 3 - Controlled migration posture (Priority: P3)
 
-**Goal**: Allow temporary skips for unstable renderer tests with clear toggle to re-enable.
-**Independent Test**: Test run reports skipped Skia migration tests with reasons; toggle reenables them.
+**Goal**: Keep Skia renderer tests always on; no skip flags or compatibility modes.
+**Independent Test**: Full test suite runs without skips; Skia is the sole renderer.
 
-- [ ] T015 [P] [US3] Tag/skip failing renderer tests with reason attribute in `src/Tests/Html2x.Renderers.Pdf.Test/*.cs`
+- [ ] T015 [P] [US3] Remove any Skia migration skips and ensure renderer tests run unconditionally in `src/Tests/Html2x.Renderers.Pdf.Test/*.cs`.
   ```csharp
-  [SkippableFact(Skip = "Skia migration pending")]
-  public void Legacy_renderer_test() { /* ... */ }
+  [Fact] // no SkippableFact
+  public void Renderer_test() { /* ... */ }
   ```
-- [ ] T016 [US3] Add config flag (trait/environment switch) to re-enable skipped tests in `src/Tests/Html2x.Renderers.Pdf.Test/` test startup
-  ```csharp
-  var skip = Environment.GetEnvironmentVariable("SKIA_MIGRATION_SKIP") == "true";
-  if (skip) Skip.IfNot(skipCondition);
-  ```
-- [ ] T017 [US3] Document skip toggles and re-enable criteria in `specs/007-skia-renderer/quickstart.md`
-  ```md
-  Set SKIA_MIGRATION_SKIP=false to run all renderer tests.
-  ```
+- [ ] T016 [US3] Delete config flags/environment switches related to skipping renderer tests; test startup should always execute the Skia path.
+- [ ] T017 [US3] Update `specs/007-skia-renderer/quickstart.md` to state there is no compatibility or skip mode—Skia is the default and only renderer path.
 
 **Checkpoint**: Skipped tests are explicit, reversible, and reported.
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
-
-- [ ] T018 [P] Document deterministic rendering diagnostics and runbook in `docs/rendering/skia-migration.md`
-  ```md
-  - How to capture diagnostics: enable recorder, run console, inspect logs
-  ```
-- [ ] T019 Validate quickstart flow and record test results in `specs/007-skia-renderer/tasks.md`
-  ```text
-  dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input ... --output ...
-  ```
-
----
-
 ## Dependencies & Execution Order
 
-- Setup (Phase 1) -> Foundational (Phase 2) -> User Stories (Phases 3-5) -> Polish (Phase 6).
+- Setup (Phase 1) -> Foundational (Phase 2) -> User Stories (Phases 3-5).
 - Story order by priority: US1 (P1) -> US2 (P2) -> US3 (P3). US2 can start after T004 but should not ship before US1 is green.
-- Tests within a story follow: determinism test before renderer implementation; skip toggles before documentation.
+- Tests within a story follow: determinism test before renderer implementation; no skip toggles or compatibility modes.
 
 ### Parallel Opportunities
 - T002, T003, T005, T006, T008, T011, T013, T016 can run in parallel (different files, no blocking dependencies).
