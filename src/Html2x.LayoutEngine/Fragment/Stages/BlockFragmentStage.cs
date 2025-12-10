@@ -17,17 +17,19 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
 
         foreach (var block in state.Boxes.Blocks)
         {
-            CreateFragmentRecursive(block, null, state.Fragments, bindings, state.Observers);
+            CreateFragmentRecursive(block, null, state.Fragments, bindings, state.Observers, state);
         }
 
         return state.WithBlockBindings(bindings);
     }
 
     private static void CreateFragmentRecursive(BlockBox blockBox, BlockFragment? parentFragment, FragmentTree tree,
-        ICollection<BlockFragmentBinding> bindings, IReadOnlyList<IFragmentBuildObserver> observers)
+        ICollection<BlockFragmentBinding> bindings, IReadOnlyList<IFragmentBuildObserver> observers, FragmentBuildState state)
     {
         var fragment = new BlockFragment
         {
+            FragmentId = state.ReserveFragmentId(),
+            PageNumber = state.PageNumber,
             Rect = new RectangleF(blockBox.X, blockBox.Y, blockBox.Width, blockBox.Height),
             Style = StyleConverter.FromComputed(blockBox.Style)
         };
@@ -50,7 +52,7 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
 
         foreach (var child in blockBox.Children.OfType<BlockBox>())
         {
-            CreateFragmentRecursive(child, fragment, tree, bindings, observers);
+            CreateFragmentRecursive(child, fragment, tree, bindings, observers, state);
         }
     }
 }

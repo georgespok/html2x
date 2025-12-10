@@ -21,6 +21,7 @@
     <None Remove="html\lists.html" />
     <None Remove="html\max-width.html" />
     <None Remove="html\single-side-border.html" />
+    <None Remove="html\skia-sample.html" />
     <None Remove="html\text-alingment.html" />
   </ItemGroup>
 
@@ -71,6 +72,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\single-side-border.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\skia-sample.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\text-alingment.html">

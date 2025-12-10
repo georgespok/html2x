@@ -36,13 +36,16 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         foreach (var binding in state.BlockBindings)
         {
-            ProcessBlock(binding.Source, binding.Fragment, lookup, visited, state.Observers);
+            ProcessBlock(state, binding.Source, binding.Fragment, lookup, visited, state.Observers);
         }
 
         return state;
     }
 
-    private void ProcessBlock(BlockBox blockBox, BlockFragment fragment,
+    private void ProcessBlock(
+        FragmentBuildState state,
+        BlockBox blockBox,
+        BlockFragment fragment,
         IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
         ISet<BlockBox> visited,
         IReadOnlyList<IFragmentBuildObserver> observers)
@@ -59,17 +62,22 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             switch (child)
             {
                 case InlineBox inline:
-                    ProcessInline(inline, fragment, blockBox, ref lineBreakPending, observers);
+                    ProcessInline(state, inline, fragment, blockBox, ref lineBreakPending, observers);
                     break;
                 case BlockBox childBlock when lookup.TryGetValue(childBlock, out var childFragment):
-                    ProcessBlock(childBlock, childFragment, lookup, visited, observers);
+                    ProcessBlock(state, childBlock, childFragment, lookup, visited, observers);
                     break;
             }
         }
     }
 
-    private void ProcessInline(InlineBox inline, BlockFragment parentFragment, BlockBox blockContext,
-        ref bool lineBreakPending, IReadOnlyList<IFragmentBuildObserver> observers)
+    private void ProcessInline(
+        FragmentBuildState state,
+        InlineBox inline,
+        BlockFragment parentFragment,
+        BlockBox blockContext,
+        ref bool lineBreakPending,
+        IReadOnlyList<IFragmentBuildObserver> observers)
     {
         if (IsLineBreak(inline))
         {
@@ -93,6 +101,8 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
             var line = new LineBoxFragment
             {
+                FragmentId = state.ReserveFragmentId(),
+                PageNumber = state.PageNumber,
                 Rect = new RectangleF(adjustedX, adjustedY, run.AdvanceWidth, height),
                 BaselineY = baselineY + paddingTop,
                 LineHeight = height,
@@ -115,7 +125,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            ProcessInline(childInline, parentFragment, blockContext, ref lineBreakPending, observers);
+            ProcessInline(state, childInline, parentFragment, blockContext, ref lineBreakPending, observers);
         }
     }
 
@@ -148,6 +158,8 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         var merged = new LineBoxFragment
         {
+            FragmentId = previous.FragmentId,
+            PageNumber = previous.PageNumber,
             Rect = new RectangleF(left, top, right - left, bottom - top),
             BaselineY = previous.BaselineY,
             LineHeight = Math.Max(previous.LineHeight, candidate.LineHeight),

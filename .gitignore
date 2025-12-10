@@ -51,3 +51,6 @@ build/logs/
 # Added by diagnostics automation
 *.tmp
 
+# Common local environment files
+*.log
+.env*
