@@ -20,7 +20,7 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T003 [P] Align fragment/render instruction contracts to data-model in `src/Html2x.Abstractions` (add Id and PageNumber to `Fragment`; update Block/LineBox/Image/Rule fragments accordingly; ensure `RenderInstruction` DTO mirrors geometry + fragment id; add validation guards against NaN/Infinity)
+- [X] T003 [P] Align fragment/render instruction contracts to data-model in `src/Html2x.Abstractions` (add Id and PageNumber to `Fragment`; update Block/LineBox/Image/Rule fragments accordingly; ensure `RenderInstruction` DTO mirrors geometry + fragment id; add validation guards against NaN/Infinity)
   ```csharp
   public abstract class Fragment
   {
@@ -31,13 +31,13 @@
       public VisualStyle Style { get; init; } = null!;
   }
   ```
-- [ ] T003A Wire fragment id assignment: add a render-pass counter in `src/Html2x.LayoutEngine/LayoutBuilder.cs` (or the shared fragment factory) that stamps unique, monotonic `FragmentId` values and sets `PageNumber` as pages are produced. Counter resets per conversion.
-- [ ] T004 Ensure renderer project references diagnostics/layout assemblies for Skia path in `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj`
+- [X] T003A Wire fragment id assignment: add a render-pass counter in `src/Html2x.LayoutEngine/LayoutBuilder.cs` (or the shared fragment factory) that stamps unique, monotonic `FragmentId` values and sets `PageNumber` as pages are produced. Counter resets per conversion.
+- [X] T004 Ensure renderer project references diagnostics/layout assemblies for Skia path in `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj`
   ```xml
   <ProjectReference Include="..\\Html2x.Diagnostics\\Html2x.Diagnostics.csproj" />
   <ProjectReference Include="..\\Html2x.LayoutEngine\\Html2x.LayoutEngine.csproj" />
   ```
-- [ ] T004A [P] Remove QuestPDF package reference and usings from `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj` and code; leave SkiaSharp only.
+- [X] T004A [P] Remove QuestPDF package reference and usings from `src/Html2x.Renderers.Pdf/Html2x.Renderers.Pdf.csproj` and code; leave SkiaSharp only.
   ```xml
   <!-- remove -->
   <!-- <PackageReference Include="QuestPDF" /> -->
@@ -50,23 +50,23 @@
 **Goal**: Render fragments via SkiaSharp using absolute coordinates with deterministic output.
 **Independent Test**: Render fixed HTML twice and compare geometry annotations/logs for equality.
 
-- [ ] T005 [P] [US1] Add Skia migration HTML sample for manual/test use in `src/Tests/Html2x.TestConsole/html/skia-sample.html`
+- [X] T005 [P] [US1] Add Skia migration HTML sample for manual/test use in `src/Tests/Html2x.TestConsole/html/skia-sample.html`
   ```html
   <p class="abs" style="position:absolute; left:40px; top:80px;">Skia sample</p>
   ```
-- [ ] T006 [P] [US1] Add determinism regression test that renders twice and compares fragment geometry in `src/Tests/Html2x.Renderers.Pdf.Test/SkiaDeterminismTests.cs`
+- [X] T006 [P] [US1] Add determinism regression test that renders twice and compares fragment geometry in `src/Tests/Html2x.Renderers.Pdf.Test/SkiaDeterminismTests.cs`
   ```csharp
   var run1 = RenderAndDumpGeometry(html);
   var run2 = RenderAndDumpGeometry(html);
   run2.ShouldBe(run1);
   ```
-- [ ] T007 [P] [US1] Add diagnostics propagation test covering missing/oversize images and render failures in `src/Tests/Html2x.Renderers.Pdf.Test/SkiaDiagnosticsTests.cs` (assert diagnostics from fragments surface unchanged, including `FragmentId` and optional `SourcePath`; run before T008/T009)
+- [X] T007 [P] [US1] Add diagnostics propagation test covering missing/oversize images and render failures in `src/Tests/Html2x.Renderers.Pdf.Test/SkiaDiagnosticsTests.cs` (assert diagnostics from fragments surface unchanged, including `FragmentId` and optional `SourcePath`; run before T008/T009)
   ```csharp
   var diag = diagnostics.Single(d => d.Code == DiagnosticCode.ImageMissing);
   diag.Message.ShouldContain("missing.png");
   diag.SourcePath.ShouldBe("/html/body/img[1]");
   ```
-- [ ] T007A [P] [US1] Add layout test proving `FragmentId` uniqueness and monotonic order in `src/Tests/Html2x.LayoutEngine.Test/Fragments/FragmentIdTests.cs`; build a multi-fragment document, assert ids start at 1, increase without gaps, and repeat runs yield the same sequence.
+- [X] T007A [P] [US1] Add layout test proving `FragmentId` uniqueness and monotonic order in `src/Tests/Html2x.LayoutEngine.Test/Fragments/FragmentIdTests.cs`; build a multi-fragment document, assert ids start at 1, increase without gaps, and repeat runs yield the same sequence.
 - [ ] T008 [P] [US1] Add Fragment->RenderInstruction mapping unit test in `src/Tests/Html2x.Renderers.Pdf.Test/RenderInstructionMappingTests.cs` (Why: enforce geometry/id integrity and command type correctness; How: map sample LineBox/Image fragments, assert geometry and IDs preserved, commands are DrawText/DrawImage, and diagnostics are observable when present)
   ```csharp
   var instructions = mapper.Map(fragments);
