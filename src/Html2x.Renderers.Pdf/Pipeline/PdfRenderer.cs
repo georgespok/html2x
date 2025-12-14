@@ -1,157 +1,51 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
-using Html2x.Renderers.Pdf.Rendering;
-using Html2x.Renderers.Pdf.Visitors;
-using Html2x.Diagnostics;
-using QuestPDF.Fluent;
-using QuestPDF.Infrastructure;
-using QuestPageSize = QuestPDF.Helpers.PageSize;
+using Html2x.Renderers.Pdf.Drawing;
+using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Pipeline;
 
+/// <summary>
+/// Renders an <see cref="HtmlLayout"/> to PDF using a SkiaSharp drawing pipeline.
+/// </summary>
 public class PdfRenderer
 {
-    private readonly IFragmentRendererFactory _rendererFactory;
-    private DiagnosticsSession? _diagnosticsSession;
-
-    public PdfRenderer()
-        : this(new QuestPdfFragmentRendererFactory())
-    {
-    }
-
-    public PdfRenderer(
-        IFragmentRendererFactory rendererFactory)
-    {
-        _rendererFactory = rendererFactory ?? throw new ArgumentNullException(nameof(rendererFactory));
-     
-    }
-
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null, DiagnosticsSession? diagnosticsSession = null)
     {
+        ArgumentNullException.ThrowIfNull(htmlLayout);
         options ??= new PdfOptions();
-        QuestPdfConfigurator.Configure(options.FontPath, options.LicenseType, options.EnableDebugging);
-        _diagnosticsSession = diagnosticsSession;
 
-        if (htmlLayout is null)
-        {
-            throw new ArgumentNullException(nameof(htmlLayout));
-        }
-
-        
-        try
-        {
-            var bytes = RenderWithQuestPdf(htmlLayout, options, diagnosticsSession);
-            return Task.FromResult(bytes);
-        }
-        catch (Exception ex)
-        {
-            
-            throw;
-        }
+        var bytes = RenderWithSkia(htmlLayout, options, diagnosticsSession);
+        return Task.FromResult(bytes);
     }
 
-    private byte[] RenderWithQuestPdf(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
+    private static byte[] RenderWithSkia(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
     {
-        PublishLayoutStart(layout, options);
-
         using var stream = new MemoryStream();
+        using var document = SKDocument.CreatePdf(stream);
+        if (document is null)
+        {
+            throw new InvalidOperationException("Failed to create Skia PDF document.");
+        }
 
-        Document.Create(doc => ConfigureDocument(doc, layout, options))
-            .GeneratePdf(stream);
+        using var fontCache = new SkiaFontCache(options.FontPath);
+        var drawer = new SkiaFragmentDrawer(options, diagnosticsSession, fontCache);
+
+        foreach (var page in layout.Pages)
+        {
+            using var canvas = document.BeginPage(page.Size.Width, page.Size.Height);
+            if (canvas is null)
+            {
+                continue;
+            }
+
+            drawer.DrawPage(canvas, page);
+            document.EndPage();
+        }
+
+        document.Close();
 
         return stream.ToArray();
     }
-
-    private void ConfigureDocument(IDocumentContainer document, HtmlLayout layout, PdfOptions options)
-    {
-        for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
-        {
-            var page = layout.Pages[pageIndex];
-            PublishPageStart(pageIndex, page);
-
-            document.Page(descriptor => ConfigurePage(descriptor, page, options));
-        }
-    }
-
-    private void ConfigurePage(PageDescriptor pageDescriptor, LayoutPage page, PdfOptions options)
-    {
-        var pageSize = page.Size;
-
-        pageDescriptor.Size(new QuestPageSize(pageSize.Width, pageSize.Height));
-        pageDescriptor.MarginTop(page.Margins.Top);
-        pageDescriptor.MarginRight(page.Margins.Right);
-        pageDescriptor.MarginBottom(page.Margins.Bottom);
-        pageDescriptor.MarginLeft(page.Margins.Left);
-
-        pageDescriptor.Content().Column(column => WriteFragments(column, page, options));
-    }
-
-    private void WriteFragments(ColumnDescriptor column, LayoutPage page, PdfOptions options)
-    {
-        var currentY = 0f;
-
-        foreach (var fragment in page.Children)
-        {
-            var xRel = fragment.Rect.X - page.Margins.Left;
-            var yRel = fragment.Rect.Y - page.Margins.Top;
-
-            InsertVerticalSpacer(column, ref currentY, yRel);
-
-            column.Item().Row(row =>
-            {
-                if (xRel > 0)
-                {
-                    row.ConstantItem(xRel).Element(_ => { });
-                }
-
-                row.ConstantItem(fragment.Rect.Width).Element(box =>
-                {
-                    var target = fragment.Rect.Height > 0
-                        ? box.MinHeight(fragment.Rect.Height)
-                        : box;
-
-                    var renderer = _rendererFactory.Create(target, options, _diagnosticsSession);
-                    var dispatcher = new FragmentRenderDispatcher(renderer);
-                    fragment.VisitWith(dispatcher);
-                });
-            });
-
-            currentY = Math.Max(currentY, yRel + fragment.Rect.Height);
-        }
-    }
-
-    private static void InsertVerticalSpacer(ColumnDescriptor column, ref float currentY, float targetY)
-    {
-        var deltaY = Math.Max(0, targetY - currentY);
-        if (deltaY <= 0)
-        {
-            return;
-        }
-
-        column.Item().Height(deltaY);
-        currentY += deltaY;
-    }
-
-    private static int ComputeOptionsHash(PdfOptions options)
-    {
-        return HashCode.Combine(
-            options.FontPath is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(options.FontPath),
-            options.LicenseType,
-            options.PageSize.GetHashCode());
-    }
-
-    private void PublishLayoutStart(HtmlLayout layout, PdfOptions options)
-    {
-        
-    }
-
-    private void PublishPageStart(int pageIndex, LayoutPage page)
-    {
-        var pageSize = page.Size;
-
-        
-    }
-
 }

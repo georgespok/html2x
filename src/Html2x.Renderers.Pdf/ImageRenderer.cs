@@ -1,16 +1,16 @@
 using System;
 using System.IO;
+using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
-using QuestPDF.Fluent;
-using QuestPDF.Infrastructure;
+using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf;
 
 /// <summary>
-/// Renders image fragments into QuestPDF containers while honoring size caps and placeholders.
+/// Renders image fragments onto a Skia canvas while honoring size caps and placeholders.
 /// </summary>
 internal sealed class ImageRenderer
 {
@@ -27,9 +27,9 @@ internal sealed class ImageRenderer
         _diagnostics = diagnosticsSession;
     }
 
-    public void Render(IContainer container, ImageFragment fragment)
+    public void Render(SKCanvas canvas, ImageFragment fragment)
     {
-        ArgumentNullException.ThrowIfNull(container);
+        ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(fragment);
 
         var width = (float)fragment.Rect.Width;
@@ -40,14 +40,14 @@ internal sealed class ImageRenderer
 
         if (width <= 0 || height <= 0)
         {
-            RenderPlaceholder(container, width, height);
+            RenderPlaceholder(canvas, fragment.Rect);
             Record(fragment, status, width, height);
             return;
         }
 
         if (status != ImageStatus.Ok)
         {
-            RenderPlaceholder(container, width, height);
+            RenderPlaceholder(canvas, fragment.Rect);
             Record(fragment, status, width, height);
             return;
         }
@@ -55,36 +55,46 @@ internal sealed class ImageRenderer
         var imgBytes = ImageLoader.Load(fragment.Src, _htmlDirectory);
         if (imgBytes is null)
         {
-            RenderPlaceholder(container, width, height);
+            RenderPlaceholder(canvas, fragment.Rect);
             Record(fragment, status, width, height);
             return;
         }
 
-        container.Element(element =>
-        {
-            element.Width(width)
-                   .Height(height)
-                   .Image(imgBytes);
-        });
+        DrawImage(canvas, fragment.Rect, imgBytes);
 
         Record(fragment, status, width, height);
     }
 
-    private static void RenderPlaceholder(IContainer container, float width, float height)
+    private static void DrawImage(SKCanvas canvas, RectangleF rect, byte[] bytes)
     {
-        var sized = container;
-
-        if (width > 0)
+        using var bitmap = SKBitmap.Decode(bytes);
+        if (bitmap is null)
         {
-            sized = sized.Width(width);
+            RenderPlaceholder(canvas, rect);
+            return;
         }
 
-        if (height > 0)
+        using var image = SKImage.FromBitmap(bitmap);
+        var dest = new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        canvas.DrawImage(image, dest);
+    }
+
+    private static void RenderPlaceholder(SKCanvas canvas, RectangleF rect)
+    {
+        if (rect.Width <= 0 || rect.Height <= 0)
         {
-            sized = sized.Height(height);
+            return;
         }
 
-        sized.Element(_ => { });
+        using var paint = new SKPaint
+        {
+            Color = new SKColor(220, 220, 220, 255),
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 1,
+            IsAntialias = true
+        };
+
+        canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom), paint);
     }
 
     private void Record(ImageFragment fragment, ImageStatus status, float width, float height)

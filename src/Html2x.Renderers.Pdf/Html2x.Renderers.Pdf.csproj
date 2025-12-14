@@ -11,13 +11,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="QuestPDF" Version="2025.7.4" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="SkiaSharp" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
-    <ProjectReference Include="..\Html2x.Diagnostics\Html2x.Diagnostics.csproj" />
+    <ProjectReference Include="..\\Html2x.Abstractions\\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\\Html2x.Diagnostics\\Html2x.Diagnostics.csproj" />
   </ItemGroup>
 
 </Project>

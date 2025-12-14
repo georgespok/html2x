@@ -1,5 +1,5 @@
 using System.Reflection;
-using Html2x.Renderers.Pdf.Rendering;
+using Html2x.Renderers.Pdf.Pipeline;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test.Dependencies;
@@ -16,7 +16,7 @@ public sealed class RendererIsolationTests
     [Fact]
     public void RendererAssembly_ShouldNotReferenceLayoutEngine()
     {
-        var assembly = typeof(QuestPdfFragmentRenderer).Assembly;
+        var assembly = typeof(PdfRenderer).Assembly;
         var referenced = assembly
             .GetReferencedAssemblies()
             .Select(a => a.Name)
@@ -29,7 +29,7 @@ public sealed class RendererIsolationTests
     [Fact]
     public void RendererTypes_ShouldNotExposeLayoutEngineTypes()
     {
-        var assembly = typeof(QuestPdfFragmentRenderer).Assembly;
+        var assembly = typeof(PdfRenderer).Assembly;
         var violations = new List<string>();
 
         foreach (var type in assembly.GetTypes()
