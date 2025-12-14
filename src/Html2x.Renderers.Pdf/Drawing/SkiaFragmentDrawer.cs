@@ -16,6 +16,7 @@ internal sealed class SkiaFragmentDrawer
     private readonly DiagnosticsSession? _diagnosticsSession;
     private readonly ImageRenderer _imageRenderer;
     private readonly SkiaFontCache _fontCache;
+    private readonly BorderShapeDrawer _borderShapeDrawer = new();
 
     public SkiaFragmentDrawer(PdfOptions options, DiagnosticsSession? diagnosticsSession, SkiaFontCache fontCache)
     {
@@ -56,6 +57,8 @@ internal sealed class SkiaFragmentDrawer
         switch (fragment)
         {
             case BlockFragment block:
+                DrawBlockBackground(canvas, block);
+                DrawBlockBorders(canvas, block);
                 foreach (var child in block.Children)
                 {
                     DrawFragment(canvas, child);
@@ -73,6 +76,48 @@ internal sealed class SkiaFragmentDrawer
             default:
                 throw new NotSupportedException($"Unsupported fragment type: {fragment.GetType().Name}");
         }
+    }
+
+    private static void DrawBlockBackground(SKCanvas canvas, BlockFragment block)
+    {
+        var background = block.Style?.BackgroundColor;
+        if (background is null || background.Value.A == 0)
+        {
+            return;
+        }
+
+        using var paint = new SKPaint
+        {
+            Color = new SKColor(background.Value.R, background.Value.G, background.Value.B, background.Value.A),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = false
+        };
+
+        canvas.DrawRect(
+            new SKRect(block.Rect.Left, block.Rect.Top, block.Rect.Right, block.Rect.Bottom),
+            paint);
+    }
+
+    private void DrawBlockBorders(SKCanvas canvas, BlockFragment block)
+    {
+        var borders = block.Style?.Borders;
+        if (borders is null || !borders.HasAny)
+        {
+            return;
+        }
+
+        var rect = block.Rect;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        canvas.Save();
+        canvas.Translate(rect.Left, rect.Top);
+
+        _borderShapeDrawer.Draw(canvas, new SKSize(rect.Width, rect.Height), borders);
+
+        canvas.Restore();
     }
 
     private void DrawLineBox(SKCanvas canvas, LineBoxFragment line)
