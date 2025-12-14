@@ -24,18 +24,23 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
         foreach (var binding in state.BlockBindings)
         {
-            AppendSpecializedFragments(binding.Source, binding.Fragment, lookup, state.Observers, state.Context);
+            AppendSpecializedFragments(state, binding.Source, binding.Fragment, lookup, state.Observers, state.Context);
         }
 
         return state;
     }
 
-    private void AppendSpecializedFragments(BlockBox blockBox, BlockFragment blockFragment,
-        IReadOnlyDictionary<BlockBox, BlockFragment> lookup, IReadOnlyList<IFragmentBuildObserver> observers, FragmentBuildContext context)
+    private void AppendSpecializedFragments(
+        FragmentBuildState state,
+        BlockBox blockBox,
+        BlockFragment blockFragment,
+        IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
+        IReadOnlyList<IFragmentBuildObserver> observers,
+        FragmentBuildContext context)
     {
         foreach (var child in blockBox.Children)
         {
-            var fragment = CreateSpecialFragment(child, blockBox, context);
+            var fragment = CreateSpecialFragment(state, child, blockBox, context);
 
             if (fragment is not null)
             {
@@ -45,31 +50,41 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
             if (child is BlockBox nested && lookup.TryGetValue(nested, out var nestedFragment))
             {
-                AppendSpecializedFragments(nested, nestedFragment, lookup, observers, context);
+                AppendSpecializedFragments(state, nested, nestedFragment, lookup, observers, context);
             }
         }
     }
 
-    private Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(DisplayNode child, BlockBox parent, FragmentBuildContext context)
+    private Abstractions.Layout.Fragments.Fragment? CreateSpecialFragment(
+        FragmentBuildState state,
+        DisplayNode child,
+        BlockBox parent,
+        FragmentBuildContext context)
     {
         var tag = child.Element?.TagName?.ToLowerInvariant();
 
         return tag switch
         {
-            HtmlCssConstants.HtmlTags.Hr => CreateRuleFragment(parent),
-            HtmlCssConstants.HtmlTags.Img => CreateImageFragment(child, parent, context),
+            HtmlCssConstants.HtmlTags.Hr => CreateRuleFragment(state, parent),
+            HtmlCssConstants.HtmlTags.Img => CreateImageFragment(state, child, parent, context),
             _ => null
         };
     }
 
-    private static RuleFragment CreateRuleFragment(BlockBox box) =>
+    private static RuleFragment CreateRuleFragment(FragmentBuildState state, BlockBox box) =>
         new()
         {
+            FragmentId = state.ReserveFragmentId(),
+            PageNumber = state.PageNumber,
             Rect = new RectangleF(box.X, box.Y + box.Height / 2, box.Width, 1),
             Style = StyleConverter.FromComputed(box.Style)
         };
 
-    private ImageFragment CreateImageFragment(DisplayNode child, BlockBox parent, FragmentBuildContext context)
+    private ImageFragment CreateImageFragment(
+        FragmentBuildState state,
+        DisplayNode child,
+        BlockBox parent,
+        FragmentBuildContext context)
     {
         var el = child.Element;
         var src = el?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty;
@@ -91,6 +106,8 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
         return new ImageFragment
         {
+            FragmentId = state.ReserveFragmentId(),
+            PageNumber = state.PageNumber,
             Src = src,
             AuthoredWidthPx = authoredWidth,
             AuthoredHeightPx = authoredHeight,

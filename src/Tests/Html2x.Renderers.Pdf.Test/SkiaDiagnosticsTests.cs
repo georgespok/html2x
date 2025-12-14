@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
+using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Renderers.Pdf.Pipeline;
+using Shouldly;
+
+namespace Html2x.Renderers.Pdf.Test;
+
+public class SkiaDiagnosticsTests
+{
+    [Fact]
+    public async Task MissingImage_ShouldEmitDiagnosticsWithSource()
+    {
+        var session = new DiagnosticsSession
+        {
+            StartTime = DateTimeOffset.UtcNow
+        };
+
+        var layout = CreateLayoutWithMissingImage();
+        var renderer = new PdfRenderer();
+        var options = new PdfOptions { FontPath = string.Empty, HtmlDirectory = "." };
+
+        var pdf = await renderer.RenderAsync(layout, options, session);
+        pdf.ShouldNotBeNull();
+
+        var evt = session.Events.SingleOrDefault(e => e.Name == "ImageRender");
+        evt.ShouldNotBeNull("Expected ImageRender diagnostics event");
+
+        var payload = evt!.Payload as ImageRenderPayload;
+        payload.ShouldNotBeNull();
+        payload!.Src.ShouldBe("missing.png");
+        payload.Status.ShouldBe(ImageStatus.Missing);
+        payload.RenderedWidth.ShouldBeGreaterThan(0);
+        payload.RenderedHeight.ShouldBeGreaterThan(0);
+    }
+
+    private static HtmlLayout CreateLayoutWithMissingImage()
+    {
+        var layout = new HtmlLayout();
+        var fragments = new List<Fragment>
+        {
+            new ImageFragment
+            {
+                Src = "missing.png",
+                IntrinsicWidthPx = 50,
+                IntrinsicHeightPx = 40,
+                IsMissing = true,
+                Rect = new RectangleF(20, 30, 50, 40),
+                Style = new VisualStyle()
+            }
+        };
+
+        var page = new LayoutPage(
+            new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new Spacing(0, 0, 0, 0),
+            fragments,
+            1,
+            new ColorRgba(255, 255, 255, 255));
+
+        layout.Pages.Add(page);
+        return layout;
+    }
+}
