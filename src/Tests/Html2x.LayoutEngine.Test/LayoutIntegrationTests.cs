@@ -257,6 +257,37 @@ public class LayoutIntegrationTests
         lineBox.BaselineY.ShouldBe(lineBox.Runs[0].Origin.Y, 0.5f);
     }
 
+    [Fact]
+    public async Task Build_WithBr_SplitsInlineContentIntoSeparateLines()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <p>first line<br />second line</p>
+              </body>
+            </html>";
+
+        var config = Configuration.Default.WithCss();
+        var dom = new AngleSharpDomProvider(config);
+        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var boxes = new BoxTreeBuilder();
+        var fragments = new FragmentBuilder();
+        var imageProvider = new NoopImageProvider();
+        var builder = new LayoutBuilder(dom, style, boxes, fragments, imageProvider);
+        var layoutOptions = new LayoutOptions { PageSize = PaperSizes.Letter };
+
+        var layout = await builder.BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        layout.Pages[0].Children.Count.ShouldBe(1);
+
+        var p = (BlockFragment)layout.Pages[0].Children[0];
+        var lines = p.Children.OfType<LineBoxFragment>().ToList();
+        lines.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        lines[1].Rect.Y.ShouldBeGreaterThan(lines[0].Rect.Y);
+    }
+
     
     private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
     {

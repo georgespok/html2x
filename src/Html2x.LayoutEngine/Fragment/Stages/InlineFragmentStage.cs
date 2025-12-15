@@ -7,7 +7,6 @@ namespace Html2x.LayoutEngine.Fragment.Stages;
 public sealed class InlineFragmentStage : IFragmentBuildStage
 {
     private readonly TextRunFactory _textRunFactory;
-    private const float BaselineTolerance = 0.1f;
 
     public InlineFragmentStage()
         : this(new TextRunFactory())
@@ -96,33 +95,74 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             var borderTop = blockContext.Style.Borders?.Top?.Width ?? 0f;
             var textAlign = blockContext.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
-            // Offset text run position by border and padding (content box origin).
-            // TextRun.Origin is the baseline origin; top-of-line is baseline minus ascent.
-            var adjustedX = run.Origin.X + borderLeft + paddingLeft;
-            var adjustedTopY = run.Origin.Y + borderTop + paddingTop;
-            var baselineY = adjustedTopY + run.Ascent;
+            // Compute the content box origin (border + padding inset).
+            var contentLeft = blockContext.X + borderLeft + paddingLeft;
+            var contentTop = blockContext.Y + borderTop + paddingTop;
 
-            var adjustedRun = run with
-            {
-                Origin = new PointF(adjustedX, baselineY)
-            };
+            // Only continue the current line when the last emitted fragment is a line and no <br> is pending.
+            var lastEmitted = parentFragment.Children.Count > 0 ? parentFragment.Children[^1] : null;
+            var canContinueLine = !lineBreakPending && lastEmitted is LineBoxFragment;
 
-            var line = new LineBoxFragment
-            {
-                FragmentId = state.ReserveFragmentId(),
-                PageNumber = state.PageNumber,
-                Rect = new RectangleF(adjustedX, adjustedTopY, run.AdvanceWidth, height),
-                BaselineY = baselineY,
-                LineHeight = height,
-                Runs = [adjustedRun],
-                TextAlign = textAlign?.ToLowerInvariant()
-            };
+            LineBoxFragment storedLine;
 
-            var storedLine = TryMergeWithPreviousLine(parentFragment, line, lineBreakPending) ?? line;
-            lineBreakPending = false;
-            if (ReferenceEquals(storedLine, line))
+            if (!canContinueLine)
             {
-                parentFragment.Children.Add(line);
+                var previousLine = FindLastLine(parentFragment);
+                var topY = previousLine is null ? contentTop : previousLine.Rect.Bottom;
+                var baselineY = topY + run.Ascent;
+
+                var adjustedRun = run with
+                {
+                    Origin = new PointF(contentLeft, baselineY)
+                };
+
+                storedLine = new LineBoxFragment
+                {
+                    FragmentId = state.ReserveFragmentId(),
+                    PageNumber = state.PageNumber,
+                    Rect = new RectangleF(contentLeft, topY, run.AdvanceWidth, height),
+                    BaselineY = baselineY,
+                    LineHeight = height,
+                    Runs = [adjustedRun],
+                    TextAlign = textAlign?.ToLowerInvariant()
+                };
+
+                parentFragment.Children.Add(storedLine);
+                lineBreakPending = false;
+            }
+            else
+            {
+                var previous = (LineBoxFragment)lastEmitted!;
+                var x = previous.Rect.Right;
+                var baselineY = previous.BaselineY;
+
+                var adjustedRun = run with
+                {
+                    Origin = new PointF(x, baselineY)
+                };
+
+                var mergedRuns = new List<TextRun>(previous.Runs.Count + 1);
+                mergedRuns.AddRange(previous.Runs);
+                mergedRuns.Add(adjustedRun);
+
+                var lineHeight = Math.Max(previous.LineHeight, height);
+                var left = previous.Rect.Left;
+                var top = previous.Rect.Top;
+                var right = x + run.AdvanceWidth;
+
+                storedLine = new LineBoxFragment
+                {
+                    FragmentId = previous.FragmentId,
+                    PageNumber = previous.PageNumber,
+                    Rect = new RectangleF(left, top, Math.Max(0, right - left), lineHeight),
+                    BaselineY = baselineY,
+                    LineHeight = lineHeight,
+                    Runs = mergedRuns,
+                    Style = previous.Style,
+                    ZOrder = previous.ZOrder
+                };
+
+                parentFragment.Children[parentFragment.Children.Count - 1] = storedLine;
             }
 
             foreach (var observer in observers)
@@ -137,47 +177,22 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         }
     }
 
-    private static LineBoxFragment? TryMergeWithPreviousLine(BlockFragment parentFragment, LineBoxFragment candidate,
-        bool lineBreakPending)
+    private static LineBoxFragment? FindLastLine(BlockFragment parentFragment)
     {
-        if (lineBreakPending || parentFragment.Children.Count == 0)
+        if (parentFragment.Children.Count == 0)
         {
             return null;
         }
 
-        if (parentFragment.Children[^1] is not LineBoxFragment previous)
+        for (var i = parentFragment.Children.Count - 1; i >= 0; i--)
         {
-            return null;
+            if (parentFragment.Children[i] is LineBoxFragment line)
+            {
+                return line;
+            }
         }
 
-        if (Math.Abs(previous.BaselineY - candidate.BaselineY) > BaselineTolerance)
-        {
-            return null;
-        }
-
-        var mergedRuns = new List<TextRun>(previous.Runs.Count + candidate.Runs.Count);
-        mergedRuns.AddRange(previous.Runs);
-        mergedRuns.AddRange(candidate.Runs);
-
-        var left = Math.Min(previous.Rect.X, candidate.Rect.X);
-        var top = Math.Min(previous.Rect.Y, candidate.Rect.Y);
-        var right = Math.Max(previous.Rect.Right, candidate.Rect.Right);
-        var bottom = Math.Max(previous.Rect.Bottom, candidate.Rect.Bottom);
-
-        var merged = new LineBoxFragment
-        {
-            FragmentId = previous.FragmentId,
-            PageNumber = previous.PageNumber,
-            Rect = new RectangleF(left, top, right - left, bottom - top),
-            BaselineY = previous.BaselineY,
-            LineHeight = Math.Max(previous.LineHeight, candidate.LineHeight),
-            Runs = mergedRuns,
-            Style = previous.Style ?? candidate.Style,
-            ZOrder = Math.Max(previous.ZOrder, candidate.ZOrder)
-        };
-
-        parentFragment.Children[parentFragment.Children.Count - 1] = merged;
-        return merged;
+        return null;
     }
 
     private static bool IsLineBreak(InlineBox inline)

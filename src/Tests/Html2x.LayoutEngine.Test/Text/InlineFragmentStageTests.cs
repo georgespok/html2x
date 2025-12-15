@@ -43,5 +43,10 @@ public class InlineFragmentStageTests
         {
             run.Origin.Y.ShouldBe(line.BaselineY, 0.01);
         }
+
+        for (var i = 1; i < line.Runs.Count; i++)
+        {
+            line.Runs[i].Origin.X.ShouldBeGreaterThanOrEqualTo(line.Runs[i - 1].Origin.X);
+        }
     }
 }
