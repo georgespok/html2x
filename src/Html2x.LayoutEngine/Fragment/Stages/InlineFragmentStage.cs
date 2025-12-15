@@ -88,25 +88,33 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         if (!string.IsNullOrWhiteSpace(inline.TextContent))
         {
             var run = _textRunFactory.Create(inline, blockContext);
-            var baselineY = run.Origin.Y + run.Ascent;
             var height = run.Ascent + run.Descent;
 
             var paddingLeft = blockContext.Padding.Left;
             var paddingTop = blockContext.Padding.Top;
+            var borderLeft = blockContext.Style.Borders?.Left?.Width ?? 0f;
+            var borderTop = blockContext.Style.Borders?.Top?.Width ?? 0f;
             var textAlign = blockContext.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
-            // Offset text run position by padding
-            var adjustedX = run.Origin.X + paddingLeft;
-            var adjustedY = run.Origin.Y + paddingTop;
+            // Offset text run position by border and padding (content box origin).
+            // TextRun.Origin is the baseline origin; top-of-line is baseline minus ascent.
+            var adjustedX = run.Origin.X + borderLeft + paddingLeft;
+            var adjustedTopY = run.Origin.Y + borderTop + paddingTop;
+            var baselineY = adjustedTopY + run.Ascent;
+
+            var adjustedRun = run with
+            {
+                Origin = new PointF(adjustedX, baselineY)
+            };
 
             var line = new LineBoxFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
-                Rect = new RectangleF(adjustedX, adjustedY, run.AdvanceWidth, height),
-                BaselineY = baselineY + paddingTop,
+                Rect = new RectangleF(adjustedX, adjustedTopY, run.AdvanceWidth, height),
+                BaselineY = baselineY,
                 LineHeight = height,
-                Runs = [run],
+                Runs = [adjustedRun],
                 TextAlign = textAlign?.ToLowerInvariant()
             };
 

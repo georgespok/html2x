@@ -41,7 +41,7 @@ public class InlineFragmentStageTests
 
         foreach (var run in line.Runs)
         {
-            (run.Origin.Y + run.Ascent).ShouldBe(line.BaselineY, 0.01);
+            run.Origin.Y.ShouldBe(line.BaselineY, 0.01);
         }
     }
 }
