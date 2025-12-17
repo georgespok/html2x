@@ -14,7 +14,7 @@ These practices keep Html2x shippable while the surface area grows. Every contri
 | Project | Scope | Typical Scenarios | Notes |
 | --- | --- | --- | --- |
 | `Html2x.LayoutEngine.Test` | Value types, DOM load, style cascade, box flow, fragmentation. | HTML fixtures producing expected fragments or pagination rules, geometry edge cases. | Use snapshot helpers sparingly; prefer explicit assertions and `[Theory]` coverage. |
-| `Html2x.Renderers.Pdf.Test` | Fragment dispatch and QuestPDF integration. | Rendering simple layouts, validating fonts, line weights, warnings for unsupported fragments. | Record fragments (`RecordingFragmentRenderer`) when diagnosing traversal. |
+| `Html2x.Renderers.Pdf.Test` | Fragment dispatch and SkiaSharp integration. | Rendering simple layouts, validating fonts, line weights, warnings for unsupported fragments. | Prefer geometry/text extraction assertions over binary diffing. |
 | `Html2x.Test` | End-to-end `HtmlConverter` verification. | Whole documents, PDF header checks, logging emission via `TestOutputLoggerProvider`. | Keep scenarios realistic and document the purpose in comments. |
 
 ## Writing High-Quality Tests

@@ -5,13 +5,6 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
-<!--
-  CONSTITUTION NOTE (Principle VII):
-  - Write in plain, simple English suitable for a junior developer.
-  - Illustrate key architectural or logic points with short code sketches.
-  - Avoid jargon where simple explanations suffice.
--->
-
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -33,7 +26,7 @@
 
 **Why this priority**: [Explain the value and why it has this priority level]
 
-**Independent Test**: [Describe how this can be tested independently (qualitative OK; no numeric targets required)]
+**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
 
 **Acceptance Scenarios**:
 
@@ -107,3 +100,11 @@
 - **[Entity 1]**: [What it represents, key attributes without implementation]
 - **[Entity 2]**: [What it represents, relationships to other entities]
 
+## Success Criteria *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Define measurable success criteria.
+  These must be technology-agnostic and measurable.
+-->
+
+- **SC-001**: [Stability metric, e.g., "No regressions in existing layout tests and new tests cover critical paths"]

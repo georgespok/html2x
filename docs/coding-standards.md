@@ -7,14 +7,14 @@ This document captures the conventions and engineering principles that keep Html
 - **SOLID first**: Each class owns a single responsibility. Build extension points through interfaces and factories rather than `if/else` forks.
 - **DRY + KISS**: Prefer composable helpers and targeted abstractions. Avoid speculative generalisations; refactor when duplication reveals the underlying pattern.
 - **Readable by default**: Code should explain itself. When intent is non-obvious, add short comments or extract well named helpers.
-- **Managed-only**: The solution must remain pure .NET (QuestPDF, AngleSharp). Any unavoidable native integration must be wrapped behind interfaces with clear contracts.
+- **Managed-only**: The solution must remain pure .NET (SkiaSharp, AngleSharp). Any unavoidable native integration must be wrapped behind interfaces with clear contracts.
 
 ## Layering & Boundaries
 
 | Area | Responsibilities | Must Not |
 | --- | --- | --- |
-| `Html2x.Abstractions` | Data contracts (styles, fragments, diagnostics, measurements), shared geometry, service interfaces. | Depend on AngleSharp, QuestPDF, logging implementations, or I/O primitives. |
-| `Html2x.LayoutEngine` | HTML -> Fragment pipeline (DOM, style, box, fragment). | Reference QuestPDF or mutate fragment data after creation. |
+| `Html2x.Abstractions` | Data contracts (styles, fragments, diagnostics, measurements), shared geometry, service interfaces. | Reference AngleSharp or SkiaSharp, or perform file I/O. |
+| `Html2x.LayoutEngine` | HTML -> Fragment pipeline (DOM, style, box, fragment). | Reference SkiaSharp or mutate fragment data after creation. |
 | `Html2x.Renderers.Pdf` | Fragment -> PDF rendering and diagnostics. | Reach back into DOM/style/box types; mutate fragment state. |
 | `Html2x` (facade) | Orchestrate layout + renderer wiring for consumers. | Contain layout or rendering logic. |
 

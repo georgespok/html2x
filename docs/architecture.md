@@ -13,7 +13,7 @@ Box Tree (layout model)
   |
 Fragment Tree (lines/pages)
   |
-Renderer (PDF via QuestPDF)
+Renderer (PDF via SkiaSharp)
 ```
 
 ## Pipeline Responsibilities
@@ -46,12 +46,12 @@ Renderer (PDF via QuestPDF)
 - **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) while collaborating with `TextRunFactory`, `DefaultLineHeightStrategy`, and `DefaultTextWidthEstimator`.
 - **Extension rules**: Introducing new fragment types requires updating interfaces and records in `Html2x.Abstractions` plus renderer dispatchers. Keep pagination logic self-contained to maintain deterministic outputs.
 
-### Renderer (QuestPDF)
-- **Responsibility**: Serialize fragments into the final artifact. The default implementation renders PDF via QuestPDF.
+### Renderer (SkiaSharp)
+- **Responsibility**: Serialize fragments into the final artifact. The default implementation renders PDF via SkiaSharp.
 - **Input**: `HtmlLayout` plus `PdfOptions`.
 - **Output**: Byte array containing the generated PDF.
-- **Implementation pattern**: `PdfRenderer` coordinates `QuestPdfConfigurator`, `FragmentRenderDispatcher`, and `QuestPdfFragmentRenderer` with help from `PdfRendererLog` and mapper utilities.
-- **Extension rules**: New render targets supply custom `IFragmentRenderer` implementations or alternate factories. Rendering code should never reach back to the DOM; it consumes fragments only.
+- **Implementation pattern**: `PdfRenderer` creates an `SKDocument` and draws each page using `SkiaFragmentDrawer` and supporting drawers (images, borders, fonts).
+- **Extension rules**: New render targets should consume fragments only. Rendering code should never reach back to the DOM.
 
 ## Solution Layout
 
@@ -59,7 +59,7 @@ Renderer (PDF via QuestPDF)
 | --- | --- | --- | --- |
 | `src/Html2x.Abstractions` | Shared contracts for styles, fragments, diagnostics, measurements, and units. | `HtmlLayout`, `LayoutPage`, `Fragment`, `PageSize`, `ComputedStyle`. | Add or evolve primitives here first so layout and renderers stay in lockstep. |
 | `src/Html2x.LayoutEngine` | DOM + CSS to fragment pipeline plus layout logging. | `LayoutBuilder`, `AngleSharpDomProvider`, `CssStyleComputer`, `BoxTreeBuilder`, `FragmentBuilder`, `LayoutLog`. | Keep stages pure; introduce measurement providers or observers instead of side effects. |
-| `src/Html2x.Renderers.Pdf` | QuestPDF renderer, configuration, and fragment dispatch. | `PdfRenderer`, `QuestPdfConfigurator`, `QuestPdfFragmentRenderer`, `FragmentRenderDispatcher`, `PdfRendererLog`. | Alternate renderers belong in sibling projects that reuse the fragment contract. |
+| `src/Html2x.Renderers.Pdf` | SkiaSharp PDF renderer and drawing pipeline. | `PdfRenderer`, `SkiaFragmentDrawer`, `SkiaFontCache`, `BorderShapeDrawer`, `ImageRenderer`. | Alternate renderers belong in sibling projects that reuse the fragment contract. |
 | `src/Html2x` | Public facade consumed by host applications. | `HtmlConverter`, `LayoutBuilderFactory`. | Add configuration hooks or DI entry points here without embedding layout logic. |
 | `src/Tests/Html2x.LayoutEngine.Test` | Layout unit and snapshot coverage. | `CssStyleComputerTests`, `BoxTreeBuilderTests`, `FragmentBuilderTests`. | Keep fixtures deterministic through builders rather than loose strings. |
 | `src/Tests/Html2x.Renderers.Pdf.Test` | Renderer validation and PDF helpers. | `PdfRendererTests`, `BorderShapeDrawerTests`, `PdfWordParser`. | Only persist PDFs or fragment recordings when diagnosing failures. |
@@ -94,17 +94,16 @@ Renderer (PDF via QuestPDF)
 
 ### Html2x.Renderers.Pdf
 
-- **Role**: Render HtmlLayout objects to PDF bytes via QuestPDF while emitting diagnostics.
+- **Role**: Render HtmlLayout objects to PDF bytes via SkiaSharp while emitting diagnostics.
 - **Components**:
-  - `PdfRenderer` orchestrator, `PdfRendererLog`, and `QuestPdfConfigurator`.
-  - `IFragmentRendererFactory` implementations (`QuestPdfFragmentRendererFactory`) plus the dispatcher/visitor pair that walks fragments.
-  - Mapper utilities such as `QuestPdfStyleMapper`.
+  - `PdfRenderer` orchestrator that writes `SKDocument` output.
+  - `SkiaFragmentDrawer` plus drawing helpers (`SkiaFontCache`, `BorderShapeDrawer`, `ImageRenderer`).
   - `BorderShapeDrawer` for custom independent border rendering via SkiaSharp.
 - **Inputs and outputs**: Consumes fragment pages with `PdfOptions`; produces PDF byte arrays and structured logs.
 - **Extension guidance**:
   1. Treat fragments as read-only facts. If data is missing, fix the layout stage.
   2. Use `LoggerMessage` helpers for new diagnostics to avoid allocation churn.
-  3. To add a different renderer, create a sibling project that implements `IFragmentRenderer` and leave this assembly focused on QuestPDF.
+  3. To add a different renderer, create a sibling project that consumes fragments and leave this assembly focused on SkiaSharp PDF output.
 
 ### Html2x (Facade)
 
@@ -129,7 +128,7 @@ Renderer (PDF via QuestPDF)
 
 - **Parsing resilience**: DOM and CSS parsing ignore unsupported tags or properties and log at `Warning` when logging is enabled. Failures that block parsing (like unreadable streams) bubble as exceptions so callers can surface meaningful errors.
 - **Deterministic layout**: Every pipeline stage is pure. Given the same HTML, options, and supporting services, the resulting fragment tree is bit-for-bit identical. Cache or snapshot outputs when diagnosing regressions.
-- **Renderer safety**: `PdfRenderer` wraps QuestPDF calls, logs at `Error`, and rethrows so hosts can decide whether to retry or surface failures. Temporary resources are confined to local streams and disposed immediately.
+- **Renderer safety**: `PdfRenderer` wraps SkiaSharp calls, logs at `Error`, and rethrows so hosts can decide whether to retry or surface failures. Temporary resources are confined to local streams and disposed immediately.
 - **Thread isolation**: The library avoids static mutable state. You can create multiple converters in parallel as long as upstream dependencies (fonts, file access) are thread safe.
 
 ## Design Principles
@@ -137,7 +136,7 @@ Renderer (PDF via QuestPDF)
 1. **Fragments are the contract**: Every renderer consumes fragments only. If you find yourself needing DOM or style nodes in a renderer, revisit the layout stage and extend the fragment model instead.
 2. **Explicit stages**: Parsing, styling, box building, and rendering remain separate to keep reasoning simple and testing cheap. Do not blend responsibilities across stages.
 3. **Configuration over convention**: New behaviors should be toggled through options or injected services, not hidden switches. This keeps the public API predictable.
-4. **Cross-platform focus**: Stay with managed code paths (QuestPDF, AngleSharp). If a feature requires native interop, isolate it behind interfaces to preserve portability.
+4. **Cross-platform focus**: Stay with managed code paths (SkiaSharp, AngleSharp). If a feature requires native interop, isolate it behind interfaces to preserve portability.
 5. **Observable by default**: When adding complex logic, add structured logging hooks at the same time so future debugging is easier.
 ## Diagnostics Logging
 
@@ -155,7 +154,7 @@ Diagnostics can be switched on per call by setting `HtmlConverterOptions.Diagnos
 | --- | --- | --- | --- |
 | Core units | Validate geometry math, color conversions, style defaults, and fragment invariants. | Inline data driven tests covering edge cases (zero widths, negative margins, etc.). | Use xUnit `[Theory]` to document edge scenarios. |
 | Layout stage | Guard DOM parsing, cascade, and pagination logic. | HTML snippets in `Html2x.LayoutEngine.Test` with approved fragment snapshots or targeted assertions. | Favor deterministic snapshots; when behavior changes intentionally, update fixtures with rationale. |
-| Renderer stage | Ensure QuestPDF translation remains consistent. | Synthetic fragment trees rendered to PDF; assertions via `PdfValidator` and `PdfWordParser`. | Add fragment recording tests when debugging traversal behavior. |
+| Renderer stage | Ensure SkiaSharp drawing remains consistent. | Synthetic fragment trees rendered to PDF; assertions via `PdfValidator` and `PdfWordParser`. | Prefer geometry/text extraction assertions over binary diffing. |
 | Integration | Exercise the full `HtmlConverter` pipeline. | Realistic documents rendered during tests with PDF header and metadata checks. | Plug in `TestOutputLoggerProvider` to capture diagnostics inside the test output. |
 | Manual harness | Provide fast validation during development. | `Html2x.TestConsole` sample HTML files. | Point to local or temporary files; review console logs for layout traces. |
 
