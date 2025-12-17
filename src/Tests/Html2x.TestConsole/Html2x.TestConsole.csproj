@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <None Remove="assets\sample-logo.jpg" />
+    <None Remove="fonts\Inter-Italic-VariableFont_opsz,wght.ttf" />
     <None Remove="fonts\Inter-Regular.ttf" />
+    <None Remove="fonts\Inter-VariableFont_opsz,wght.ttf" />
     <None Remove="html\borders.html" />
     <None Remove="html\example.html" />
     <None Remove="html\headlines.html" />
@@ -29,7 +31,10 @@
     <Content Include="assets\sample-logo.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="fonts\Inter-Regular.ttf">
+    <Content Include="fonts\Inter-Italic-VariableFont_opsz,wght.ttf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="fonts\Inter-VariableFont_opsz,wght.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\borders.html">
