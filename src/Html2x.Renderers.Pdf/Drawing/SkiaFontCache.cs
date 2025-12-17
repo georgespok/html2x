@@ -32,22 +32,24 @@ namespace Html2x.Renderers.Pdf.Drawing;
 internal sealed class SkiaFontCache : IDisposable
 {
     private readonly IFileDirectory _fileDirectory;
+    private readonly ISkiaTypefaceFactory _typefaceFactory;
     private readonly string? _fontPath;
     private readonly ConcurrentDictionary<FontKey, SKTypeface> _typefaces = new();
     private readonly ConcurrentDictionary<string, SKTypeface> _typefacesByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<FontKey, SKTypeface> _typefacesFromDirectory = new();
-    private readonly Lazy<IReadOnlyList<TypefaceEntry>> _directoryFaces;
+    private readonly Lazy<IReadOnlyList<TypefaceCandidate>> _directoryFaces;
 
     public SkiaFontCache(string? fontPath)
-        : this(fontPath, new FileDirectory())
+        : this(fontPath, new FileDirectory(), new SkiaTypefaceFactory())
     {
     }
 
-    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory)
+    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
     {
         _fontPath = string.IsNullOrWhiteSpace(fontPath) ? null : fontPath;
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
-        _directoryFaces = new Lazy<IReadOnlyList<TypefaceEntry>>(LoadDirectoryFaces, LazyThreadSafetyMode.ExecutionAndPublication);
+        _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
+        _directoryFaces = new Lazy<IReadOnlyList<TypefaceCandidate>>(LoadDirectoryFaces, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public SKTypeface GetTypeface(FontKey key)
@@ -56,7 +58,7 @@ internal sealed class SkiaFontCache : IDisposable
         {
             return _typefacesByPath.GetOrAdd(_fontPath, path =>
             {
-                var fromFile = SKTypeface.FromFile(path);
+                var fromFile = _typefaceFactory.FromFile(path);
                 return fromFile ?? SKTypeface.Default;
             });
         }
@@ -87,7 +89,7 @@ internal sealed class SkiaFontCache : IDisposable
 
         foreach (var family in familyCandidates)
         {
-            var tf = SKTypeface.FromFamilyName(family, style);
+            var tf = _typefaceFactory.FromFamilyName(family, style);
             if (tf is not null)
             {
                 return tf;
@@ -111,23 +113,23 @@ internal sealed class SkiaFontCache : IDisposable
 
         foreach (var family in familyCandidates)
         {
-            var best = FindBestMatchInDirectory(faces, family, requestedWeight, wantsItalic);
+            var best = FindBestMatchCandidate(faces, family, requestedWeight, wantsItalic);
             if (best is not null)
             {
-                return best;
+                return best.Typeface;
             }
         }
 
         return null;
     }
 
-    private static SKTypeface? FindBestMatchInDirectory(
-        IReadOnlyList<TypefaceEntry> faces,
+    internal static TypefaceCandidate? FindBestMatchCandidate(
+        IReadOnlyList<TypefaceCandidate> faces,
         string family,
         int requestedWeight,
         bool wantsItalic)
     {
-        TypefaceEntry? best = null;
+        TypefaceCandidate? best = null;
         var bestSlantMatch = false;
         var bestWeightDistance = int.MaxValue;
 
@@ -180,23 +182,45 @@ internal sealed class SkiaFontCache : IDisposable
             }
         }
 
-        return best?.Typeface;
+        return best;
     }
 
-    private IReadOnlyList<TypefaceEntry> LoadDirectoryFaces()
+    private static readonly string[] FontExtensions = [".ttf", ".otf", ".ttc"];
+
+    private static IReadOnlyList<string> ListFontFiles(IFileDirectory fileDirectory, string directory)
+    {
+        ArgumentNullException.ThrowIfNull(fileDirectory);
+
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            return [];
+        }
+
+        if (!fileDirectory.DirectoryExists(directory))
+        {
+            return [];
+        }
+
+        return fileDirectory.EnumerateFiles(directory, "*.*", recursive: true)
+            .Where(path => FontExtensions.Contains(fileDirectory.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private IReadOnlyList<TypefaceCandidate> LoadDirectoryFaces()
     {
         if (_fontPath is null || !_fileDirectory.DirectoryExists(_fontPath))
         {
             return [];
         }
 
-        var files = SkiaFontFileDiscovery.ListFontFiles(_fileDirectory, _fontPath);
+        var files = ListFontFiles(_fileDirectory, _fontPath);
         if (files.Count == 0)
         {
             return [];
         }
 
-        var faces = new List<TypefaceEntry>(capacity: files.Count);
+        var faces = new List<TypefaceCandidate>(capacity: files.Count);
 
         foreach (var file in files)
         {
@@ -207,58 +231,78 @@ internal sealed class SkiaFontCache : IDisposable
                 continue;
             }
 
-            var tf = SKTypeface.FromFile(file);
+            var tf = _typefaceFactory.FromFile(file);
             if (tf is null)
             {
                 continue;
             }
 
-            faces.Add(TypefaceEntry.FromSingleFace(file, tf));
+            faces.Add(ToCandidate(file, faceIndex: 0, tf));
         }
 
         return faces;
     }
 
-    private static void LoadCollectionFaces(string file, List<TypefaceEntry> faces)
+    private void LoadCollectionFaces(string file, List<TypefaceCandidate> faces)
     {
         for (var index = 0; ; index++)
         {
-            var tf = SKTypeface.FromFile(file, index);
+            var tf = _typefaceFactory.FromFile(file, index);
             if (tf is null)
             {
                 break;
             }
 
-            faces.Add(TypefaceEntry.FromCollectionFace(file, index, tf));
+            faces.Add(ToCandidate(file, index, tf));
         }
+    }
+
+    private static TypefaceCandidate ToCandidate(string path, int faceIndex, SKTypeface typeface)
+    {
+        return new TypefaceCandidate(
+            path,
+            faceIndex,
+            typeface,
+            typeface.FamilyName ?? string.Empty,
+            typeface.FontWeight,
+            typeface.IsItalic || typeface.FontSlant != SKFontStyleSlant.Upright);
     }
 
     public void Dispose()
     {
-        foreach (var kvp in _typefaces)
-        {
-            kvp.Value.Dispose();
-        }
+        var disposedHandles = new HashSet<IntPtr>();
 
-        foreach (var kvp in _typefacesByPath)
-        {
-            kvp.Value.Dispose();
-        }
-
-        foreach (var kvp in _typefacesFromDirectory)
-        {
-            // Values are owned by _directoryFaces; do not dispose here.
-            _ = kvp;
-        }
+        DisposeTypefaces(_typefaces.Values, disposedHandles);
+        DisposeTypefaces(_typefacesByPath.Values, disposedHandles);
 
         var faces = _directoryFaces.IsValueCreated ? _directoryFaces.Value : null;
         if (faces is not null)
         {
-            for (var i = 0; i < faces.Count; i++)
-            {
-                faces[i].Typeface.Dispose();
-            }
+            DisposeTypefaces(faces.Select(x => x.Typeface), disposedHandles);
         }
+    }
+
+    private static void DisposeTypefaces(IEnumerable<SKTypeface> typefaces, HashSet<IntPtr> disposedHandles)
+    {
+        foreach (var typeface in typefaces)
+        {
+            if (IsDefaultTypeface(typeface))
+            {
+                continue;
+            }
+
+            if (!disposedHandles.Add(typeface.Handle))
+            {
+                continue;
+            }
+
+            typeface.Dispose();
+        }
+    }
+
+    private static bool IsDefaultTypeface(SKTypeface typeface)
+    {
+        return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
     }
 
     private static IEnumerable<string> GetFamilyCandidates(string family)
@@ -303,28 +347,5 @@ internal sealed class SkiaFontCache : IDisposable
             _ => SKFontStyleSlant.Upright
         };
 
-    private sealed record TypefaceEntry(string Path, int FaceIndex, SKTypeface Typeface, string Family, int Weight, bool IsItalic)
-    {
-        public static TypefaceEntry FromSingleFace(string path, SKTypeface typeface)
-        {
-            return new TypefaceEntry(
-                path,
-                FaceIndex: 0,
-                typeface,
-                typeface.FamilyName ?? string.Empty,
-                typeface.FontWeight,
-                typeface.IsItalic || typeface.FontSlant != SKFontStyleSlant.Upright);
-        }
-
-        public static TypefaceEntry FromCollectionFace(string path, int faceIndex, SKTypeface typeface)
-        {
-            return new TypefaceEntry(
-                path,
-                faceIndex,
-                typeface,
-                typeface.FamilyName ?? string.Empty,
-                typeface.FontWeight,
-                typeface.IsItalic || typeface.FontSlant != SKFontStyleSlant.Upright);
-        }
-    }
+    internal sealed record TypefaceCandidate(string Path, int FaceIndex, SKTypeface Typeface, string Family, int Weight, bool IsItalic);
 }

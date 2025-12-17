@@ -88,7 +88,7 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         {
             Pdf = new PdfOptions
             {
-                FontPath = "\\fonts\\Inter-Regular.ttf",
+                FontPath = "\\fonts",
                 EnableDebugging = true,
                 HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
                                 Directory.GetCurrentDirectory()
