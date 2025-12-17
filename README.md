@@ -18,7 +18,7 @@ The **primary** target is **PDF**, with an architecture designed to extend to **
 
 * **`Html2x.Abstractions`** - Contracts, diagnostics payloads, and shared utilities consumed by every engine and renderer.
 * **`Html2x.LayoutEngine`** - Parses HTML/CSS (via AngleSharp), builds the style/box trees, and emits predictable fragments with diagnostics hooks.
-* **`Html2x.Renderers.Pdf`** - Consumes fragments and renders PDFs using QuestPDF; owns renderer-side diagnostics.
+* **`Html2x.Renderers.Pdf`** - Consumes fragments and renders PDFs using SkiaSharp; owns renderer-side diagnostics.
 * **`Html2x`** - Composition facade for embedding scenarios; wires abstractions, layout, and renderers together.
 
 Additional renderers (for example `Html2x.Renderers.Svg`) can plug into the same abstractions without touching the layout engine.
@@ -38,7 +38,7 @@ Box Tree (layout model)
   ↓
 Fragment Tree (lines/pages)
   ↓
-Renderer (PDF via QuestPDF; future: SVG/Canvas)
+Renderer (PDF via SkiaSharp; future: SVG/Canvas)
 ```
 
 * **Display List** = a stable, device-independent set of drawing operations (text runs, paths, fills, borders, images, page breaks, etc.).
@@ -103,7 +103,7 @@ src/
   Html2x/                     (composition + public surface)
   Html2x.Abstractions/        (contracts, diagnostics, shared utilities)
   Html2x.LayoutEngine/        (style traversal, box + fragment builders)
-  Html2x.Renderers.Pdf/       (QuestPDF pipeline, mapping, visitors)
+  Html2x.Renderers.Pdf/       (SkiaSharp PDF pipeline, drawing, font resolution)
   Tests/
     Html2x.LayoutEngine.Test/
     Html2x.Renderers.Pdf.Test/

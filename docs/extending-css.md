@@ -51,9 +51,9 @@ If the property is render-only (e.g., text decoration), you may skip box changes
 
 ## 5. Render the Property
 
-1. Update `QuestPdfFragmentRenderer` (or relevant renderer) to translate the fragment data.
+1. Update the active PDF renderer drawing layer (for SkiaSharp this is `SkiaFragmentDrawer` and related drawers) to translate the fragment data.
 2. Add logging traces if the property impacts rendering decisions (e.g., something is skipped).
-3. Where QuestPDF lacks native support, log a `Warning` and document the limitation.
+3. Where the SkiaSharp drawing pipeline lacks native support, log a `Warning` and document the limitation.
 
 ### Tests
 
