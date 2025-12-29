@@ -1,6 +1,7 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
@@ -13,7 +14,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     {
     }
 
-    private InlineFragmentStage(TextRunFactory textRunFactory)
+    public InlineFragmentStage(TextRunFactory textRunFactory)
     {
         _textRunFactory = textRunFactory ?? throw new ArgumentNullException(nameof(textRunFactory));
     }
@@ -33,9 +34,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         var lookup = state.BlockBindings.ToDictionary(b => b.Source, b => b.Fragment);
         var visited = new HashSet<BlockBox>();
 
+        var factory = new TextRunFactory(new FontMetricsProvider(), state.Context.TextMeasurer);
+        var stage = new InlineFragmentStage(factory);
+
         foreach (var binding in state.BlockBindings)
         {
-            ProcessBlock(state, binding.Source, binding.Fragment, lookup, visited, state.Observers);
+            stage.ProcessBlock(state, binding.Source, binding.Fragment, lookup, visited, state.Observers);
         }
 
         return state;
