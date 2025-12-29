@@ -46,7 +46,7 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Confirm baseline classes and dependencies before edits
 
-- [ ] T001 [P] Review Class: FontMetricsProvider in `src/Html2x.LayoutEngine/FontMetricsProvider.cs` and Class: DefaultTextWidthEstimator in `src/Html2x.LayoutEngine/DefaultTextWidthEstimator.cs` to document current heuristic behavior and ensure replacement tasks preserve required outputs.
+- [x] T001 [P] Review Class: FontMetricsProvider in `src/Html2x.LayoutEngine/FontMetricsProvider.cs` and Class: DefaultTextWidthEstimator in `src/Html2x.LayoutEngine/DefaultTextWidthEstimator.cs` to document current heuristic behavior and ensure replacement tasks preserve required outputs.
   Why: avoids accidental regression when switching to real font metrics.
   How: summarize current ascent/descent and width heuristics in a short note inside `specs/008-text-measurement/research.md`.
 
