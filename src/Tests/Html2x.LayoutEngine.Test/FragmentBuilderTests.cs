@@ -1,11 +1,14 @@
 using AngleSharp;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Text;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.Assertions;
 using Html2x.LayoutEngine.Test.Builders;
+using Moq;
 using Shouldly;
 using System.IO;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
@@ -24,7 +27,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
+        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -48,7 +51,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
+        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -73,7 +76,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
+        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
 
         // Assert: One top-level BlockFragment for div
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -109,7 +112,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
+        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
 
         // Assert: One top-level BlockFragment
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -161,7 +164,7 @@ public class FragmentBuilderTests
 
         boxTree.Blocks.Add(ulBlock);
 
-        var fragments = CreateFragmentBuilder().Build(boxTree, new FragmentBuildContext(new NoopImageProvider(), Directory.GetCurrentDirectory(), (long)(10 * 1024 * 1024)));
+        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
 
         var ulFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
@@ -176,6 +179,26 @@ public class FragmentBuilderTests
     private static FragmentBuilder CreateFragmentBuilder() => new FragmentBuilder();
 
     private static BlockBoxBuilder BuildBoxTree() => new BlockBoxBuilder();
+
+    private static FragmentBuildContext CreateContext()
+    {
+        var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns(0f);
+        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
+            .Returns((0f, 0f));
+
+        var fontSource = new Mock<IFontSource>();
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
+
+        return new FragmentBuildContext(
+            new NoopImageProvider(),
+            Directory.GetCurrentDirectory(),
+            (long)(10 * 1024 * 1024),
+            textMeasurer.Object,
+            fontSource.Object);
+    }
 
     private static FragmentTreeAssertion AssertFragmentTree(FragmentTree tree)
     {
