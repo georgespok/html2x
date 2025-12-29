@@ -15,6 +15,7 @@
     <PackageVersion Include="QuestPDF" Version="2025.7.4" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="SkiaSharp" Version="3.119.1" />
+    <PackageVersion Include="SkiaSharp.HarfBuzz" Version="3.119.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
     <PackageVersion Include="Spectre.Console" Version="0.54.0" />

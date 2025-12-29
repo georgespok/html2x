@@ -18,8 +18,8 @@ public sealed class SkiaFontCacheTests
             true,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("regular.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("italic.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: true)
+                new FontFaceEntry("regular.ttf", 0, "Inter", 700, IsItalic: false),
+                new FontFaceEntry("italic.ttf", 0, "Inter", 400, IsItalic: true)
             },
             "italic.ttf",
             0
@@ -32,8 +32,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("w400.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("w700.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("w400.ttf", 0, "Inter", 400, IsItalic: false),
+                new FontFaceEntry("w700.ttf", 0, "Inter", 700, IsItalic: false)
             },
             "w700.ttf",
             0
@@ -46,8 +46,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("b.ttf", 0, SKTypeface.Default, "Inter", 600, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("a.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("b.ttf", 0, "Inter", 600, IsItalic: false),
+                new FontFaceEntry("a.ttf", 0, "Inter", 700, IsItalic: false)
             },
             "a.ttf",
             0
@@ -60,8 +60,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("a.ttc", 1, SKTypeface.Default, "Inter", 600, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("a.ttc", 0, SKTypeface.Default, "Inter", 600, IsItalic: false)
+                new FontFaceEntry("a.ttc", 1, "Inter", 600, IsItalic: false),
+                new FontFaceEntry("a.ttc", 0, "Inter", 600, IsItalic: false)
             },
             "a.ttc",
             0
@@ -78,7 +78,8 @@ public sealed class SkiaFontCacheTests
         string expectedPath,
         int expectedFaceIndex)
     {
-        var best = SkiaFontCache.FindBestMatchCandidate((SkiaFontCache.TypefaceCandidate[])candidates, family, requestedWeight, wantsItalic);
+        var key = new FontKey(family, (FontWeight)requestedWeight, wantsItalic ? FontStyle.Italic : FontStyle.Normal);
+        var best = FontDirectoryIndex.FindBestMatch((FontFaceEntry[])candidates, key);
 
         best.ShouldNotBeNull();
         best.Path.ShouldBe(expectedPath);
@@ -92,11 +93,12 @@ public sealed class SkiaFontCacheTests
     {
         var candidates = new[]
         {
-            new SkiaFontCache.TypefaceCandidate("a.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: false),
-            new SkiaFontCache.TypefaceCandidate("b.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: true)
+            new FontFaceEntry("a.ttf", 0, "Inter", 400, IsItalic: false),
+            new FontFaceEntry("b.ttf", 0, "Inter", 700, IsItalic: true)
         };
 
-        var best = SkiaFontCache.FindBestMatchCandidate(candidates, requestedFamily, requestedWeight: 400, wantsItalic: false);
+        var key = new FontKey(requestedFamily, FontWeight.W400, FontStyle.Normal);
+        var best = FontDirectoryIndex.FindBestMatch(candidates, key);
 
         best.ShouldBeNull();
     }
@@ -179,7 +181,7 @@ public sealed class SkiaFontCacheTests
             fileDirectory.Verify(x => x.EnumerateFiles(fontPath, "*.*", true), Times.Once);
             foreach (var file in enumeratedFiles.Where(f => !f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
             {
-                typefaceFactory.Verify(x => x.FromFile(file), Times.Once);
+                typefaceFactory.Verify(x => x.FromFile(file), Times.AtLeastOnce);
             }
 
             foreach (var ttc in enumeratedFiles.Where(f => f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
