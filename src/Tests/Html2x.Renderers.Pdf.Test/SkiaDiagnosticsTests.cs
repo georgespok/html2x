@@ -6,10 +6,12 @@ using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.File;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
+using Moq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -25,7 +27,8 @@ public class SkiaDiagnosticsTests
         };
 
         var layout = CreateLayoutWithMissingImage();
-        var renderer = new PdfRenderer();
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        var renderer = new PdfRenderer(fileDirectory.Object);
         var options = new PdfOptions { FontPath = string.Empty, HtmlDirectory = "." };
 
         var pdf = await renderer.RenderAsync(layout, options, session);

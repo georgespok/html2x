@@ -3,7 +3,9 @@ using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Options;
+using Html2x.Abstractions.File;
 using Html2x.Renderers.Pdf.Drawing;
+using Moq;
 using Shouldly;
 using SkiaSharp;
 
@@ -36,7 +38,8 @@ public sealed class BordersRenderingTests
             PageBackground: new ColorRgba(255, 255, 255, 255));
 
         var options = new PdfOptions { FontPath = string.Empty };
-        using var fontCache = new SkiaFontCache(fontPath: null);
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        using var fontCache = new SkiaFontCache(fontPath: null, fileDirectory.Object);
         var drawer = new SkiaFragmentDrawer(options, diagnosticsSession: null, fontCache);
 
         using var surface = SKSurface.Create(new SKImageInfo(200, 200, SKColorType.Bgra8888, SKAlphaType.Premul));

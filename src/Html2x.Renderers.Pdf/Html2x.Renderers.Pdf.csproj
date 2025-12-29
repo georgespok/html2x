@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Drawing\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="SkiaSharp" />
   </ItemGroup>
 

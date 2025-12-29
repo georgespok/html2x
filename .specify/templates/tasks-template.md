@@ -13,15 +13,21 @@ description: "Task list template for feature implementation"
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
 **Clarity rules**:
-- Each task description (excluding code) must be 2–6 plain-English lines, understandable to an entry-level developer with the listed tech but no project background.
+- Each task description (excluding code) must be 2-6 plain-English lines, understandable to an entry-level developer with the listed tech but no project background.
 - Include a short code sketch for decision points, calculations, or logic-heavy steps.
 - For substantial logic, include a brief **Why** (goal/risk) and **How** (steps) inside the task description before the code sketch.
+- Code-change tasks MUST name the concrete class(es) being changed or added, describe the new or updated responsibility, and summarize behavioral change in that class.
+- When a method name is known, include it, but class design and responsibility changes are required.
+- Class names and responsibilities MUST be based on existing code. The task writer MUST inspect the current codebase and cite the file path for each class mentioned.
+- Tasks that introduce or alter class design MUST align with SOLID principles and clean code practices.
+- Tasks that do not involve code changes should still reference the concrete file or document being updated.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- Prefer "Class: <Name> in <path>" for code change tasks to make responsibilities explicit
 
 ## Path Conventions
 
@@ -29,6 +35,12 @@ description: "Task list template for feature implementation"
 - **Web app**: `backend/src/`, `frontend/src/`
 - **Mobile**: `api/src/`, `ios/src/` or `android/src/`
 - Paths shown below assume single project - adjust based on plan.md structure
+
+## Preflight Checklist (must complete before writing tasks)
+
+- [ ] Scan existing classes relevant to each user story and record their file paths
+- [ ] Confirm any new classes align with existing naming and responsibility patterns
+- [ ] Identify at least one existing class per story that will change, or justify why a new class is required
 
 <!-- 
   ============================================================================
@@ -69,7 +81,7 @@ Examples of foundational tasks (adjust based on your project):
 
 - [ ] T004 Setup database schema and migrations framework
 - [ ] T005 [P] Implement authentication/authorization framework
-- [ ] T006 [P] (not used) — no API surface
+- [ ] T006 [P] (not used) - no API surface
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
@@ -93,12 +105,11 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
-- [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
-- [ ] T015 [US1] Implement user story behavior in src/[location]/[file].cs
-- [ ] T016 [US1] Add validation and error handling
-- [ ] T017 [US1] Add logging for user story 1 operations
+- [ ] T012 [P] [US1] Class: [ExistingOrNewClass] in src/[path]/[file].cs - add responsibility [X] and behavior [Y] (cite existing class usage)
+- [ ] T013 [P] [US1] Class: [ExistingOrNewClass] in src/[path]/[file].cs - update responsibility [X] and behavior [Y] (cite existing class usage)
+- [ ] T014 [US1] Class: [ExistingOrNewClass] in src/[path]/[file].cs - integrate with [OtherClass] in src/[path]/[file].cs, describe interaction
+- [ ] T015 [US1] Update validation or error handling in Class: [ExistingClass] in src/[path]/[file].cs
+- [ ] T016 [US1] Add diagnostics in Class: [ExistingClass] in src/[path]/[file].cs
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -117,10 +128,9 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
-- [ ] T021 [US2] Implement [Service] in src/services/[service].py
-- [ ] T022 [US2] Implement user story behavior in src/[location]/[file].cs
-- [ ] T023 [US2] Integrate with User Story 1 components (if needed)
+- [ ] T020 [P] [US2] Class: [ExistingOrNewClass] in src/[path]/[file].cs - add responsibility [X] and behavior [Y] (cite existing class usage)
+- [ ] T021 [US2] Class: [ExistingOrNewClass] in src/[path]/[file].cs - update behavior [Y] and error handling
+- [ ] T022 [US2] Class: [ExistingClass] in src/[path]/[file].cs - integrate with [OtherClass] in src/[path]/[file].cs
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -139,9 +149,9 @@ Examples of foundational tasks (adjust based on your project):
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Create [Entity] model in src/models/[entity].py
-- [ ] T027 [US3] Implement [Service] in src/services/[service].py
-- [ ] T028 [US3] Implement user story behavior in src/[location]/[file].cs
+- [ ] T026 [P] [US3] Class: [ExistingOrNewClass] in src/[path]/[file].cs - add responsibility [X] and behavior [Y] (cite existing class usage)
+- [ ] T027 [US3] Class: [ExistingOrNewClass] in src/[path]/[file].cs - update behavior [Y]
+- [ ] T028 [US3] Class: [ExistingClass] in src/[path]/[file].cs - integrate with [OtherClass] in src/[path]/[file].cs
 
 **Checkpoint**: All user stories should now be independently functional
 

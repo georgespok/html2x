@@ -9,6 +9,40 @@ namespace Html2x.Renderers.Pdf.Test.Drawing;
 
 public sealed class SkiaFontCacheTests
 {
+    [Fact]
+    public void Build_SkipsNonFontFilesAndDisposesNonDefaultTypefaces()
+    {
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
+
+        fileDirectory.Setup(x => x.DirectoryExists("fonts")).Returns(true);
+        fileDirectory.Setup(x => x.EnumerateFiles("fonts", "*.*", true)).Returns(new[]
+        {
+            "fonts\\a.ttf",
+            "fonts\\b.otf",
+            "fonts\\c.ttc",
+            "fonts\\readme.txt"
+        });
+        fileDirectory.Setup(x => x.GetExtension(It.IsAny<string>()))
+            .Returns((string path) => Path.GetExtension(path));
+
+        using var aTypeface = SKTypeface.FromFamilyName("Inter");
+        using var bTypeface = SKTypeface.FromFamilyName("Inter");
+        using var cTypeface = SKTypeface.FromFamilyName("Inter");
+
+        typefaceFactory.Setup(x => x.FromFile("fonts\\a.ttf")).Returns(aTypeface);
+        typefaceFactory.Setup(x => x.FromFile("fonts\\b.otf")).Returns(bTypeface);
+        typefaceFactory.Setup(x => x.FromFile("fonts\\c.ttc", 0)).Returns(cTypeface);
+        typefaceFactory.Setup(x => x.FromFile("fonts\\c.ttc", 1)).Returns((SKTypeface?)null);
+
+        var faces = FontDirectoryIndex.Build(fileDirectory.Object, typefaceFactory.Object, "fonts");
+
+        faces.Count.ShouldBe(3);
+        faces.Select(face => face.Path).ShouldBe(new[] { "fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc" }, ignoreOrder: true);
+
+        fileDirectory.VerifyAll();
+        typefaceFactory.VerifyAll();
+    }
     public static IEnumerable<object[]> BestMatchCases()
     {
         yield return
@@ -18,8 +52,8 @@ public sealed class SkiaFontCacheTests
             true,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("regular.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("italic.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: true)
+                new FontFaceEntry("regular.ttf", 0, "Inter", 700, IsItalic: false),
+                new FontFaceEntry("italic.ttf", 0, "Inter", 400, IsItalic: true)
             },
             "italic.ttf",
             0
@@ -32,8 +66,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("w400.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("w700.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("w400.ttf", 0, "Inter", 400, IsItalic: false),
+                new FontFaceEntry("w700.ttf", 0, "Inter", 700, IsItalic: false)
             },
             "w700.ttf",
             0
@@ -46,8 +80,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("b.ttf", 0, SKTypeface.Default, "Inter", 600, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("a.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("b.ttf", 0, "Inter", 600, IsItalic: false),
+                new FontFaceEntry("a.ttf", 0, "Inter", 700, IsItalic: false)
             },
             "a.ttf",
             0
@@ -60,10 +94,38 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new SkiaFontCache.TypefaceCandidate("a.ttc", 1, SKTypeface.Default, "Inter", 600, IsItalic: false),
-                new SkiaFontCache.TypefaceCandidate("a.ttc", 0, SKTypeface.Default, "Inter", 600, IsItalic: false)
+                new FontFaceEntry("a.ttc", 1, "Inter", 600, IsItalic: false),
+                new FontFaceEntry("a.ttc", 0, "Inter", 600, IsItalic: false)
             },
             "a.ttc",
+            0
+        ];
+
+        yield return
+        [
+            "MissingFamily",
+            600,
+            false,
+            new[]
+            {
+                new FontFaceEntry("b.ttf", 0, "Beta", 500, IsItalic: false),
+                new FontFaceEntry("a.ttf", 0, "Alpha", 700, IsItalic: false)
+            },
+            "a.ttf",
+            0
+        ];
+
+        yield return
+        [
+            "MissingFamily",
+            400,
+            true,
+            new[]
+            {
+                new FontFaceEntry("upright.ttf", 0, "Alpha", 400, IsItalic: false),
+                new FontFaceEntry("italic.ttf", 0, "Beta", 900, IsItalic: true)
+            },
+            "italic.ttf",
             0
         ];
     }
@@ -78,27 +140,12 @@ public sealed class SkiaFontCacheTests
         string expectedPath,
         int expectedFaceIndex)
     {
-        var best = SkiaFontCache.FindBestMatchCandidate((SkiaFontCache.TypefaceCandidate[])candidates, family, requestedWeight, wantsItalic);
+        var key = new FontKey(family, (FontWeight)requestedWeight, wantsItalic ? FontStyle.Italic : FontStyle.Normal);
+        var best = FontDirectoryIndex.FindBestMatch((FontFaceEntry[])candidates, key);
 
         best.ShouldNotBeNull();
         best.Path.ShouldBe(expectedPath);
         best.FaceIndex.ShouldBe(expectedFaceIndex);
-    }
-
-    [Theory]
-    [InlineData("MissingFamily")]
-    [InlineData("Other")]
-    public void FindBestMatchCandidate_WhenNoFamilyMatches_ReturnsNull(string requestedFamily)
-    {
-        var candidates = new[]
-        {
-            new SkiaFontCache.TypefaceCandidate("a.ttf", 0, SKTypeface.Default, "Inter", 400, IsItalic: false),
-            new SkiaFontCache.TypefaceCandidate("b.ttf", 0, SKTypeface.Default, "Inter", 700, IsItalic: true)
-        };
-
-        var best = SkiaFontCache.FindBestMatchCandidate(candidates, requestedFamily, requestedWeight: 400, wantsItalic: false);
-
-        best.ShouldBeNull();
     }
 
     public static IEnumerable<object[]> GetTypefaceBranchCases()
@@ -179,7 +226,7 @@ public sealed class SkiaFontCacheTests
             fileDirectory.Verify(x => x.EnumerateFiles(fontPath, "*.*", true), Times.Once);
             foreach (var file in enumeratedFiles.Where(f => !f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
             {
-                typefaceFactory.Verify(x => x.FromFile(file), Times.Once);
+                typefaceFactory.Verify(x => x.FromFile(file), Times.AtLeastOnce);
             }
 
             foreach (var ttc in enumeratedFiles.Where(f => f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
