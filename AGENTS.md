@@ -92,7 +92,7 @@ For technical solutions:
 - `src/Html2x` hosts the composition layer and public-facing APIs.
 - `src/Html2x.Abstractions` holds shared contracts, diagnostics payloads, and utilities.
 - `src/Html2x.LayoutEngine` builds style, box, and fragment trees.
-- `src/Html2x.Renderers.Pdf` renders output via QuestPDF.
+- `src/Html2x.Renderers.Pdf` renders output via SkiaSharp.
 - Tests live under `src/Tests`: `Html2x.LayoutEngine.Test`, `Html2x.Renderers.Pdf.Test`, scenario coverage in `Html2x.Test`, and the manual harness in `Html2x.TestConsole` (HTML samples and fonts live inside that project).
 - `src\Html2x.Diagnostics` - diagnostics framework
 - Developer docs remain under `docs/`; keep `build/` for local artifacts you do not commit.
@@ -132,7 +132,7 @@ For technical solutions:
 ## Tooling & Environment
 
 - Target .NET 8 across all projects.
-- QuestPDF assets live under `src/Tests/Html2x.TestConsole/fonts`; verify custom fonts there.
+- `src/Tests/Html2x.TestConsole/fonts`; verify custom fonts there.
 - Keep local scripts under `build/` or `.vscode/` and document anything new in `docs/`.
 - Shell choices for local automation:
   - PowerShell: lowest friction for orchestration, working directory ops, `dotnet` commands, and quick file moves. Uses native PATH and repo context.
