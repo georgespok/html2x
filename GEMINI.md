@@ -7,7 +7,7 @@
 **Key Technologies:**
 *   **Language:** C# (.NET 8.0)
 *   **Parsing:** AngleSharp (DOM & CSSOM)
-*   **PDF Rendering:** QuestPDF
+*   **PDF Rendering:** SkiaSharp
 *   **Testing:** xUnit
 
 ## Workflows & Constraints
@@ -30,13 +30,13 @@ The solution follows a strict pipeline architecture:
 2.  **Style:** `CssStyleComputer` resolves the cascade to produce a **Style Tree**.
 3.  **Layout:** `BoxTreeBuilder` creates a **Box Tree** (block/inline formatting contexts).
 4.  **Pagination:** `FragmentBuilder` converts boxes into a **Fragment Tree** (pages, lines, text runs).
-5.  **Rendering:** `Html2x.Renderers.Pdf` consumes the Fragment Tree to draw the PDF using **QuestPDF**.
+5.  **Rendering:** `Html2x.Renderers.Pdf` consumes the Fragment Tree to draw the PDF using **SkiaSharp**.
 
 **Project Structure:**
 *   `src/Html2x`: Public facade/composition root.
 *   `src/Html2x.Abstractions`: Core contracts, shared types (Fragments, Styles, Diagnostics). **Zero dependencies.**
 *   `src/Html2x.LayoutEngine`: The core layout pipeline (HTML -> Fragments).
-*   `src/Html2x.Renderers.Pdf`: PDF implementation using QuestPDF.
+*   `src/Html2x.Renderers.Pdf`: PDF implementation using SkiaSharp.
 *   `src/Html2x.Diagnostics`: Structured logging and diagnostics models.
 *   `src/Tests/*`: Unit, Integration, and Console harness projects.
 
@@ -74,7 +74,7 @@ dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- -
 *   **Style:** Standard C# conventions. 4-space indentation.
 *   **Immutability:** Prefer immutable records for data models (Fragments, Styles).
 *   **Separation of Concerns:**
-    *   **LayoutEngine** should *never* know about QuestPDF.
+    *   **LayoutEngine** should *never* know about SkiaSharp.
     *   **Renderers** should *never* touch the DOM/AngleSharp.
     *   **Abstractions** has *no* external dependencies.
 *   **Logging:** Use structured logging (`LoggerMessage.Define`). High-volume logs (layout traces) should be guarded by `IsEnabled` checks.
