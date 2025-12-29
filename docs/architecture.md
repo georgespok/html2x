@@ -43,7 +43,7 @@ Renderer (PDF via QuestPDF)
 - **Responsibility**: Convert boxes into positioned fragments, paginate content, and assemble `LayoutPage` instances.
 - **Input**: Box tree enriched with geometry and page settings.
 - **Output**: Fragment collection containing `LineBoxFragment`, `TextRun`, `ImageFragment`, and block containers ready for rendering.
-- **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) while collaborating with `TextRunFactory`, `DefaultLineHeightStrategy`, and `DefaultTextWidthEstimator`.
+- **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) while collaborating with `TextRunFactory`, `DefaultLineHeightStrategy`, and `TextWrapper` for whitespace-aware wrapping. Text width and metrics come from the injected `ITextMeasurer`.
 - **Extension rules**: Introducing new fragment types requires updating interfaces and records in `Html2x.Abstractions` plus renderer dispatchers. Keep pagination logic self-contained to maintain deterministic outputs.
 
 ### Renderer (QuestPDF)
@@ -85,7 +85,7 @@ Renderer (PDF via QuestPDF)
   - `AngleSharpDomProvider` for DOM loading and normalization.
   - `CssStyleComputer`, `UserAgentDefaults`, `StyleTraversal`, and `DefaultStyleDomFilter` for cascade logic.
   - `BoxTreeBuilder`, `DisplayTreeBuilder`, inline/float/table layout engines, and pagination utilities.
-  - `FragmentBuilder` with staged visitors, `TextRunFactory`, `FontMetricsProvider`, `DefaultLineHeightStrategy`, and the `LayoutBuilder`/`LayoutLog` facades.
+  - `FragmentBuilder` with staged visitors, `TextRunFactory`, `TextWrapper`, `DefaultLineHeightStrategy`, and the `LayoutBuilder`/`LayoutLog` facades. Text metrics and widths are supplied by the injected `ITextMeasurer`.
 - **Inputs and outputs**: Accepts HTML with `PageSize`, returns an `HtmlLayout` ready for rendering.
 - **Extension guidance**:
   1. Keep stage logic deterministic. If a feature needs external data, pass it in through abstractions.
@@ -109,7 +109,7 @@ Renderer (PDF via QuestPDF)
 ### Html2x (Facade)
 
 - **Role**: Provide the developer facing `HtmlConverter` API that wires layout, rendering, and diagnostics.
-- **Inputs and outputs**: Accepts HTML and `PdfOptions`, returns PDF bytes. 
+- **Inputs and outputs**: Accepts HTML and `PdfOptions`, returns PDF bytes. Requires an explicit `PdfOptions.FontPath` and resolves all fonts from that path before layout begins.
 - **Extension guidance**: Keep this layer thin; add configuration knobs or logging hooks but redirect substantive behavior to the pipeline projects.
 
 ### Test Projects
