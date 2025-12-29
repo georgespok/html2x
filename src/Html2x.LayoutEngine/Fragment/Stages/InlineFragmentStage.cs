@@ -1,10 +1,8 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
-using Html2x.LayoutEngine;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
@@ -17,7 +15,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     {
     }
 
-    public InlineFragmentStage(TextRunFactory textRunFactory)
+    private InlineFragmentStage(TextRunFactory textRunFactory)
     {
         _textRunFactory = textRunFactory ?? throw new ArgumentNullException(nameof(textRunFactory));
     }

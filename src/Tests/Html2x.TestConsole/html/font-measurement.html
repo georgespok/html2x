@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Font Measurement Sample</title>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        font-size: 16pt;
+        margin: 24pt;
+      }
+      .narrow {
+        max-width: 180pt;
+        border: 1pt dashed #2563eb;
+        padding: 8pt;
+        margin-bottom: 16pt;
+      }
+      .wide {
+        max-width: 360pt;
+        border: 1pt solid #16a34a;
+        padding: 8pt;
+      }
+      .accent {
+        font-weight: 700;
+        color: #1d4ed8;
+      }
+      .emoji {
+        font-size: 20pt;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Font Measurement Sample</h1>
+    <div class="narrow">
+      <span class="accent">Narrow block:</span>
+      This line should wrap at spaces, and long tokens like
+      Supercalifragilisticexpialidocious should split cleanly.
+    </div>
+    <div class="wide">
+      <span class="accent">Wide block:</span>
+      Mixed scripts: مرحبا بالعالم, नमस्ते दुनिया, 你好世界.
+      <span class="emoji">🙂🔥</span>
+    </div>
+  </body>
+</html>

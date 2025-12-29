@@ -28,7 +28,7 @@ public class InlineFragmentStageTests
             .Up()
             .BuildTree();
 
-        var context = CreateContext();
+        var context = CreateContext(new FakeTextMeasurer(0f, 9f, 3f));
         var state = new FragmentBuildState(boxTree, context);
         
         // Act
@@ -63,7 +63,7 @@ public class InlineFragmentStageTests
             .Up()
             .BuildTree();
 
-        var context = CreateContext(width: 40f, ascent: 9f, descent: 3f);
+        var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -77,14 +77,8 @@ public class InlineFragmentStageTests
         line.BaselineY.ShouldBe(line.Rect.Top + 9f, 0.001f);
     }
 
-    private static FragmentBuildContext CreateContext(float width = 0f, float ascent = 0f, float descent = 0f)
+    private static FragmentBuildContext CreateContext(ITextMeasurer textMeasurer)
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(width);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((ascent, descent));
-
         var fontSource = new Mock<IFontSource>();
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
@@ -93,7 +87,7 @@ public class InlineFragmentStageTests
             new NoopImageProvider(),
             Directory.GetCurrentDirectory(),
             (long)(10 * 1024 * 1024),
-            textMeasurer.Object,
+            textMeasurer,
             fontSource.Object);
     }
 }

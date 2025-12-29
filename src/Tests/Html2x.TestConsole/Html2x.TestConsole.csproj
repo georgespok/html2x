@@ -14,6 +14,7 @@
     <None Remove="fonts\Inter-VariableFont_opsz,wght.ttf" />
     <None Remove="html\borders.html" />
     <None Remove="html\example.html" />
+    <None Remove="html\font-measurement.html" />
     <None Remove="html\headlines.html" />
     <None Remove="html\images.html" />
     <None Remove="html\images\sample-logo.jpg" />
@@ -38,6 +39,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\borders.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="html\font-measurement.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\headlines.html">
