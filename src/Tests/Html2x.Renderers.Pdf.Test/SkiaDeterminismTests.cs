@@ -3,9 +3,11 @@ using System.Linq;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.File;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Pipeline;
+using Moq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -18,7 +20,8 @@ public class SkiaDeterminismTests
         var layout1 = CreateSimpleLayout();
         var layout2 = CreateSimpleLayout();
         var options = new PdfOptions { FontPath = string.Empty };
-        var renderer = new PdfRenderer();
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        var renderer = new PdfRenderer(fileDirectory.Object);
 
         // Warm up renderer/font caches to avoid first-render variance.
         await renderer.RenderAsync(CreateSimpleLayout(), options);

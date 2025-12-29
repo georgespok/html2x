@@ -2,6 +2,8 @@ using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fonts;
+using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
@@ -20,13 +22,17 @@ public class LayoutBuilder(
     IStyleComputer styleComputer,
     IBoxTreeBuilder boxBuilder,
     IFragmentBuilder fragmentBuilder,
-    IImageProvider imageProvider)
+    IImageProvider imageProvider,
+    ITextMeasurer textMeasurer,
+    IFontSource fontSource)
 {
     private readonly IBoxTreeBuilder _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
     private readonly IDomProvider _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
     private readonly IFragmentBuilder _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
     private readonly IStyleComputer _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
     private readonly IImageProvider _imageProvider = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
+    private readonly ITextMeasurer _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+    private readonly IFontSource _fontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
     
     public async Task<HtmlLayout> BuildAsync(string html, 
         LayoutOptions options, DiagnosticsSession? diagnosticsSession = null)
@@ -45,7 +51,9 @@ public class LayoutBuilder(
             new FragmentBuildContext(
                 _imageProvider,
                 options.HtmlDirectory,
-                options.MaxImageSizeBytes)));
+                options.MaxImageSizeBytes,
+                _textMeasurer,
+                _fontSource)));
 
         RunStage("stage/fragmentation", () =>
         {
