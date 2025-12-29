@@ -7,9 +7,11 @@ using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.File;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -47,7 +49,8 @@ public class ImageRenderingTests
             }
         };
 
-        var renderer = new PdfRenderer();
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        var renderer = new PdfRenderer(fileDirectory.Object);
 
         // act
         var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnostics);

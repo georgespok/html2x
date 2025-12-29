@@ -1,6 +1,6 @@
 using Html2x.Abstractions.File;
 
-namespace Html2x.Renderers.Pdf.Files;
+namespace Html2x.Files;
 
 internal sealed class FileDirectory : IFileDirectory
 {

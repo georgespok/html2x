@@ -1,6 +1,7 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
+using Html2x.Files;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
 
@@ -49,7 +50,7 @@ public class HtmlConverter
                 Snapshot = LayoutSnapshotMapper.From(layout)
             });
 
-        var renderer = new PdfRenderer();
+        var renderer = new PdfRenderer(new FileDirectory());
 
         AddDiagnosticsEvent(
             session,
