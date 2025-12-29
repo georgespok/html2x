@@ -60,25 +60,25 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Contracts and composition wiring used by all user stories
 
-- [ ] T003 [P] Class: ITextMeasurer in `src/Html2x.Abstractions/Layout/Text/ITextMeasurer.cs` - add a renderer-agnostic text measurement contract that returns widths and vertical metrics in points.
+- [x] T003 [P] Class: ITextMeasurer in `src/Html2x.Abstractions/Layout/Text/ITextMeasurer.cs` - add a renderer-agnostic text measurement contract that returns widths and vertical metrics in points.
   Why: layout must depend only on abstractions for font measurement.
   How: define method signatures using existing `FontKey` from `src/Html2x.Abstractions/Layout/Styles/FontKey.cs`.
 
-- [ ] T004 [P] Class: IFontSource in `src/Html2x.Abstractions/Layout/Fonts/IFontSource.cs` and Class: ResolvedFont in `src/Html2x.Abstractions/Layout/Fonts/ResolvedFont.cs` - define strict font resolution contracts that carry family, weight, style, and a stable source id.
+- [x] T004 [P] Class: IFontSource in `src/Html2x.Abstractions/Layout/Fonts/IFontSource.cs` and Class: ResolvedFont in `src/Html2x.Abstractions/Layout/Fonts/ResolvedFont.cs` - define strict font resolution contracts that carry family, weight, style, and a stable source id.
   Why: enforce font-path-only resolution without leaking renderer types.
   How: model fields on existing `FontKey` and keep file path optional for diagnostics.
 
-- [ ] T005 Class: LayoutServices in `src/Html2x/LayoutServices.cs` - introduce a composition DTO that carries `ITextMeasurer` and `IFontSource` for layout.
+- [x] T005 Class: LayoutServices in `src/Html2x/LayoutServices.cs` - introduce a composition DTO that carries `ITextMeasurer` and `IFontSource` for layout.
   Why: centralizes dependency injection without coupling LayoutEngine to renderers.
   How: keep it immutable and require non-null services.
 
-- [ ] T006 Class: ILayoutBuilderFactory in `src/Html2x/ILayoutBuilderFactory.cs` and Class: LayoutBuilderFactory in `src/Html2x/LayoutBuilderFactory.cs` - add an overload or updated signature to accept `LayoutServices` and pass it to LayoutBuilder creation.
+- [x] T006 Class: ILayoutBuilderFactory in `src/Html2x/ILayoutBuilderFactory.cs` and Class: LayoutBuilderFactory in `src/Html2x/LayoutBuilderFactory.cs` - add an overload or updated signature to accept `LayoutServices` and pass it to LayoutBuilder creation.
   Why: HtmlConverter must provide real measurement services to layout.
   How: keep existing `Create()` for backward compatibility if needed, but prefer the new path in HtmlConverter.
 
   **TODO: Remove existing `Create()` method from LayoutBuilderFactory**
 
-- [ ] T007 Class: LayoutBuilder in `src/Html2x.LayoutEngine/LayoutBuilder.cs` and Class: FragmentBuildContext in `src/Html2x.LayoutEngine/Fragment/FragmentBuildContext.cs` - carry measurement services through fragment building.
+- [x] T007 Class: LayoutBuilder in `src/Html2x.LayoutEngine/LayoutBuilder.cs` and Class: FragmentBuildContext in `src/Html2x.LayoutEngine/Fragment/FragmentBuildContext.cs` - carry measurement services through fragment building.
   Why: Inline layout needs access to the measurer without new renderer dependencies.
   How: extend FragmentBuildContext with `ITextMeasurer` and `IFontSource` and update constructors to require them.
 
@@ -92,29 +92,29 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 1
 
-- [ ] T008 [P] [US1] Add unit tests in `src/Tests/Html2x.LayoutEngine.Test/Text/InlineFragmentStageTests.cs` that assert baseline and width changes when a deterministic measurer returns specific metrics.
+- [x] T008 [P] [US1] Add unit tests in `src/Tests/Html2x.LayoutEngine.Test/Text/InlineFragmentStageTests.cs` that assert baseline and width changes when a deterministic measurer returns specific metrics.
   Why: verifies that layout consumes the measurer rather than heuristics.
   How: prefer a Moq `Mock<ITextMeasurer>` when practical; fall back to a fake only if mocking is impractical. Assert LineBoxFragment metrics.
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Class: TextRunFactory in `src/Html2x.LayoutEngine/Fragment/TextRunFactory.cs` - replace width and metrics estimation with `ITextMeasurer` and remove reliance on `DefaultTextWidthEstimator`.
+- [x] T009 [US1] Class: TextRunFactory in `src/Html2x.LayoutEngine/Fragment/TextRunFactory.cs` - replace width and metrics estimation with `ITextMeasurer` and remove reliance on `DefaultTextWidthEstimator`.
   Why: text runs must reflect real font metrics.
   How: accept `ITextMeasurer` via constructor and use it for both width and ascent/descent.
 
-- [ ] T010 [US1] Class: InlineLayoutEngine in `src/Html2x.LayoutEngine/Box/InlineLayoutEngine.cs` - update line height computation to use `ITextMeasurer` metrics instead of `IFontMetricsProvider` heuristics.
+- [x] T010 [US1] Class: InlineLayoutEngine in `src/Html2x.LayoutEngine/Box/InlineLayoutEngine.cs` - update line height computation to use `ITextMeasurer` metrics instead of `IFontMetricsProvider` heuristics.
   Why: vertical alignment must match real fonts.
   How: resolve font key and size from `ComputedStyle` then call the measurer for metrics.
 
-- [ ] T011 [US1] Class: FragmentBuilder in `src/Html2x.LayoutEngine/Fragment/FragmentBuilder.cs` and Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` - inject a TextRunFactory that uses the new measurer.
+- [x] T011 [US1] Class: FragmentBuilder in `src/Html2x.LayoutEngine/Fragment/FragmentBuilder.cs` and Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` - inject a TextRunFactory that uses the new measurer.
   Why: inline fragments must be built with accurate measurements.
   How: pass services through FragmentBuildContext and construct stages with the configured factory.
 
-- [ ] T012 [US1] Class: SkiaFontCache in `src/Html2x.Renderers.Pdf/Drawing/SkiaFontCache.cs` - reuse its font resolution logic to support file- and directory-backed resolution for the measurer.
+- [x] T012 [US1] Class: SkiaFontCache in `src/Html2x.Renderers.Pdf/Drawing/SkiaFontCache.cs` - reuse its font resolution logic to support file- and directory-backed resolution for the measurer.
   Why: keep font resolution consistent between layout and PDF rendering.
   How: expose a helper or new adapter class without leaking Skia types into layout.
 
-- [ ] T013 [US1] Class: SkiaTextMeasurer in `src/Html2x/SkiaTextMeasurer.cs` - add a measurer that shapes text with HarfBuzz and returns widths and metrics in points.
+- [x] T013 [US1] Class: SkiaTextMeasurer in `src/Html2x/SkiaTextMeasurer.cs` - add a measurer that shapes text with HarfBuzz and returns widths and metrics in points.
   Why: ensures accurate, font-backed measurement.
   How: resolve typefaces via the font source adapter and cache results per conversion.
 
@@ -128,17 +128,17 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 2
 
-- [ ] T014 [P] [US2] Add integration tests in `src/Tests/Html2x.Test/HtmlConverterTests.cs` that assert an exception and diagnostics event when `PdfOptions.FontPath` is missing or points to an invalid location.
+- [x] T014 [P] [US2] Add integration tests in `src/Tests/Html2x.Test/HtmlConverterTests.cs` that assert an exception and diagnostics event when `PdfOptions.FontPath` is missing or points to an invalid location.
   Why: validates early failure contract.
   How: call HtmlConverter with invalid options and assert diagnostics include an error event.
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Class: HtmlConverter in `src/Html2x/HtmlConverter.cs` - enforce a non-empty `PdfOptions.FontPath` before layout and emit a diagnostics error when missing.
+- [x] T015 [US2] Class: HtmlConverter in `src/Html2x/HtmlConverter.cs` - enforce a non-empty `PdfOptions.FontPath` before layout and emit a diagnostics error when missing.
   Why: prevents layout from running with undefined fonts.
   How: validate `options.Pdf.FontPath` and use `DiagnosticsEventType.Error` on failure.
 
-- [ ] T016 [US2] Class: SkiaTextMeasurer in `src/Html2x/SkiaTextMeasurer.cs` - surface invalid font file resolution via a descriptive exception and diagnostics signal.
+- [x] T016 [US2] Class: SkiaTextMeasurer in `src/Html2x/SkiaTextMeasurer.cs` - surface invalid font file resolution via a descriptive exception and diagnostics signal.
   Why: missing or corrupted fonts must be reported clearly.
   How: return a failure result or throw with context that HtmlConverter captures into diagnostics.
 
@@ -152,17 +152,17 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 3
 
-- [ ] T017 [P] [US3] Add unit tests in `src/Tests/Html2x.LayoutEngine.Test/Text/LineBoxFragmentTests.cs` covering whitespace wrapping and long-token fallback using a deterministic measurer.
+- [x] T017 [P] [US3] Add unit tests in `src/Tests/Html2x.LayoutEngine.Test/Text/LineBoxFragmentTests.cs` covering whitespace wrapping and long-token fallback using a deterministic measurer.
   Why: ensures wrapping rules are stable and regression-safe.
   How: prefer a Moq `Mock<ITextMeasurer>` when practical; assert line counts and run content for a narrow width.
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Class: TextWrapper in `src/Html2x.LayoutEngine/Text/TextWrapper.cs` - introduce a wrapper that splits text by whitespace first and falls back to character boundaries.
+- [x] T018 [US3] Class: TextWrapper in `src/Html2x.LayoutEngine/Text/TextWrapper.cs` - introduce a wrapper that splits text by whitespace first and falls back to character boundaries.
   Why: consistent wrapping behavior is required for correctness.
   How: use `System.Globalization.StringInfo` to enumerate text elements for fallback.
 
-- [ ] T019 [US3] Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` - integrate TextWrapper to create multiple LineBoxFragments when runs exceed available width.
+- [x] T019 [US3] Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` - integrate TextWrapper to create multiple LineBoxFragments when runs exceed available width.
   Why: inline fragments currently never wrap.
   How: compute line width from the block content box and emit multiple line fragments.
 
@@ -176,17 +176,17 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 4
 
-- [ ] T020 [P] [US4] Add a test double Class: FakeTextMeasurer in `src/Tests/Html2x.LayoutEngine.Test/TestDoubles/FakeTextMeasurer.cs` with deterministic widths and metrics, only if Moq cannot express the needed behavior cleanly.
+- [x] T020 [P] [US4] Add a test double Class: FakeTextMeasurer in `src/Tests/Html2x.LayoutEngine.Test/TestDoubles/FakeTextMeasurer.cs` with deterministic widths and metrics, only if Moq cannot express the needed behavior cleanly.
   Why: enables repeatable tests without font files.
   How: prefer Moq for simple expectations; implement `ITextMeasurer` with fixed outputs only when necessary.
 
-- [ ] T021 [P] [US4] Add tests in `src/Tests/Html2x.LayoutEngine.Test/Text/InlineFragmentStageTests.cs` that inject a deterministic `ITextMeasurer` and verify repeatable output.
+- [x] T021 [P] [US4] Add tests in `src/Tests/Html2x.LayoutEngine.Test/Text/InlineFragmentStageTests.cs` that inject a deterministic `ITextMeasurer` and verify repeatable output.
   Why: ensures layout supports deterministic injection.
   How: prefer a Moq `Mock<ITextMeasurer>` when practical; use FakeTextMeasurer only if needed, then compare line metrics.
 
 ### Implementation for User Story 4
 
-- [ ] T022 [US4] Class: FragmentBuildContext in `src/Html2x.LayoutEngine/Fragment/FragmentBuildContext.cs` - make measurer injection required and ensure tests can pass FakeTextMeasurer.
+- [x] T022 [US4] Class: FragmentBuildContext in `src/Html2x.LayoutEngine/Fragment/FragmentBuildContext.cs` - make measurer injection required and ensure tests can pass FakeTextMeasurer.
   Why: determinism depends on injectable services.
   How: remove default constructors that hide dependencies.
 
@@ -196,15 +196,15 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Documentation, diagnostics, and sample coverage
 
-- [ ] T023 [P] Update documentation in `docs/` to explain the new font measurement contracts, expected font path configuration, and failure modes.
+- [x] T023 [P] Update documentation in `docs/` to explain the new font measurement contracts, expected font path configuration, and failure modes.
   Why: new extension points must be documented for users.
   How: add a concise section in an existing doc or create a new one if needed.
 
-- [ ] T024 [P] Add a sample HTML file in `src/Tests/Html2x.TestConsole/html/font-measurement.html` and wire it into `src/Tests/Html2x.TestConsole/Program.cs` or `RenderCommand.cs` for manual validation.
+- [x] T024 [P] Add a sample HTML file in `src/Tests/Html2x.TestConsole/html/font-measurement.html` and wire it into `src/Tests/Html2x.TestConsole/Program.cs` or `RenderCommand.cs` for manual validation.
   Why: required by constitution and helps manual verification.
   How: include mixed fonts and long text to exercise wrapping.
 
-- [ ] T025 Run quickstart validation using `specs/008-text-measurement/quickstart.md` and update any steps that do not match the new configuration.
+- [x] T025 Run quickstart validation using `specs/008-text-measurement/quickstart.md` and update any steps that do not match the new configuration.
   Why: ensures docs stay accurate.
   How: execute the described steps and adjust the quickstart notes.
 
