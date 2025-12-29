@@ -31,25 +31,7 @@ public static class FontDirectoryIndex
 
         foreach (var file in files)
         {
-            var ext = fileDirectory.GetExtension(file);
-            if (string.Equals(ext, ".ttc", StringComparison.OrdinalIgnoreCase))
-            {
-                LoadCollectionFaces(typefaceFactory, file, faces);
-                continue;
-            }
-
-            var tf = typefaceFactory.FromFile(file);
-            if (tf is null)
-            {
-                continue;
-            }
-
-            faces.Add(ToEntry(file, faceIndex: 0, tf));
-
-            if (!IsDefaultTypeface(tf))
-            {
-                tf.Dispose();
-            }
+            AddFaceEntries(typefaceFactory, file, faces);
         }
 
         return faces;
@@ -64,65 +46,13 @@ public static class FontDirectoryIndex
 
         var wantsItalic = key.Style is FontStyle.Italic or FontStyle.Oblique;
         var requestedWeight = (int)key.Weight;
-        var familyCandidates = GetFamilyCandidates(key.Family).ToArray();
-
-        FontFaceEntry? best = null;
-        var bestSlantMatch = false;
-        var bestWeightDistance = int.MaxValue;
-
-        foreach (var family in familyCandidates)
+        var candidates = GetFamilyCandidates(faces, key.Family);
+        if (candidates.Count == 0)
         {
-            for (var i = 0; i < faces.Count; i++)
-            {
-                var entry = faces[i];
-                if (!string.Equals(entry.Family, family, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var slantMatch = entry.IsItalic == wantsItalic;
-                var weightDistance = Math.Abs(entry.Weight - requestedWeight);
-
-                if (best is null)
-                {
-                    best = entry;
-                    bestSlantMatch = slantMatch;
-                    bestWeightDistance = weightDistance;
-                    continue;
-                }
-
-                if (bestSlantMatch != slantMatch)
-                {
-                    if (slantMatch)
-                    {
-                        best = entry;
-                        bestSlantMatch = true;
-                        bestWeightDistance = weightDistance;
-                    }
-
-                    continue;
-                }
-
-                if (weightDistance < bestWeightDistance)
-                {
-                    best = entry;
-                    bestWeightDistance = weightDistance;
-                    continue;
-                }
-
-                if (weightDistance == bestWeightDistance)
-                {
-                    var pathComparison = StringComparer.OrdinalIgnoreCase.Compare(entry.Path, best.Path);
-                    if (pathComparison < 0 || (pathComparison == 0 && entry.FaceIndex < best.FaceIndex))
-                    {
-                        best = entry;
-                        bestWeightDistance = weightDistance;
-                    }
-                }
-            }
+            return SelectBestMatch(faces, wantsItalic, requestedWeight);
         }
 
-        return best;
+        return SelectBestMatch(candidates, wantsItalic, requestedWeight);
     }
 
     private static IReadOnlyList<string> ListFontFiles(IFileDirectory fileDirectory, string directory)
@@ -138,6 +68,17 @@ public static class FontDirectoryIndex
             .ToList();
     }
 
+    private static void AddFaceEntries(ISkiaTypefaceFactory typefaceFactory, string file, List<FontFaceEntry> faces)
+    {
+        if (string.Equals(Path.GetExtension(file), ".ttc", StringComparison.OrdinalIgnoreCase))
+        {
+            LoadCollectionFaces(typefaceFactory, file, faces);
+            return;
+        }
+
+        AddFaceEntry(typefaceFactory, file, faceIndex: 0, faces);
+    }
+
     private static void LoadCollectionFaces(ISkiaTypefaceFactory typefaceFactory, string file, List<FontFaceEntry> faces)
     {
         for (var index = 0; ; index++)
@@ -148,48 +89,116 @@ public static class FontDirectoryIndex
                 break;
             }
 
-            faces.Add(ToEntry(file, index, tf));
-
-            if (!IsDefaultTypeface(tf))
-            {
-                tf.Dispose();
-            }
+            AddFaceEntry(file, index, tf, faces);
         }
     }
 
-    private static FontFaceEntry ToEntry(string path, int faceIndex, SKTypeface typeface)
-    {
-        return new FontFaceEntry(
+    private static FontFaceEntry ToEntry(string path, int faceIndex, SKTypeface typeface) =>
+        new(
             path,
             faceIndex,
             typeface.FamilyName ?? string.Empty,
             typeface.FontWeight,
             typeface.IsItalic || typeface.FontSlant != SKFontStyleSlant.Upright);
-    }
 
-    private static IEnumerable<string> GetFamilyCandidates(string family)
+    private static List<FontFaceEntry> GetFamilyCandidates(IReadOnlyList<FontFaceEntry> faces, string? family) =>
+        string.IsNullOrWhiteSpace(family) 
+            ? [] 
+            : faces.Where(entry => string.Equals(entry.Family, family, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private static bool IsDefaultTypeface(SKTypeface typeface) => 
+        ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
+
+    private static FontFaceEntry? SelectBestMatch(
+        IReadOnlyList<FontFaceEntry> candidates,
+        bool wantsItalic,
+        int requestedWeight)
     {
-        if (string.IsNullOrWhiteSpace(family))
+        if (candidates.Count == 0)
         {
-            yield return SKTypeface.Default.FamilyName;
-            yield break;
+            return null;
         }
 
-        yield return family;
+        // Selection order: slant match, weight distance, family, path, face index.
+        var best = candidates[0];
+        var bestScore = GetMatchScore(best, wantsItalic, requestedWeight);
 
-        if (string.Equals(family, "Arial", StringComparison.OrdinalIgnoreCase))
+        for (var i = 1; i < candidates.Count; i++)
         {
-            yield return "Liberation Sans";
-            yield return "Helvetica";
+            var entry = candidates[i];
+            var score = GetMatchScore(entry, wantsItalic, requestedWeight);
+            if (CompareScores(score, bestScore) < 0)
+            {
+                best = entry;
+                bestScore = score;
+            }
         }
 
-        yield return SKTypeface.Default.FamilyName;
+        return best;
     }
 
-    private static bool IsDefaultTypeface(SKTypeface typeface)
+    private static MatchScore GetMatchScore(FontFaceEntry entry, bool wantsItalic, int requestedWeight) =>
+        new(
+            entry.IsItalic == wantsItalic ? 0 : 1,
+            Math.Abs(entry.Weight - requestedWeight),
+            entry.Family ?? string.Empty,
+            entry.Path,
+            entry.FaceIndex);
+
+    private static int CompareScores(MatchScore left, MatchScore right)
     {
-        return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
+        var slantCompare = left.SlantMismatch.CompareTo(right.SlantMismatch);
+        if (slantCompare != 0)
+        {
+            return slantCompare;
+        }
+
+        var weightCompare = left.WeightDistance.CompareTo(right.WeightDistance);
+        if (weightCompare != 0)
+        {
+            return weightCompare;
+        }
+
+        var familyCompare = StringComparer.OrdinalIgnoreCase.Compare(left.Family, right.Family);
+        if (familyCompare != 0)
+        {
+            return familyCompare;
+        }
+
+        var pathCompare = StringComparer.OrdinalIgnoreCase.Compare(left.Path, right.Path);
+        if (pathCompare != 0)
+        {
+            return pathCompare;
+        }
+
+        return left.FaceIndex.CompareTo(right.FaceIndex);
+    }
+
+    private static void AddFaceEntry(
+        ISkiaTypefaceFactory typefaceFactory,
+        string path,
+        int faceIndex,
+        List<FontFaceEntry> faces)
+    {
+        var typeface = faceIndex > 0
+            ? typefaceFactory.FromFile(path, faceIndex)
+            : typefaceFactory.FromFile(path);
+
+        if (typeface is null)
+        {
+            return;
+        }
+
+        AddFaceEntry(path, faceIndex, typeface, faces);
+    }
+
+    private static void AddFaceEntry(string path, int faceIndex, SKTypeface typeface, List<FontFaceEntry> faces)
+    {
+        faces.Add(ToEntry(path, faceIndex, typeface));
+
+        if (!IsDefaultTypeface(typeface))
+        {
+            typeface.Dispose();
+        }
     }
 }
-
-public sealed record FontFaceEntry(string Path, int FaceIndex, string Family, int Weight, bool IsItalic);
