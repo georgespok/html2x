@@ -50,7 +50,7 @@ description: "Task list template for feature implementation"
   Why: avoids accidental regression when switching to real font metrics.
   How: summarize current ascent/descent and width heuristics in a short note inside `specs/008-text-measurement/research.md`.
 
-- [ ] T002 [P] Review Class: TextRunFactory in `src/Html2x.LayoutEngine/Fragment/TextRunFactory.cs` and Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` to map where width, ascent, and descent are currently used.
+- [x] T002 [P] Review Class: TextRunFactory in `src/Html2x.LayoutEngine/Fragment/TextRunFactory.cs` and Class: InlineFragmentStage in `src/Html2x.LayoutEngine/Fragment/Stages/InlineFragmentStage.cs` to map where width, ascent, and descent are currently used.
   Why: ensures new measurer is wired at the correct point in the layout pipeline.
   How: capture a short note in `specs/008-text-measurement/research.md` with current data flow.
 
