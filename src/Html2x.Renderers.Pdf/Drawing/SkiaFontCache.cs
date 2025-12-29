@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Html2x.Abstractions.File;
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.Renderers.Pdf.Files;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;
@@ -39,8 +38,8 @@ internal sealed class SkiaFontCache : IDisposable
     private readonly ConcurrentDictionary<FontKey, SKTypeface> _typefacesFromDirectory = new();
     private readonly Lazy<IReadOnlyList<FontFaceEntry>> _directoryFaces;
 
-    public SkiaFontCache(string? fontPath)
-        : this(fontPath, new FileDirectory(), new SkiaTypefaceFactory())
+    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory)
+        : this(fontPath, fileDirectory, new SkiaTypefaceFactory())
     {
     }
 

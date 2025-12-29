@@ -3,6 +3,7 @@ using Html2x.Abstractions.File;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Files;
 using Html2x.Renderers.Pdf.Drawing;
 using SkiaSharp;
 using SkiaSharp.HarfBuzz;
@@ -24,7 +25,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private readonly ConcurrentDictionary<string, IReadOnlyList<FontFaceEntry>> _directoryFaces = new(StringComparer.OrdinalIgnoreCase);
 
     public SkiaTextMeasurer(IFontSource fontSource)
-        : this(fontSource, new LocalFileDirectory(), new DefaultTypefaceFactory())
+        : this(fontSource, new FileDirectory(), new DefaultTypefaceFactory())
     {
     }
 
@@ -173,21 +174,6 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private readonly record struct TextMeasureKey(string SourceId, float SizePt, string Text);
 
     private readonly record struct MetricKey(string SourceId, float SizePt);
-
-    private sealed class LocalFileDirectory : IFileDirectory
-    {
-        public bool FileExists(string path) => File.Exists(path);
-
-        public bool DirectoryExists(string path) => Directory.Exists(path);
-
-        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive)
-        {
-            var option = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-            return Directory.EnumerateFiles(directory, searchPattern, option);
-        }
-
-        public string GetExtension(string path) => Path.GetExtension(path);
-    }
 
     private sealed class DefaultTypefaceFactory : ISkiaTypefaceFactory
     {
