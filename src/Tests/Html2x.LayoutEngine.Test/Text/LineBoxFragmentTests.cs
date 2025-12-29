@@ -1,5 +1,9 @@
 using AngleSharp;
+using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Fonts;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
@@ -7,6 +11,7 @@ using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
+using Moq;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Text;
@@ -24,7 +29,7 @@ public class LineBoxFragmentTests
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();
-        var layoutBuilder = new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
+        var layoutBuilder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
         var options = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -40,5 +45,25 @@ public class LineBoxFragmentTests
         lineBoxes.Count.ShouldBe(2);
         lineBoxes[0].Runs.Single().Text.ShouldBe("first line");
         lineBoxes[1].Runs.Single().Text.ShouldBe("second line");
+    }
+
+    private static LayoutBuilder CreateLayoutBuilder(
+        IDomProvider domProvider,
+        IStyleComputer styleComputer,
+        IBoxTreeBuilder boxBuilder,
+        IFragmentBuilder fragmentBuilder,
+        IImageProvider imageProvider)
+    {
+        var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns(0f);
+        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
+            .Returns((0f, 0f));
+
+        var fontSource = new Mock<IFontSource>();
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
+
+        return new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider, textMeasurer.Object, fontSource.Object);
     }
 }

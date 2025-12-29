@@ -12,4 +12,8 @@
     <ProjectReference Include="..\Html2x.Renderers.Pdf\Html2x.Renderers.Pdf.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp.HarfBuzz" />
+  </ItemGroup>
+
 </Project>

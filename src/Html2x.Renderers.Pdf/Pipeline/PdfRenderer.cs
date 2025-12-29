@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.File;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Drawing;
@@ -11,6 +12,13 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 /// </summary>
 public class PdfRenderer
 {
+    private readonly IFileDirectory _fileDirectory;
+
+    public PdfRenderer(IFileDirectory fileDirectory)
+    {
+        _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+    }
+
     public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null, DiagnosticsSession? diagnosticsSession = null)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
@@ -20,7 +28,7 @@ public class PdfRenderer
         return Task.FromResult(bytes);
     }
 
-    private static byte[] RenderWithSkia(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
+    private byte[] RenderWithSkia(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
     {
         using var stream = new MemoryStream();
         using var document = SKDocument.CreatePdf(stream);
@@ -29,7 +37,7 @@ public class PdfRenderer
             throw new InvalidOperationException("Failed to create Skia PDF document.");
         }
 
-        using var fontCache = new SkiaFontCache(options.FontPath);
+        using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory);
         var drawer = new SkiaFragmentDrawer(options, diagnosticsSession, fontCache);
 
         foreach (var page in layout.Pages)

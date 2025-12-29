@@ -2,6 +2,8 @@ using AngleSharp.Dom;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Fonts;
+using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
@@ -24,6 +26,8 @@ public class LayoutBuilderTests
     private readonly Mock<IFragmentBuilder> _fragmentBuilder;
     private readonly Mock<IStyleComputer> _styleComputer;
     private readonly Mock<IImageProvider> _imageProvider;
+    private readonly Mock<ITextMeasurer> _textMeasurer;
+    private readonly Mock<IFontSource> _fontSource;
 
     public LayoutBuilderTests()
     {
@@ -32,9 +36,11 @@ public class LayoutBuilderTests
         _boxTreeBuilder = new Mock<IBoxTreeBuilder>();
         _fragmentBuilder = new Mock<IFragmentBuilder>();
         _imageProvider = new Mock<IImageProvider>();
+        _textMeasurer = new Mock<ITextMeasurer>();
+        _fontSource = new Mock<IFontSource>();
 
         _builder = new LayoutBuilder(_domProvider.Object, _styleComputer.Object, _boxTreeBuilder.Object,
-            _fragmentBuilder.Object, _imageProvider.Object);
+            _fragmentBuilder.Object, _imageProvider.Object, _textMeasurer.Object, _fontSource.Object);
     }
 
     [Fact]
