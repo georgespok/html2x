@@ -4,7 +4,7 @@ using Html2x.Abstractions.Layout.Text;
 
 namespace Html2x.LayoutEngine.Fragment;
 
-public readonly record struct FragmentBuildContext
+public sealed class FragmentBuildContext
 {
     public FragmentBuildContext(
         IImageProvider imageProvider,
