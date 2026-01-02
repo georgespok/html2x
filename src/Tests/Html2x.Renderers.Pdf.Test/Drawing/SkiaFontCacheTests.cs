@@ -242,4 +242,30 @@ public sealed class SkiaFontCacheTests
         fileDirectory.VerifyAll();
         typefaceFactory.VerifyNoOtherCalls();
     }
+
+    [Fact]
+    public void GetTypeface_FallsBackToDefaultFamilyWhenCandidatesFail()
+    {
+        var defaultFamily = SKTypeface.Default.FamilyName;
+        defaultFamily.ShouldNotBeNullOrWhiteSpace();
+
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        fileDirectory.Setup(x => x.FileExists(It.IsAny<string>())).Returns(false);
+        fileDirectory.Setup(x => x.DirectoryExists(It.IsAny<string>())).Returns(false);
+
+        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
+        typefaceFactory.Setup(x => x.FromFamilyName(It.Is<string>(s => s != defaultFamily), It.IsAny<SKFontStyle>()))
+            .Returns((SKTypeface?)null);
+        typefaceFactory.SetupSequence(x => x.FromFamilyName(defaultFamily, It.IsAny<SKFontStyle>()))
+            .Returns((SKTypeface?)null)
+            .Returns(SKTypeface.Default);
+
+        using var cache = new SkiaFontCache("missing", fileDirectory.Object, typefaceFactory.Object);
+        var key = new FontKey("MissingFamily", FontWeight.W700, FontStyle.Italic);
+
+        var typeface = cache.GetTypeface(key);
+
+        typeface.ShouldBeSameAs(SKTypeface.Default);
+        typefaceFactory.Verify(x => x.FromFamilyName(defaultFamily, It.IsAny<SKFontStyle>()), Times.Exactly(2));
+    }
 }

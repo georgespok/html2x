@@ -141,7 +141,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                     run.Width,
                     run.Ascent,
                     run.Descent,
-                    TextDecorations.None,
+                    run.Decorations,
                     run.Color);
 
                 lineRuns.Add(textRun);

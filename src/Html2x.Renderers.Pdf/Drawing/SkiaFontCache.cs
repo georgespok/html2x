@@ -95,6 +95,16 @@ internal sealed class SkiaFontCache : IDisposable
             }
         }
 
+        var defaultFamily = SKTypeface.Default.FamilyName;
+        if (!string.IsNullOrWhiteSpace(defaultFamily))
+        {
+            var fallback = _typefaceFactory.FromFamilyName(defaultFamily, style);
+            if (fallback is not null)
+            {
+                return fallback;
+            }
+        }
+
         return SKTypeface.Default;
     }
 

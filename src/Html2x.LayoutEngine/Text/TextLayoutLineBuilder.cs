@@ -98,6 +98,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
                 width,
                 ascent,
                 descent,
+                buffer.Source.Style.Decorations,
                 buffer.Source.Style.Color));
 
             lineWidth += width;
