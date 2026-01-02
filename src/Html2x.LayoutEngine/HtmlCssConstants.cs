@@ -78,6 +78,7 @@ public static class HtmlCssConstants
         public const string FontStyle = "font-style";
         public const string TextAlign = "text-align";
         public const string LineHeight = "line-height";
+        public const string TextDecoration = "text-decoration";
         public const string Color = "color";
         public const string BackgroundColor = "background-color";
         public const string Width = "width";

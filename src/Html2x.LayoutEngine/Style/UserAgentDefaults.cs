@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;
@@ -54,6 +55,16 @@ public sealed class UserAgentDefaults : IUserAgentDefaults
             style.Italic = true;
         }
 
+        if (IsUnderlineTag(element))
+        {
+            style.Decorations |= TextDecorations.Underline;
+        }
+
+        if (IsStrikethroughTag(element))
+        {
+            style.Decorations |= TextDecorations.LineThrough;
+        }
+
         if (IsTableHeader(element))
         {
             style.Bold = true;
@@ -107,6 +118,16 @@ public sealed class UserAgentDefaults : IUserAgentDefaults
     private static bool IsItalicTag(IElement element)
     {
         return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.I, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsUnderlineTag(IElement element)
+    {
+        return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.U, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsStrikethroughTag(IElement element)
+    {
+        return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.S, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsTableHeader(IElement element)

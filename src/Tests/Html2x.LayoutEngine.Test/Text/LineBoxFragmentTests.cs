@@ -95,6 +95,47 @@ public class LineBoxFragmentTests
         string.Concat(line.Runs.Select(r => r.Text)).ShouldBe("alpha beta gamma");
     }
 
+    [Fact]
+    public async Task ParagraphWithUnderlineStrikethroughAndSpan_EmitsAllTextRuns()
+    {
+        const string html = "<html><body><p>This is <u>underlined</u> text <s>struck</s> and <span>spanned</span>.</p></body></html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var paragraph = (BlockFragment)layout.Pages[0].Children[0];
+        var line = paragraph.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
+
+        line.Runs.Count.ShouldBeGreaterThan(4);
+        string.Concat(line.Runs.Select(r => r.Text)).ShouldBe("This is underlined text struck and spanned.");
+    }
+
+    [Fact]
+    public async Task ParagraphWithUnsupportedInline_DoesNotDropFollowingRuns()
+    {
+        const string html = "<html><body><p>alpha <blink>beta</blink> gamma</p></body></html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var paragraph = (BlockFragment)layout.Pages[0].Children[0];
+        var line = paragraph.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
+
+        string.Concat(line.Runs.Select(r => r.Text)).ShouldBe("alpha beta gamma");
+    }
+
+    [Fact]
+    public async Task FontFamilyList_UsesFirstFamilyToken()
+    {
+        const string html = "<html><body><p style=\"font-family: 'Inter', Arial, sans-serif\">text</p></body></html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var paragraph = (BlockFragment)layout.Pages[0].Children[0];
+        var line = paragraph.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
+
+        line.Runs.Count.ShouldBe(1);
+        line.Runs[0].Font.Family.ShouldBe("Inter");
+    }
+
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
     {
         var config = Configuration.Default.WithCss();

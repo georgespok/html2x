@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
@@ -25,6 +26,7 @@ internal sealed record TextLayoutRun(
     float Width,
     float Ascent,
     float Descent,
+    TextDecorations Decorations,
     ColorRgba? Color);
 
 internal sealed record TextLayoutLine(

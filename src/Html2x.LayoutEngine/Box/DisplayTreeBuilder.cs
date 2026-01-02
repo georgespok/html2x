@@ -127,6 +127,7 @@ public sealed class DisplayTreeBuilder
 
             if (!styleLookup.TryGetValue(childElement, out var styleChild))
             {
+                AppendUnsupportedElement(childElement, box, textState);
                 continue;
             }
 
@@ -187,5 +188,29 @@ public sealed class DisplayTreeBuilder
         }
 
         return lookup;
+    }
+
+    private static void AppendUnsupportedElement(IElement element, DisplayNode box, TextNormalizationState textState)
+    {
+        foreach (var child in element.ChildNodes)
+        {
+            if (child.NodeType == NodeType.Text)
+            {
+                AppendTextRun(child, box, textState);
+                continue;
+            }
+
+            if (child is not IElement childElement)
+            {
+                continue;
+            }
+
+            AppendUnsupportedElement(childElement, box, textState);
+
+            if (string.Equals(childElement.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase))
+            {
+                textState.MarkLineBreak();
+            }
+        }
     }
 }

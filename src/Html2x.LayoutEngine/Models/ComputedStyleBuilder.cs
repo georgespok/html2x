@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Models;
@@ -8,6 +9,7 @@ public sealed class ComputedStyleBuilder
     public float FontSizePt { get; set; } = 12;
     public bool Bold { get; set; }
     public bool Italic { get; set; }
+    public TextDecorations Decorations { get; set; }
     public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
     public float? LineHeightMultiplier { get; set; }
     public ColorRgba Color { get; set; } = ColorRgba.Black;
@@ -32,6 +34,7 @@ public sealed class ComputedStyleBuilder
             FontSizePt = FontSizePt,
             Bold = Bold,
             Italic = Italic,
+            Decorations = Decorations,
             TextAlign = TextAlign,
             LineHeightMultiplier = LineHeightMultiplier ?? 1.2f,
             Color = Color,
