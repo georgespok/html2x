@@ -1,6 +1,8 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Text;
 
 namespace Html2x.LayoutEngine.Box;
 
@@ -37,9 +39,59 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         var fontSize = _metrics.GetFontSize(block.Style);
         var font = _metrics.GetFontKey(block.Style);
         var metrics = _textMeasurer.GetMetrics(font, fontSize);
+        var lineHeight = _lineHeightStrategy.GetLineHeight(block.Style, font, fontSize, metrics);
+        var runs = CollectInlineRuns(block, _metrics);
 
-        return _lineHeightStrategy.GetLineHeight(block.Style, font, fontSize, metrics);
+        if (runs.Count == 0)
+        {
+            return 0f;
+        }
+
+        var input = new TextLayoutInput(runs, availableWidth, lineHeight);
+        return new TextLayoutEngine(_textMeasurer).Layout(input).TotalHeight;
     }
+
+    private static List<TextRunInput> CollectInlineRuns(DisplayNode block, IFontMetricsProvider metrics)
+    {
+        var runs = new List<TextRunInput>();
+        var runId = 1;
+        foreach (var inline in block.Children.OfType<InlineBox>())
+        {
+            CollectInlineRuns(inline, metrics, runs, ref runId);
+        }
+
+        return runs;
+    }
+
+    private static void CollectInlineRuns(
+        InlineBox inline,
+        IFontMetricsProvider metrics,
+        ICollection<TextRunInput> runs,
+        ref int runId)
+    {
+        if (IsLineBreak(inline))
+        {
+            var font = metrics.GetFontKey(inline.Style);
+            var fontSize = metrics.GetFontSize(inline.Style);
+            runs.Add(new TextRunInput(runId++, inline, string.Empty, font, fontSize, inline.Style, true));
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(inline.TextContent))
+        {
+            var font = metrics.GetFontKey(inline.Style);
+            var fontSize = metrics.GetFontSize(inline.Style);
+            runs.Add(new TextRunInput(runId++, inline, inline.TextContent, font, fontSize, inline.Style));
+        }
+
+        foreach (var childInline in inline.Children.OfType<InlineBox>())
+        {
+            CollectInlineRuns(childInline, metrics, runs, ref runId);
+        }
+    }
+
+    private static bool IsLineBreak(InlineBox inline)
+        => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
 
     private sealed class FallbackTextMeasurer(IFontMetricsProvider metricsProvider) : ITextMeasurer
     {

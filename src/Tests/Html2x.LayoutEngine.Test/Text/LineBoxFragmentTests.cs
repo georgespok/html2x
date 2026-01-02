@@ -19,24 +19,27 @@ namespace Html2x.LayoutEngine.Test.Text;
 
 public class LineBoxFragmentTests
 {
+
+    [Fact]
+    public async Task ParagraphWithLongText_ComputesHeightFromMultipleLines()
+    {
+        const string html = "<html><body><div style=\"max-width: 80px; font-size: 10px; line-height: 1.4;\">alpha beta gamma delta</div></body></html>";
+        
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var block = (BlockFragment)layout.Pages[0].Children[0];
+        var lineBoxes = block.Children.OfType<LineBoxFragment>().ToList();
+
+        lineBoxes.Count.ShouldBeGreaterThan(1);
+        block.Rect.Height.ShouldBeGreaterThan(lineBoxes[0].LineHeight * 1.5f);
+    }
+
     [Fact]
     public async Task ParagraphWithBrProducesDistinctLineBoxes()
     {
         const string html = "<html><body><p>first line<br/>second line</p></body></html>";
 
-        var config = Configuration.Default.WithCss();
-        var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxBuilder = new BoxTreeBuilder();
-        var fragmentBuilder = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var layoutBuilder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
-        var options = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        var layout = await layoutBuilder.BuildAsync(html, options);
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(1);
@@ -125,7 +128,7 @@ public class LineBoxFragmentTests
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns((FontKey _, float _, string text) => text.Length * widthPerChar);
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((0f, 0f));
+            .Returns((8f, 2f));
         return textMeasurer.Object;
     }
 }
