@@ -35,7 +35,9 @@ public sealed class DefaultStyleDomFilter : IStyleDomFilter
                 HtmlCssConstants.HtmlTags.Footer,
                 HtmlCssConstants.HtmlTags.B,
                 HtmlCssConstants.HtmlTags.I,
-                HtmlCssConstants.HtmlTags.Strong
+                HtmlCssConstants.HtmlTags.Strong,
+                HtmlCssConstants.HtmlTags.U,
+                HtmlCssConstants.HtmlTags.S
             ],
             StringComparer.OrdinalIgnoreCase);
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using AngleSharp;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
@@ -78,6 +79,20 @@ public class LineBoxFragmentTests
 
         lineBoxes.Count.ShouldBeGreaterThan(1);
         lineBoxes.All(line => line.Runs.Count == 1).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ParagraphWithSpan_EmitsSpanTextAsRun()
+    {
+        const string html = "<html><body><p>alpha <span>beta</span> gamma</p></body></html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var paragraph = (BlockFragment)layout.Pages[0].Children[0];
+        var line = paragraph.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
+
+        line.Runs.Count.ShouldBe(3);
+        string.Concat(line.Runs.Select(r => r.Text)).ShouldBe("alpha beta gamma");
     }
 
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
