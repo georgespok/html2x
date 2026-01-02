@@ -150,6 +150,10 @@ internal sealed class SkiaFragmentDrawer
             Subpixel = true,
             Hinting = SKFontHinting.Full
         };
+        if (ShouldEmbolden(run, font.Typeface))
+        {
+            font.Embolden = true;
+        }
 
         canvas.DrawText(run.Text, run.Origin.X, run.Origin.Y, SKTextAlign.Left, font, paint);
         DrawDecorationsIfAny(canvas, run, paint);
@@ -191,6 +195,18 @@ internal sealed class SkiaFragmentDrawer
             var y = baseline - run.Ascent;
             canvas.DrawLine(x0, y, x1, y, paint);
         }
+    }
+
+    private static bool ShouldEmbolden(TextRun run, SKTypeface typeface)
+    {
+        var requestedWeight = (int)run.Font.Weight;
+        if (requestedWeight < (int)FontWeight.W600)
+        {
+            return false;
+        }
+
+        var actualWeight = typeface.FontWeight;
+        return actualWeight < requestedWeight;
     }
 
     private static void DrawRule(SKCanvas canvas, RuleFragment rule)

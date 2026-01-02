@@ -329,7 +329,8 @@ public class LayoutIntegrationTests
         }
     }
 
-    [Fact(Skip = "Disabled while width and height is not implemented")]
+    //[Fact(Skip = "Disabled while width and height is not implemented")]
+    [Fact]
     public async Task LayoutBlockWithPadding_AdjustsContentWidth()
     {
         // Arrange: Block with width: 200px (150pt) and padding: 20px (15pt each side)
