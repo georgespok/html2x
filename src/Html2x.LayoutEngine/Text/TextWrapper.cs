@@ -1,6 +1,4 @@
-using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 
@@ -51,16 +49,10 @@ internal sealed class TextWrapper(ITextMeasurer textMeasurer)
             return;
         }
 
-        var tokens = Regex.Matches(rawLine, @"\s+|\S+", RegexOptions.Multiline);
-
-        foreach (Match token in tokens)
+        var tokens = TextTokenization.Tokenize(rawLine);
+        foreach (var token in tokens)
         {
-            if (token.Length == 0)
-            {
-                continue;
-            }
-
-            var segment = token.Value;
+            var segment = token;
             if (string.IsNullOrWhiteSpace(segment) && current.Length == 0)
             {
                 continue;
@@ -83,7 +75,7 @@ internal sealed class TextWrapper(ITextMeasurer textMeasurer)
                 continue;
             }
 
-            foreach (var element in EnumerateGraphemes(segment))
+            foreach (var element in TextTokenization.EnumerateGraphemes(segment))
             {
                 if (TryAppend(element))
                 {
@@ -129,19 +121,9 @@ internal sealed class TextWrapper(ITextMeasurer textMeasurer)
 
     private static IEnumerable<string> SplitIntoLogicalLines(string text)
     {
-        var lines = text.Replace("\r\n", "\n").Split('\n');
-        foreach (var line in lines)
+        foreach (var line in TextTokenization.SplitIntoLogicalLines(text))
         {
             yield return line;
-        }
-    }
-
-    private static IEnumerable<string> EnumerateGraphemes(string text)
-    {
-        var enumerator = StringInfo.GetTextElementEnumerator(text);
-        while (enumerator.MoveNext())
-        {
-            yield return enumerator.GetTextElement();
         }
     }
 }

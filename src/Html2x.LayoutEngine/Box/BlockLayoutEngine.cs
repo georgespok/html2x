@@ -61,13 +61,13 @@ public sealed class BlockLayoutEngine(
             // so inline-only documents still render without introducing anonymous blocks.
             if (hasInline && !hasBlockOrTable)
             {
-                return new[] { rootBlock };
+                return [rootBlock];
             }
 
             return rootBlock.Children;
         }
 
-        return new[] { displayRoot };
+        return [displayRoot];
     }
 
     private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)
@@ -110,7 +110,7 @@ public sealed class BlockLayoutEngine(
         var contentYForChildren = y + padding.Top + borderTop;
 
         // use inline engine for height estimation (use content width)
-        floatEngine.PlaceFloats(node, x, y, width);
+        floatEngine.PlaceFloats(node, x, y, width); 
         var inlineHeight = inlineEngine.MeasureHeight(node, contentWidthForChildren);
 
         var nestedBlocksHeight = LayoutChildBlocks(node, contentXForChildren, contentYForChildren, contentWidthForChildren);
@@ -126,7 +126,7 @@ public sealed class BlockLayoutEngine(
 
         return node;
     }
-
+    
     private float LayoutChildBlocks(BlockBox parent, float contentX, float cursorY, float contentWidth)
     {
         var currentY = cursorY;

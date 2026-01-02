@@ -82,7 +82,7 @@ public static class LayoutSnapshotMapper
             Width = line.Rect.Width,
             Height = line.Rect.Height,
             Text = text,
-            Children = Array.Empty<FragmentSnapshot>()
+            Children = []
         };
     }
 
@@ -95,7 +95,7 @@ public static class LayoutSnapshotMapper
             Y = image.Rect.Y,
             Width = image.Rect.Width,
             Height = image.Rect.Height,
-            Children = Array.Empty<FragmentSnapshot>()
+            Children = []
         };
     }
 
@@ -108,7 +108,7 @@ public static class LayoutSnapshotMapper
             Y = rule.Rect.Y,
             Width = rule.Rect.Width,
             Height = rule.Rect.Height,
-            Children = Array.Empty<FragmentSnapshot>()
+            Children = []
         };
     }
 
@@ -121,7 +121,7 @@ public static class LayoutSnapshotMapper
             Y = fragment.Rect.Y,
             Width = fragment.Rect.Width,
             Height = fragment.Rect.Height,
-            Children = Array.Empty<FragmentSnapshot>()
+            Children = []
         };
     }
 }
