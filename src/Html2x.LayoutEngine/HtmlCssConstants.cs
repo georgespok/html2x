@@ -38,6 +38,8 @@ public static class HtmlCssConstants
         public const string B = "b";
         public const string I = "i";
         public const string Strong = "strong";
+        public const string U = "u";
+        public const string S = "s";
     }
 
     /// <summary>

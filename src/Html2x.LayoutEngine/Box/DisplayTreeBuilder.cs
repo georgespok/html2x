@@ -104,7 +104,7 @@ public sealed class DisplayTreeBuilder
     {
         var element = styleNode.Element;
         var styleChildren = styleNode.Children;
-        var styleIndex = 0;
+        var styleLookup = BuildStyleLookup(styleChildren);
 
         foreach (var child in element.ChildNodes)
         {
@@ -125,8 +125,7 @@ public sealed class DisplayTreeBuilder
                 continue;
             }
 
-            var styleChild = FindStyleChild(styleChildren, ref styleIndex, childElement);
-            if (styleChild is null)
+            if (!styleLookup.TryGetValue(childElement, out var styleChild))
             {
                 continue;
             }
@@ -166,20 +165,27 @@ public sealed class DisplayTreeBuilder
         });
     }
 
-    private static StyleNode? FindStyleChild(IReadOnlyList<StyleNode> children, ref int styleIndex, IElement element)
+    private static IReadOnlyDictionary<IElement, StyleNode> BuildStyleLookup(IReadOnlyList<StyleNode> children)
     {
-        for (; styleIndex < children.Count; styleIndex++)
+        if (children.Count == 0)
         {
-            var candidate = children[styleIndex];
-            if (!ReferenceEquals(candidate.Element, element))
+            return new Dictionary<IElement, StyleNode>();
+        }
+
+        var lookup = new Dictionary<IElement, StyleNode>(children.Count);
+        foreach (var child in children)
+        {
+            if (child.Element is null)
             {
                 continue;
             }
 
-            styleIndex++;
-            return candidate;
+            if (!lookup.ContainsKey(child.Element))
+            {
+                lookup.Add(child.Element, child);
+            }
         }
 
-        return null;
+        return lookup;
     }
 }

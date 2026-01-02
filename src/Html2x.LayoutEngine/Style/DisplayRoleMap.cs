@@ -25,6 +25,8 @@ internal static class DisplayRoleMap
         [HtmlCssConstants.HtmlTags.B] = DisplayRole.Inline,
         [HtmlCssConstants.HtmlTags.I] = DisplayRole.Inline,
         [HtmlCssConstants.HtmlTags.Strong] = DisplayRole.Inline,
+        [HtmlCssConstants.HtmlTags.U] = DisplayRole.Inline,
+        [HtmlCssConstants.HtmlTags.S] = DisplayRole.Inline,
         [HtmlCssConstants.HtmlTags.H1] = DisplayRole.Block,
         [HtmlCssConstants.HtmlTags.H2] = DisplayRole.Block,
         [HtmlCssConstants.HtmlTags.H3] = DisplayRole.Block,
