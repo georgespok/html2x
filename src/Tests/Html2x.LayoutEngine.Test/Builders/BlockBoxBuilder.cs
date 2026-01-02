@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test.Builders;
@@ -30,10 +31,7 @@ internal sealed class BlockBoxBuilder
     {
         _block.Style = _block.Style with
         {
-            PaddingTopPt = top,
-            PaddingRightPt = right,
-            PaddingBottomPt = bottom,
-            PaddingLeftPt = left
+            Padding = new Spacing(top, right, bottom, left)
         };
         return this;
     }
@@ -51,10 +49,7 @@ internal sealed class BlockBoxBuilder
     {
         _block.Style = _block.Style with
         {
-            MarginTopPt = top,
-            MarginRightPt = right,
-            MarginBottomPt = bottom,
-            MarginLeftPt = left
+            Margin = new Spacing(top, right, bottom, left)
         };
         return this;
     }
@@ -134,10 +129,11 @@ internal sealed class BlockBoxBuilder
 
         if (_pageMarginTop.HasValue)
         {
-            tree.Page.MarginTopPt = _pageMarginTop.Value;
-            tree.Page.MarginRightPt = _pageMarginRight ?? 0;
-            tree.Page.MarginBottomPt = _pageMarginBottom ?? 0;
-            tree.Page.MarginLeftPt = _pageMarginLeft ?? 0;
+            tree.Page.Margin = new Spacing(
+                _pageMarginTop.Value,
+                _pageMarginRight ?? 0,
+                _pageMarginBottom ?? 0,
+                _pageMarginLeft ?? 0);
         }
 
         foreach (var child in root.Children.OfType<BlockBox>())

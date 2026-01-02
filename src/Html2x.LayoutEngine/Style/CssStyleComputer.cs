@@ -63,10 +63,40 @@ public sealed class CssStyleComputer(
 
     private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
     {
+        var width = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Width, element);
+        if (width.HasValue)
+        {
+            style.WidthPt = width.Value;
+        }
+
+        var minWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinWidth, element);
+        if (minWidth.HasValue)
+        {
+            style.MinWidthPt = minWidth.Value;
+        }
+
         var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element);
         if (maxWidth.HasValue)
         {
             style.MaxWidthPt = maxWidth.Value;
+        }
+
+        var height = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Height, element);
+        if (height.HasValue)
+        {
+            style.HeightPt = height.Value;
+        }
+
+        var minHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinHeight, element);
+        if (minHeight.HasValue)
+        {
+            style.MinHeightPt = minHeight.Value;
+        }
+
+        var maxHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxHeight, element);
+        if (maxHeight.HasValue)
+        {
+            style.MaxHeightPt = maxHeight.Value;
         }
     }
 
@@ -108,18 +138,16 @@ public sealed class CssStyleComputer(
 
     private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles, IElement element)
     {
-        ApplySpacingWithOverrides(
+        var margin = ParseSpacingWithOverrides(
             styles,
             HtmlCssConstants.CssProperties.Margin,
             HtmlCssConstants.CssProperties.MarginTop,
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            element,
-            value => tree.Page.MarginTopPt = value,
-            value => tree.Page.MarginRightPt = value,
-            value => tree.Page.MarginBottomPt = value,
-            value => tree.Page.MarginLeftPt = value);
+            element);
+
+        tree.Page.Margin = margin;
     }
 
     private void ApplySpacingWithOverrides(
@@ -345,31 +373,61 @@ public sealed class CssStyleComputer(
 
     private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
     {
-        ApplySpacingWithOverrides(
+        var margin = ParseSpacingWithOverrides(
             css,
             HtmlCssConstants.CssProperties.Margin,
             HtmlCssConstants.CssProperties.MarginTop,
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            element,
-            value => style.MarginTopPt = value,
-            value => style.MarginRightPt = value,
-            value => style.MarginBottomPt = value,
-            value => style.MarginLeftPt = value);
+            element);
 
-        ApplySpacingWithOverrides(
+        style.Margin = margin;
+
+        var padding = ParseSpacingWithOverrides(
             css,
             HtmlCssConstants.CssProperties.Padding,
             HtmlCssConstants.CssProperties.PaddingTop,
             HtmlCssConstants.CssProperties.PaddingRight,
             HtmlCssConstants.CssProperties.PaddingBottom,
             HtmlCssConstants.CssProperties.PaddingLeft,
+            element);
+
+        style.Padding = new Spacing(
+            Math.Max(0, padding.Top),
+            Math.Max(0, padding.Right),
+            Math.Max(0, padding.Bottom),
+            Math.Max(0, padding.Left));
+    }
+
+    private Spacing ParseSpacingWithOverrides(
+        ICssStyleDeclaration css,
+        string shorthandProperty,
+        string topProperty,
+        string rightProperty,
+        string bottomProperty,
+        string leftProperty,
+        IElement element)
+    {
+        var top = 0f;
+        var right = 0f;
+        var bottom = 0f;
+        var left = 0f;
+
+        ApplySpacingWithOverrides(
+            css,
+            shorthandProperty,
+            topProperty,
+            rightProperty,
+            bottomProperty,
+            leftProperty,
             element,
-            value => style.PaddingTopPt = value,
-            value => style.PaddingRightPt = value,
-            value => style.PaddingBottomPt = value,
-            value => style.PaddingLeftPt = value);
+            value => top = value,
+            value => right = value,
+            value => bottom = value,
+            value => left = value);
+
+        return new Spacing(top, right, bottom, left);
     }
 
     private bool TryParseSpacingValues(

@@ -18,9 +18,9 @@ public sealed class BlockLayoutEngine(
         var tree = new BoxTree();
         CopyPageTo(tree.Page, page);
 
-        var contentX = page.MarginLeftPt;
-        var contentY = page.MarginTopPt;
-        var contentWidth = page.PageWidthPt - page.MarginLeftPt - page.MarginRightPt;
+        var contentX = page.Margin.Left;
+        var contentY = page.Margin.Top;
+        var contentWidth = page.PageWidthPt - page.Margin.Left - page.Margin.Right;
 
         NormalizeChildrenForBlock(displayRoot);
 
@@ -73,21 +73,17 @@ public sealed class BlockLayoutEngine(
     private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)
     {
         var s = node.Style;
-        var margin = new Spacing
-        {
-            Top = Safe(s.MarginTopPt),
-            Right = Safe(s.MarginRightPt),
-            Bottom = Safe(s.MarginBottomPt),
-            Left = Safe(s.MarginLeftPt)
-        };
+        var margin = new Spacing(
+            Safe(s.Margin.Top),
+            Safe(s.Margin.Right),
+            Safe(s.Margin.Bottom),
+            Safe(s.Margin.Left));
 
-        var padding = new Spacing
-        {
-            Top = Safe(s.PaddingTopPt),
-            Right = Safe(s.PaddingRightPt),
-            Bottom = Safe(s.PaddingBottomPt),
-            Left = Safe(s.PaddingLeftPt)
-        };
+        var padding = new Spacing(
+            Safe(s.Padding.Top),
+            Safe(s.Padding.Right),
+            Safe(s.Padding.Bottom),
+            Safe(s.Padding.Left));
 
         var borderTop = Safe(s.Borders?.Top?.Width ?? 0);
         var borderRight = Safe(s.Borders?.Right?.Width ?? 0);
@@ -98,11 +94,17 @@ public sealed class BlockLayoutEngine(
         var y = cursorY + margin.Top;
         
         var availableWidth = Math.Max(0, contentWidth - margin.Left - margin.Right);
-        var maxWidth = s.MaxWidthPt;
-        
-        var width = maxWidth.HasValue && maxWidth.Value < availableWidth
-            ? maxWidth.Value
-            : availableWidth;
+        var width = s.WidthPt ?? availableWidth;
+
+        if (s.MinWidthPt.HasValue)
+        {
+            width = Math.Max(width, s.MinWidthPt.Value);
+        }
+
+        if (s.MaxWidthPt.HasValue)
+        {
+            width = Math.Min(width, s.MaxWidthPt.Value);
+        }
 
         // Content width accounts for padding and borders
         var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right - borderLeft - borderRight);
@@ -115,6 +117,20 @@ public sealed class BlockLayoutEngine(
 
         var nestedBlocksHeight = LayoutChildBlocks(node, contentXForChildren, contentYForChildren, contentWidthForChildren);
         var contentHeight = Math.Max(inlineHeight, nestedBlocksHeight);
+        if (s.HeightPt.HasValue)
+        {
+            contentHeight = s.HeightPt.Value;
+        }
+
+        if (s.MinHeightPt.HasValue)
+        {
+            contentHeight = Math.Max(contentHeight, s.MinHeightPt.Value);
+        }
+
+        if (s.MaxHeightPt.HasValue)
+        {
+            contentHeight = Math.Min(contentHeight, s.MaxHeightPt.Value);
+        }
 
         node.X = x;
         node.Y = y;
@@ -148,13 +164,11 @@ public sealed class BlockLayoutEngine(
     private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth)
     {
         var s = node.Style;
-        var margin = new Spacing
-        {
-            Top = Safe(s.MarginTopPt),
-            Right = Safe(s.MarginRightPt),
-            Bottom = Safe(s.MarginBottomPt),
-            Left = Safe(s.MarginLeftPt)
-        };
+        var margin = new Spacing(
+            Safe(s.Margin.Top),
+            Safe(s.Margin.Right),
+            Safe(s.Margin.Bottom),
+            Safe(s.Margin.Left));
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
@@ -185,10 +199,7 @@ public sealed class BlockLayoutEngine(
     {
         target.PageWidthPt = source.PageWidthPt;
         target.PageHeightPt = source.PageHeightPt;
-        target.MarginTopPt = source.MarginTopPt;
-        target.MarginRightPt = source.MarginRightPt;
-        target.MarginBottomPt = source.MarginBottomPt;
-        target.MarginLeftPt = source.MarginLeftPt;
+        target.Margin = source.Margin;
     }
 
     private static void NormalizeChildrenForBlock(DisplayNode parent)
@@ -286,14 +297,14 @@ public sealed class BlockLayoutEngine(
             TextAlign = parentStyle.TextAlign,
             Color = parentStyle.Color,
             BackgroundColor = parentStyle.BackgroundColor,
-            MarginTopPt = 0,
-            MarginRightPt = 0,
-            MarginBottomPt = 0,
-            MarginLeftPt = 0,
-            PaddingTopPt = 0,
-            PaddingRightPt = 0,
-            PaddingBottomPt = 0,
-            PaddingLeftPt = 0,
+            Margin = new Spacing(0, 0, 0, 0),
+            Padding = new Spacing(0, 0, 0, 0),
+            WidthPt = null,
+            MinWidthPt = null,
+            MaxWidthPt = null,
+            HeightPt = null,
+            MinHeightPt = null,
+            MaxHeightPt = null,
             Borders = parentStyle.Borders
         };
     }

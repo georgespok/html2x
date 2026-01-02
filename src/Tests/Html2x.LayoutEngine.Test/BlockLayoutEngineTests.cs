@@ -4,6 +4,7 @@ using Html2x.LayoutEngine.Test.Builders;
 using Moq;
 using Shouldly;
 using Xunit.Abstractions;
+using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -15,6 +16,7 @@ public class BlockLayoutEngineTests
     
     private static PageBox DefaultPage() => new()
     {
+        Margin = new Spacing(0, 0, 0, 0),
         PageWidthPt = 200,
         PageHeightPt = 400
     };
@@ -69,6 +71,39 @@ public class BlockLayoutEngineTests
             () => result.Blocks[0].IsAnonymous.ShouldBeTrue(),
             () => result.Blocks[0].Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>().TextContent.ShouldBe("root inline"),
             () => result.Blocks[1].IsAnonymous.ShouldBeFalse());
+    }
+
+    [Fact]
+    public void Layout_AnonymousBlock_DoesNotInheritWidthOrHeightConstraints()
+    {
+        _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(10f);
+
+        var root = new BlockBox
+        {
+            Style = new ComputedStyle
+            {
+                WidthPt = 60f,
+                MinWidthPt = 50f,
+                MaxWidthPt = 70f,
+                HeightPt = 40f,
+                MinHeightPt = 30f,
+                MaxHeightPt = 50f
+            }
+        };
+
+        root.Children.Add(new InlineBox { TextContent = "inline" });
+        root.Children.Add(new BlockBox { Style = new ComputedStyle() });
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var anonymous = result.Blocks.FirstOrDefault(b => b.IsAnonymous);
+        anonymous.ShouldNotBeNull();
+        anonymous!.Style.WidthPt.ShouldBeNull();
+        anonymous.Style.MinWidthPt.ShouldBeNull();
+        anonymous.Style.MaxWidthPt.ShouldBeNull();
+        anonymous.Style.HeightPt.ShouldBeNull();
+        anonymous.Style.MinHeightPt.ShouldBeNull();
+        anonymous.Style.MaxHeightPt.ShouldBeNull();
     }
 
     [Fact]

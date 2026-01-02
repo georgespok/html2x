@@ -11,6 +11,10 @@ internal sealed record TextRunInput(
     FontKey Font,
     float FontSizePt,
     ComputedStyle Style,
+    float PaddingLeft,
+    float PaddingRight,
+    float MarginLeft,
+    float MarginRight,
     bool IsLineBreak = false);
 
 internal sealed record TextLayoutInput(
@@ -24,6 +28,8 @@ internal sealed record TextLayoutRun(
     FontKey Font,
     float FontSizePt,
     float Width,
+    float LeftSpacing,
+    float RightSpacing,
     float Ascent,
     float Descent,
     TextDecorations Decorations,

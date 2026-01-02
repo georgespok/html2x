@@ -31,10 +31,7 @@ internal sealed class StyleNodeBuilder(StyleNode node)
     {
         node.Style = node.Style with
         {
-            PaddingTopPt = top,
-            PaddingRightPt = right,
-            PaddingBottomPt = bottom,
-            PaddingLeftPt = left
+            Padding = new Spacing(top, right, bottom, left)
         };
         return this;
     }
@@ -42,14 +39,14 @@ internal sealed class StyleNodeBuilder(StyleNode node)
     private static StyleNode CreateNode(IElement el, float? marginTop = null, float? marginLeft = null, float fontSize = 12)
     {
         var style = new ComputedStyle { FontSizePt = fontSize };
-        if (marginTop.HasValue)
+        var top = marginTop ?? 0f;
+        var left = marginLeft ?? 0f;
+        if (marginTop.HasValue || marginLeft.HasValue)
         {
-            style = style with { MarginTopPt = marginTop.Value };
-        }
-
-        if (marginLeft.HasValue)
-        {
-            style = style with { MarginLeftPt = marginLeft.Value };
+            style = style with
+            {
+                Margin = new Spacing(top, 0f, 0f, left)
+            };
         }
 
         return new StyleNode { Element = el, Style = style };

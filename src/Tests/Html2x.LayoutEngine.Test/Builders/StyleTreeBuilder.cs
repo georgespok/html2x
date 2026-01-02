@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test.Builders;
@@ -12,10 +13,7 @@ internal sealed class StyleTreeBuilder(IElement body)
 
     public StyleTreeBuilder WithPageMargins(float top, float right, float bottom, float left)
     {
-        _tree.Page.MarginTopPt = top;
-        _tree.Page.MarginRightPt = right;
-        _tree.Page.MarginBottomPt = bottom;
-        _tree.Page.MarginLeftPt = left;
+        _tree.Page.Margin = new Spacing(top, right, bottom, left);
         return this;
     }
 
@@ -41,14 +39,14 @@ internal sealed class StyleTreeBuilder(IElement body)
     private static StyleNode CreateNode(IElement el, float? marginTop = null, float? marginLeft = null, float fontSize = 12)
     {
         var style = new ComputedStyle { FontSizePt = fontSize };
-        if (marginTop.HasValue)
+        var top = marginTop ?? 0f;
+        var left = marginLeft ?? 0f;
+        if (marginTop.HasValue || marginLeft.HasValue)
         {
-            style = style with { MarginTopPt = marginTop.Value };
-        }
-
-        if (marginLeft.HasValue)
-        {
-            style = style with { MarginLeftPt = marginLeft.Value };
+            style = style with
+            {
+                Margin = new Spacing(top, 0f, 0f, left)
+            };
         }
 
         return new StyleNode { Element = el, Style = style };

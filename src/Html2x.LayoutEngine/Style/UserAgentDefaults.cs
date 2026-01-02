@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;
@@ -41,8 +42,7 @@ public sealed class UserAgentDefaults : IUserAgentDefaults
 
         if (IsHeading(element) && !AuthorOverridesMargins(element))
         {
-            style.MarginTopPt = HeadingGapPt;
-            style.MarginBottomPt = HeadingGapPt;
+            style.Margin = new Spacing(HeadingGapPt, style.Margin.Right, HeadingGapPt, style.Margin.Left);
         }
 
         if (IsBoldTag(element))

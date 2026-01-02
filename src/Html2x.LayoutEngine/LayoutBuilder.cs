@@ -69,8 +69,7 @@ public class LayoutBuilder(
     {
         var newLayout = new HtmlLayout();
         var page = new LayoutPage(new SizeF(options.PageSize.Width, options.PageSize.Height),
-            new Spacing(boxTree.Page.MarginTopPt, boxTree.Page.MarginRightPt, boxTree.Page.MarginBottomPt,
-                boxTree.Page.MarginLeftPt),
+            boxTree.Page.Margin,
             fragments.Blocks);
         newLayout.Pages.Add(page);
         return newLayout;

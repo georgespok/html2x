@@ -6,6 +6,7 @@ using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
@@ -51,15 +52,12 @@ public class LayoutBuilderTests
 
         var document = new Mock<IDocument>().Object;
         var styleTree = new StyleTree
-            { Page = { MarginTopPt = 10, MarginRightPt = 11, MarginBottomPt = 12, MarginLeftPt = 13 } };
+            { Page = { Margin = new Spacing(10, 11, 12, 13) } };
         var boxTree = new BoxTree
         {
             Page =
             {
-                MarginTopPt = 10,
-                MarginRightPt = 11,
-                MarginBottomPt = 12,
-                MarginLeftPt = 13
+                Margin = new Spacing(10, 11, 12, 13)
             }
         };
 

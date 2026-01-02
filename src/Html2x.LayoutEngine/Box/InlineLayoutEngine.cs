@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
-using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 
@@ -8,6 +7,10 @@ namespace Html2x.LayoutEngine.Box;
 
 public sealed class InlineLayoutEngine : IInlineLayoutEngine
 {
+    private readonly ILineHeightStrategy _lineHeightStrategy;
+    private readonly IFontMetricsProvider _metrics;
+    private readonly ITextMeasurer _textMeasurer;
+
     public InlineLayoutEngine()
         : this(new FontMetricsProvider(), null, new DefaultLineHeightStrategy())
     {
@@ -24,10 +27,6 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         _textMeasurer = textMeasurer ?? new FallbackTextMeasurer(_metrics);
         _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
     }
-
-    private readonly ILineHeightStrategy _lineHeightStrategy;
-    private readonly IFontMetricsProvider _metrics;
-    private readonly ITextMeasurer _textMeasurer;
 
     public float MeasureHeight(DisplayNode block, float availableWidth)
     {
@@ -73,7 +72,18 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         {
             var font = metrics.GetFontKey(inline.Style);
             var fontSize = metrics.GetFontSize(inline.Style);
-            runs.Add(new TextRunInput(runId++, inline, string.Empty, font, fontSize, inline.Style, true));
+            runs.Add(new TextRunInput(
+                runId++,
+                inline,
+                string.Empty,
+                font,
+                fontSize,
+                inline.Style,
+                PaddingLeft: 0f,
+                PaddingRight: 0f,
+                MarginLeft: 0f,
+                MarginRight: 0f,
+                IsLineBreak: true));
             return;
         }
 
@@ -81,7 +91,18 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         {
             var font = metrics.GetFontKey(inline.Style);
             var fontSize = metrics.GetFontSize(inline.Style);
-            runs.Add(new TextRunInput(runId++, inline, inline.TextContent, font, fontSize, inline.Style));
+            var (paddingLeft, paddingRight, marginLeft, marginRight) = GetInlineSpacing(inline);
+            runs.Add(new TextRunInput(
+                runId++,
+                inline,
+                inline.TextContent,
+                font,
+                fontSize,
+                inline.Style,
+                paddingLeft,
+                paddingRight,
+                marginLeft,
+                marginRight));
         }
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
@@ -92,6 +113,22 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
     private static bool IsLineBreak(InlineBox inline)
         => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
+
+    private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(InlineBox inline)
+    {
+        var source = inline;
+        if (source.Element is null && source.Parent is InlineBox parent && parent.Element is not null)
+        {
+            source = parent;
+        }
+
+        if (source.Element is null)
+        {
+            return (0f, 0f, 0f, 0f);
+        }
+
+        return (source.Style.Padding.Left, source.Style.Padding.Right, source.Style.Margin.Left, source.Style.Margin.Right);
+    }
 
     private sealed class FallbackTextMeasurer(IFontMetricsProvider metricsProvider) : ITextMeasurer
     {

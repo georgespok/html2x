@@ -1,3 +1,5 @@
+using Html2x.Abstractions.Layout.Styles;
+
 namespace Html2x.Abstractions.Diagnostics;
 
 public sealed class LayoutPageSnapshot
@@ -8,13 +10,7 @@ public sealed class LayoutPageSnapshot
 
     public float Height { get; init; }
 
-    public float MarginTop { get; init; }
-
-    public float MarginRight { get; init; }
-
-    public float MarginBottom { get; init; }
-
-    public float MarginLeft { get; init; }
+    public Spacing Margin { get; init; }
 
     public IReadOnlyList<FragmentSnapshot> Fragments { get; init; } = [];
 }

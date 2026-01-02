@@ -94,7 +94,7 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new("body", null, [
-            new("div", new() { PaddingTopPt = 0, PaddingRightPt = 0, PaddingBottomPt = 0, PaddingLeftPt = 0 })
+            new("div", new() { Padding = new Spacing(0f, 0f, 0f, 0f) })
         ]));
     }
 
@@ -273,10 +273,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 15f,
-                PaddingRightPt = 11.25f,
-                PaddingBottomPt = 7.5f,
-                PaddingLeftPt = 3.75f
+                Padding = new Spacing(15f, 11.25f, 7.5f, 3.75f)
             })
         ]));
     }
@@ -306,10 +303,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 30f,
-                PaddingRightPt = 22.5f,
-                PaddingBottomPt = 15f,
-                PaddingLeftPt = 7.5f
+                Padding = new Spacing(30f, 22.5f, 15f, 7.5f)
             })
         ]));
     }
@@ -336,7 +330,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 15f
+                Padding = new Spacing(15f, 0f, 0f, 0f)
             })
         ]));
     }
@@ -362,10 +356,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 0f,
-                PaddingRightPt = 0f,
-                PaddingBottomPt = 0f,
-                PaddingLeftPt = 0f
+                Padding = new Spacing(0f, 0f, 0f, 0f)
             })
         ]));
     }
@@ -393,17 +384,11 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 15f,
-                PaddingRightPt = 11.25f,
-                PaddingBottomPt = 7.5f,
-                PaddingLeftPt = 3.75f
+                Padding = new Spacing(15f, 11.25f, 7.5f, 3.75f)
             }, [
                 new("p", new()
                 {
-                    PaddingTopPt = 0f,
-                    PaddingRightPt = 0f,
-                    PaddingBottomPt = 0f,
-                    PaddingLeftPt = 0f
+                    Padding = new Spacing(0f, 0f, 0f, 0f)
                 })
             ])
         ]));
@@ -433,10 +418,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = top,
-                PaddingRightPt = right,
-                PaddingBottomPt = bottom,
-                PaddingLeftPt = left
+                Padding = new Spacing(top, right, bottom, left)
             })
         ]));
     }
@@ -463,10 +445,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                PaddingTopPt = 18.75f,
-                PaddingRightPt = 7.5f,
-                PaddingBottomPt = 7.5f,
-                PaddingLeftPt = 7.5f
+                Padding = new Spacing(18.75f, 7.5f, 7.5f, 7.5f)
             })
         ]));
     }
