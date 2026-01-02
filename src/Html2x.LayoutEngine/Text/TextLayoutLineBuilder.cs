@@ -90,18 +90,23 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
             var width = _measurer.MeasureWidth(buffer.Source.Font, buffer.Source.FontSizePt, text);
             var (ascent, descent) = _measurer.GetMetrics(buffer.Source.Font, buffer.Source.FontSizePt);
 
+            var leftSpacing = buffer.LeftSpacing;
+            var rightSpacing = buffer.RightSpacing;
+
             lineRuns.Add(new TextLayoutRun(
                 buffer.Source.Source,
                 text,
                 buffer.Source.Font,
                 buffer.Source.FontSizePt,
                 width,
+                leftSpacing,
+                rightSpacing,
                 ascent,
                 descent,
                 buffer.Source.Style.Decorations,
                 buffer.Source.Style.Color));
 
-            lineWidth += width;
+            lineWidth += leftSpacing + width + rightSpacing;
         }
 
         return lineRuns;
@@ -138,7 +143,8 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
     private bool TryAppendToken(TextRunInput run, string token)
     {
         var tokenWidth = MeasureWidth(run, token);
-        if (Fits(_currentWidth + tokenWidth, _availableWidth))
+        var additionalSpacing = GetAdditionalSpacing(run);
+        if (Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth))
         {
             AppendToken(run, token, tokenWidth);
             return true;
@@ -149,16 +155,27 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
 
     private void AppendToken(TextRunInput run, string token, float tokenWidth)
     {
-        var buffer = _currentLine.Count > 0 ? _currentLine[^1] : null;
-        if (buffer is not null && buffer.Source.RunId == run.RunId)
+        if (_currentLine.Count > 0)
         {
-            buffer.Append(token);
+            var buffer = _currentLine[^1];
+            if (buffer.Source.RunId == run.RunId)
+            {
+                buffer.Append(token);
+            }
+            else
+            {
+                buffer = new LineRunBuffer(run);
+                buffer.Append(token);
+                _currentLine.Add(buffer);
+                _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
+            }
         }
         else
         {
-            buffer = new LineRunBuffer(run);
+            var buffer = new LineRunBuffer(run);
             buffer.Append(token);
             _currentLine.Add(buffer);
+            _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
         }
 
         _currentWidth += tokenWidth;
@@ -167,6 +184,22 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
     private float MeasureWidth(TextRunInput run, string text)
     {
         return _measurer.MeasureWidth(run.Font, run.FontSizePt, text);
+    }
+
+    private float GetAdditionalSpacing(TextRunInput run)
+    {
+        if (_currentLine.Count == 0)
+        {
+            return run.PaddingLeft + run.MarginLeft + run.PaddingRight + run.MarginRight;
+        }
+
+        var buffer = _currentLine[^1];
+        if (buffer.Source.RunId == run.RunId)
+        {
+            return 0f;
+        }
+
+        return run.PaddingLeft + run.MarginLeft + run.PaddingRight + run.MarginRight;
     }
 
     private static bool Fits(float width, float maxWidth)
@@ -256,6 +289,8 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
     {
         public TextRunInput Source { get; } = source;
         public StringBuilder Text { get; } = new();
+        public float LeftSpacing { get; } = source.PaddingLeft + source.MarginLeft;
+        public float RightSpacing { get; } = source.PaddingRight + source.MarginRight;
 
         public void Append(string text)
         {

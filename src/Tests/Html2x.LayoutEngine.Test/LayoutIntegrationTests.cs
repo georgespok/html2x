@@ -13,7 +13,6 @@ using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
-using System.IO;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 using Html2x.LayoutEngine.Models;
 
@@ -33,20 +32,13 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
         };
 
         // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -127,23 +119,11 @@ public class LayoutIntegrationTests
                 <h6>H6</h6>                
             </html>";
 
-        var config = Configuration.Default.WithCss();
-        var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxBuilder = new BoxTreeBuilder();
-        var fragmentBuilder = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
-
-        var document = await domProvider.LoadAsync(html);
-        var styleTree = styleComputer.Compute(document);
-        var boxTree = boxBuilder.Build(styleTree);
-        var fragmentTree = fragmentBuilder.Build(boxTree, CreateContext(imageProvider));
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.Letter
         };
-        var layout = await builder.BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
 
         var page = layout.Pages[0];
         var h1Block = (BlockFragment)page.Children[0];
@@ -175,20 +155,13 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.Letter
         };
 
         // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
         
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -229,20 +202,13 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.Letter
         };
 
         // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -261,6 +227,116 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
+    public async Task Build_WithFixedWidth_UsesSpecifiedWidth()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 200px;'>Content</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Width.ShouldBe(150f, 0.5f);
+    }
+
+    [Fact]
+    public async Task Build_WithMinWidth_OverridesAvailableWidth()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 200px;'>
+                <div style='min-width: 400px;'>Content</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Width.ShouldBe(300f, 0.5f);
+    }
+
+    [Fact]
+    public async Task Build_WithFixedHeight_UsesSpecifiedHeight()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='height: 100px;'>Content</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Height.ShouldBe(75f, 0.5f);
+    }
+
+    [Fact]
+    public async Task Build_WithMinHeight_ClampsContentHeight()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='min-height: 120px;'>Hi</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Height.ShouldBe(90f, 0.5f);
+    }
+
+    [Fact]
+    public async Task Build_WithMaxHeight_ClampsSpecifiedHeight()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='height: 300px; max-height: 100px;'>Hi</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Height.ShouldBe(75f, 0.5f);
+    }
+
+    [Fact]
     public async Task Build_WithBr_SplitsInlineContentIntoSeparateLines()
     {
         const string html = @"
@@ -270,16 +346,9 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
         var layoutOptions = new LayoutOptions { PageSize = PaperSizes.Letter };
 
-        var layout = await builder.BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(1);
@@ -292,6 +361,157 @@ public class LayoutIntegrationTests
     }
 
     
+    //[Fact(Skip = "Disabled while width and height is not implemented")]
+    [Fact]
+    public async Task LayoutBlockWithPadding_AdjustsContentWidth()
+    {
+        // Arrange: Block with width: 200px (150pt) and padding: 20px (15pt each side)
+        // Expected: Content width = 150pt - 15pt (left) - 15pt (right) = 120pt
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 200px; padding: 20px;'>Content</div>
+              </body>
+            </html>";
+
+       var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        // Act
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        var lineBox = (LineBoxFragment)div.Children[0];
+        
+        lineBox.Rect.X.ShouldBe(15f, 0.5f);
+        lineBox.Rect.Y.ShouldBe(15f, 0.5f);
+    }
+
+    //[Fact(Skip = "Disabled while width and height is not implemented")]
+    [Fact]
+    public async Task LayoutInlineWithPadding_AffectsHorizontalSpacing()
+    {
+        // Arrange: Inline element with padding: 10px (7.5pt) inside a block
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div><span style='padding: 10px;'>Inline</span></div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        // Act
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        // Assert: Padding should affect horizontal spacing
+        // For inline elements, padding affects the spacing around the content
+        layout.Pages.Count.ShouldBe(1);
+        if (layout.Pages[0].Children.Count > 0)
+        {
+            var block = (BlockFragment)layout.Pages[0].Children[0];
+            if (block.Children.Count > 0)
+            {
+                var lineBox = (LineBoxFragment)block.Children[0];
+                // Verify padding is applied (check that text run has spacing)
+                lineBox.Runs.Count.ShouldBeGreaterThan(0);
+                // The inline element's padding should be reflected in the layout
+                // Padding offsets the text position within the block
+                // Text should be offset by left padding (7.5pt)
+                lineBox.Runs[0].Origin.X.ShouldBe(lineBox.Rect.X + 7.5f, 0.5f);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LayoutInlineWithMargin_AffectsHorizontalSpacing()
+    {
+        // Arrange: Inline element with margin: 10px (7.5pt) inside a block
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div><span style='margin: 10px;'>Inline</span></div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        // Act
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var block = (BlockFragment)layout.Pages[0].Children[0];
+        var lineBox = (LineBoxFragment)block.Children[0];
+        lineBox.Runs.Count.ShouldBeGreaterThan(0);
+        lineBox.Runs[0].Origin.X.ShouldBe(lineBox.Rect.X + 7.5f, 0.5f);
+    }
+
+    [Fact]
+    public async Task LayoutInlinePadding_CanForceLineWrap()
+    {
+        // Arrange: padding should consume width and force a wrap.
+        // Note: width is not enforced in layout yet; max-width drives the constraint.
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='max-width: 40px;'>
+                    <span style='padding: 10px;'>A</span>
+                    <span>B</span>
+                </div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        // Act
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var block = (BlockFragment)layout.Pages[0].Children[0];
+        var lines = block.Children.OfType<LineBoxFragment>().ToList();
+        lines.Count.ShouldBeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task Build_ShouldReturnBlockFragment()
+    {
+        // Arrange: Inline element with padding: 10px (7.5pt) inside a block
+        const string html = @"
+            <html>
+              <p>first line<br/>second line</p>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        // Act
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        // Assert
+        layout.Pages.Count.ShouldBe(1);
+        var page = layout.Pages[0];
+        page.Children.Count.ShouldBe(1);
+        var block = page.Children[0] as BlockFragment;
+        block.ShouldNotBeNull();
+    }
+
     private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
     {
         foreach (var fragment in fragments)
@@ -327,123 +547,6 @@ public class LayoutIntegrationTests
                 }
             }
         }
-    }
-
-    //[Fact(Skip = "Disabled while width and height is not implemented")]
-    [Fact]
-    public async Task LayoutBlockWithPadding_AdjustsContentWidth()
-    {
-        // Arrange: Block with width: 200px (150pt) and padding: 20px (15pt each side)
-        // Expected: Content width = 150pt - 15pt (left) - 15pt (right) = 120pt
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div style='width: 200px; padding: 20px;'>Content</div>
-              </body>
-            </html>";
-
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
-
-        // Assert
-        layout.Pages.Count.ShouldBe(1);
-        var div = (BlockFragment)layout.Pages[0].Children[0];
-        var lineBox = (LineBoxFragment)div.Children[0];
-        
-        // Child X position should account for left padding (3.75pt)
-        lineBox.Rect.X.ShouldBe(div.Rect.X + 3.75f, 0.5f);
-        
-        // Child Y position should account for top padding (7.5pt)
-        lineBox.Rect.Y.ShouldBe(div.Rect.Y + 7.5f, 0.5f);
-    }
-
-    [Fact(Skip = "Disabled while width and height is not implemented")]
-    public async Task LayoutInlineWithPadding_AffectsHorizontalSpacing()
-    {
-        // Arrange: Inline element with padding: 10px (7.5pt) inside a block
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div><span style='padding: 10px;'>Inline</span></div>
-              </body>
-            </html>";
-
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
-
-        // Assert: Padding should affect horizontal spacing
-        // For inline elements, padding affects the spacing around the content
-        layout.Pages.Count.ShouldBe(1);
-        if (layout.Pages[0].Children.Count > 0)
-        {
-            var block = (BlockFragment)layout.Pages[0].Children[0];
-            if (block.Children.Count > 0)
-            {
-                var lineBox = (LineBoxFragment)block.Children[0];
-                // Verify padding is applied (check that text run has spacing)
-                lineBox.Runs.Count.ShouldBeGreaterThan(0);
-                // The inline element's padding should be reflected in the layout
-                // Padding offsets the text position within the block
-                // Text should be offset by left padding (7.5pt)
-                lineBox.Rect.X.ShouldBeGreaterThan(block.Rect.X);
-            }
-        }
-    }
-
-    [Fact]
-    public async Task Build_ShouldReturnBlockFragment()
-    {
-        // Arrange: Inline element with padding: 10px (7.5pt) inside a block
-        const string html = @"
-            <html>
-              <p>first line<br/>second line</p>
-            </html>";
-
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        // Act
-        var layout = await builder.BuildAsync(html, layoutOptions);
-
-        // Assert
-        layout.Pages.Count.ShouldBe(1);
-        var page = layout.Pages[0];
-        page.Children.Count.ShouldBe(1);
-        var block = page.Children[0] as BlockFragment;
-        block.ShouldNotBeNull();
     }
 
     private static BlockFragment? FindBlockContainingText(BlockFragment block, string text)
@@ -511,6 +614,18 @@ public class LayoutIntegrationTests
             (long)(10 * 1024 * 1024),
             textMeasurer.Object,
             fontSource.Object);
+    }
+
+    private static LayoutBuilder CreateLayoutBuilder()
+    {
+        var config = Configuration.Default.WithCss();
+        var dom = new AngleSharpDomProvider(config);
+        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var boxes = new BoxTreeBuilder();
+        var fragments = new FragmentBuilder();
+        var imageProvider = new NoopImageProvider();
+        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
+        return builder;
     }
 
     private static LayoutBuilder CreateLayoutBuilder(

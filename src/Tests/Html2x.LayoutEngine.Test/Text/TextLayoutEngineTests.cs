@@ -100,7 +100,11 @@ public class TextLayoutEngineTests
             text,
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
-            style);
+            style,
+            PaddingLeft: 0f,
+            PaddingRight: 0f,
+            MarginLeft: 0f,
+            MarginRight: 0f);
     }
 
     private static TextRunInput LineBreak(int runId)
@@ -113,6 +117,10 @@ public class TextLayoutEngineTests
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
             style,
-            true);
+            PaddingLeft: 0f,
+            PaddingRight: 0f,
+            MarginLeft: 0f,
+            MarginRight: 0f,
+            IsLineBreak: true);
     }
 }

@@ -76,6 +76,7 @@ If the property is render-only (e.g., text decoration), you may skip box changes
 
 ## Checklist
 
+- [ ] For width/height: confirm overflow behavior. If widths exceed available space, document that overflow is currently not clipped and content can render outside the page content area.
 - [ ] Style computation updated with defaults, inheritance, parsing.
 - [ ] Box or fragment models extended as needed.
 - [ ] Renderer covers rendering and diagnostics.

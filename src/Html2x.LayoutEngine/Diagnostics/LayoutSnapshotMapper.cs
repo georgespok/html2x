@@ -26,10 +26,7 @@ public static class LayoutSnapshotMapper
                 PageNumber = page.PageNumber,
                 Width = page.Size.Width,
                 Height = page.Size.Height,
-                MarginTop = page.Margins.Top,
-                MarginRight = page.Margins.Right,
-                MarginBottom = page.Margins.Bottom,
-                MarginLeft = page.Margins.Left,
+                Margin = page.Margins,
                 Fragments = fragments
             });
         }

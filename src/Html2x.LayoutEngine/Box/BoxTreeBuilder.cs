@@ -16,10 +16,7 @@ public class BoxTreeBuilder : IBoxTreeBuilder
 
         var page = new PageBox
         {
-            MarginTopPt = styles.Page.MarginTopPt,
-            MarginRightPt = styles.Page.MarginRightPt,
-            MarginBottomPt = styles.Page.MarginBottomPt,
-            MarginLeftPt = styles.Page.MarginLeftPt
+            Margin = styles.Page.Margin
         };
 
         return blockEngine.Layout(displayRoot, page);

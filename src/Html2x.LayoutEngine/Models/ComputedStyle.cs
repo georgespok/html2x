@@ -14,14 +14,13 @@ public sealed record ComputedStyle
     public float LineHeightMultiplier { get; init; }
     public ColorRgba Color { get; init; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; init; }
-    public float MarginTopPt { get; init; }
-    public float MarginRightPt { get; init; }
-    public float MarginBottomPt { get; init; }
-    public float MarginLeftPt { get; init; }
-    public float PaddingTopPt { get; init; }
-    public float PaddingRightPt { get; init; }
-    public float PaddingBottomPt { get; init; }
-    public float PaddingLeftPt { get; init; }
+    public Spacing Margin { get; init; } = new(0, 0, 0, 0);
+    public Spacing Padding { get; init; } = new(0, 0, 0, 0);
+    public float? WidthPt { get; init; }
+    public float? MinWidthPt { get; init; }
     public float? MaxWidthPt { get; init; }
+    public float? HeightPt { get; init; }
+    public float? MinHeightPt { get; init; }
+    public float? MaxHeightPt { get; init; }
     public BorderEdges Borders { get; init; } = BorderEdges.None;
 }

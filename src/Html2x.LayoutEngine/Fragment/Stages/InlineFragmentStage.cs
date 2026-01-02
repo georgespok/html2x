@@ -133,6 +133,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
             foreach (var run in line.Runs)
             {
+                currentX += run.LeftSpacing;
                 var textRun = new TextRun(
                     run.Text,
                     run.Font,
@@ -145,7 +146,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                     run.Color);
 
                 lineRuns.Add(textRun);
-                currentX += run.Width;
+                currentX += run.Width + run.RightSpacing;
             }
 
             var storedLine = new LineBoxFragment
@@ -182,7 +183,18 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         {
             var font = _metrics.GetFontKey(blockContext.Style);
             var fontSize = _metrics.GetFontSize(blockContext.Style);
-            runs.Add(new TextRunInput(runId++, inline, string.Empty, font, fontSize, blockContext.Style, true));
+            runs.Add(new TextRunInput(
+                runId++,
+                inline,
+                string.Empty,
+                font,
+                fontSize,
+                blockContext.Style,
+                PaddingLeft: 0f,
+                PaddingRight: 0f,
+                MarginLeft: 0f,
+                MarginRight: 0f,
+                IsLineBreak: true));
             return;
         }
 
@@ -190,7 +202,18 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         {
             var font = _metrics.GetFontKey(inline.Style);
             var fontSize = _metrics.GetFontSize(inline.Style);
-            runs.Add(new TextRunInput(runId++, inline, inline.TextContent, font, fontSize, inline.Style));
+            var (paddingLeft, paddingRight, marginLeft, marginRight) = GetInlineSpacing(inline);
+            runs.Add(new TextRunInput(
+                runId++,
+                inline,
+                inline.TextContent,
+                font,
+                fontSize,
+                inline.Style,
+                paddingLeft,
+                paddingRight,
+                marginLeft,
+                marginRight));
         }
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
@@ -235,6 +258,22 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
     private static bool IsLineBreak(InlineBox inline)
         => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
+
+    private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(InlineBox inline)
+    {
+        var source = inline;
+        if (source.Element is null && source.Parent is InlineBox parent && parent.Element is not null)
+        {
+            source = parent;
+        }
+
+        if (source.Element is null)
+        {
+            return (0f, 0f, 0f, 0f);
+        }
+
+        return (source.Style.Padding.Left, source.Style.Padding.Right, source.Style.Margin.Left, source.Style.Margin.Right);
+    }
 
     private sealed class FallbackTextMeasurer : ITextMeasurer
     {

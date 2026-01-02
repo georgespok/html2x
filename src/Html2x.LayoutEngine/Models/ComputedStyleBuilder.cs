@@ -14,15 +14,14 @@ public sealed class ComputedStyleBuilder
     public float? LineHeightMultiplier { get; set; }
     public ColorRgba Color { get; set; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; set; }
-    public float MarginTopPt { get; set; }
-    public float MarginRightPt { get; set; }
-    public float MarginBottomPt { get; set; }
-    public float MarginLeftPt { get; set; }
-    public float PaddingTopPt { get; set; }
-    public float PaddingRightPt { get; set; }
-    public float PaddingBottomPt { get; set; }
-    public float PaddingLeftPt { get; set; }
+    public Spacing Margin { get; set; }
+    public Spacing Padding { get; set; }
+    public float? WidthPt { get; set; }
+    public float? MinWidthPt { get; set; }
     public float? MaxWidthPt { get; set; }
+    public float? HeightPt { get; set; }
+    public float? MinHeightPt { get; set; }
+    public float? MaxHeightPt { get; set; }
     
     public BorderBuilder Borders { get; } = new();
 
@@ -39,18 +38,24 @@ public sealed class ComputedStyleBuilder
             LineHeightMultiplier = LineHeightMultiplier ?? 1.2f,
             Color = Color,
             BackgroundColor = BackgroundColor,
-            MarginTopPt = MarginTopPt,
-            MarginRightPt = MarginRightPt,
-            MarginBottomPt = MarginBottomPt,
-            MarginLeftPt = MarginLeftPt,
-            PaddingTopPt = Math.Max(0, PaddingTopPt),
-            PaddingRightPt = Math.Max(0, PaddingRightPt),
-            PaddingBottomPt = Math.Max(0, PaddingBottomPt),
-            PaddingLeftPt = Math.Max(0, PaddingLeftPt),
+            Margin = Margin,
+            Padding = NormalizePadding(Padding),
+            WidthPt = WidthPt,
+            MinWidthPt = MinWidthPt,
             MaxWidthPt = MaxWidthPt,
+            HeightPt = HeightPt,
+            MinHeightPt = MinHeightPt,
+            MaxHeightPt = MaxHeightPt,
             Borders = Borders.Build(Color)
         };
     }
+
+    private static Spacing NormalizePadding(Spacing padding)
+        => new(
+            Math.Max(0, padding.Top),
+            Math.Max(0, padding.Right),
+            Math.Max(0, padding.Bottom),
+            Math.Max(0, padding.Left));
 
     public sealed class BorderBuilder
     {

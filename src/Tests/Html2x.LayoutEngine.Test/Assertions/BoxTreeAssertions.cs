@@ -1,5 +1,6 @@
 using System.Reflection;
 using AngleSharp.Dom;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test.Assertions;
@@ -60,10 +61,7 @@ public sealed class PageBoxExpectationBuilder(PageBox page)
 {
     public PageBoxExpectationBuilder Margins(float top, float right, float bottom, float left)
     {
-        page.MarginTopPt = top;
-        page.MarginRightPt = right;
-        page.MarginBottomPt = bottom;
-        page.MarginLeftPt = left;
+        page.Margin = new Spacing(top, right, bottom, left);
         return this;
     }
 }

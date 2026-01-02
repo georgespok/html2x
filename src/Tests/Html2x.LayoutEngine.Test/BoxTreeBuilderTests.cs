@@ -73,6 +73,7 @@ public class BoxTreeBuilderTests
 
         // Assert
         actual.ShouldMatch(tree => tree
+            .Page(p => p.Margins(0f, 0f, 0f, 0f))
             .Block(b => b.Element(div)
                 .Style(new ComputedStyle { Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid)) })
                 .Inline(i => i.Text("Hello"))
@@ -98,8 +99,7 @@ public class BoxTreeBuilderTests
             Element = ul,
             Style = new ComputedStyle
             {
-                MarginTopPt = 15f,
-                MarginLeftPt = 5f
+                Margin = new Spacing(15f, 0f, 0f, 5f)
             }
         };
         ulNode.Children.Add(new StyleNode { Element = firstLi, Style = new ComputedStyle() });
@@ -218,6 +218,7 @@ public class BoxTreeBuilderTests
 
         // Assert: Padding values should be copied to BlockBox.Padding
         actual.ShouldMatch(tree => tree
+            .Page(p => p.Margins(0f, 0f, 0f, 0f))
             .Block(b => b.Element(div)
                 .Padding(15f, 11.25f, 7.5f, 3.75f)));
     }
