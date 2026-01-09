@@ -127,10 +127,11 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             return (0f, 0f, 0f, 0f);
         }
 
-        var paddingLeft = source.Style.Padding.Left + (source.Style.Borders.Left?.Width ?? 0f);
-        var paddingRight = source.Style.Padding.Right + (source.Style.Borders.Right?.Width ?? 0f);
+        var padding = source.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(source.Style.Borders).Safe();
+        var margin = source.Style.Margin.Safe();
 
-        return (paddingLeft, paddingRight, source.Style.Margin.Left, source.Style.Margin.Right);
+        return (padding.Left + border.Left, padding.Right + border.Right, margin.Left, margin.Right);
     }
 
     private sealed class FallbackTextMeasurer(IFontMetricsProvider metricsProvider) : ITextMeasurer

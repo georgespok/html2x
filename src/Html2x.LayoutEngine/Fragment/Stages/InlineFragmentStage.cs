@@ -99,17 +99,13 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         IReadOnlyList<TextRunInput> runs,
         IReadOnlyList<IFragmentBuildObserver> observers)
     {
-        var paddingLeft = blockContext.Padding.Left;
-        var paddingRight = blockContext.Padding.Right;
-        var paddingTop = blockContext.Padding.Top;
-        var borderLeft = blockContext.Style.Borders?.Left?.Width ?? 0f;
-        var borderRight = blockContext.Style.Borders?.Right?.Width ?? 0f;
-        var borderTop = blockContext.Style.Borders?.Top?.Width ?? 0f;
+        var padding = blockContext.Padding.Safe();
+        var border = Spacing.FromBorderEdges(blockContext.Style.Borders).Safe();
         var textAlign = blockContext.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
-        var contentLeft = blockContext.X + borderLeft + paddingLeft;
-        var contentTop = blockContext.Y + borderTop + paddingTop;
-        var contentWidth = blockContext.Width - paddingLeft - paddingRight - borderLeft - borderRight;
+        var contentLeft = blockContext.X + border.Left + padding.Left;
+        var contentTop = blockContext.Y + border.Top + padding.Top;
+        var contentWidth = blockContext.Width - padding.Horizontal - border.Horizontal;
         if (contentWidth <= 0f || !float.IsFinite(contentWidth))
         {
             contentWidth = float.PositiveInfinity;
@@ -272,10 +268,11 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             return (0f, 0f, 0f, 0f);
         }
 
-        var paddingLeft = source.Style.Padding.Left + (source.Style.Borders.Left?.Width ?? 0f);
-        var paddingRight = source.Style.Padding.Right + (source.Style.Borders.Right?.Width ?? 0f);
+        var padding = source.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(source.Style.Borders).Safe();
+        var margin = source.Style.Margin.Safe();
 
-        return (paddingLeft, paddingRight, source.Style.Margin.Left, source.Style.Margin.Right);
+        return (padding.Left + border.Left, padding.Right + border.Right, margin.Left, margin.Right);
     }
 
     private sealed class FallbackTextMeasurer : ITextMeasurer

@@ -42,7 +42,8 @@ public class PdfRenderer
 
         foreach (var page in layout.Pages)
         {
-            using var canvas = document.BeginPage(page.Size.Width, page.Size.Height);
+            var size = page.PageSize;
+            using var canvas = document.BeginPage(size.Width, size.Height);
             if (canvas is null)
             {
                 continue;

@@ -1,7 +1,6 @@
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Microsoft.Extensions.Logging;
-using System.IO;
 
 namespace Html2x.TestConsole;
 

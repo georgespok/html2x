@@ -4,8 +4,7 @@ namespace Html2x.Abstractions.Measurements.Dimensions;
 
 public sealed record FragmentDimension(
     string ElementId,
-    float WidthPt,
-    float HeightPt,
+    SizePt Size,
     float? BorderThicknessPt,
     DimensionOverflowBehaviorEnum OverflowBehaviorEnum)
 {

@@ -13,13 +13,14 @@ public class BoxTreeBuilderImageFitTests
         var (authWidth, authHeight) = (300d, 150d);
 
         // act
-        var (w, h) = StyleConverter.ResolveImageSize(authWidth, authHeight, 0, 0);
-        var scale = Math.Min(1.0, availableWidth / w);
-        w *= scale;
-        h *= scale;
+        var size = StyleConverter.ResolveImageSize(
+            new Html2x.Abstractions.Measurements.Units.SizePx(authWidth, authHeight),
+            new Html2x.Abstractions.Measurements.Units.SizePx(0, 0));
+        var scale = Math.Min(1d, availableWidth / size.WidthOrZero);
+        var scaled = size.Scale(scale);
 
         // assert
-        w.ShouldBe(200, 1);
-        h.ShouldBe(100, 1);
+        scaled.WidthOrZero.ShouldBe(200d, 1);
+        scaled.HeightOrZero.ShouldBe(100d, 1);
     }
 }

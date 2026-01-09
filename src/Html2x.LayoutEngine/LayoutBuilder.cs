@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
@@ -9,7 +8,6 @@ using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
-using Spacing = Html2x.Abstractions.Layout.Styles.Spacing;
 
 namespace Html2x.LayoutEngine;
 
@@ -68,7 +66,8 @@ public class LayoutBuilder(
     private static HtmlLayout CreateHtmlLayout(LayoutOptions options, Models.BoxTree boxTree, FragmentTree fragments)
     {
         var newLayout = new HtmlLayout();
-        var page = new LayoutPage(new SizeF(options.PageSize.Width, options.PageSize.Height),
+        var pageSize = options.PageSize;
+        var page = new LayoutPage(pageSize,
             boxTree.Page.Margin,
             fragments.Blocks);
         newLayout.Pages.Add(page);

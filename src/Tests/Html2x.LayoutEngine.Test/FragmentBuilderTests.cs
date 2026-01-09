@@ -10,7 +10,6 @@ using Html2x.LayoutEngine.Test.Assertions;
 using Html2x.LayoutEngine.Test.Builders;
 using Moq;
 using Shouldly;
-using System.IO;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test;

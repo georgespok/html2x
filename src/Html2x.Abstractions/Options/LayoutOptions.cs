@@ -1,11 +1,10 @@
 using Html2x.Abstractions.Measurements.Units;
-using System.IO;
 
 namespace Html2x.Abstractions.Options;
 
 public sealed class LayoutOptions
 {
-    public PageSize PageSize { get; init; } = PaperSizes.Letter;
+    public SizePt PageSize { get; init; } = PaperSizes.Letter;
 
     /// <summary>Base directory used to resolve relative image paths.</summary>
     public string HtmlDirectory { get; init; } = Directory.GetCurrentDirectory();

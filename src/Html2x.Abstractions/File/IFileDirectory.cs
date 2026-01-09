@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Html2x.Abstractions.File;
 
 public interface IFileDirectory

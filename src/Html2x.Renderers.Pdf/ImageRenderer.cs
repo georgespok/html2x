@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
@@ -115,8 +113,7 @@ internal sealed class ImageRenderer
             Payload = new ImageRenderPayload
             {
                 Src = fragment.Src,
-                RenderedWidth = width,
-                RenderedHeight = height,
+                RenderedSize = new Html2x.Abstractions.Measurements.Units.SizePt(width, height),
                 Status = status,
                 Borders = fragment.Style?.Borders
             }
