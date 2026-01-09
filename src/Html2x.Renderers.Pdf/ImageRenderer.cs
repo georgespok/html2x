@@ -32,22 +32,25 @@ internal sealed class ImageRenderer
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(fragment);
 
-        var width = (float)fragment.Rect.Width;
-        var height = (float)fragment.Rect.Height;
+        var rect = fragment.ContentRect == default
+            ? fragment.Rect
+            : fragment.ContentRect;
+        var width = (float)rect.Width;
+        var height = (float)rect.Height;
         var status = fragment.IsMissing
             ? ImageStatus.Missing
             : fragment.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok;
 
         if (width <= 0 || height <= 0)
         {
-            RenderPlaceholder(canvas, fragment.Rect);
+            RenderPlaceholder(canvas, rect);
             Record(fragment, status, width, height);
             return;
         }
 
         if (status != ImageStatus.Ok)
         {
-            RenderPlaceholder(canvas, fragment.Rect);
+            RenderPlaceholder(canvas, rect);
             Record(fragment, status, width, height);
             return;
         }
@@ -55,12 +58,12 @@ internal sealed class ImageRenderer
         var imgBytes = ImageLoader.Load(fragment.Src, _htmlDirectory);
         if (imgBytes is null)
         {
-            RenderPlaceholder(canvas, fragment.Rect);
+            RenderPlaceholder(canvas, rect);
             Record(fragment, status, width, height);
             return;
         }
 
-        DrawImage(canvas, fragment.Rect, imgBytes);
+        DrawImage(canvas, rect, imgBytes);
 
         Record(fragment, status, width, height);
     }
@@ -114,7 +117,8 @@ internal sealed class ImageRenderer
                 Src = fragment.Src,
                 RenderedWidth = width,
                 RenderedHeight = height,
-                Status = status
+                Status = status,
+                Borders = fragment.Style?.Borders
             }
         });
     }

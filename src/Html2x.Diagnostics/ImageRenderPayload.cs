@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.Diagnostics;
 
@@ -16,4 +17,6 @@ public sealed class ImageRenderPayload : IDiagnosticsPayload
     public double RenderedHeight { get; init; }
 
     public ImageStatus Status { get; init; }
+
+    public BorderEdges? Borders { get; init; }
 }

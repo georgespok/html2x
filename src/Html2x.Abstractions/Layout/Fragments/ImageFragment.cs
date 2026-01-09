@@ -1,3 +1,5 @@
+using System.Drawing;
+
 namespace Html2x.Abstractions.Layout.Fragments;
 
 /// <summary>
@@ -8,6 +10,12 @@ public sealed class ImageFragment : Fragment
 {
     /// <summary>Original src attribute value (data URI or file path relative to input HTML).</summary>
     public required string Src { get; init; }
+
+    /// <summary>
+    /// Content box rect after applying padding and borders to the outer rect.
+    /// Used for image drawing and placeholders.
+    /// </summary>
+    public RectangleF ContentRect { get; init; }
 
     /// <summary>Author-specified width in CSS pixels, if present.</summary>
     public double? AuthoredWidthPx { get; init; }

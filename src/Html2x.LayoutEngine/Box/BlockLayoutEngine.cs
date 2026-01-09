@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Utilities;
 
 namespace Html2x.LayoutEngine.Box;
 
@@ -74,21 +75,21 @@ public sealed class BlockLayoutEngine(
     {
         var s = node.Style;
         var margin = new Spacing(
-            Safe(s.Margin.Top),
-            Safe(s.Margin.Right),
-            Safe(s.Margin.Bottom),
-            Safe(s.Margin.Left));
+            LayoutMath.Safe(s.Margin.Top),
+            LayoutMath.Safe(s.Margin.Right),
+            LayoutMath.Safe(s.Margin.Bottom),
+            LayoutMath.Safe(s.Margin.Left));
 
         var padding = new Spacing(
-            Safe(s.Padding.Top),
-            Safe(s.Padding.Right),
-            Safe(s.Padding.Bottom),
-            Safe(s.Padding.Left));
+            LayoutMath.Safe(s.Padding.Top),
+            LayoutMath.Safe(s.Padding.Right),
+            LayoutMath.Safe(s.Padding.Bottom),
+            LayoutMath.Safe(s.Padding.Left));
 
-        var borderTop = Safe(s.Borders?.Top?.Width ?? 0);
-        var borderRight = Safe(s.Borders?.Right?.Width ?? 0);
-        var borderBottom = Safe(s.Borders?.Bottom?.Width ?? 0);
-        var borderLeft = Safe(s.Borders?.Left?.Width ?? 0);
+        var borderTop = LayoutMath.Safe(s.Borders?.Top?.Width ?? 0);
+        var borderRight = LayoutMath.Safe(s.Borders?.Right?.Width ?? 0);
+        var borderBottom = LayoutMath.Safe(s.Borders?.Bottom?.Width ?? 0);
+        var borderLeft = LayoutMath.Safe(s.Borders?.Left?.Width ?? 0);
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
@@ -165,10 +166,10 @@ public sealed class BlockLayoutEngine(
     {
         var s = node.Style;
         var margin = new Spacing(
-            Safe(s.Margin.Top),
-            Safe(s.Margin.Right),
-            Safe(s.Margin.Bottom),
-            Safe(s.Margin.Left));
+            LayoutMath.Safe(s.Margin.Top),
+            LayoutMath.Safe(s.Margin.Right),
+            LayoutMath.Safe(s.Margin.Bottom),
+            LayoutMath.Safe(s.Margin.Left));
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
@@ -188,11 +189,6 @@ public sealed class BlockLayoutEngine(
         };
 
         return box;
-    }
-
-    private static float Safe(float v)
-    {
-        return float.IsFinite(v) ? v : 0f;
     }
 
     private static void CopyPageTo(PageBox target, PageBox source)

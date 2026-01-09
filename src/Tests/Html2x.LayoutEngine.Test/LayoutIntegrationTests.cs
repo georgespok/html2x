@@ -227,6 +227,68 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
+    public async Task Build_InlineImageWithBorderAndPadding_IncludesOuterSize()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <p>Before <img src='image.png' width='100' height='80' style='padding: 10px; border: 2px solid black;' /> After</p>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var page = layout.Pages[0];
+        var image = page.Children
+            .OfType<BlockFragment>()
+            .Select(FindFirstImageFragment)
+            .FirstOrDefault(fragment => fragment is not null);
+
+        image.ShouldNotBeNull();
+        image!.Rect.Width.ShouldBe(118f, 0.5f);
+        image.Rect.Height.ShouldBe(98f, 0.5f);
+        image.ContentRect.Width.ShouldBe(100f, 0.5f);
+        image.ContentRect.Height.ShouldBe(80f, 0.5f);
+    }
+
+    [Fact]
+    public async Task Build_ImageWithOversizedBorderAndPadding_ClampsContentRectToZero()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div>
+                    <img src='image.png' width='0' height='0' style='padding: 20px; border: 10px solid black;' />
+                </div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var page = layout.Pages[0];
+        var image = page.Children
+            .OfType<BlockFragment>()
+            .Select(FindFirstImageFragment)
+            .FirstOrDefault(fragment => fragment is not null);
+
+        image.ShouldNotBeNull();
+        image!.ContentRect.Width.ShouldBe(0f);
+        image.ContentRect.Height.ShouldBe(0f);
+    }
+
+    [Fact]
     public async Task Build_WithFixedWidth_UsesSpecifiedWidth()
     {
         const string html = @"
@@ -563,6 +625,28 @@ public class LayoutIntegrationTests
             if (match is not null)
             {
                 return match;
+            }
+        }
+
+        return null;
+    }
+
+    private static ImageFragment? FindFirstImageFragment(CoreFragment fragment)
+    {
+        if (fragment is ImageFragment image)
+        {
+            return image;
+        }
+
+        if (fragment is BlockFragment block)
+        {
+            foreach (var child in block.Children)
+            {
+                var match = FindFirstImageFragment(child);
+                if (match is not null)
+                {
+                    return match;
+                }
             }
         }
 
