@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Diagnostics;
 
@@ -12,9 +13,7 @@ public sealed class ImageRenderPayload : IDiagnosticsPayload
 
     public string Src { get; init; } = string.Empty;
 
-    public double RenderedWidth { get; init; }
-
-    public double RenderedHeight { get; init; }
+    public SizePt RenderedSize { get; init; }
 
     public ImageStatus Status { get; init; }
 

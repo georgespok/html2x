@@ -1,5 +1,6 @@
-﻿using System.Drawing;
+using System.Drawing;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Abstractions.Layout.Fragments;
 
@@ -24,6 +25,8 @@ public abstract class Fragment
             _rect = value;
         }
     } // absolute page coords (pt)
+
+    public SizePt Size => new(Rect.Width, Rect.Height);
 
     public int ZOrder { get; init; } // resolved stacking/z-index
 

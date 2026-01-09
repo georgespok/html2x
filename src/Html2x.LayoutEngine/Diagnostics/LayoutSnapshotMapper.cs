@@ -24,8 +24,7 @@ public static class LayoutSnapshotMapper
             pages.Add(new LayoutPageSnapshot
             {
                 PageNumber = page.PageNumber,
-                Width = page.Size.Width,
-                Height = page.Size.Height,
+                PageSize = page.PageSize,
                 Margin = page.Margins,
                 Fragments = fragments
             });
@@ -59,8 +58,7 @@ public static class LayoutSnapshotMapper
             Kind = "block",
             X = block.Rect.X,
             Y = block.Rect.Y,
-            Width = block.Rect.Width,
-            Height = block.Rect.Height,
+            Size = block.Size,
             Children = children
         };
     }
@@ -76,8 +74,7 @@ public static class LayoutSnapshotMapper
             Kind = "line",
             X = line.Rect.X,
             Y = line.Rect.Y,
-            Width = line.Rect.Width,
-            Height = line.Rect.Height,
+            Size = line.Size,
             Text = text,
             Children = []
         };
@@ -90,12 +87,10 @@ public static class LayoutSnapshotMapper
             Kind = "image",
             X = image.Rect.X,
             Y = image.Rect.Y,
-            Width = image.Rect.Width,
-            Height = image.Rect.Height,
+            Size = image.Size,
             ContentX = image.ContentRect.X,
             ContentY = image.ContentRect.Y,
-            ContentWidth = image.ContentRect.Width,
-            ContentHeight = image.ContentRect.Height,
+            ContentSize = image.ContentSize,
             Borders = image.Style?.Borders,
             Children = []
         };
@@ -108,8 +103,7 @@ public static class LayoutSnapshotMapper
             Kind = "rule",
             X = rule.Rect.X,
             Y = rule.Rect.Y,
-            Width = rule.Rect.Width,
-            Height = rule.Rect.Height,
+            Size = rule.Size,
             Children = []
         };
     }
@@ -121,8 +115,7 @@ public static class LayoutSnapshotMapper
             Kind = fragment.GetType().Name.ToLowerInvariant(),
             X = fragment.Rect.X,
             Y = fragment.Rect.Y,
-            Width = fragment.Rect.Width,
-            Height = fragment.Rect.Height,
+            Size = fragment.Size,
             Children = []
         };
     }

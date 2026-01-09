@@ -50,8 +50,7 @@ public sealed class DimensionStyleMapper
         ArgumentNullException.ThrowIfNull(requested);
         return new ResolvedDimension(
             requested.ElementId,
-            widthPt,
-            heightPt,
+            new SizePt(widthPt, heightPt),
             percentageWidth,
             percentageHeight,
             passCount,

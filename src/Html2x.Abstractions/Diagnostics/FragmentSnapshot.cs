@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Abstractions.Diagnostics;
 
@@ -10,9 +11,7 @@ public sealed class FragmentSnapshot
 
     public float Y { get; init; }
 
-    public float Width { get; init; }
-
-    public float Height { get; init; }
+    public SizePt Size { get; init; }
 
     public string? Text { get; init; }
 
@@ -20,9 +19,7 @@ public sealed class FragmentSnapshot
 
     public float? ContentY { get; init; }
 
-    public float? ContentWidth { get; init; }
-
-    public float? ContentHeight { get; init; }
+    public SizePt? ContentSize { get; init; }
 
     public BorderEdges? Borders { get; init; }
 

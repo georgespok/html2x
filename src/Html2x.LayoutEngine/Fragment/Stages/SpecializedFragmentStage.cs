@@ -2,8 +2,9 @@ using System.Drawing;
 using System.Globalization;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
-using Html2x.LayoutEngine.Utilities;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
@@ -93,53 +94,38 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         var authoredHeight = ParsePxAttr(el, HtmlCssConstants.HtmlAttributes.Height);
         var loadResult = context.ImageProvider.Load(src, context.HtmlDirectory, context.MaxImageSizeBytes);
 
-        var intrinsicW = loadResult.IntrinsicWidth > 0 ? loadResult.IntrinsicWidth : 0;
-        var intrinsicH = loadResult.IntrinsicHeight > 0 ? loadResult.IntrinsicHeight : 0;
+        var authoredSize = new SizePx(authoredWidth, authoredHeight);
+        var sizePx = StyleConverter.ResolveImageSize(authoredSize, loadResult.IntrinsicSizePx)
+            .ClampMin(0d, 0d);
 
-        var (width, height) = StyleConverter.ResolveImageSize(authoredWidth, authoredHeight, intrinsicW, intrinsicH);
+        var size = new SizePt((float)sizePx.WidthOrZero, (float)sizePx.HeightOrZero)
+            .Safe()
+            .ClampMin(0f, 0f);
 
-        if (parent.Width > 0 && width > parent.Width)
+        if (parent.Width > 0 && size.Width > parent.Width)
         {
-            var scale = parent.Width / width;
-            width *= scale;
-            height *= scale;
+            var scale = parent.Width / size.Width;
+            size = size.Scale(scale);
         }
 
-        var paddingLeft = LayoutMath.Safe(child.Style.Padding.Left);
-        var paddingRight = LayoutMath.Safe(child.Style.Padding.Right);
-        var paddingTop = LayoutMath.Safe(child.Style.Padding.Top);
-        var paddingBottom = LayoutMath.Safe(child.Style.Padding.Bottom);
+        var padding = child.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(child.Style.Borders).Safe();
 
-        var borderLeft = LayoutMath.Safe(child.Style.Borders.Left?.Width ?? 0f);
-        var borderRight = LayoutMath.Safe(child.Style.Borders.Right?.Width ?? 0f);
-        var borderTop = LayoutMath.Safe(child.Style.Borders.Top?.Width ?? 0f);
-        var borderBottom = LayoutMath.Safe(child.Style.Borders.Bottom?.Width ?? 0f);
+        var contentSize = size.ClampMin(0f, 0f);
+        var outerSize = contentSize
+            .Inflate(padding.Horizontal + border.Horizontal, padding.Vertical + border.Vertical)
+            .ClampMin(0f, 0f);
 
-        var contentWidth = Math.Max(0f, (float)width);
-        var contentHeight = Math.Max(0f, (float)height);
-
-        var outerWidth = Math.Max(0f, contentWidth + paddingLeft + paddingRight + borderLeft + borderRight);
-        var outerHeight = Math.Max(0f, contentHeight + paddingTop + paddingBottom + borderTop + borderBottom);
-
-        var contentRectWidth = Math.Max(0f, outerWidth - paddingLeft - paddingRight - borderLeft - borderRight);
-        var contentRectHeight = Math.Max(0f, outerHeight - paddingTop - paddingBottom - borderTop - borderBottom);
-
-        var outerRect = new RectangleF(parent.X, parent.Y, outerWidth, outerHeight);
-        var contentRect = new RectangleF(
-            parent.X + borderLeft + paddingLeft,
-            parent.Y + borderTop + paddingTop,
-            contentRectWidth,
-            contentRectHeight);
+        var outerRect = new RectangleF(parent.X, parent.Y, outerSize.Width, outerSize.Height);
+        var contentRect = padding.Add(border).Inset(outerRect);
 
         return new ImageFragment
         {
             FragmentId = state.ReserveFragmentId(),
             PageNumber = state.PageNumber,
             Src = src,
-            AuthoredWidthPx = authoredWidth,
-            AuthoredHeightPx = authoredHeight,
-            IntrinsicWidthPx = width,
-            IntrinsicHeightPx = height,
+            AuthoredSizePx = authoredSize,
+            IntrinsicSizePx = new SizePx(contentSize.Width, contentSize.Height),
             IsMissing = loadResult.Status == ImageLoadStatus.Missing,
             IsOversize = loadResult.Status == ImageLoadStatus.Oversize,
             Rect = outerRect,

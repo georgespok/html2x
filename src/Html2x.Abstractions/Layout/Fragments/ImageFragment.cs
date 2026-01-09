@@ -1,4 +1,5 @@
 using System.Drawing;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Abstractions.Layout.Fragments;
 
@@ -16,18 +17,13 @@ public sealed class ImageFragment : Fragment
     /// Used for image drawing and placeholders.
     /// </summary>
     public RectangleF ContentRect { get; init; }
+    public SizePt ContentSize => new(ContentRect.Width, ContentRect.Height);
 
-    /// <summary>Author-specified width in CSS pixels, if present.</summary>
-    public double? AuthoredWidthPx { get; init; }
+    /// <summary>Author-specified size in CSS pixels, if present.</summary>
+    public SizePx AuthoredSizePx { get; init; }
 
-    /// <summary>Author-specified height in CSS pixels, if present.</summary>
-    public double? AuthoredHeightPx { get; init; }
-
-    /// <summary>Intrinsic image width in CSS pixels (0 if unknown at fragment creation).</summary>
-    public double IntrinsicWidthPx { get; init; }
-
-    /// <summary>Intrinsic image height in CSS pixels (0 if unknown at fragment creation).</summary>
-    public double IntrinsicHeightPx { get; init; }
+    /// <summary>Intrinsic image size in CSS pixels (0 if unknown at fragment creation).</summary>
+    public SizePx IntrinsicSizePx { get; init; }
 
     /// <summary>True when the image failed validation or loading (e.g., out-of-scope path).</summary>
     public bool IsMissing { get; init; }

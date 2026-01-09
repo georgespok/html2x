@@ -66,8 +66,8 @@ public static class DiagnosticsSessionSerializer
             {
                 image.Kind,
                 image.Src,
-                image.RenderedWidth,
-                image.RenderedHeight,
+                RenderedWidth = image.RenderedSize.Width,
+                RenderedHeight = image.RenderedSize.Height,
                 image.Status
             },
             null => null,

@@ -1,11 +1,12 @@
+using Html2x.Abstractions.Measurements.Units;
+
 namespace Html2x.Abstractions.Measurements.Dimensions;
 
 public sealed record ResolvedDimension
 {
     public ResolvedDimension(
         string elementId,
-        float widthPt,
-        float heightPt,
+        SizePt size,
         bool isPercentageWidth,
         bool isPercentageHeight,
         int passCount = 1,
@@ -17,8 +18,7 @@ public sealed record ResolvedDimension
         }
 
         ElementId = elementId ?? throw new ArgumentNullException(nameof(elementId));
-        WidthPt = widthPt;
-        HeightPt = heightPt;
+        Size = size;
         IsPercentageWidth = isPercentageWidth;
         IsPercentageHeight = isPercentageHeight;
         PassCount = passCount;
@@ -26,8 +26,7 @@ public sealed record ResolvedDimension
     }
 
     public string ElementId { get; }
-    public float WidthPt { get; }
-    public float HeightPt { get; }
+    public SizePt Size { get; }
     public bool IsPercentageWidth { get; }
     public bool IsPercentageHeight { get; }
     public int PassCount { get; }

@@ -1,6 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
-using Html2x.LayoutEngine.Utilities;
 
 namespace Html2x.LayoutEngine.Box;
 
@@ -21,7 +21,8 @@ public sealed class BlockLayoutEngine(
 
         var contentX = page.Margin.Left;
         var contentY = page.Margin.Top;
-        var contentWidth = page.PageWidthPt - page.Margin.Left - page.Margin.Right;
+        var pageSize = page.Size;
+        var contentWidth = pageSize.Width - page.Margin.Left - page.Margin.Right;
 
         NormalizeChildrenForBlock(displayRoot);
 
@@ -74,22 +75,9 @@ public sealed class BlockLayoutEngine(
     private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)
     {
         var s = node.Style;
-        var margin = new Spacing(
-            LayoutMath.Safe(s.Margin.Top),
-            LayoutMath.Safe(s.Margin.Right),
-            LayoutMath.Safe(s.Margin.Bottom),
-            LayoutMath.Safe(s.Margin.Left));
-
-        var padding = new Spacing(
-            LayoutMath.Safe(s.Padding.Top),
-            LayoutMath.Safe(s.Padding.Right),
-            LayoutMath.Safe(s.Padding.Bottom),
-            LayoutMath.Safe(s.Padding.Left));
-
-        var borderTop = LayoutMath.Safe(s.Borders?.Top?.Width ?? 0);
-        var borderRight = LayoutMath.Safe(s.Borders?.Right?.Width ?? 0);
-        var borderBottom = LayoutMath.Safe(s.Borders?.Bottom?.Width ?? 0);
-        var borderLeft = LayoutMath.Safe(s.Borders?.Left?.Width ?? 0);
+        var margin = s.Margin.Safe();
+        var padding = s.Padding.Safe();
+        var border = Spacing.FromBorderEdges(s.Borders).Safe();
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
@@ -108,9 +96,9 @@ public sealed class BlockLayoutEngine(
         }
 
         // Content width accounts for padding and borders
-        var contentWidthForChildren = Math.Max(0, width - padding.Left - padding.Right - borderLeft - borderRight);
-        var contentXForChildren = x + padding.Left + borderLeft;
-        var contentYForChildren = y + padding.Top + borderTop;
+        var contentWidthForChildren = Math.Max(0, width - padding.Horizontal - border.Horizontal);
+        var contentXForChildren = x + padding.Left + border.Left;
+        var contentYForChildren = y + padding.Top + border.Top;
 
         // use inline engine for height estimation (use content width)
         floatEngine.PlaceFloats(node, x, y, width); 
@@ -133,10 +121,12 @@ public sealed class BlockLayoutEngine(
             contentHeight = Math.Min(contentHeight, s.MaxHeightPt.Value);
         }
 
+        var contentSize = new SizePt(width, contentHeight).Safe().ClampMin(0f, 0f);
+
         node.X = x;
         node.Y = y;
-        node.Width = width; // Total width (for fragment Rect)
-        node.Height = contentHeight + padding.Top + padding.Bottom + borderTop + borderBottom;
+        node.Width = contentSize.Width; // Total width (for fragment Rect)
+        node.Height = contentSize.Height + padding.Vertical + border.Vertical;
         node.Margin = margin;
         node.Padding = padding;
         node.TextAlign = s.TextAlign ?? "left";
@@ -165,17 +155,13 @@ public sealed class BlockLayoutEngine(
     private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth)
     {
         var s = node.Style;
-        var margin = new Spacing(
-            LayoutMath.Safe(s.Margin.Top),
-            LayoutMath.Safe(s.Margin.Right),
-            LayoutMath.Safe(s.Margin.Bottom),
-            LayoutMath.Safe(s.Margin.Left));
+        var margin = s.Margin.Safe();
 
         var x = contentX + margin.Left;
         var y = cursorY + margin.Top;
         var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
-
         var height = tableEngine.MeasureHeight(node, width);
+        var size = new SizePt(width, height).Safe().ClampMin(0f, 0f);
 
         var box = new BlockBox
         {
@@ -183,8 +169,8 @@ public sealed class BlockLayoutEngine(
             Style = s,
             X = x,
             Y = y,
-            Width = width,
-            Height = height,
+            Width = size.Width,
+            Height = size.Height,
             Margin = margin
         };
 
@@ -193,8 +179,7 @@ public sealed class BlockLayoutEngine(
 
     private static void CopyPageTo(PageBox target, PageBox source)
     {
-        target.PageWidthPt = source.PageWidthPt;
-        target.PageHeightPt = source.PageHeightPt;
+        target.Size = source.Size;
         target.Margin = source.Margin;
     }
 

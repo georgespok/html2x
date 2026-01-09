@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Models;
 
@@ -22,7 +23,7 @@ public sealed class ComputedStyleBuilder
     public float? HeightPt { get; set; }
     public float? MinHeightPt { get; set; }
     public float? MaxHeightPt { get; set; }
-    
+
     public BorderBuilder Borders { get; } = new();
 
     public ComputedStyle Build()

@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Linq;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
@@ -50,7 +49,7 @@ public class SkiaDeterminismTests
         var layout = new HtmlLayout();
 
         var page = new LayoutPage(
-            new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
             new Spacing(50, 50, 50, 50),
             CreateSimpleContent(),
             1,

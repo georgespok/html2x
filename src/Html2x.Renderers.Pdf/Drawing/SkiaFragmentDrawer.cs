@@ -49,7 +49,8 @@ internal sealed class SkiaFragmentDrawer
             IsAntialias = false
         };
 
-        canvas.DrawRect(new SKRect(0, 0, page.Size.Width, page.Size.Height), paint);
+        var size = page.PageSize;
+        canvas.DrawRect(new SKRect(0, 0, size.Width, size.Height), paint);
     }
 
     private void DrawFragment(SKCanvas canvas, Fragment fragment)

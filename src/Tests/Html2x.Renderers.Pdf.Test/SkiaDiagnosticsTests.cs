@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
@@ -41,8 +38,8 @@ public class SkiaDiagnosticsTests
         payload.ShouldNotBeNull();
         payload!.Src.ShouldBe("missing.png");
         payload.Status.ShouldBe(ImageStatus.Missing);
-        payload.RenderedWidth.ShouldBeGreaterThan(0);
-        payload.RenderedHeight.ShouldBeGreaterThan(0);
+        payload.RenderedSize.Width.ShouldBeGreaterThan(0);
+        payload.RenderedSize.Height.ShouldBeGreaterThan(0);
     }
 
     private static HtmlLayout CreateLayoutWithMissingImage()
@@ -53,8 +50,7 @@ public class SkiaDiagnosticsTests
             new ImageFragment
             {
                 Src = "missing.png",
-                IntrinsicWidthPx = 50,
-                IntrinsicHeightPx = 40,
+                IntrinsicSizePx = new SizePx(50, 40),
                 IsMissing = true,
                 Rect = new RectangleF(20, 30, 50, 40),
                 Style = new VisualStyle()
@@ -62,7 +58,7 @@ public class SkiaDiagnosticsTests
         };
 
         var page = new LayoutPage(
-            new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
             new Spacing(0, 0, 0, 0),
             fragments,
             1,

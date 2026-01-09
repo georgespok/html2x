@@ -11,10 +11,7 @@ internal sealed class BlockBoxBuilder
 {
     private readonly BlockBox _block;
     private readonly BlockBoxBuilder? _parent;
-    private float? _pageMarginTop;
-    private float? _pageMarginRight;
-    private float? _pageMarginBottom;
-    private float? _pageMarginLeft;
+    private Spacing? _pageMargins;
 
     public BlockBoxBuilder()
         : this(new BlockBox(), parent: null)
@@ -68,10 +65,7 @@ internal sealed class BlockBoxBuilder
             return this;
         }
 
-        _pageMarginTop = top;
-        _pageMarginRight = right;
-        _pageMarginBottom = bottom;
-        _pageMarginLeft = left;
+        _pageMargins = new Spacing(top, right, bottom, left);
         return this;
     }
 
@@ -127,13 +121,9 @@ internal sealed class BlockBoxBuilder
         var root = BuildRoot();
         var tree = new BoxTree();
 
-        if (_pageMarginTop.HasValue)
+        if (_pageMargins.HasValue)
         {
-            tree.Page.Margin = new Spacing(
-                _pageMarginTop.Value,
-                _pageMarginRight ?? 0,
-                _pageMarginBottom ?? 0,
-                _pageMarginLeft ?? 0);
+            tree.Page.Margin = _pageMargins.Value;
         }
 
         foreach (var child in root.Children.OfType<BlockBox>())

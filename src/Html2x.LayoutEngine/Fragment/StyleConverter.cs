@@ -1,4 +1,5 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Fragment;
@@ -26,33 +27,45 @@ public static class StyleConverter
     /// Resolve target image width/height using authored values and intrinsic aspect ratio.
     /// Falls back to intrinsic when both authored are missing; falls back to square if intrinsic unknown.
     /// </summary>
-    public static (double Width, double Height) ResolveImageSize(
-        double? authoredWidth,
-        double? authoredHeight,
-        double intrinsicWidth,
-        double intrinsicHeight)
+    public static SizePx ResolveImageSize(SizePx authored, SizePx intrinsic)
     {
-        double? iw = intrinsicWidth > 0 ? intrinsicWidth : null;
-        double? ih = intrinsicHeight > 0 ? intrinsicHeight : null;
+        var iw = intrinsic.Width is > 0 ? intrinsic.Width : null;
+        var ih = intrinsic.Height is > 0 ? intrinsic.Height : null;
 
-        if (authoredWidth.HasValue && authoredHeight.HasValue)
-            return (authoredWidth.Value, authoredHeight.Value);
+        if (authored.HasWidth && authored.HasHeight)
+        {
+            return new SizePx(authored.Width, authored.Height);
+        }
 
-        if (authoredWidth.HasValue && iw.HasValue && ih.HasValue)
-            return (authoredWidth.Value, authoredWidth.Value * ih.Value / iw.Value);
+        if (authored.HasWidth && iw.HasValue && ih.HasValue)
+        {
+            return new SizePx(
+                authored.Width,
+                authored.Width.Value * ih.Value / iw.Value);
+        }
 
-        if (authoredHeight.HasValue && iw.HasValue && ih.HasValue)
-            return (authoredHeight.Value * iw.Value / ih.Value, authoredHeight.Value);
+        if (authored.HasHeight && iw.HasValue && ih.HasValue)
+        {
+            return new SizePx(
+                authored.Height.Value * iw.Value / ih.Value,
+                authored.Height);
+        }
 
         if (iw.HasValue && ih.HasValue)
-            return (iw.Value, ih.Value);
+        {
+            return new SizePx(iw.Value, ih.Value);
+        }
 
-        if (authoredWidth.HasValue)
-            return (authoredWidth.Value, authoredWidth.Value); // square fallback
+        if (authored.HasWidth)
+        {
+            return new SizePx(authored.Width, authored.Width); // square fallback
+        }
 
-        if (authoredHeight.HasValue)
-            return (authoredHeight.Value, authoredHeight.Value); // square fallback
+        if (authored.HasHeight)
+        {
+            return new SizePx(authored.Height, authored.Height); // square fallback
+        }
 
-        return (0, 0); // unknown size; caller should handle
+        return new SizePx(0d, 0d); // unknown size; caller should handle
     }
 }

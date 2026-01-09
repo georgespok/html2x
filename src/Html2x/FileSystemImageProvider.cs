@@ -84,8 +84,7 @@ public sealed class FileSystemImageProvider : IImageProvider
         {
             Src = src,
             Status = ImageLoadStatus.Missing,
-            IntrinsicWidth = 0,
-            IntrinsicHeight = 0
+            IntrinsicSizePx = new Html2x.Abstractions.Measurements.Units.SizePx(0, 0)
         };
 
     private static ImageLoadResult Oversize(string src) =>
@@ -93,8 +92,7 @@ public sealed class FileSystemImageProvider : IImageProvider
         {
             Src = src,
             Status = ImageLoadStatus.Oversize,
-            IntrinsicWidth = 0,
-            IntrinsicHeight = 0
+            IntrinsicSizePx = new Html2x.Abstractions.Measurements.Units.SizePx(0, 0)
         };
 
     private static ImageLoadResult Ok(string src, double width, double height) =>
@@ -102,7 +100,6 @@ public sealed class FileSystemImageProvider : IImageProvider
         {
             Src = src,
             Status = ImageLoadStatus.Ok,
-            IntrinsicWidth = width,
-            IntrinsicHeight = height
+            IntrinsicSizePx = new Html2x.Abstractions.Measurements.Units.SizePx(width, height)
         };
 }

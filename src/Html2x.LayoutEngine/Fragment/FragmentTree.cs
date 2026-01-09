@@ -14,8 +14,4 @@ public sealed class FragmentTree
     /// </summary>
     public List<Abstractions.Layout.Fragments.Fragment> All { get; } = [];
 
-    /// <summary>
-    ///     Optional page-level metadata (A4, margins, etc.)
-    /// </summary>
-    public LayoutPageMetadata Page { get; } = new();
 }

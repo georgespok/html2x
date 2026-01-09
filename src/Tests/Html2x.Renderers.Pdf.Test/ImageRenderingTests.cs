@@ -4,6 +4,7 @@ using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.File;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
@@ -20,7 +21,7 @@ public class ImageRenderingTests
         // arrange: construct layout with success, missing, and oversize cases
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
-            new SizeF(612, 792),
+            new SizePt(612, 792),
             new Spacing(24, 24, 24, 24),
             new List<Fragment>
             {
@@ -42,14 +43,14 @@ public class ImageRenderingTests
         images[1].Status.ShouldBe(ImageStatus.Missing);
         images[2].Status.ShouldBe(ImageStatus.Oversize);
 
-        images[0].RenderedWidth.ShouldBe(120, 1);
-        images[0].RenderedHeight.ShouldBe(120, 1);
+        images[0].RenderedSize.Width.ShouldBe(120, 1);
+        images[0].RenderedSize.Height.ShouldBe(120, 1);
 
-        images[1].RenderedWidth.ShouldBe(80, 1);
-        images[1].RenderedHeight.ShouldBe(80, 1);
+        images[1].RenderedSize.Width.ShouldBe(80, 1);
+        images[1].RenderedSize.Height.ShouldBe(80, 1);
 
-        images[2].RenderedWidth.ShouldBe(140, 1);
-        images[2].RenderedHeight.ShouldBe(70, 1);
+        images[2].RenderedSize.Width.ShouldBe(140, 1);
+        images[2].RenderedSize.Height.ShouldBe(70, 1);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class ImageRenderingTests
 
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
-            new SizeF(612, 792),
+            new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
             {
@@ -89,7 +90,7 @@ public class ImageRenderingTests
 
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
-            new SizeF(612, 792),
+            new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
             {
@@ -119,7 +120,7 @@ public class ImageRenderingTests
 
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
-            new SizeF(612, 792),
+            new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
             {
@@ -147,7 +148,7 @@ public class ImageRenderingTests
 
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
-            new SizeF(612, 792),
+            new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
             {
@@ -183,10 +184,8 @@ public class ImageRenderingTests
         return new ImageFragment
         {
             Src = dataUri,
-            AuthoredWidthPx = width,
-            AuthoredHeightPx = height,
-            IntrinsicWidthPx = width,
-            IntrinsicHeightPx = height,
+            AuthoredSizePx = new SizePx(width, height),
+            IntrinsicSizePx = new SizePx(width, height),
             Rect = new RectangleF(x, y, width, height),
             Style = new VisualStyle(Borders: borders),
             ZOrder = 0,

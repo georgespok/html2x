@@ -1,4 +1,3 @@
-using System.Linq;
 using AngleSharp;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;

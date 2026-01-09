@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
@@ -10,7 +7,6 @@ using Html2x.LayoutEngine.Test.Builders;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
-using Xunit;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Fragments;

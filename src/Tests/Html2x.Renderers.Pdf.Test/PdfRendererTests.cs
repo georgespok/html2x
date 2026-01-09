@@ -66,7 +66,7 @@ public class PdfRendererTests
         var layout = new HtmlLayout();
 
         var page = new LayoutPage(
-            new SizeF(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
             new Spacing(72, 72, 72, 72),
             CreateSimpleContent(),
             1,
@@ -121,7 +121,7 @@ public class PdfRendererTests
         };
 
         var page = new LayoutPage(
-            new SizeF(400, 400),
+            new SizePt(400, 400),
             new Spacing(0, 0, 0, 0),
             new List<Fragment> { block },
             1,

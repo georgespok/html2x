@@ -1,4 +1,3 @@
-using System.Linq;
 using Html2x.Abstractions.Layout.Text;
 
 namespace Html2x.LayoutEngine.Text;

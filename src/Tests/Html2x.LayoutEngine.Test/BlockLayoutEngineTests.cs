@@ -5,6 +5,7 @@ using Moq;
 using Shouldly;
 using Xunit.Abstractions;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -17,8 +18,7 @@ public class BlockLayoutEngineTests
     private static PageBox DefaultPage() => new()
     {
         Margin = new Spacing(0, 0, 0, 0),
-        PageWidthPt = 200,
-        PageHeightPt = 400
+        Size = new SizePt(200, 400)
     };
 
     public BlockLayoutEngineTests(ITestOutputHelper output) 

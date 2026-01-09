@@ -2,6 +2,7 @@ using System.Drawing;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.File;
 using Html2x.Renderers.Pdf.Drawing;
@@ -31,7 +32,7 @@ public sealed class BordersRenderingTests
         };
 
         var page = new LayoutPage(
-            new SizeF(200, 200),
+            new SizePt(200, 200),
             new Spacing(0, 0, 0, 0),
             new List<Fragment> { block },
             PageNumber: 1,
