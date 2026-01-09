@@ -3,6 +3,7 @@ using System.Globalization;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Utilities;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
@@ -80,7 +81,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             Style = StyleConverter.FromComputed(box.Style)
         };
 
-    private ImageFragment CreateImageFragment(
+    private static ImageFragment CreateImageFragment(
         FragmentBuildState state,
         DisplayNode child,
         BlockBox parent,
@@ -104,6 +105,32 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             height *= scale;
         }
 
+        var paddingLeft = LayoutMath.Safe(child.Style.Padding.Left);
+        var paddingRight = LayoutMath.Safe(child.Style.Padding.Right);
+        var paddingTop = LayoutMath.Safe(child.Style.Padding.Top);
+        var paddingBottom = LayoutMath.Safe(child.Style.Padding.Bottom);
+
+        var borderLeft = LayoutMath.Safe(child.Style.Borders.Left?.Width ?? 0f);
+        var borderRight = LayoutMath.Safe(child.Style.Borders.Right?.Width ?? 0f);
+        var borderTop = LayoutMath.Safe(child.Style.Borders.Top?.Width ?? 0f);
+        var borderBottom = LayoutMath.Safe(child.Style.Borders.Bottom?.Width ?? 0f);
+
+        var contentWidth = Math.Max(0f, (float)width);
+        var contentHeight = Math.Max(0f, (float)height);
+
+        var outerWidth = Math.Max(0f, contentWidth + paddingLeft + paddingRight + borderLeft + borderRight);
+        var outerHeight = Math.Max(0f, contentHeight + paddingTop + paddingBottom + borderTop + borderBottom);
+
+        var contentRectWidth = Math.Max(0f, outerWidth - paddingLeft - paddingRight - borderLeft - borderRight);
+        var contentRectHeight = Math.Max(0f, outerHeight - paddingTop - paddingBottom - borderTop - borderBottom);
+
+        var outerRect = new RectangleF(parent.X, parent.Y, outerWidth, outerHeight);
+        var contentRect = new RectangleF(
+            parent.X + borderLeft + paddingLeft,
+            parent.Y + borderTop + paddingTop,
+            contentRectWidth,
+            contentRectHeight);
+
         return new ImageFragment
         {
             FragmentId = state.ReserveFragmentId(),
@@ -115,7 +142,8 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
             IntrinsicHeightPx = height,
             IsMissing = loadResult.Status == ImageLoadStatus.Missing,
             IsOversize = loadResult.Status == ImageLoadStatus.Oversize,
-            Rect = new RectangleF(parent.X, parent.Y, (float)width, (float)height),
+            Rect = outerRect,
+            ContentRect = contentRect,
             Style = StyleConverter.FromComputed(child.Style)
         };
     }
@@ -138,4 +166,5 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         }
         return null;
     }
+
 }

@@ -69,6 +69,7 @@ internal sealed class SkiaFragmentDrawer
                 break;
             case ImageFragment image:
                 _imageRenderer.Render(canvas, image);
+                DrawImageBorders(canvas, image);
                 break;
             case RuleFragment rule:
                 DrawRule(canvas, rule);
@@ -107,6 +108,28 @@ internal sealed class SkiaFragmentDrawer
         }
 
         var rect = block.Rect;
+        if (rect.Width <= 0 || rect.Height <= 0)
+        {
+            return;
+        }
+
+        canvas.Save();
+        canvas.Translate(rect.Left, rect.Top);
+
+        _borderShapeDrawer.Draw(canvas, new SKSize(rect.Width, rect.Height), borders);
+
+        canvas.Restore();
+    }
+
+    private void DrawImageBorders(SKCanvas canvas, ImageFragment image)
+    {
+        var borders = image.Style?.Borders;
+        if (borders is null || !borders.HasAny)
+        {
+            return;
+        }
+
+        var rect = image.Rect;
         if (rect.Width <= 0 || rect.Height <= 0)
         {
             return;

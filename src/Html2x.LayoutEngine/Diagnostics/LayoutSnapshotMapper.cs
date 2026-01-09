@@ -92,6 +92,11 @@ public static class LayoutSnapshotMapper
             Y = image.Rect.Y,
             Width = image.Rect.Width,
             Height = image.Rect.Height,
+            ContentX = image.ContentRect.X,
+            ContentY = image.ContentRect.Y,
+            ContentWidth = image.ContentRect.Width,
+            ContentHeight = image.ContentRect.Height,
+            Borders = image.Style?.Borders,
             Children = []
         };
     }

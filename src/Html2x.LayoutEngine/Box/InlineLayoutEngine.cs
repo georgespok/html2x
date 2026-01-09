@@ -127,7 +127,10 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             return (0f, 0f, 0f, 0f);
         }
 
-        return (source.Style.Padding.Left, source.Style.Padding.Right, source.Style.Margin.Left, source.Style.Margin.Right);
+        var paddingLeft = source.Style.Padding.Left + (source.Style.Borders.Left?.Width ?? 0f);
+        var paddingRight = source.Style.Padding.Right + (source.Style.Borders.Right?.Width ?? 0f);
+
+        return (paddingLeft, paddingRight, source.Style.Margin.Left, source.Style.Margin.Right);
     }
 
     private sealed class FallbackTextMeasurer(IFontMetricsProvider metricsProvider) : ITextMeasurer
