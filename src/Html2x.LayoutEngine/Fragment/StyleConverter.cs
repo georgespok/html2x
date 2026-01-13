@@ -39,16 +39,18 @@ public static class StyleConverter
 
         if (authored.HasWidth && iw.HasValue && ih.HasValue)
         {
+            var authoredWidth = authored.Width.GetValueOrDefault();
             return new SizePx(
-                authored.Width,
-                authored.Width.Value * ih.Value / iw.Value);
+                authoredWidth,
+                authoredWidth * ih.Value / iw.Value);
         }
 
         if (authored.HasHeight && iw.HasValue && ih.HasValue)
         {
+            var authoredHeight = authored.Height.GetValueOrDefault();
             return new SizePx(
-                authored.Height.Value * iw.Value / ih.Value,
-                authored.Height);
+                authoredHeight * iw.Value / ih.Value,
+                authoredHeight);
         }
 
         if (iw.HasValue && ih.HasValue)
@@ -58,12 +60,14 @@ public static class StyleConverter
 
         if (authored.HasWidth)
         {
-            return new SizePx(authored.Width, authored.Width); // square fallback
+            var authoredWidth = authored.Width.GetValueOrDefault();
+            return new SizePx(authoredWidth, authoredWidth); // square fallback
         }
 
         if (authored.HasHeight)
         {
-            return new SizePx(authored.Height, authored.Height); // square fallback
+            var authoredHeight = authored.Height.GetValueOrDefault();
+            return new SizePx(authoredHeight, authoredHeight); // square fallback
         }
 
         return new SizePx(0d, 0d); // unknown size; caller should handle

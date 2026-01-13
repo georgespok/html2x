@@ -139,8 +139,8 @@ public class LineBoxFragmentTests
     {
         var config = Configuration.Default.WithCss();
         var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
-        var boxBuilder = new BoxTreeBuilder();
+        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
+        var boxBuilder = new BoxTreeBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();
         var layoutBuilder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider, textMeasurer);

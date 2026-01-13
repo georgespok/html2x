@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\DefaultUserAgent.css" />
+  </ItemGroup>
+
 </Project>

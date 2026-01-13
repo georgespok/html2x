@@ -12,21 +12,14 @@ namespace Html2x.LayoutEngine.Style;
 /// </summary>
 public sealed class CssStyleComputer(
     IStyleTraversal traversal,
-    IUserAgentDefaults uaDefaults,
     ICssValueConverter converter)
     : IStyleComputer
 {
     private readonly IStyleTraversal _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
-    private readonly IUserAgentDefaults _uaDefaults = uaDefaults ?? throw new ArgumentNullException(nameof(uaDefaults));
     private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
     
     public CssStyleComputer()
-        : this(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter())
-    {
-    }
-
-    public CssStyleComputer(IStyleTraversal traversal, IUserAgentDefaults uaDefaults)
-        : this(traversal, uaDefaults, new CssValueConverter())
+        : this(new StyleTraversal(), new CssValueConverter())
     {
     }
 
@@ -56,7 +49,6 @@ public sealed class CssStyleComputer(
         ApplySpacing(css, element, style);
         ApplyDimensions(css, element, style);
 
-        _uaDefaults.Apply(element, style, parentStyle);
         ApplyBorders(css, style);
         return style.Build();
     }

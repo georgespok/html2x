@@ -5,7 +5,7 @@ namespace Html2x.Diagnostics;
 public sealed class HtmlPayload : IDiagnosticsPayload
 {
     public string Kind => "html";
-    public string Html { get; init; }
+    public required string Html { get; init; }
 
     /// <summary>Status of the most recent image processed (ok, missing, oversize).</summary>
     public ImageStatus? ImageStatus { get; init; }
