@@ -65,7 +65,7 @@ public class LayoutBuilderTests
         var fragmentTree = new FragmentTree();
         fragmentTree.Blocks.Add(expectedBlock);
 
-        _domProvider.Setup(x => x.LoadAsync(html)).ReturnsAsync(document);
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
         _boxTreeBuilder.Setup(x => x.Build(styleTree)).Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
@@ -89,7 +89,7 @@ public class LayoutBuilderTests
         layout.Pages[0].Margins.Left.ShouldBe(13);
         layout.Pages[0].Children[0].ShouldBeSameAs(expectedBlock);
 
-        _domProvider.Verify(x => x.LoadAsync(html), Times.Once);
+        _domProvider.Verify(x => x.LoadAsync(html, options), Times.Once);
         _styleComputer.Verify(x => x.Compute(document), Times.Once);
         _boxTreeBuilder.Verify(x => x.Build(styleTree), Times.Once);
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);

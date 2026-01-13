@@ -78,15 +78,19 @@ public class AbsolutePositioningTests(ITestOutputHelper output)
 
     private static void DrawText(SKCanvas canvas, TestTextFragment text)
     {
+        using var font = new SKFont
+        {
+            Size = text.FontSize
+        };
+
         using var paint = new SKPaint
         {
             Color = text.Color,
-            TextSize = text.FontSize,
             IsAntialias = true
         };
 
         // Draw text baseline at FontSize (like top-left baseline)
-        canvas.DrawText(text.Text, 0, text.FontSize, paint);
+        canvas.DrawText(text.Text, 0, text.FontSize, SKTextAlign.Left, font, paint);
     }
 
     // ---------------- Fragment Model ----------------

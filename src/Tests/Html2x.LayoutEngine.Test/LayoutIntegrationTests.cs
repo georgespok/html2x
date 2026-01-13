@@ -48,9 +48,39 @@ public class LayoutIntegrationTests
         p.Rect.Y.ShouldBe(84f);
         p.Children.Count.ShouldBe(1);
         var div = (BlockFragment)layout.Pages[0].Children[1];
-        div.Rect.Y.ShouldBe(112f, 0.5f);
+        div.Rect.Y.ShouldBe(104.4f, 0.5f);
         var lineBox = (LineBoxFragment)div.Children[0];
         lineBox.Runs[0].Text.ShouldBe("DIV");
+    }
+
+    [Fact]
+    public async Task BlockMargins_CollapseBetweenAdjacentParagraphs()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <p style='margin: 0 0 20pt 0;'>First</p>
+                <p style='margin: 10pt 0 0 0;'>Second</p>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        layout.Pages[0].Children.Count.ShouldBe(2);
+
+        var first = (BlockFragment)layout.Pages[0].Children[0];
+        var second = (BlockFragment)layout.Pages[0].Children[1];
+
+        var expectedGap = 20f; // collapsed max(20pt, 10pt)
+        var expectedSecondY = first.Rect.Y + first.Rect.Height + expectedGap;
+
+        second.Rect.Y.ShouldBe(expectedSecondY, 0.5f);
     }
 
     [Fact]
@@ -61,20 +91,20 @@ public class LayoutIntegrationTests
 
         var config = Configuration.Default.WithCss();
         var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();
         var builder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
-
-        var document = await domProvider.LoadAsync(html);
-        var styleTree = styleComputer.Compute(document);
-        var boxTree = boxBuilder.Build(styleTree);
-        var fragmentTree = fragmentBuilder.Build(boxTree, CreateContext(imageProvider));
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
         };
+
+        var document = await domProvider.LoadAsync(html, layoutOptions);
+        var styleTree = styleComputer.Compute(document);
+        var boxTree = boxBuilder.Build(styleTree);
+        var fragmentTree = fragmentBuilder.Build(boxTree, CreateContext(imageProvider));
         var layout = await builder.BuildAsync(html, layoutOptions);
 
         var boxTexts = CollectInlineTexts(boxTree.Blocks).ToList();
@@ -133,10 +163,11 @@ public class LayoutIntegrationTests
         var h5Block = (BlockFragment)page.Children[4];
         var h6Block = (BlockFragment)page.Children[5];
 
-        // margin top = 5 + bottom = 5 , html -> pdf = 1.2
-        const float rowGapPt = (5 + 5) * (float)1.2;
+        // Collapsed margins: max(5, 5) = 5pt between headings.
+        const float rowGapPt = 5f;
 
-        h6Block.Rect.Y.ShouldBe(h1Block.Rect.Height +
+        h6Block.Rect.Y.ShouldBe(h1Block.Rect.Y +
+                                h1Block.Rect.Height +
                                 h2Block.Rect.Height +
                                 h3Block.Rect.Height +
                                 h4Block.Rect.Height +
@@ -704,7 +735,7 @@ public class LayoutIntegrationTests
     {
         var config = Configuration.Default.WithCss();
         var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults());
+        var style = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
         var boxes = new BoxTreeBuilder();
         var fragments = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();

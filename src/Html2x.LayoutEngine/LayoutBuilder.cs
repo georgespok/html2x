@@ -38,7 +38,7 @@ public class LayoutBuilder(
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options);
 
-        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html));
+        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html, options));
         
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
 

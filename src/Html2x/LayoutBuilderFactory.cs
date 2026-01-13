@@ -26,8 +26,8 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
 
         return new LayoutBuilder(
             new AngleSharpDomProvider(angleSharpConfig),
-            new CssStyleComputer(new StyleTraversal(), new UserAgentDefaults(), new CssValueConverter()),
-            new BoxTreeBuilder(),
+            new CssStyleComputer(new StyleTraversal(), new CssValueConverter()),
+            new BoxTreeBuilder(services.TextMeasurer),
             new FragmentBuilder(),
             imageProvider,
             services.TextMeasurer,

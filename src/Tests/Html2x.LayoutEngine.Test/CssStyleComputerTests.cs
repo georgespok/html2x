@@ -1,14 +1,17 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.Assertions;
+using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
 
 public class CssStyleComputerTests
 {
-    private readonly CssStyleComputer _sut = new(new StyleTraversal(), new UserAgentDefaults());
+    private readonly CssStyleComputer _sut = new(new StyleTraversal(), new CssValueConverter());
 
     [Fact]
     public async Task Compute_ShouldProjectComputedStyles()
@@ -204,15 +207,11 @@ public class CssStyleComputerTests
         ]));
     }
 
-    [Fact]
-    public async Task Compute_WithBorder_ProducesExpectedTree()
+    [Theory]
+    [MemberData(nameof(BorderCases))]
+    public async Task Compute_WithBorderStyles_ProducesExpectedTree(string html, BorderEdges expected)
     {
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='border-width: 1px; border-style: dashed;'>
-                    Text                
-                </div>
-            </body></html>");
+        var document = await CreateHtmlDocument(html);
 
         var tree = _sut.Compute(document);
 
@@ -221,20 +220,16 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed))
+                Borders = expected
             })
         ]));
     }
 
-    [Fact]
-    public async Task Compute_WithBorderShorthand_ProducesExpectedTree()
+    [Theory]
+    [MemberData(nameof(PaddingCases))]
+    public async Task Compute_WithPaddingValues_ResolvesSpacing(string html, Spacing expected)
     {
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='border: 1px dashed;'>
-                    Text
-                </div>
-            </body></html>");
+        var document = await CreateHtmlDocument(html);
 
         var tree = _sut.Compute(document);
 
@@ -243,120 +238,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed))
-            })
-        ]));
-    }   
-
-    [Fact]
-    public async Task Compute_WithIndividualPaddingProperties_ParsesCorrectPointValues()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding-top: 20px = 15pt (20 * 0.75)
-        // padding-right: 15px = 11.25pt (15 * 0.75)
-        // padding-bottom: 10px = 7.5pt (10 * 0.75)
-        // padding-left: 5px = 3.75pt (5 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                Padding = new Spacing(15f, 11.25f, 7.5f, 3.75f)
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParseIndividualPaddingProperties_WithAllSides_ReturnsCorrectPointValues()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding-top: 40px; padding-right: 30px; padding-bottom: 20px; padding-left: 10px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding-top: 40px = 30pt (40 * 0.75)
-        // padding-right: 30px = 22.5pt (30 * 0.75)
-        // padding-bottom: 20px = 15pt (20 * 0.75)
-        // padding-left: 10px = 7.5pt (10 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                Padding = new Spacing(30f, 22.5f, 15f, 7.5f)
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParsePaddingTop_WithPxValue_ConvertsToPoints()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div style='padding-top: 20px;'>
-                    Content
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Conversion: 1px = 0.75pt
-        // padding-top: 20px = 15pt (20 * 0.75)
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                Padding = new Spacing(15f, 0f, 0f, 0f)
-            })
-        ]));
-    }
-
-    [Fact]
-    public async Task ParsePaddingProperties_WhenNotSpecified_DefaultsToZero()
-    {
-        // Arrange
-        var document = await CreateHtmlDocument(
-            @"<html><body>
-                <div>
-                    Content without padding
-                </div>
-            </body></html>");
-
-        // Act
-        var tree = _sut.Compute(document);
-
-        var actual = StyleTreeSnapshot.FromTree(tree);
-
-        // Assert
-        // Padding should default to 0 for all sides when not specified
-        actual.ShouldMatch(new("body", null, [
-            new("div", new()
-            {
-                Padding = new Spacing(0f, 0f, 0f, 0f)
+                Padding = expected
             })
         ]));
     }
@@ -473,11 +355,166 @@ public class CssStyleComputerTests
         ]));
     }
 
+    [Fact]
+    public async Task Compute_UsesEmbeddedUserAgentStyleSheetByDefault()
+    {
+        const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
+
+        var options = new LayoutOptions
+        {
+            UseDefaultUserAgentStyleSheet = true
+        };
+
+        var actual = await ComputeStyleTreeAsync(html, options);
+
+        actual.ShouldMatch(new StyleSnapshot("body", null,
+        [
+            new StyleSnapshot("h1", new ComputedStyle
+            {
+                FontSizePt = 18,
+                Bold = true
+            }),
+            new StyleSnapshot("p", new ComputedStyle
+            {
+                Margin = new Spacing(6f, 0f, 6f, 0f)
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_UserAgentStyleSheetOverride_ReplacesDefault()
+    {
+        const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
+
+        var options = new LayoutOptions
+        {
+            UseDefaultUserAgentStyleSheet = true,
+            UserAgentStyleSheet = "h1 { font-size: 22pt; } p { margin: 2pt 0; }"
+        };
+
+        var actual = await ComputeStyleTreeAsync(html, options);
+
+        actual.ShouldMatch(new StyleSnapshot("body", null,
+        [
+            new StyleSnapshot("h1", new ComputedStyle
+            {
+                FontSizePt = 22
+            }),
+            new StyleSnapshot("p", new ComputedStyle
+            {
+                Margin = new Spacing(2f, 0f, 2f, 0f)
+            })
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_DisableDefaultUserAgentStyleSheet_RemovesDefaultMargins()
+    {
+        const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
+
+        var options = new LayoutOptions
+        {
+            UseDefaultUserAgentStyleSheet = false
+        };
+
+        var actual = await ComputeStyleTreeAsync(html, options);
+
+        actual.ShouldMatch(new StyleSnapshot("body", null,
+        [
+            new StyleSnapshot("h1", new ComputedStyle
+            {
+                FontSizePt = 12
+            }),
+            new StyleSnapshot("p", new ComputedStyle
+            {
+                Margin = new Spacing(0f, 0f, 0f, 0f)
+            })
+        ]));
+    }
+
     private static async Task<IDocument> CreateHtmlDocument(string html)
     {
         var context = BrowsingContext.New(Configuration.Default.WithCss());
         var document = await context.OpenAsync(req => req.Content(html));
         return document;
+    }
+
+    private static async Task<StyleSnapshot> ComputeStyleTreeAsync(string html, LayoutOptions options)
+    {
+        var config = Configuration.Default.WithCss();
+        var domProvider = new AngleSharpDomProvider(config);
+        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
+        var document = await domProvider.LoadAsync(html, options);
+        var tree = styleComputer.Compute(document);
+        return StyleTreeSnapshot.FromTree(tree);
+    }
+
+    public static IEnumerable<object[]> BorderCases()
+    {
+        var expected = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed));
+
+        yield return
+        [
+            @"<html><body>
+                <div style='border-width: 1px; border-style: dashed;'>
+                    Text                
+                </div>
+            </body></html>",
+            expected
+        ];
+
+        yield return
+        [
+            @"<html><body>
+                <div style='border: 1px dashed;'>
+                    Text
+                </div>
+            </body></html>",
+            expected
+        ];
+    }
+
+    public static IEnumerable<object[]> PaddingCases()
+    {
+        yield return
+        [
+            @"<html><body>
+                <div style='padding-top: 20px; padding-right: 15px; padding-bottom: 10px; padding-left: 5px;'>
+                    Content
+                </div>
+            </body></html>",
+            new Spacing(15f, 11.25f, 7.5f, 3.75f)
+        ];
+
+        yield return
+        [
+            @"<html><body>
+                <div style='padding-top: 40px; padding-right: 30px; padding-bottom: 20px; padding-left: 10px;'>
+                    Content
+                </div>
+            </body></html>",
+            new Spacing(30f, 22.5f, 15f, 7.5f)
+        ];
+
+        yield return
+        [
+            @"<html><body>
+                <div style='padding-top: 20px;'>
+                    Content
+                </div>
+            </body></html>",
+            new Spacing(15f, 0f, 0f, 0f)
+        ];
+
+        yield return
+        [
+            @"<html><body>
+                <div>
+                    Content without padding
+                </div>
+            </body></html>",
+            new Spacing(0f, 0f, 0f, 0f)
+        ];
     }
 
 }

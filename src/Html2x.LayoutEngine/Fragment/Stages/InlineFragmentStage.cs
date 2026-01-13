@@ -119,37 +119,28 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         var layout = _textLayout.Layout(new TextLayoutInput(runs, contentWidth, lineHeight));
         var lastLine = FindLastLine(parentFragment);
 
-        foreach (var line in layout.Lines)
+        for (var lineIndex = 0; lineIndex < layout.Lines.Count; lineIndex++)
         {
+            var line = layout.Lines[lineIndex];
             var topY = lastLine is null ? contentTop : lastLine.Rect.Bottom;
             var baselineY = topY + GetBaselineAscent(line);
 
-            var lineRuns = new List<TextRun>(line.Runs.Count);
-            var currentX = contentLeft;
-
-            foreach (var run in line.Runs)
-            {
-                currentX += run.LeftSpacing;
-                var textRun = new TextRun(
-                    run.Text,
-                    run.Font,
-                    run.FontSizePt,
-                    new PointF(currentX, baselineY),
-                    run.Width,
-                    run.Ascent,
-                    run.Descent,
-                    run.Decorations,
-                    run.Color);
-
-                lineRuns.Add(textRun);
-                currentX += run.Width + run.RightSpacing;
-            }
+            var lineRuns = BuildLineRuns(
+                line,
+                textAlign,
+                contentWidth,
+                contentLeft,
+                baselineY,
+                lineIndex,
+                layout.Lines.Count,
+                state.Context.TextMeasurer,
+                out var lineWidthForFragment);
 
             var storedLine = new LineBoxFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
-                Rect = new RectangleF(contentLeft, topY, line.LineWidth, line.LineHeight),
+                Rect = new RectangleF(contentLeft, topY, lineWidthForFragment, line.LineHeight),
                 BaselineY = baselineY,
                 LineHeight = line.LineHeight,
                 Runs = lineRuns,
@@ -167,6 +158,218 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 }
             }
         }
+    }
+
+    private static List<TextRun> BuildLineRuns(
+        TextLayoutLine line,
+        string? textAlign,
+        float contentWidth,
+        float contentLeft,
+        float baselineY,
+        int lineIndex,
+        int lineCount,
+        ITextMeasurer measurer,
+        out float lineWidthForFragment)
+    {
+        var justifyExtra = ResolveJustifyExtra(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
+        var lineOffsetX = ResolveLineOffset(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
+        var isJustified = justifyExtra > 0f;
+
+        if (isJustified && CountWhitespace(line) > 0)
+        {
+            var runs = BuildJustifiedRuns(line, contentLeft, baselineY, justifyExtra, measurer, out var justifiedWidth);
+            lineWidthForFragment = justifiedWidth;
+            return runs;
+        }
+
+        var lineRuns = new List<TextRun>(line.Runs.Count);
+        var currentX = contentLeft + lineOffsetX;
+
+        foreach (var run in line.Runs)
+        {
+            currentX += run.LeftSpacing;
+            var textRun = new TextRun(
+                run.Text,
+                run.Font,
+                run.FontSizePt,
+                new PointF(currentX, baselineY),
+                run.Width,
+                run.Ascent,
+                run.Descent,
+                run.Decorations,
+                run.Color);
+
+            lineRuns.Add(textRun);
+            currentX += run.Width + run.RightSpacing;
+        }
+
+        lineWidthForFragment = line.LineWidth;
+        return lineRuns;
+    }
+
+    private static List<TextRun> BuildJustifiedRuns(
+        TextLayoutLine line,
+        float contentLeft,
+        float baselineY,
+        float extraSpace,
+        ITextMeasurer measurer,
+        out float lineWidthForFragment)
+    {
+        var spaceCount = CountWhitespace(line);
+        if (spaceCount == 0)
+        {
+            lineWidthForFragment = line.LineWidth;
+            var fallbackRuns = new List<TextRun>(line.Runs.Count);
+            var fallbackX = contentLeft;
+
+            foreach (var run in line.Runs)
+            {
+                fallbackX += run.LeftSpacing;
+                fallbackRuns.Add(new TextRun(
+                    run.Text,
+                    run.Font,
+                    run.FontSizePt,
+                    new PointF(fallbackX, baselineY),
+                    run.Width,
+                    run.Ascent,
+                    run.Descent,
+                    run.Decorations,
+                    run.Color));
+                fallbackX += run.Width + run.RightSpacing;
+            }
+
+            return fallbackRuns;
+        }
+
+        var perSpaceExtra = extraSpace / spaceCount;
+        var lineRuns = new List<TextRun>();
+        var currentX = contentLeft;
+
+        foreach (var run in line.Runs)
+        {
+            var tokens = TextTokenization.Tokenize(run.Text);
+            if (tokens.Count == 0)
+            {
+                continue;
+            }
+
+            for (var tokenIndex = 0; tokenIndex < tokens.Count; tokenIndex++)
+            {
+                var token = tokens[tokenIndex];
+                var isFirstToken = tokenIndex == 0;
+                var isLastToken = tokenIndex == tokens.Count - 1;
+                var leftSpacing = isFirstToken ? run.LeftSpacing : 0f;
+                var rightSpacing = isLastToken ? run.RightSpacing : 0f;
+                var tokenWidth = measurer.MeasureWidth(run.Font, run.FontSizePt, token);
+                var whitespaceCount = CountWhitespace(token);
+                var tokenExtra = whitespaceCount > 0 ? whitespaceCount * perSpaceExtra : 0f;
+
+                currentX += leftSpacing;
+                var textRun = new TextRun(
+                    token,
+                    run.Font,
+                    run.FontSizePt,
+                    new PointF(currentX, baselineY),
+                    tokenWidth,
+                    run.Ascent,
+                    run.Descent,
+                    run.Decorations,
+                    run.Color);
+
+                lineRuns.Add(textRun);
+                currentX += tokenWidth + rightSpacing + tokenExtra;
+            }
+        }
+
+        lineWidthForFragment = line.LineWidth + extraSpace;
+        return lineRuns;
+    }
+
+    private static float ResolveLineOffset(
+        string? textAlign,
+        float contentWidth,
+        float lineWidth,
+        TextLayoutLine line,
+        int lineIndex,
+        int lineCount)
+    {
+        if (!float.IsFinite(contentWidth) || contentWidth <= 0f)
+        {
+            return 0f;
+        }
+
+        var align = textAlign?.ToLowerInvariant() ?? HtmlCssConstants.Defaults.TextAlign;
+        var extra = Math.Max(0f, contentWidth - lineWidth);
+
+        return align switch
+        {
+            "center" => extra / 2f,
+            "right" => extra,
+            "justify" when ShouldJustifyLine(line, lineIndex, lineCount) => 0f,
+            _ => 0f
+        };
+    }
+
+    private static float ResolveJustifyExtra(
+        string? textAlign,
+        float contentWidth,
+        float lineWidth,
+        TextLayoutLine line,
+        int lineIndex,
+        int lineCount)
+    {
+        if (!float.IsFinite(contentWidth) || contentWidth <= 0f)
+        {
+            return 0f;
+        }
+
+        var align = textAlign?.ToLowerInvariant() ?? HtmlCssConstants.Defaults.TextAlign;
+        if (!string.Equals(align, "justify", StringComparison.OrdinalIgnoreCase))
+        {
+            return 0f;
+        }
+
+        if (!ShouldJustifyLine(line, lineIndex, lineCount))
+        {
+            return 0f;
+        }
+
+        return Math.Max(0f, contentWidth - lineWidth);
+    }
+
+    private static bool ShouldJustifyLine(TextLayoutLine line, int lineIndex, int lineCount)
+    {
+        return lineIndex < lineCount - 1;
+    }
+
+    private static int CountWhitespace(TextLayoutLine line)
+    {
+        var count = 0;
+        foreach (var run in line.Runs)
+        {
+            count += CountWhitespace(run.Text);
+        }
+
+        return count;
+    }
+
+    private static int CountWhitespace(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        foreach (var ch in text)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private void CollectInlineRuns(

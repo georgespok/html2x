@@ -28,22 +28,29 @@ public sealed class BlockLayoutEngine(
 
         var candidates = SelectTopLevelCandidates(displayRoot);
 
+        var currentY = contentY;
+        var previousBottomMargin = 0f;
+
         foreach (var child in candidates)
         {
             switch (child)
             {
                 case BlockBox box:
                 {
-                    var block = LayoutBlock(box, contentX, contentY, contentWidth);
+                    var collapsedTop = Math.Max(previousBottomMargin, box.Style.Margin.Safe().Top);
+                    var block = LayoutBlock(box, contentX, currentY, contentWidth, collapsedTop);
                     tree.Blocks.Add(block);
-                    contentY = block.Y + block.Height + block.Margin.Bottom;
+                    currentY = block.Y + block.Height;
+                    previousBottomMargin = block.Margin.Bottom;
                     break;
                 }
                 case TableBox table:
                 {
-                    var tableBlock = LayoutTable(table, contentX, contentY, contentWidth);
+                    var collapsedTop = Math.Max(previousBottomMargin, table.Style.Margin.Safe().Top);
+                    var tableBlock = LayoutTable(table, contentX, currentY, contentWidth, collapsedTop);
                     tree.Blocks.Add(tableBlock);
-                    contentY = tableBlock.Y + tableBlock.Height + tableBlock.Margin.Bottom;
+                    currentY = tableBlock.Y + tableBlock.Height;
+                    previousBottomMargin = tableBlock.Margin.Bottom;
                     break;
                 }
             }
@@ -72,7 +79,7 @@ public sealed class BlockLayoutEngine(
         return [displayRoot];
     }
 
-    private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth)
+    private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth, float collapsedTopMargin)
     {
         var s = node.Style;
         var margin = s.Margin.Safe();
@@ -80,7 +87,7 @@ public sealed class BlockLayoutEngine(
         var border = Spacing.FromBorderEdges(s.Borders).Safe();
 
         var x = contentX + margin.Left;
-        var y = cursorY + margin.Top;
+        var y = cursorY + collapsedTopMargin;
         
         var availableWidth = Math.Max(0, contentWidth - margin.Left - margin.Right);
         var width = s.WidthPt ?? availableWidth;
@@ -137,6 +144,7 @@ public sealed class BlockLayoutEngine(
     private float LayoutChildBlocks(BlockBox parent, float contentX, float cursorY, float contentWidth)
     {
         var currentY = cursorY;
+        var previousBottomMargin = 0f;
 
         NormalizeChildrenForBlock(parent);
 
@@ -144,21 +152,23 @@ public sealed class BlockLayoutEngine(
         {
             if (child is BlockBox blockChild)
             {
-                LayoutBlock(blockChild, contentX, currentY, contentWidth);
-                currentY = blockChild.Y + blockChild.Height + blockChild.Margin.Bottom;
+                var collapsedTop = Math.Max(previousBottomMargin, blockChild.Style.Margin.Safe().Top);
+                LayoutBlock(blockChild, contentX, currentY, contentWidth, collapsedTop);
+                currentY = blockChild.Y + blockChild.Height;
+                previousBottomMargin = blockChild.Margin.Bottom;
             }
         }
 
-        return Math.Max(0, currentY - cursorY);
+        return Math.Max(0, (currentY + previousBottomMargin) - cursorY);
     }
 
-    private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth)
+    private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth, float collapsedTopMargin)
     {
         var s = node.Style;
         var margin = s.Margin.Safe();
 
         var x = contentX + margin.Left;
-        var y = cursorY + margin.Top;
+        var y = cursorY + collapsedTopMargin;
         var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
         var height = tableEngine.MeasureHeight(node, width);
         var size = new SizePt(width, height).Safe().ClampMin(0f, 0f);

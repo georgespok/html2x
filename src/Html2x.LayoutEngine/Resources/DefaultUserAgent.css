@@ -1,0 +1,57 @@
+html {
+  display: block;
+  font-family: Arial;
+  font-size: 12pt;
+  color: #000000;
+}
+
+body {
+  display: block;
+  margin: 8px;
+}
+
+div, section, main, header, footer, p {
+  display: block;
+}
+
+p {
+  margin: 6pt 0;
+}
+
+span, b, strong, i, u, s, br {
+  display: inline;
+}
+
+h1 { display: block; font-size: 18pt; font-weight: bold; margin: 5pt 0; }
+h2 { display: block; font-size: 16pt; font-weight: bold; margin: 5pt 0; }
+h3 { display: block; font-size: 14pt; font-weight: bold; margin: 5pt 0; }
+h4 { display: block; font-size: 12pt; font-weight: bold; margin: 5pt 0; }
+h5 { display: block; font-size: 11pt; font-weight: bold; margin: 5pt 0; }
+h6 { display: block; font-size: 10pt; font-weight: bold; margin: 5pt 0; }
+
+b, strong { font-weight: bold; }
+i { font-style: italic; }
+u { text-decoration: underline; }
+s { text-decoration: line-through; }
+
+ul, ol { display: block; margin: 6pt 0; padding-left: 30pt; }
+li { display: list-item; }
+
+table { display: table; }
+tr { display: table-row; }
+td, th { display: table-cell; }
+th { font-weight: bold; }
+
+img { display: inline-block; }
+
+hr {
+  display: block;
+  margin: 6pt 0;
+  border-top-width: 1pt;
+  border-top-style: solid;
+  border-top-color: #000000;
+  border-right-width: 0;
+  border-bottom-width: 0;
+  border-left-width: 0;
+  height: 0;
+}
