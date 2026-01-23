@@ -48,9 +48,18 @@ public sealed class CssStyleComputer(
         ApplyTypography(css, style, parentStyle);
         ApplySpacing(css, element, style);
         ApplyDimensions(css, element, style);
+        ApplyDisplay(css, style);
 
         ApplyBorders(css, style);
         return style.Build();
+    }
+
+    private static void ApplyDisplay(ICssStyleDeclaration css, ComputedStyleBuilder style)
+    {
+        var display = css.GetPropertyValue(HtmlCssConstants.CssProperties.Display);
+        style.Display = string.IsNullOrWhiteSpace(display)
+            ? null
+            : display.Trim().ToLowerInvariant();
     }
 
     private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)

@@ -1,10 +1,6 @@
-using Html2x.LayoutEngine;
-
-namespace Html2x;
+namespace Html2x.LayoutEngine;
 
 public interface ILayoutBuilderFactory
 {
-    LayoutBuilder Create();
-
     LayoutBuilder Create(LayoutServices services);
 }

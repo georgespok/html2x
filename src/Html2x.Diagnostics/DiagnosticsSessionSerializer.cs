@@ -62,6 +62,13 @@ public static class DiagnosticsSessionSerializer
                 summary.PageCount,
                 summary.PdfSize
             },
+            MarginCollapsePayload margin => new
+            {
+                margin.Kind,
+                margin.PreviousBottomMargin,
+                margin.NextTopMargin,
+                margin.CollapsedTopMargin
+            },
             ImageRenderPayload image => new
             {
                 image.Kind,

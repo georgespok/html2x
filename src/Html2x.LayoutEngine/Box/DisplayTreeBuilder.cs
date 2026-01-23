@@ -89,7 +89,7 @@ public sealed class DisplayTreeBuilder
             return DisplayRole.Float;
         }
 
-        return DisplayRoleMap.Resolve(el.LocalName);
+        return DisplayRoleMap.Resolve(node.Style.Display, el.LocalName);
     }
 
     private static string ResolveFloatDirection(StyleNode node)

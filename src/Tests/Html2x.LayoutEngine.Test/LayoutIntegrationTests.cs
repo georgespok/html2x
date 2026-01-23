@@ -95,7 +95,7 @@ public class LayoutIntegrationTests
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider);
+        var builder = CreateLayoutBuilder();
         var layoutOptions = new LayoutOptions
         {
             PageSize = PaperSizes.A4
@@ -103,7 +103,7 @@ public class LayoutIntegrationTests
 
         var document = await domProvider.LoadAsync(html, layoutOptions);
         var styleTree = styleComputer.Compute(document);
-        var boxTree = boxBuilder.Build(styleTree);
+        var boxTree = boxBuilder.Build(styleTree, null);
         var fragmentTree = fragmentBuilder.Build(boxTree, CreateContext(imageProvider));
         var layout = await builder.BuildAsync(html, layoutOptions);
 
@@ -733,23 +733,7 @@ public class LayoutIntegrationTests
 
     private static LayoutBuilder CreateLayoutBuilder()
     {
-        var config = Configuration.Default.WithCss();
-        var dom = new AngleSharpDomProvider(config);
-        var style = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
-        var boxes = new BoxTreeBuilder();
-        var fragments = new FragmentBuilder();
         var imageProvider = new NoopImageProvider();
-        var builder = CreateLayoutBuilder(dom, style, boxes, fragments, imageProvider);
-        return builder;
-    }
-
-    private static LayoutBuilder CreateLayoutBuilder(
-        IDomProvider domProvider,
-        IStyleComputer styleComputer,
-        IBoxTreeBuilder boxBuilder,
-        IFragmentBuilder fragmentBuilder,
-        IImageProvider imageProvider)
-    {
         var textMeasurer = new Mock<ITextMeasurer>();
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns(10f);
@@ -760,13 +744,7 @@ public class LayoutIntegrationTests
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        return new LayoutBuilder(
-            domProvider,
-            styleComputer,
-            boxBuilder,
-            fragmentBuilder,
-            imageProvider,
-            textMeasurer.Object,
-            fontSource.Object);
+        var services = new LayoutServices(textMeasurer.Object, fontSource.Object, imageProvider);
+        return new LayoutBuilderFactory().Create(services);
     }
 }

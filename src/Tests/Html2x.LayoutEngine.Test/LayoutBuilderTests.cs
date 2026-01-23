@@ -7,6 +7,7 @@ using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
@@ -67,7 +68,7 @@ public class LayoutBuilderTests
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree)).Returns(boxTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
             .Returns(fragmentTree);
 
@@ -91,7 +92,7 @@ public class LayoutBuilderTests
 
         _domProvider.Verify(x => x.LoadAsync(html, options), Times.Once);
         _styleComputer.Verify(x => x.Compute(document), Times.Once);
-        _boxTreeBuilder.Verify(x => x.Build(styleTree), Times.Once);
+        _boxTreeBuilder.Verify(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>()), Times.Once);
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
 
