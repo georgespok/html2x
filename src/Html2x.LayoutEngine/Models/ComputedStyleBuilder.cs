@@ -14,6 +14,7 @@ public sealed class ComputedStyleBuilder
     public float? LineHeightMultiplier { get; set; }
     public ColorRgba Color { get; set; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; set; }
+    public string? Display { get; set; }
     public Spacing Margin { get; set; }
     public Spacing Padding { get; set; }
     public float? WidthPt { get; set; }
@@ -38,6 +39,7 @@ public sealed class ComputedStyleBuilder
             LineHeightMultiplier = LineHeightMultiplier ?? 1.2f,
             Color = Color,
             BackgroundColor = BackgroundColor,
+            Display = Display,
             Margin = Margin,
             Padding = NormalizePadding(Padding),
             WidthPt = WidthPt,

@@ -79,6 +79,7 @@ public static class HtmlCssConstants
         public const string TextAlign = "text-align";
         public const string LineHeight = "line-height";
         public const string TextDecoration = "text-decoration";
+        public const string Display = "display";
         public const string Color = "color";
         public const string BackgroundColor = "background-color";
         public const string Width = "width";
@@ -102,9 +103,13 @@ public static class HtmlCssConstants
     /// </summary>
     public static class CssValues
     {
+        public const string Block = "block";
         public const string Bold = "bold";
         public const string Italic = "italic";
         public const string Oblique = "oblique";
+        public const string Inline = "inline";
+        public const string InlineBlock = "inline-block";
+        public const string ListItem = "list-item";
         public const string Left = "left";
         public const string Right = "right";
         public const string None = "none";
@@ -112,6 +117,9 @@ public static class HtmlCssConstants
         public const string Solid = "solid";
         public const string Dashed = "dashed";
         public const string Dotted = "dotted";
+        public const string Table = "table";
+        public const string TableRow = "table-row";
+        public const string TableCell = "table-cell";
     }
 
     /// <summary>

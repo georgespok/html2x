@@ -4,6 +4,18 @@ namespace Html2x.LayoutEngine.Style;
 
 internal static class DisplayRoleMap
 {
+    private static readonly IReadOnlyDictionary<string, DisplayRole> DisplayTokens =
+        new Dictionary<string, DisplayRole>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HtmlCssConstants.CssValues.Block] = DisplayRole.Block,
+            [HtmlCssConstants.CssValues.Inline] = DisplayRole.Inline,
+            [HtmlCssConstants.CssValues.InlineBlock] = DisplayRole.InlineBlock,
+            [HtmlCssConstants.CssValues.ListItem] = DisplayRole.ListItem,
+            [HtmlCssConstants.CssValues.Table] = DisplayRole.Table,
+            [HtmlCssConstants.CssValues.TableRow] = DisplayRole.TableRow,
+            [HtmlCssConstants.CssValues.TableCell] = DisplayRole.TableCell
+        };
+
     private static readonly IReadOnlyDictionary<string, DisplayRole> DefaultRoles = new Dictionary<string, DisplayRole>(StringComparer.OrdinalIgnoreCase)
     {
         [HtmlCssConstants.HtmlTags.Div] = DisplayRole.Block,
@@ -37,17 +49,19 @@ internal static class DisplayRoleMap
         [HtmlCssConstants.HtmlTags.Br] = DisplayRole.Inline
     };
 
-    public static DisplayRole Resolve(string? tagName)
+    public static DisplayRole Resolve(string? display, string? tagName)
     {
+        if (!string.IsNullOrWhiteSpace(display) &&
+            DisplayTokens.TryGetValue(display.Trim(), out var displayRole))
+        {
+            return displayRole;
+        }
+
         if (string.IsNullOrWhiteSpace(tagName))
         {
             return DisplayRole.Inline;
         }
 
-        return DefaultRoles.TryGetValue(tagName, out var role) ? role : DisplayRole.Inline;
+        return DefaultRoles.GetValueOrDefault(tagName, DisplayRole.Inline);
     }
 }
-
-
-
-

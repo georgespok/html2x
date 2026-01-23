@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
@@ -7,8 +8,11 @@ namespace Html2x.LayoutEngine.Box;
 public sealed class BlockLayoutEngine(
     IInlineLayoutEngine inlineEngine,
     ITableLayoutEngine tableEngine,
-    IFloatLayoutEngine floatEngine)
+    IFloatLayoutEngine floatEngine,
+    DiagnosticsSession? diagnosticsSession = null)
 {
+    private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
+
     public BoxTree Layout(DisplayNode displayRoot, PageBox page)
     {
         if (displayRoot is null)
@@ -37,8 +41,17 @@ public sealed class BlockLayoutEngine(
             {
                 case BlockBox box:
                 {
-                    var collapsedTop = Math.Max(previousBottomMargin, box.Style.Margin.Safe().Top);
-                    var block = LayoutBlock(box, contentX, currentY, contentWidth, collapsedTop);
+                    var marginTop = box.Style.Margin.Safe().Top;
+                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
+                    PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
+                    var block = LayoutBlock(
+                        box,
+                        contentX,
+                        currentY,
+                        contentWidth,
+                        contentY,
+                        previousBottomMargin,
+                        collapsedTop);
                     tree.Blocks.Add(block);
                     currentY = block.Y + block.Height;
                     previousBottomMargin = block.Margin.Bottom;
@@ -46,7 +59,8 @@ public sealed class BlockLayoutEngine(
                 }
                 case TableBox table:
                 {
-                    var collapsedTop = Math.Max(previousBottomMargin, table.Style.Margin.Safe().Top);
+                    var marginTop = table.Style.Margin.Safe().Top;
+                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
                     var tableBlock = LayoutTable(table, contentX, currentY, contentWidth, collapsedTop);
                     tree.Blocks.Add(tableBlock);
                     currentY = tableBlock.Y + tableBlock.Height;
@@ -79,15 +93,24 @@ public sealed class BlockLayoutEngine(
         return [displayRoot];
     }
 
-    private BlockBox LayoutBlock(BlockBox node, float contentX, float cursorY, float contentWidth, float collapsedTopMargin)
+    private BlockBox LayoutBlock(
+        BlockBox node,
+        float contentX,
+        float cursorY,
+        float contentWidth,
+        float parentContentTop,
+        float previousBottomMargin,
+        float collapsedTopMargin)
     {
         var s = node.Style;
         var margin = s.Margin.Safe();
         var padding = s.Padding.Safe();
         var border = Spacing.FromBorderEdges(s.Borders).Safe();
 
-        var x = contentX + margin.Left;
-        var y = cursorY + collapsedTopMargin;
+        var rawX = contentX + margin.Left;
+        var rawY = cursorY + collapsedTopMargin;
+        var x = Math.Max(rawX, contentX);
+        var y = Math.Max(rawY, parentContentTop);
         
         var availableWidth = Math.Max(0, contentWidth - margin.Left - margin.Right);
         var width = s.WidthPt ?? availableWidth;
@@ -111,7 +134,12 @@ public sealed class BlockLayoutEngine(
         floatEngine.PlaceFloats(node, x, y, width); 
         var inlineHeight = inlineEngine.MeasureHeight(node, contentWidthForChildren);
 
-        var nestedBlocksHeight = LayoutChildBlocks(node, contentXForChildren, contentYForChildren, contentWidthForChildren);
+        var nestedBlocksHeight = LayoutChildBlocks(
+            node,
+            contentXForChildren,
+            contentYForChildren,
+            contentWidthForChildren,
+            contentYForChildren);
         var contentHeight = Math.Max(inlineHeight, nestedBlocksHeight);
         if (s.HeightPt.HasValue)
         {
@@ -141,7 +169,12 @@ public sealed class BlockLayoutEngine(
         return node;
     }
     
-    private float LayoutChildBlocks(BlockBox parent, float contentX, float cursorY, float contentWidth)
+    private float LayoutChildBlocks(
+        BlockBox parent,
+        float contentX,
+        float cursorY,
+        float contentWidth,
+        float parentContentTop)
     {
         var currentY = cursorY;
         var previousBottomMargin = 0f;
@@ -152,14 +185,43 @@ public sealed class BlockLayoutEngine(
         {
             if (child is BlockBox blockChild)
             {
-                var collapsedTop = Math.Max(previousBottomMargin, blockChild.Style.Margin.Safe().Top);
-                LayoutBlock(blockChild, contentX, currentY, contentWidth, collapsedTop);
+                var marginTop = blockChild.Style.Margin.Safe().Top;
+                var collapsedTop = Math.Max(previousBottomMargin, marginTop);
+                PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
+                LayoutBlock(
+                    blockChild,
+                    contentX,
+                    currentY,
+                    contentWidth,
+                    parentContentTop,
+                    previousBottomMargin,
+                    collapsedTop);
                 currentY = blockChild.Y + blockChild.Height;
                 previousBottomMargin = blockChild.Margin.Bottom;
             }
         }
 
         return Math.Max(0, (currentY + previousBottomMargin) - cursorY);
+    }
+
+    private void PublishMarginCollapse(float previousBottomMargin, float nextTopMargin, float collapsedTopMargin)
+    {
+        if (_diagnosticsSession is null)
+        {
+            return;
+        }
+
+        _diagnosticsSession.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.Trace,
+            Name = "layout/margin-collapse",
+            Payload = new MarginCollapsePayload
+            {
+                PreviousBottomMargin = previousBottomMargin,
+                NextTopMargin = nextTopMargin,
+                CollapsedTopMargin = collapsedTopMargin
+            }
+        });
     }
 
     private BlockBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth, float collapsedTopMargin)

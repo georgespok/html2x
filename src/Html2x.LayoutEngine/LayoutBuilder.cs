@@ -42,7 +42,7 @@ public class LayoutBuilder(
         
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
 
-        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree));
+        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree, diagnosticsSession));
         
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(
             boxTree,

@@ -3,6 +3,7 @@ using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Files;
 using Html2x.Fonts;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
 
@@ -49,6 +50,7 @@ public class HtmlConverter
 
         var fontSource = new FontPathSource(fontPath, fileDirectory);
         var measurer = new SkiaTextMeasurer(fontSource);
+        var imageProvider = new FileSystemImageProvider();
 
         AddDiagnosticsEvent(
             session,
@@ -56,7 +58,7 @@ public class HtmlConverter
             "LayoutBuild",
             new HtmlPayload { Html = html.Trim() });
 
-        var layoutBuilder = _layoutBuilderFactory.Create(new LayoutServices(measurer, fontSource))
+        var layoutBuilder = _layoutBuilderFactory.Create(new LayoutServices(measurer, fontSource, imageProvider))
                             ?? throw new InvalidOperationException("Layout factory returned null.");
 
         var layout = await layoutBuilder.BuildAsync(html, options.Layout, session);

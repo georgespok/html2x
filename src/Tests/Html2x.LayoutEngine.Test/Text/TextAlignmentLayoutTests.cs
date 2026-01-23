@@ -1,17 +1,9 @@
-using AngleSharp;
-using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Dom;
-using Html2x.LayoutEngine.Fragment;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
 
@@ -19,6 +11,8 @@ namespace Html2x.LayoutEngine.Test.Text;
 
 public class TextAlignmentLayoutTests
 {
+    private static readonly LayoutBuilderFixture Fixture = new();
+
     [Fact]
     public async Task CenterAlignedParagraph_OffsetsLineRuns()
     {
@@ -130,34 +124,10 @@ public class TextAlignmentLayoutTests
 
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
     {
-        var config = Configuration.Default.WithCss();
-        var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
-        var boxBuilder = new BoxTreeBuilder(textMeasurer);
-        var fragmentBuilder = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
-        var layoutBuilder = CreateLayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider, textMeasurer);
-        var options = new LayoutOptions
+        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutOptions
         {
             PageSize = PaperSizes.A4
-        };
-
-        return await layoutBuilder.BuildAsync(html, options);
-    }
-
-    private static LayoutBuilder CreateLayoutBuilder(
-        IDomProvider domProvider,
-        IStyleComputer styleComputer,
-        IBoxTreeBuilder boxBuilder,
-        IFragmentBuilder fragmentBuilder,
-        IImageProvider imageProvider,
-        ITextMeasurer textMeasurer)
-    {
-        var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
-            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
-
-        return new LayoutBuilder(domProvider, styleComputer, boxBuilder, fragmentBuilder, imageProvider, textMeasurer, fontSource.Object);
+        });
     }
 
     private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
