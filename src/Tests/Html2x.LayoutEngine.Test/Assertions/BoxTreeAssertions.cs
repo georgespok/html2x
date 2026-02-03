@@ -50,7 +50,7 @@ public sealed class BoxTreeExpectationBuilder
 
     public BoxTreeExpectationBuilder Block(Action<BlockExpectationBuilder> configure)
     {
-        var block = new BlockBox();
+        var block = new BlockBox(DisplayRole.Block);
         configure(new BlockExpectationBuilder(block));
         _tree.Blocks.Add(block);
         return this;
@@ -101,7 +101,7 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Text(string text)
     {
-        var inline = new InlineBox();
+        var inline = new InlineBox(DisplayRole.Inline);
         InitPropertySetter.SetText(inline, text);
         block.Children.Add(inline);
         return this;
@@ -115,7 +115,7 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Inline(Action<InlineExpectationBuilder> configure)
     {
-        var inline = new InlineBox();
+        var inline = new InlineBox(DisplayRole.Inline);
         configure(new InlineExpectationBuilder(inline));
         block.Children.Add(inline);
         return this;
@@ -123,7 +123,7 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Block(Action<BlockExpectationBuilder> configure)
     {
-        var child = new BlockBox();
+        var child = new BlockBox(DisplayRole.Block);
         configure(new BlockExpectationBuilder(child));
         block.Children.Add(child);
         return this;
@@ -158,7 +158,7 @@ public sealed class InlineExpectationBuilder(InlineBox inline)
 
     public InlineExpectationBuilder Inline(Action<InlineExpectationBuilder> configure)
     {
-        var child = new InlineBox();
+        var child = new InlineBox(DisplayRole.Inline);
         configure(new InlineExpectationBuilder(child));
         inline.Children.Add(child);
         return this;

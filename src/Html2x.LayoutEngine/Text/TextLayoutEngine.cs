@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Layout.Text;
+using System.Linq;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -22,7 +23,7 @@ internal sealed class TextLayoutEngine(ITextMeasurer measurer)
 
         builder.FlushLine(forceWhenEmpty: true);
 
-        var totalHeight = builder.Lines.Count * input.LineHeight;
+        var totalHeight = builder.Lines.Sum(line => line.LineHeight);
         var maxWidth = builder.Lines.Count == 0 ? 0f : builder.Lines.Max(l => l.LineWidth);
 
         return new TextLayoutResult(builder.Lines, totalHeight, maxWidth);

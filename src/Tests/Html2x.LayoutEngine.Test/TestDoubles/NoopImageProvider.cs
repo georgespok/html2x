@@ -9,6 +9,6 @@ internal sealed class NoopImageProvider : IImageProvider
         {
             Src = src,
             Status = ImageLoadStatus.Ok,
-            IntrinsicSizePx = new Html2x.Abstractions.Measurements.Units.SizePx(0, 0)
+            IntrinsicSizePx = new Abstractions.Measurements.Units.SizePx(0, 0)
         };
 }

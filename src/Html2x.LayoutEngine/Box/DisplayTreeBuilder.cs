@@ -24,31 +24,42 @@ public sealed class DisplayTreeBuilder
 
         DisplayNode box = display switch
         {
-            DisplayRole.Block => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.Inline => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.InlineBlock => new InlineBox { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.ListItem => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.Float => new FloatBox
+            DisplayRole.Block => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.Inline => new InlineBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.InlineBlock => new InlineBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.ListItem => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.Float => new FloatBox(display)
             {
                 Element = element,
                 Style = styleNode.Style,
                 Parent = parent,
                 FloatDirection = ResolveFloatDirection(styleNode)
             },
-            DisplayRole.Table => new TableBox { Element = element, Style = styleNode.Style, Parent = parent },
-            _ => new BlockBox { Element = element, Style = styleNode.Style, Parent = parent }
+            DisplayRole.Table => new TableBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            _ => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent }
         };
 
         // Add child boxes recursively
-        AppendChildNodes(styleNode, box, textState);
+        var childContainer = box;
+        var childState = textState;
+        if (display == DisplayRole.InlineBlock && box is InlineBox inlineBlock)
+        {
+            var contentBox = CreateInlineBlockContentContainer(inlineBlock, styleNode);
+            childContainer = contentBox;
+            childState = textState.CreateForBlockBoundary();
+        }
+
+        AppendChildNodes(styleNode, childContainer, childState);
 
         if (string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase) &&
-            parent != null)
+            parent != null &&
+            box is BlockBox listItem)
         {
             var markerText = ResolveListMarker(parent, box);
             if (!string.IsNullOrWhiteSpace(markerText))
             {
-                var marker = new InlineBox
+                listItem.MarkerOffset = HtmlCssConstants.Defaults.ListMarkerOffsetPt;
+                var marker = new InlineBox(DisplayRole.Inline)
                 {
                     TextContent = markerText,
                     Style = box.Style,
@@ -57,6 +68,11 @@ public sealed class DisplayTreeBuilder
 
                 box.Children.Insert(0, marker);
             }
+        }
+
+        if (box is BlockBox blockBox)
+        {
+            BlockFlowNormalization.NormalizeChildrenForBlock(blockBox);
         }
 
         return box;
@@ -71,6 +87,22 @@ public sealed class DisplayTreeBuilder
             HtmlCssConstants.HtmlTags.Ol => $"{listContainer.Children.Count + 1}. ",
             _ => string.Empty
         };
+    }
+
+    private static BlockBox CreateInlineBlockContentContainer(InlineBox inlineBlock, StyleNode styleNode)
+    {
+        var contentBox = new BlockBox(DisplayRole.Block)
+        {
+            Element = styleNode.Element,
+            Style = styleNode.Style,
+            Parent = inlineBlock,
+            IsAnonymous = true,
+            TextAlign = styleNode.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign,
+            IsInlineBlockContext = true
+        };
+
+        inlineBlock.Children.Add(contentBox);
+        return contentBox;
     }
 
     private static bool IsListContainer(IElement element)
@@ -158,7 +190,7 @@ public sealed class DisplayTreeBuilder
             return;
         }
 
-        box.Children.Add(new InlineBox
+        box.Children.Add(new InlineBox(DisplayRole.Inline)
         {
             TextContent = normalized,
             Parent = box,

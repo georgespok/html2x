@@ -20,4 +20,8 @@ internal sealed class RenderSettings : CommandSettings
     [CommandOption("--diagnostics-json <PATH>")]
     [Description("Optional path for structured diagnostics output.")]
     public string? DiagnosticsJson { get; init; }
+
+    [CommandOption("--debug")]
+    [Description("Optional flag to enable debugging borders around blocks.")]
+    public bool EnableDebugging { get; set; }
 }

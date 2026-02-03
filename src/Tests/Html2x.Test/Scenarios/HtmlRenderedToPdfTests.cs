@@ -37,7 +37,7 @@ namespace Html2x.Test.Scenarios
             var converter = new HtmlConverter();
             var result = await converter.ToPdfAsync(html, DefaultOptions);
 
-            await this.SavePdfForInspectionAsync(result.PdfBytes);
+            await SavePdfForInspectionAsync(result.PdfBytes);
 
             var page = GetLayoutPageSnapshot(result);
 

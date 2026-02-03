@@ -1,3 +1,4 @@
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 
@@ -22,6 +23,12 @@ public sealed class FragmentSnapshot
     public SizePt? ContentSize { get; init; }
 
     public BorderEdges? Borders { get; init; }
+
+    public FragmentDisplayRole? DisplayRole { get; init; }
+
+    public FormattingContextKind? FormattingContext { get; init; }
+
+    public float? MarkerOffset { get; init; }
 
     public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
 }

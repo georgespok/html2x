@@ -25,4 +25,9 @@ internal sealed class TextNormalizationState
         PendingSpace = false;
         AtLineStart = true;
     }
+
+    public TextNormalizationState CreateForBlockBoundary()
+    {
+        return new TextNormalizationState();
+    }
 }

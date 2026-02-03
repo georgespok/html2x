@@ -22,7 +22,8 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
         private static async Task<int> RunConversionAsync(RenderSettings settings, string inputPath)
         {
             var outputPath = ResolveOutputPath(settings, inputPath);
-            var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, settings.DiagnosticsJson);
+            var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, 
+                settings.DiagnosticsJson, settings.EnableDebugging);
             var service = new HtmlConversionService(options);
     
             var (result, actualOutputPath) = await service.ExecuteAsync().ConfigureAwait(false);

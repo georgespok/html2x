@@ -95,7 +95,7 @@ public class TextLayoutEngineTests
         var style = new ComputedStyle { FontSizePt = 12 };
         return new TextRunInput(
             runId,
-            new InlineBox { TextContent = text, Style = style },
+            new InlineBox(DisplayRole.Inline) { TextContent = text, Style = style },
             text,
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
@@ -111,7 +111,7 @@ public class TextLayoutEngineTests
         var style = new ComputedStyle { FontSizePt = 12 };
         return new TextRunInput(
             runId,
-            new InlineBox { TextContent = string.Empty, Style = style },
+            new InlineBox(DisplayRole.Inline) { TextContent = string.Empty, Style = style },
             string.Empty,
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
@@ -120,6 +120,6 @@ public class TextLayoutEngineTests
             PaddingRight: 0f,
             MarginLeft: 0f,
             MarginRight: 0f,
-            IsLineBreak: true);
+            Kind: TextRunKind.LineBreak);
     }
 }

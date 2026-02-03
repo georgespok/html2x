@@ -59,6 +59,9 @@ public static class LayoutSnapshotMapper
             X = block.Rect.X,
             Y = block.Rect.Y,
             Size = block.Size,
+            DisplayRole = block.DisplayRole,
+            FormattingContext = block.FormattingContext,
+            MarkerOffset = block.MarkerOffset,
             Children = children
         };
     }

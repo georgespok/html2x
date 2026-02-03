@@ -61,6 +61,8 @@ public class BlockLayoutEngineTests
             .Up()
             .BuildRoot();
 
+        NormalizeForBlockLayout(root);
+
         
         // Act
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
@@ -78,7 +80,7 @@ public class BlockLayoutEngineTests
     {
         _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(10f);
 
-        var root = new BlockBox
+        var root = new BlockBox(DisplayRole.Block)
         {
             Style = new ComputedStyle
             {
@@ -91,8 +93,10 @@ public class BlockLayoutEngineTests
             }
         };
 
-        root.Children.Add(new InlineBox { TextContent = "inline" });
-        root.Children.Add(new BlockBox { Style = new ComputedStyle() });
+        root.Children.Add(new InlineBox(DisplayRole.Inline) { TextContent = "inline" });
+        root.Children.Add(new BlockBox(DisplayRole.Block) { Style = new ComputedStyle() });
+
+        NormalizeForBlockLayout(root);
 
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
 
@@ -117,6 +121,8 @@ public class BlockLayoutEngineTests
             .Up()
             .Block(style: new())
             .BuildRoot();
+
+        NormalizeForBlockLayout(root);
 
         // Act
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
@@ -148,4 +154,12 @@ public class BlockLayoutEngineTests
     
     private BlockLayoutEngine CreateBlockLayoutEngine() => 
         new(_inlineEngine.Object, _tableLayoutEngine.Object, _floatLayoutEngine.Object);
+
+    private static void NormalizeForBlockLayout(DisplayNode root)
+    {
+        if (root is BlockBox block)
+        {
+            BlockFlowNormalization.NormalizeChildrenForBlock(block);
+        }
+    }
 }

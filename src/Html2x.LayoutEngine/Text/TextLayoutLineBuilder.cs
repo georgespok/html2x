@@ -21,12 +21,28 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
             return;
         }
 
-        if (run.IsLineBreak)
+        switch (run.Kind)
         {
-            FlushLine(forceWhenEmpty: true);
-            return;
+            case TextRunKind.LineBreak:
+                FlushLine(forceWhenEmpty: true);
+                return;
+            case TextRunKind.Atomic:
+                ProcessRunLines(run, AppendAtomicToken);
+                return;
+            case TextRunKind.InlineObject:
+                AppendInlineObject(run);
+                return;
+            case TextRunKind.Normal:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(run.Kind), run.Kind, "Unsupported run kind.");
         }
 
+        ProcessRunLines(run, ProcessLogicalLine);
+    }
+
+    private void ProcessRunLines(TextRunInput run, Action<TextRunInput, string> tokenHandler)
+    {
         if (string.IsNullOrEmpty(run.Text))
         {
             return;
@@ -47,7 +63,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
                 continue;
             }
 
-            ProcessLogicalLine(run, rawLine);
+            tokenHandler(run, rawLine);
             isFirstLine = false;
         }
     }
@@ -67,8 +83,9 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         TrimLineEnd(_currentLine);
 
         var lineRuns = BuildLineRuns(out var lineWidth);
+        var lineHeight = ResolveLineHeight(lineRuns, _input.LineHeight);
 
-        _lines.Add(new TextLayoutLine(lineRuns, lineWidth, _input.LineHeight));
+        _lines.Add(new TextLayoutLine(lineRuns, lineWidth, lineHeight));
 
         _currentLine.Clear();
         _currentWidth = 0f;
@@ -81,6 +98,30 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
 
         foreach (var buffer in _currentLine)
         {
+            if (buffer.InlineObject is not null)
+            {
+                var inlineObject = buffer.InlineObject;
+                var inlineAscent = inlineObject.Baseline;
+                var inlineDescent = inlineObject.Height - inlineObject.Baseline;
+
+                lineRuns.Add(new TextLayoutRun(
+                    buffer.Source.Source,
+                    string.Empty,
+                    buffer.Source.Font,
+                    buffer.Source.FontSizePt,
+                    inlineObject.Width,
+                    buffer.LeftSpacing,
+                    buffer.RightSpacing,
+                    inlineAscent,
+                    inlineDescent,
+                    buffer.Source.Style.Decorations,
+                    buffer.Source.Style.Color,
+                    inlineObject));
+
+                lineWidth += buffer.LeftSpacing + inlineObject.Width + buffer.RightSpacing;
+                continue;
+            }
+
             if (buffer.Text.Length == 0)
             {
                 continue;
@@ -124,6 +165,40 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
     {
         var processor = new TokenProcessor(this, run, token);
         processor.Execute();
+    }
+
+    private void AppendAtomicToken(TextRunInput run, string token)
+    {
+        if (string.IsNullOrWhiteSpace(token) && _currentLine.Count == 0)
+        {
+            return;
+        }
+
+        var tokenWidth = MeasureWidth(run, token);
+        var additionalSpacing = GetAdditionalSpacing(run);
+        if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
+        {
+            FlushLine();
+        }
+
+        AppendToken(run, token, tokenWidth);
+    }
+
+    private void AppendInlineObject(TextRunInput run)
+    {
+        if (run.InlineObject is null)
+        {
+            return;
+        }
+
+        var tokenWidth = run.InlineObject.Width;
+        var additionalSpacing = GetAdditionalSpacing(run);
+        if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
+        {
+            FlushLine();
+        }
+
+        AppendInlineObject(run, tokenWidth);
     }
 
     private void ProcessTokenByGrapheme(TextRunInput run, string token)
@@ -181,6 +256,13 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         _currentWidth += tokenWidth;
     }
 
+    private void AppendInlineObject(TextRunInput run, float tokenWidth)
+    {
+        var buffer = new LineRunBuffer(run, run.InlineObject);
+        _currentLine.Add(buffer);
+        _currentWidth += buffer.LeftSpacing + tokenWidth + buffer.RightSpacing;
+    }
+
     private float MeasureWidth(TextRunInput run, string text)
     {
         return _measurer.MeasureWidth(run.Font, run.FontSizePt, text);
@@ -222,6 +304,11 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         for (var i = runs.Count - 1; i >= 0; i--)
         {
             var buffer = runs[i];
+            if (buffer.InlineObject is not null)
+            {
+                return;
+            }
+
             if (buffer.Text.Length == 0)
             {
                 runs.RemoveAt(i);
@@ -285,16 +372,45 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         }
     }
 
-    private sealed class LineRunBuffer(TextRunInput source)
+    private sealed class LineRunBuffer
     {
-        public TextRunInput Source { get; } = source;
+        public TextRunInput Source { get; }
         public StringBuilder Text { get; } = new();
-        public float LeftSpacing { get; } = source.PaddingLeft + source.MarginLeft;
-        public float RightSpacing { get; } = source.PaddingRight + source.MarginRight;
+        public float LeftSpacing { get; }
+        public float RightSpacing { get; }
+        public InlineObjectLayout? InlineObject { get; }
+
+        public LineRunBuffer(TextRunInput source, InlineObjectLayout? inlineObject = null)
+        {
+            Source = source;
+            InlineObject = inlineObject;
+            LeftSpacing = source.PaddingLeft + source.MarginLeft;
+            RightSpacing = source.PaddingRight + source.MarginRight;
+        }
 
         public void Append(string text)
         {
             Text.Append(text);
         }
+    }
+
+    private static float ResolveLineHeight(IReadOnlyList<TextLayoutRun> runs, float fallbackLineHeight)
+    {
+        var maxAscent = 0f;
+        var maxDescent = 0f;
+
+        foreach (var run in runs)
+        {
+            maxAscent = Math.Max(maxAscent, run.Ascent);
+            maxDescent = Math.Max(maxDescent, run.Descent);
+        }
+
+        var measured = maxAscent + maxDescent;
+        if (measured <= 0f)
+        {
+            return fallbackLineHeight;
+        }
+
+        return Math.Max(fallbackLineHeight, measured);
     }
 }

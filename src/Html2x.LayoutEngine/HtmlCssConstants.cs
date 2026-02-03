@@ -149,5 +149,6 @@ public static class HtmlCssConstants
         public const string TextAlign = "left";
         public const string FloatDirection = "none";
         public const int DefaultFontSizePt = 12;
+        public const float ListMarkerOffsetPt = 12f;
     }
 }

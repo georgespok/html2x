@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 
@@ -26,13 +25,7 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
     private static void CreateFragmentRecursive(BlockBox blockBox, BlockFragment? parentFragment, FragmentTree tree,
         ICollection<BlockFragmentBinding> bindings, IReadOnlyList<IFragmentBuildObserver> observers, FragmentBuildState state)
     {
-        var fragment = new BlockFragment
-        {
-            FragmentId = state.ReserveFragmentId(),
-            PageNumber = state.PageNumber,
-            Rect = new RectangleF(blockBox.X, blockBox.Y, blockBox.Width, blockBox.Height),
-            Style = StyleConverter.FromComputed(blockBox.Style)
-        };
+        var fragment = BlockFragmentFactory.Create(blockBox, state);
 
         if (parentFragment is null)
         {
