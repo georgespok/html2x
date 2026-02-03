@@ -113,7 +113,7 @@ internal sealed class ImageRenderer
             Payload = new ImageRenderPayload
             {
                 Src = fragment.Src,
-                RenderedSize = new Html2x.Abstractions.Measurements.Units.SizePt(width, height),
+                RenderedSize = new Abstractions.Measurements.Units.SizePt(width, height),
                 Status = status,
                 Borders = fragment.Style?.Borders
             }

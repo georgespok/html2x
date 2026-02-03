@@ -2,7 +2,7 @@ using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Models;
 
-public sealed class InlineBox : DisplayNode
+public sealed class InlineBox(DisplayRole role) : DisplayNode(role)
 {
     public string? TextContent { get; init; } // For inline text nodes
 

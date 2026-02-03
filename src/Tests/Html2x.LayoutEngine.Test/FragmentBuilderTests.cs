@@ -139,25 +139,25 @@ public class FragmentBuilderTests
     public void Build_WithUnorderedList_AddsBulletMarkers()
     {
         var boxTree = new BoxTree();
-        var ulBlock = new BlockBox { Element = CreateElement("ul") };
+        var ulBlock = new BlockBox(DisplayRole.Block) { Element = CreateElement("ul") };
 
-        ulBlock.Children.Add(new BlockBox
+        ulBlock.Children.Add(new BlockBox(DisplayRole.Block)
         {
             Element = CreateElement("li"),
             Children =
             {
-                new InlineBox { TextContent = "• " },
-                new InlineBox { TextContent = "item1" }
+                new InlineBox(DisplayRole.Inline) { TextContent = "• " },
+                new InlineBox(DisplayRole.Inline) { TextContent = "item1" }
             }
         });
 
-        ulBlock.Children.Add(new BlockBox
+        ulBlock.Children.Add(new BlockBox(DisplayRole.Block)
         {
             Element = CreateElement("li"),
             Children =
             {
-                new InlineBox { TextContent = "• " },
-                new InlineBox { TextContent = "item2" }
+                new InlineBox(DisplayRole.Inline) { TextContent = "• " },
+                new InlineBox(DisplayRole.Inline) { TextContent = "item2" }
             }
         });
 

@@ -28,8 +28,6 @@ public sealed class BlockLayoutEngine(
         var pageSize = page.Size;
         var contentWidth = pageSize.Width - page.Margin.Left - page.Margin.Right;
 
-        NormalizeChildrenForBlock(displayRoot);
-
         var candidates = SelectTopLevelCandidates(displayRoot);
 
         var currentY = contentY;
@@ -77,12 +75,7 @@ public sealed class BlockLayoutEngine(
     {
         if (displayRoot is BlockBox rootBlock)
         {
-            var hasInline = rootBlock.Children.Any(c => c is InlineBox);
-            var hasBlockOrTable = rootBlock.Children.Any(c => c is BlockBox or TableBox);
-
-            // If the root contains only inline content, treat the root itself as the block to layout
-            // so inline-only documents still render without introducing anonymous blocks.
-            if (hasInline && !hasBlockOrTable)
+            if (IsInlineOnlyBlock(rootBlock))
             {
                 return [rootBlock];
             }
@@ -91,6 +84,13 @@ public sealed class BlockLayoutEngine(
         }
 
         return [displayRoot];
+    }
+
+    private static bool IsInlineOnlyBlock(BlockBox block)
+    {
+        var hasInline = block.Children.Any(c => c is InlineBox);
+        var hasBlockOrTable = block.Children.Any(c => c is BlockBox or TableBox);
+        return hasInline && !hasBlockOrTable;
     }
 
     private BlockBox LayoutBlock(
@@ -129,6 +129,12 @@ public sealed class BlockLayoutEngine(
         var contentWidthForChildren = Math.Max(0, width - padding.Horizontal - border.Horizontal);
         var contentXForChildren = x + padding.Left + border.Left;
         var contentYForChildren = y + padding.Top + border.Top;
+
+        if (node.MarkerOffset > 0f)
+        {
+            contentXForChildren += node.MarkerOffset;
+            contentWidthForChildren = Math.Max(0, contentWidthForChildren - node.MarkerOffset);
+        }
 
         // use inline engine for height estimation (use content width)
         floatEngine.PlaceFloats(node, x, y, width); 
@@ -178,8 +184,6 @@ public sealed class BlockLayoutEngine(
     {
         var currentY = cursorY;
         var previousBottomMargin = 0f;
-
-        NormalizeChildrenForBlock(parent);
 
         foreach (var child in parent.Children)
         {
@@ -235,7 +239,7 @@ public sealed class BlockLayoutEngine(
         var height = tableEngine.MeasureHeight(node, width);
         var size = new SizePt(width, height).Safe().ClampMin(0f, 0f);
 
-        var box = new BlockBox
+        var box = new BlockBox(DisplayRole.Block)
         {
             Element = node.Element,
             Style = s,
@@ -255,110 +259,4 @@ public sealed class BlockLayoutEngine(
         target.Margin = source.Margin;
     }
 
-    private static void NormalizeChildrenForBlock(DisplayNode parent)
-    {
-        if (parent is BlockBox { IsAnonymous: true })
-        {
-            return;
-        }
-
-        var hasInline = parent.Children.Any(c => c is InlineBox);
-        var hasNonInline = parent.Children.Any(c => c is not InlineBox);
-
-        // Only create anonymous blocks when inline and block-level nodes coexist.
-        if (!hasInline || !hasNonInline)
-        {
-            return;
-        }
-
-        var normalized = new List<DisplayNode>(parent.Children.Count);
-        var inlineBuffer = new List<InlineBox>();
-
-        foreach (var child in parent.Children)
-        {
-            if (child is InlineBox inline)
-            {
-                inlineBuffer.Add(inline);
-                continue;
-            }
-
-            if (inlineBuffer.Count > 0)
-            {
-                normalized.Add(CreateAnonymousBlock(parent, inlineBuffer));
-                inlineBuffer.Clear();
-            }
-
-            normalized.Add(child);
-        }
-
-        if (inlineBuffer.Count > 0)
-        {
-            normalized.Add(CreateAnonymousBlock(parent, inlineBuffer));
-        }
-
-        parent.Children.Clear();
-        parent.Children.AddRange(normalized);
-    }
-
-    private static BlockBox CreateAnonymousBlock(DisplayNode parent, List<InlineBox> inlines)
-    {
-        var anon = new BlockBox
-        {
-            IsAnonymous = true,
-            Parent = parent,
-            Element = parent.Element,
-            Style = CreateAnonymousStyle(parent.Style),
-            TextAlign = parent.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign
-        };
-
-        foreach (var inline in inlines)
-        {
-            var cloned = CloneInline(inline, anon);
-            anon.Children.Add(cloned);
-        }
-
-        return anon;
-    }
-
-    private static InlineBox CloneInline(InlineBox source, DisplayNode parent)
-    {
-        var clone = new InlineBox
-        {
-            TextContent = source.TextContent,
-            Element = source.Element,
-            Style = source.Style,
-            Parent = parent
-        };
-
-        foreach (var child in source.Children.OfType<InlineBox>())
-        {
-            var childClone = CloneInline(child, clone);
-            clone.Children.Add(childClone);
-        }
-
-        return clone;
-    }
-
-    private static ComputedStyle CreateAnonymousStyle(ComputedStyle parentStyle)
-    {
-        return new ComputedStyle
-        {
-            FontFamily = parentStyle.FontFamily,
-            FontSizePt = parentStyle.FontSizePt,
-            Bold = parentStyle.Bold,
-            Italic = parentStyle.Italic,
-            TextAlign = parentStyle.TextAlign,
-            Color = parentStyle.Color,
-            BackgroundColor = parentStyle.BackgroundColor,
-            Margin = new Spacing(0, 0, 0, 0),
-            Padding = new Spacing(0, 0, 0, 0),
-            WidthPt = null,
-            MinWidthPt = null,
-            MaxWidthPt = null,
-            HeightPt = null,
-            MinHeightPt = null,
-            MaxHeightPt = null,
-            Borders = parentStyle.Borders
-        };
-    }
 }

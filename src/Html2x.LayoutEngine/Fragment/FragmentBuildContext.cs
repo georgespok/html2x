@@ -4,29 +4,20 @@ using Html2x.Abstractions.Layout.Text;
 
 namespace Html2x.LayoutEngine.Fragment;
 
-public sealed class FragmentBuildContext
+public sealed class FragmentBuildContext(
+    IImageProvider imageProvider,
+    string htmlDirectory,
+    long maxImageSizeBytes,
+    ITextMeasurer textMeasurer,
+    IFontSource fontSource)
 {
-    public FragmentBuildContext(
-        IImageProvider imageProvider,
-        string htmlDirectory,
-        long maxImageSizeBytes,
-        ITextMeasurer textMeasurer,
-        IFontSource fontSource)
-    {
-        ImageProvider = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
-        HtmlDirectory = htmlDirectory ?? throw new ArgumentNullException(nameof(htmlDirectory));
-        MaxImageSizeBytes = maxImageSizeBytes;
-        TextMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
-        FontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
-    }
+    public IImageProvider ImageProvider { get; } = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
 
-    public IImageProvider ImageProvider { get; }
+    public string HtmlDirectory { get; } = htmlDirectory ?? throw new ArgumentNullException(nameof(htmlDirectory));
 
-    public string HtmlDirectory { get; }
+    public long MaxImageSizeBytes { get; } = maxImageSizeBytes;
 
-    public long MaxImageSizeBytes { get; }
+    public ITextMeasurer TextMeasurer { get; } = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
 
-    public ITextMeasurer TextMeasurer { get; }
-
-    public IFontSource FontSource { get; }
+    public IFontSource FontSource { get; } = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
 }

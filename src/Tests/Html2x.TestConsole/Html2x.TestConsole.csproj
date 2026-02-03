@@ -107,4 +107,10 @@
     <ProjectReference Include="..\..\Html2x\Html2x.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="html\display-model.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
