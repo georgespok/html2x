@@ -11,7 +11,7 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Display;
 
-public class BlockFlowLayoutTests
+public class BlockFlowTests
 {
     private static readonly LayoutBuilderFixture Fixture = new();
 
@@ -153,6 +153,39 @@ public class BlockFlowLayoutTests
         var expectedHeight = 12f + 5f + 7f + 2f + 3f;
 
         block.Rect.Height.ShouldBe(expectedHeight, 0.5f);
+    }
+
+    [Fact]
+    public async Task MixedInlineAndBlock_CreatesBlockToInlineBoundary()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div>
+                  Inline text
+                  <div style='height: 10pt;'>Block</div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var container = (BlockFragment)layout.Pages[0].Children[0];
+        var blockChildren = container.Children.OfType<BlockFragment>().ToList();
+        blockChildren.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        var inlineIndex = blockChildren.FindIndex(b =>
+            b.Children.OfType<LineBoxFragment>()
+                .SelectMany(line => line.Runs)
+                .Any(run => run.Text.Contains("Inline", StringComparison.OrdinalIgnoreCase)));
+        var blockIndex = blockChildren.FindIndex(b =>
+            b.Children.OfType<LineBoxFragment>()
+                .SelectMany(line => line.Runs)
+                .Any(run => run.Text.Contains("Block", StringComparison.OrdinalIgnoreCase)));
+
+        inlineIndex.ShouldBeGreaterThanOrEqualTo(0);
+        blockIndex.ShouldBeGreaterThanOrEqualTo(0);
+        inlineIndex.ShouldBeLessThan(blockIndex);
     }
 
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)

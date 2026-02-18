@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Display Model Sample</title>
+    <style>
+      body { margin: 0; font-family: Arial, sans-serif; font-size: 12pt; }
+      .page { padding: 12pt; }
+      .box { border: 1pt solid #000; padding: 6pt; margin-bottom: 8pt; }
+      .inline-block { display: inline-block; border: 1pt dashed #000; padding: 4pt; }
+      .inline-block + .inline-block { margin-left: 6pt; }
+      .inline-block.tall { padding: 8pt 4pt; }
+      .inline-block.narrow { width: 40pt; }
+      .inline-block.baseline { font-size: 18pt; }
+      .inline-block.blocky { padding: 4pt; }
+      .inline-block.blocky ul { margin: 4pt 0 0 0; padding: 0; }
+      .inline-block.blocky li { margin: 0; }
+      .override { display: block; border: 1pt solid #000; padding: 4pt; margin-top: 4pt; }
+      .note { color: #333; font-size: 10pt; }
+      ul { margin: 6pt 0 0 0; padding: 0; }
+      li { margin: 0 0 4pt 0; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="box">
+        <div><strong>Inline flow:</strong> Text wraps into line boxes.</div>
+        <div>
+          Alpha Bravo Charlie Delta Echo Foxtrot Golf Hotel India Juliett Kilo Lima
+        </div>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline-block atomic:</strong></div>
+        <span class="inline-block">Inline-block A</span>
+        <span class="inline-block">Inline-block B</span>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline + inline-block mix:</strong></div>
+        <span>Text before</span>
+        <span class="inline-block">Inline-block C</span>
+        <span>text after</span>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline-block baseline alignment:</strong></div>
+        <span class="inline-block baseline">Big baseline</span>
+        <span>normal text</span>
+        <span class="inline-block">small box</span>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline-block with internal block content:</strong></div>
+        <span class="inline-block blocky">
+          Blocky title
+          <ul>
+            <li>Item A</li>
+            <li>Item B</li>
+          </ul>
+        </span>
+        <span class="inline-block">Neighbor</span>
+        <div class="note">The list inside the inline-block should stay inside its border.</div>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline-block wrapping (narrow width):</strong></div>
+        <span class="inline-block narrow">Wrap me please</span>
+        <span class="inline-block">Next</span>
+      </div>
+
+      <div class="box">
+        <div><strong>Inline-block height impact:</strong></div>
+        <span class="inline-block tall">Tall inline-block</span>
+        <span class="inline-block">Normal inline-block</span>
+        <span>Baseline text</span>
+      </div>
+
+      <div class="box">
+        <div><strong>Display override:</strong></div>
+        <span class="override">Span forced to block</span>
+      </div>
+
+      <div class="box">
+        <div><strong>List items with marker space:</strong></div>
+        <ul>
+          <li>First item</li>
+          <li>Second item</li>
+          <li>Third item</li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

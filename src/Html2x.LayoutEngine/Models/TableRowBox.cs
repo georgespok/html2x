@@ -1,5 +1,3 @@
 ﻿namespace Html2x.LayoutEngine.Models;
 
-public sealed class TableRowBox : DisplayNode
-{
-}
+public sealed class TableRowBox(DisplayRole role) : DisplayNode(role);

@@ -4,6 +4,23 @@ using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
 
+internal enum TextRunKind
+{
+    Normal,
+    LineBreak,
+    Atomic,
+    InlineObject
+}
+
+internal sealed record InlineObjectLayout(
+    BlockBox ContentBox,
+    TextLayoutResult Layout,
+    float ContentWidth,
+    float ContentHeight,
+    float Width,
+    float Height,
+    float Baseline);
+
 internal sealed record TextRunInput(
     int RunId,
     InlineBox Source,
@@ -15,7 +32,8 @@ internal sealed record TextRunInput(
     float PaddingRight,
     float MarginLeft,
     float MarginRight,
-    bool IsLineBreak = false);
+    TextRunKind Kind = TextRunKind.Normal,
+    InlineObjectLayout? InlineObject = null);
 
 internal sealed record TextLayoutInput(
     IReadOnlyList<TextRunInput> Runs,
@@ -33,7 +51,8 @@ internal sealed record TextLayoutRun(
     float Ascent,
     float Descent,
     TextDecorations Decorations,
-    ColorRgba? Color);
+    ColorRgba? Color,
+    InlineObjectLayout? InlineObject = null);
 
 internal sealed record TextLayoutLine(
     IReadOnlyList<TextLayoutRun> Runs,

@@ -14,7 +14,7 @@ internal sealed class BlockBoxBuilder
     private Spacing? _pageMargins;
 
     public BlockBoxBuilder()
-        : this(new BlockBox(), parent: null)
+        : this(new BlockBox(DisplayRole.Block), parent: null)
     {
     }
 
@@ -71,7 +71,7 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder Inline(string textContent, ComputedStyle? style = null)
     {
-        _block.Children.Add(new InlineBox
+        _block.Children.Add(new InlineBox(DisplayRole.Inline)
         {
             TextContent = textContent,
             Style = style ?? new ComputedStyle()
@@ -81,7 +81,7 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder Block(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null)
     {
-        return Attach(new BlockBox
+        return Attach(new BlockBox(DisplayRole.Block)
         {
             X = x,
             Y = y,
@@ -94,7 +94,7 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder Block(ComputedStyle? style = null)
     {
-        return Attach(new BlockBox
+        return Attach(new BlockBox(DisplayRole.Block)
         {
             Style = style ?? new ComputedStyle(),
             Parent = _block

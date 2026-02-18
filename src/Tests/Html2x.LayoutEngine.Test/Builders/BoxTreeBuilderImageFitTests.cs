@@ -14,8 +14,8 @@ public class BoxTreeBuilderImageFitTests
 
         // act
         var size = StyleConverter.ResolveImageSize(
-            new Html2x.Abstractions.Measurements.Units.SizePx(authWidth, authHeight),
-            new Html2x.Abstractions.Measurements.Units.SizePx(0, 0));
+            new Abstractions.Measurements.Units.SizePx(authWidth, authHeight),
+            new Abstractions.Measurements.Units.SizePx(0, 0));
         var scale = Math.Min(1d, availableWidth / size.WidthOrZero);
         var scaled = size.Scale(scale);
 

@@ -39,7 +39,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         var font = _metrics.GetFontKey(block.Style);
         var metrics = _textMeasurer.GetMetrics(font, fontSize);
         var lineHeight = _lineHeightStrategy.GetLineHeight(block.Style, font, fontSize, metrics);
-        var runs = CollectInlineRuns(block, _metrics);
+        var runFactory = new InlineRunFactory(_metrics);
+        var runs = CollectInlineRuns(block, runFactory, _metrics, _textMeasurer, _lineHeightStrategy, availableWidth);
 
         if (runs.Count == 0)
         {
@@ -50,13 +51,28 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         return new TextLayoutEngine(_textMeasurer).Layout(input).TotalHeight;
     }
 
-    private static List<TextRunInput> CollectInlineRuns(DisplayNode block, IFontMetricsProvider metrics)
+    private static List<TextRunInput> CollectInlineRuns(
+        DisplayNode block,
+        InlineRunFactory runFactory,
+        IFontMetricsProvider metrics,
+        ITextMeasurer measurer,
+        ILineHeightStrategy lineHeightStrategy,
+        float availableWidth)
     {
         var runs = new List<TextRunInput>();
         var runId = 1;
         foreach (var inline in block.Children.OfType<InlineBox>())
         {
-            CollectInlineRuns(inline, metrics, runs, ref runId);
+            CollectInlineRuns(
+                inline,
+                block.Style,
+                runFactory,
+                metrics,
+                measurer,
+                lineHeightStrategy,
+                availableWidth,
+                runs,
+                ref runId);
         }
 
         return runs;
@@ -64,74 +80,61 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
     private static void CollectInlineRuns(
         InlineBox inline,
+        ComputedStyle blockStyle,
+        InlineRunFactory runFactory,
         IFontMetricsProvider metrics,
+        ITextMeasurer measurer,
+        ILineHeightStrategy lineHeightStrategy,
+        float availableWidth,
         ICollection<TextRunInput> runs,
         ref int runId)
     {
-        if (IsLineBreak(inline))
+        if (runFactory.TryBuildInlineBlockLayout(inline, availableWidth, measurer, lineHeightStrategy, out var inlineLayout))
         {
-            var font = metrics.GetFontKey(inline.Style);
-            var fontSize = metrics.GetFontSize(inline.Style);
+            var margin = inline.Style.Margin.Safe();
             runs.Add(new TextRunInput(
-                runId++,
+                runId,
                 inline,
                 string.Empty,
-                font,
-                fontSize,
+                metrics.GetFontKey(inline.Style),
+                metrics.GetFontSize(inline.Style),
                 inline.Style,
                 PaddingLeft: 0f,
                 PaddingRight: 0f,
-                MarginLeft: 0f,
-                MarginRight: 0f,
-                IsLineBreak: true));
+                MarginLeft: margin.Left,
+                MarginRight: margin.Right,
+                Kind: TextRunKind.InlineObject,
+                InlineObject: inlineLayout));
+            runId++;
             return;
         }
 
-        if (!string.IsNullOrEmpty(inline.TextContent))
+        if (runFactory.TryBuildLineBreakRunFromBlockContext(inline, blockStyle, runId, out var lineBreakRun))
         {
-            var font = metrics.GetFontKey(inline.Style);
-            var fontSize = metrics.GetFontSize(inline.Style);
-            var (paddingLeft, paddingRight, marginLeft, marginRight) = GetInlineSpacing(inline);
-            runs.Add(new TextRunInput(
-                runId++,
-                inline,
-                inline.TextContent,
-                font,
-                fontSize,
-                inline.Style,
-                paddingLeft,
-                paddingRight,
-                marginLeft,
-                marginRight));
+            runs.Add(lineBreakRun);
+            runId++;
+            return;
+        }
+
+        if (runFactory.TryBuildTextRun(inline, runId, out var textRun))
+        {
+            runs.Add(textRun);
+            runId++;
         }
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            CollectInlineRuns(childInline, metrics, runs, ref runId);
+            CollectInlineRuns(
+                childInline,
+                blockStyle,
+                runFactory,
+                metrics,
+                measurer,
+                lineHeightStrategy,
+                availableWidth,
+                runs,
+                ref runId);
         }
-    }
-
-    private static bool IsLineBreak(InlineBox inline)
-        => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
-
-    private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(InlineBox inline)
-    {
-        var source = inline;
-        if (source.Element is null && source.Parent is InlineBox parent && parent.Element is not null)
-        {
-            source = parent;
-        }
-
-        if (source.Element is null)
-        {
-            return (0f, 0f, 0f, 0f);
-        }
-
-        var padding = source.Style.Padding.Safe();
-        var border = Spacing.FromBorderEdges(source.Style.Borders).Safe();
-        var margin = source.Style.Margin.Safe();
-
-        return (padding.Left + border.Left, padding.Right + border.Right, margin.Left, margin.Right);
     }
 
     private sealed class FallbackTextMeasurer(IFontMetricsProvider metricsProvider) : ITextMeasurer
