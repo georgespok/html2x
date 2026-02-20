@@ -1,8 +1,11 @@
 using AngleSharp;
+using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
@@ -174,6 +177,101 @@ public class FragmentBuilderTests
         AssertLineContainsMarkerAndText(liFragment2, "• ", "item2");
     }
 
+    [Fact]
+    public void Build_WithInlineBlockBetweenInlineRuns_PreservesTextOrderAcrossFragments()
+    {
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 300,
+            Height = 120,
+            Style = new ComputedStyle()
+        };
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = "before",
+            Parent = root,
+            Style = new ComputedStyle()
+        });
+
+        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        {
+            Parent = root,
+            Style = new ComputedStyle()
+        };
+
+        var inlineBlockContent = new BlockBox(DisplayRole.Block)
+        {
+            Parent = inlineBlock,
+            IsAnonymous = true,
+            IsInlineBlockContext = true,
+            Style = new ComputedStyle(),
+            Width = 120,
+            Height = 20
+        };
+
+        inlineBlockContent.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = "inner",
+            Parent = inlineBlockContent,
+            Style = new ComputedStyle()
+        });
+
+        inlineBlock.Children.Add(inlineBlockContent);
+        root.Children.Add(inlineBlock);
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = "after",
+            Parent = root,
+            Style = new ComputedStyle()
+        });
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(root);
+
+        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var parent = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
+
+        var orderedTexts = EnumerateTextRuns(parent).ToList();
+        orderedTexts.ShouldBe(["before", "inner", "after"]);
+    }
+
+    [Fact]
+    public void LayoutSnapshotPayload_RepeatedRuns_PreservesTraversalOrderAndSequenceIds()
+    {
+        var runs = new List<IReadOnlyList<string>>();
+        var sequenceRuns = new List<IReadOnlyList<int>>();
+
+        for (var iteration = 0; iteration < 3; iteration++)
+        {
+            var fragmentTree = CreateFragmentBuilder().Build(BuildAmbiguousTopLevelOrderTree(), CreateContext());
+            var layout = new HtmlLayout();
+            layout.Pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), fragmentTree.Blocks));
+
+            var snapshot = LayoutSnapshotMapper.From(layout);
+            var topLevelTexts = snapshot.Pages[0].Fragments
+                .Select(GetFirstText)
+                .ToList();
+            runs.Add(topLevelTexts);
+
+            var sequenceIds = Flatten(snapshot.Pages[0].Fragments)
+                .Select(static fragment => fragment.SequenceId)
+                .ToList();
+            sequenceRuns.Add(sequenceIds);
+        }
+
+        runs[1].ShouldBe(runs[0]);
+        runs[2].ShouldBe(runs[0]);
+        runs[0].ShouldBe(["beta", "alpha"]);
+
+        sequenceRuns[1].ShouldBe(sequenceRuns[0]);
+        sequenceRuns[2].ShouldBe(sequenceRuns[0]);
+        sequenceRuns[0].ShouldBe(Enumerable.Range(1, sequenceRuns[0].Count).ToList());
+    }
+
     // Helpers
     private static FragmentBuilder CreateFragmentBuilder() => new FragmentBuilder();
 
@@ -227,6 +325,104 @@ public class FragmentBuilderTests
         foreach (var run in line.Runs)
         {
             run.Origin.Y.ShouldBe(line.BaselineY, 0.01);
+        }
+    }
+
+    private static IEnumerable<string> EnumerateTextRuns(CoreFragment fragment)
+    {
+        if (fragment is LineBoxFragment line)
+        {
+            foreach (var run in line.Runs)
+            {
+                var text = run.Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    yield return text;
+                }
+            }
+        }
+
+        if (fragment is not BlockFragment block)
+        {
+            yield break;
+        }
+
+        foreach (var child in block.Children)
+        {
+            foreach (var text in EnumerateTextRuns(child))
+            {
+                yield return text;
+            }
+        }
+    }
+
+    private static BoxTree BuildAmbiguousTopLevelOrderTree()
+    {
+        var beta = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 100,
+            Height = 20,
+            Style = new ComputedStyle()
+        };
+        beta.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = "beta",
+            Parent = beta,
+            Style = new ComputedStyle()
+        });
+
+        var alpha = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 100,
+            Height = 20,
+            Style = new ComputedStyle()
+        };
+        alpha.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = "alpha",
+            Parent = alpha,
+            Style = new ComputedStyle()
+        });
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(beta);
+        tree.Blocks.Add(alpha);
+        return tree;
+    }
+
+    private static string GetFirstText(Abstractions.Diagnostics.FragmentSnapshot fragment)
+    {
+        if (!string.IsNullOrWhiteSpace(fragment.Text))
+        {
+            return fragment.Text.Trim();
+        }
+
+        foreach (var child in fragment.Children)
+        {
+            var text = GetFirstText(child);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> Flatten(IReadOnlyList<Abstractions.Diagnostics.FragmentSnapshot> fragments)
+    {
+        foreach (var fragment in fragments)
+        {
+            yield return fragment;
+
+            foreach (var child in Flatten(fragment.Children))
+            {
+                yield return child;
+            }
         }
     }
 }

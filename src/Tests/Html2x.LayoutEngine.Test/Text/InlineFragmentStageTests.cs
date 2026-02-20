@@ -2,6 +2,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using AngleSharp;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Fragment.Stages;
 using Html2x.LayoutEngine.Models;
@@ -126,6 +127,57 @@ public class InlineFragmentStageTests
         line.Runs[2].Decorations.ShouldBe(TextDecorations.LineThrough);
     }
 
+    [Fact]
+    public void ListItemFallback_ForOrderedList_UsesSiblingOrdinalMarker()
+    {
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 500,
+            Height = 200,
+            Style = new ComputedStyle { FontSizePt = 12 },
+            Element = CreateElement("div")
+        };
+
+        var orderedList = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 500,
+            Height = 200,
+            Style = new ComputedStyle { FontSizePt = 12 },
+            Element = CreateElement("ol"),
+            Parent = root
+        };
+
+        root.Children.Add(orderedList);
+        orderedList.Children.Add(CreateListItem("First", orderedList));
+        orderedList.Children.Add(CreateListItem("Second", orderedList));
+
+        var boxTree = new BoxTree();
+        boxTree.Blocks.Add(root);
+
+        var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        var state = new FragmentBuildState(boxTree, context);
+
+        state = new BlockFragmentStage().Execute(state);
+        state = new InlineFragmentStage().Execute(state);
+
+        var rootFragment = state.Fragments.Blocks.ShouldHaveSingleItem();
+        var listItemFragments = EnumerateBlockFragments(rootFragment)
+            .Where(fragment => fragment.DisplayRole == FragmentDisplayRole.ListItem)
+            .ToList();
+
+        listItemFragments.Count.ShouldBe(2);
+
+        var firstLine = listItemFragments[0].Children.OfType<LineBoxFragment>().First();
+        var secondLine = listItemFragments[1].Children.OfType<LineBoxFragment>().First();
+
+        firstLine.Runs[0].Text.ShouldBe("1. ");
+        secondLine.Runs[0].Text.ShouldBe("2. ");
+    }
+
     private static FragmentBuildContext CreateContext(ITextMeasurer textMeasurer)
     {
         var fontSource = new Mock<IFontSource>();
@@ -138,6 +190,48 @@ public class InlineFragmentStageTests
             (long)(10 * 1024 * 1024),
             textMeasurer,
             fontSource.Object);
+    }
+
+    private static BlockBox CreateListItem(string text, DisplayNode parent)
+    {
+        var listItem = new BlockBox(DisplayRole.ListItem)
+        {
+            X = 0,
+            Y = 0,
+            Width = 500,
+            Height = 30,
+            Style = new ComputedStyle { FontSizePt = 12 },
+            Element = CreateElement("li"),
+            Parent = parent
+        };
+
+        listItem.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = text,
+            Style = listItem.Style,
+            Parent = listItem
+        });
+
+        return listItem;
+    }
+
+    private static IEnumerable<BlockFragment> EnumerateBlockFragments(BlockFragment root)
+    {
+        yield return root;
+
+        foreach (var child in root.Children.OfType<BlockFragment>())
+        {
+            foreach (var nested in EnumerateBlockFragments(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    private static AngleSharp.Dom.IElement CreateElement(string tagName)
+    {
+        return BrowsingContext.New(Configuration.Default)
+            .OpenNewAsync().Result.CreateElement(tagName);
     }
 
     private sealed class SizeBasedTextMeasurer(float widthPerChar) : ITextMeasurer

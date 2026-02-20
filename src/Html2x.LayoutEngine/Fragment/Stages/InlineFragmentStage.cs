@@ -2,6 +2,8 @@ using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 
@@ -13,21 +15,28 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     private readonly IFontMetricsProvider _metrics;
     private readonly ILineHeightStrategy _lineHeightStrategy;
     private readonly InlineRunFactory _runFactory;
+    private readonly IBlockFormattingContext _blockFormattingContext;
 
     public InlineFragmentStage()
-        : this(new TextLayoutEngine(new FallbackTextMeasurer()), new FontMetricsProvider(), new DefaultLineHeightStrategy())
+        : this(
+            new TextLayoutEngine(new FallbackTextMeasurer()),
+            new FontMetricsProvider(),
+            new DefaultLineHeightStrategy(),
+            new BlockFormattingContext())
     {
     }
 
     private InlineFragmentStage(
         TextLayoutEngine textLayout,
         IFontMetricsProvider metrics,
-        ILineHeightStrategy lineHeightStrategy)
+        ILineHeightStrategy lineHeightStrategy,
+        IBlockFormattingContext blockFormattingContext)
     {
         _textLayout = textLayout ?? throw new ArgumentNullException(nameof(textLayout));
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-        _runFactory = new InlineRunFactory(_metrics);
+        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _runFactory = new InlineRunFactory(_metrics, _blockFormattingContext);
     }
 
     public FragmentBuildState Execute(FragmentBuildState state)
@@ -47,7 +56,11 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         var metricsProvider = new FontMetricsProvider();
         var textLayout = new TextLayoutEngine(state.Context.TextMeasurer);
-        var stage = new InlineFragmentStage(textLayout, metricsProvider, new DefaultLineHeightStrategy());
+        var stage = new InlineFragmentStage(
+            textLayout,
+            metricsProvider,
+            new DefaultLineHeightStrategy(),
+            state.Context.BlockFormattingContext);
 
         foreach (var binding in state.BlockBindings)
         {
@@ -156,32 +169,69 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 state.Context.TextMeasurer,
                 observers,
                 out var lineWidthForFragment,
-                out var inlineObjects);
+                out var inlineObjectInsertions);
 
-            foreach (var inlineObject in inlineObjects)
+            if (inlineObjectInsertions.Count == 0)
             {
-                parentFragment.Children.Add(inlineObject);
+                var storedLine = new LineBoxFragment
+                {
+                    FragmentId = state.ReserveFragmentId(),
+                    PageNumber = state.PageNumber,
+                    Rect = new RectangleF(contentLeft, topY, lineWidthForFragment, line.LineHeight),
+                    BaselineY = baselineY,
+                    LineHeight = line.LineHeight,
+                    Runs = lineRuns,
+                    TextAlign = textAlign?.ToLowerInvariant()
+                };
+
+                parentFragment.Children.Add(storedLine);
+                lastLine = storedLine;
             }
-
-            var storedLine = new LineBoxFragment
+            else
             {
-                FragmentId = state.ReserveFragmentId(),
-                PageNumber = state.PageNumber,
-                Rect = new RectangleF(contentLeft, topY, lineWidthForFragment, line.LineHeight),
-                BaselineY = baselineY,
-                LineHeight = line.LineHeight,
-                Runs = lineRuns,
-                TextAlign = textAlign?.ToLowerInvariant()
-            };
+                var lineStart = 0;
+                foreach (var insertion in inlineObjectInsertions)
+                {
+                    lastLine = AddLineSegment(
+                        state,
+                        parentFragment,
+                        lineRuns,
+                        lineStart,
+                        insertion.TextRunIndex,
+                        contentLeft,
+                        topY,
+                        line.LineHeight,
+                        baselineY,
+                        textAlign,
+                        lastLine);
+                    parentFragment.Children.Add(insertion.Fragment);
+                    lineStart = insertion.TextRunIndex;
+                }
 
-            parentFragment.Children.Add(storedLine);
-            lastLine = storedLine;
+                lastLine = AddLineSegment(
+                    state,
+                    parentFragment,
+                    lineRuns,
+                    lineStart,
+                    lineRuns.Count,
+                    contentLeft,
+                    topY,
+                    line.LineHeight,
+                    baselineY,
+                    textAlign,
+                    lastLine);
+            }
 
             foreach (var source in line.Runs.Select(r => r.Source).Distinct())
             {
+                if (lastLine is null)
+                {
+                    continue;
+                }
+
                 foreach (var observer in observers)
                 {
-                    observer.OnInlineFragmentCreated(source, parentFragment, storedLine);
+                    observer.OnInlineFragmentCreated(source, parentFragment, lastLine);
                 }
             }
         }
@@ -199,12 +249,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         ITextMeasurer measurer,
         IReadOnlyList<IFragmentBuildObserver> observers,
         out float lineWidthForFragment,
-        out List<BlockFragment> inlineObjects)
+        out List<InlineObjectInsertion> inlineObjectInsertions)
     {
         var justifyExtra = ResolveJustifyExtra(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
         var lineOffsetX = ResolveLineOffset(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
         var isJustified = justifyExtra > 0f;
-        inlineObjects = [];
+        inlineObjectInsertions = [];
 
         if (isJustified && CountWhitespace(line) > 0)
         {
@@ -217,7 +267,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 measurer,
                 observers,
                 out var justifiedWidth,
-                inlineObjects);
+                inlineObjectInsertions);
             lineWidthForFragment = justifiedWidth;
             return runs;
         }
@@ -235,7 +285,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                     currentX + run.LeftSpacing,
                     baselineY,
                     observers);
-                inlineObjects.Add(inlineFragment);
+                inlineObjectInsertions.Add(new InlineObjectInsertion(lineRuns.Count, inlineFragment));
                 currentX += run.LeftSpacing + run.Width + run.RightSpacing;
                 continue;
             }
@@ -269,7 +319,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         ITextMeasurer measurer,
         IReadOnlyList<IFragmentBuildObserver> observers,
         out float lineWidthForFragment,
-        List<BlockFragment> inlineObjects)
+        List<InlineObjectInsertion> inlineObjectInsertions)
     {
         var spaceCount = CountWhitespace(line);
         if (spaceCount == 0)
@@ -288,7 +338,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                         fallbackX + run.LeftSpacing,
                         baselineY,
                         observers);
-                    inlineObjects.Add(inlineFragment);
+                    inlineObjectInsertions.Add(new InlineObjectInsertion(fallbackRuns.Count, inlineFragment));
                     fallbackX += run.LeftSpacing + run.Width + run.RightSpacing;
                     continue;
                 }
@@ -324,7 +374,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                     currentX + run.LeftSpacing,
                     baselineY,
                     observers);
-                inlineObjects.Add(inlineFragment);
+                inlineObjectInsertions.Add(new InlineObjectInsertion(lineRuns.Count, inlineFragment));
                 currentX += run.LeftSpacing + run.Width + run.RightSpacing;
                 continue;
             }
@@ -461,12 +511,91 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     {
         var runs = new List<TextRunInput>();
         var runId = 1;
+
+        TryAppendSyntheticListMarkerRun(blockContext, runs, ref runId);
+
         foreach (var inline in blockContext.Children.OfType<InlineBox>())
         {
             CollectInlineRuns(inline, blockContext.Style, availableWidth, measurer, runs, ref runId);
         }
 
         return runs;
+    }
+
+    private void TryAppendSyntheticListMarkerRun(BlockBox blockContext, ICollection<TextRunInput> runs, ref int runId)
+    {
+        if (blockContext.Role != DisplayRole.ListItem || blockContext.MarkerOffset > 0f || HasExplicitListMarker(blockContext))
+        {
+            return;
+        }
+
+        var markerText = ResolveListMarkerText(blockContext);
+        if (string.IsNullOrWhiteSpace(markerText))
+        {
+            return;
+        }
+
+        var marker = new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = markerText,
+            Style = blockContext.Style,
+            Parent = blockContext
+        };
+
+        if (_runFactory.TryBuildTextRun(marker, runId, out var markerRun))
+        {
+            runs.Add(markerRun);
+            runId++;
+        }
+    }
+
+    private static bool HasExplicitListMarker(BlockBox blockContext)
+    {
+        foreach (var inline in blockContext.Children.OfType<InlineBox>())
+        {
+            var text = inline.TextContent?.TrimStart();
+            if (string.IsNullOrEmpty(text))
+            {
+                continue;
+            }
+
+            if (text.StartsWith("•", StringComparison.Ordinal) ||
+                (char.IsDigit(text[0]) && text.Contains('.')))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ResolveListMarkerText(BlockBox listItem)
+    {
+        var listContainer = FindNearestListContainer(listItem.Parent);
+        if (listContainer is null)
+        {
+            return string.Empty;
+        }
+
+        return ListMarkerResolver.ResolveMarkerText(listContainer, listItem);
+    }
+
+    private static DisplayNode? FindNearestListContainer(DisplayNode? node)
+    {
+        var current = node;
+        while (current is not null)
+        {
+            var tag = current.Element?.TagName;
+            if (string.Equals(tag, HtmlCssConstants.HtmlTags.Ul, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(tag, HtmlCssConstants.HtmlTags.Ol, StringComparison.OrdinalIgnoreCase))
+            {
+                return current;
+            }
+
+            current = current.Parent;
+        }
+
+        return null;
     }
 
     private BlockFragment CreateInlineObjectFragment(
@@ -524,24 +653,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     {
         if (_runFactory.TryBuildInlineBlockLayout(inline, availableWidth, measurer, _lineHeightStrategy, out var inlineLayout))
         {
-            var font = _metrics.GetFontKey(inline.Style);
-            var fontSize = _metrics.GetFontSize(inline.Style);
-            var margin = inline.Style.Margin.Safe();
-            runs.Add(new TextRunInput(
-                runId,
-                inline,
-                string.Empty,
-                font,
-                fontSize,
-                inline.Style,
-                PaddingLeft: 0f,
-                PaddingRight: 0f,
-                MarginLeft: margin.Left,
-                MarginRight: margin.Right,
-                Kind: TextRunKind.InlineObject,
-                InlineObject: inlineLayout));
-            runId++;
-            return;
+            if (_runFactory.TryBuildInlineBlockRun(inline, runId, inlineLayout, out var inlineRun))
+            {
+                runs.Add(inlineRun);
+                runId++;
+                return;
+            }
         }
 
         if (_runFactory.TryBuildLineBreakRunFromBlockContext(inline, blockStyle, runId, out var lineBreakRun))
@@ -596,6 +713,46 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         return ascent;
     }
+
+    private static LineBoxFragment? AddLineSegment(
+        FragmentBuildState state,
+        BlockFragment parentFragment,
+        IReadOnlyList<TextRun> lineRuns,
+        int startIndex,
+        int endIndex,
+        float fallbackX,
+        float topY,
+        float lineHeight,
+        float baselineY,
+        string? textAlign,
+        LineBoxFragment? lastLine)
+    {
+        if (endIndex <= startIndex)
+        {
+            return lastLine;
+        }
+
+        var segmentRuns = lineRuns.Skip(startIndex).Take(endIndex - startIndex).ToList();
+        var minX = segmentRuns.Min(static run => run.Origin.X);
+        var maxX = segmentRuns.Max(static run => run.Origin.X + run.AdvanceWidth);
+        var width = Math.Max(0f, maxX - minX);
+
+        var line = new LineBoxFragment
+        {
+            FragmentId = state.ReserveFragmentId(),
+            PageNumber = state.PageNumber,
+            Rect = new RectangleF(Math.Min(fallbackX, minX), topY, width, lineHeight),
+            BaselineY = baselineY,
+            LineHeight = lineHeight,
+            Runs = segmentRuns,
+            TextAlign = textAlign?.ToLowerInvariant()
+        };
+
+        parentFragment.Children.Add(line);
+        return line;
+    }
+
+    private readonly record struct InlineObjectInsertion(int TextRunIndex, BlockFragment Fragment);
 
     private sealed class FallbackTextMeasurer : ITextMeasurer
     {

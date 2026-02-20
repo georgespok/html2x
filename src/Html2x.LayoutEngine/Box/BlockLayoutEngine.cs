@@ -1,17 +1,42 @@
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
 
-public sealed class BlockLayoutEngine(
-    IInlineLayoutEngine inlineEngine,
-    ITableLayoutEngine tableEngine,
-    IFloatLayoutEngine floatEngine,
-    DiagnosticsSession? diagnosticsSession = null)
+public sealed class BlockLayoutEngine
 {
-    private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
+    private readonly IInlineLayoutEngine _inlineEngine;
+    private readonly ITableLayoutEngine _tableEngine;
+    private readonly IFloatLayoutEngine _floatEngine;
+    private readonly DiagnosticsSession? _diagnosticsSession;
+    private readonly IBlockFormattingContext _blockFormattingContext;
+
+    public BlockLayoutEngine(
+        IInlineLayoutEngine inlineEngine,
+        ITableLayoutEngine tableEngine,
+        IFloatLayoutEngine floatEngine,
+        DiagnosticsSession? diagnosticsSession = null)
+        : this(inlineEngine, tableEngine, floatEngine, new BlockFormattingContext(), diagnosticsSession)
+    {
+    }
+
+    internal BlockLayoutEngine(
+        IInlineLayoutEngine inlineEngine,
+        ITableLayoutEngine tableEngine,
+        IFloatLayoutEngine floatEngine,
+        IBlockFormattingContext blockFormattingContext,
+        DiagnosticsSession? diagnosticsSession = null)
+    {
+        _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
+        _tableEngine = tableEngine ?? throw new ArgumentNullException(nameof(tableEngine));
+        _floatEngine = floatEngine ?? throw new ArgumentNullException(nameof(floatEngine));
+        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _diagnosticsSession = diagnosticsSession;
+    }
 
     public BoxTree Layout(DisplayNode displayRoot, PageBox page)
     {
@@ -75,12 +100,9 @@ public sealed class BlockLayoutEngine(
     {
         if (displayRoot is BlockBox rootBlock)
         {
-            if (IsInlineOnlyBlock(rootBlock))
-            {
-                return [rootBlock];
-            }
-
-            return rootBlock.Children;
+            return IsInlineOnlyBlock(rootBlock) 
+                ? [rootBlock] 
+                : rootBlock.Children;
         }
 
         return [displayRoot];
@@ -137,8 +159,8 @@ public sealed class BlockLayoutEngine(
         }
 
         // use inline engine for height estimation (use content width)
-        floatEngine.PlaceFloats(node, x, y, width); 
-        var inlineHeight = inlineEngine.MeasureHeight(node, contentWidthForChildren);
+        _floatEngine.PlaceFloats(node, x, y, width); 
+        var inlineHeight = _inlineEngine.MeasureHeight(node, contentWidthForChildren);
 
         var nestedBlocksHeight = LayoutChildBlocks(
             node,
@@ -146,7 +168,8 @@ public sealed class BlockLayoutEngine(
             contentYForChildren,
             contentWidthForChildren,
             contentYForChildren);
-        var contentHeight = Math.Max(inlineHeight, nestedBlocksHeight);
+        var canonicalBlockHeight = ResolveCanonicalBlockHeight(node, contentWidthForChildren);
+        var contentHeight = Math.Max(inlineHeight, Math.Max(nestedBlocksHeight, canonicalBlockHeight));
         if (s.HeightPt.HasValue)
         {
             contentHeight = s.HeightPt.Value;
@@ -210,12 +233,7 @@ public sealed class BlockLayoutEngine(
 
     private void PublishMarginCollapse(float previousBottomMargin, float nextTopMargin, float collapsedTopMargin)
     {
-        if (_diagnosticsSession is null)
-        {
-            return;
-        }
-
-        _diagnosticsSession.Events.Add(new DiagnosticsEvent
+        _diagnosticsSession?.Events.Add(new DiagnosticsEvent
         {
             Type = DiagnosticsEventType.Trace,
             Name = "layout/margin-collapse",
@@ -236,7 +254,7 @@ public sealed class BlockLayoutEngine(
         var x = contentX + margin.Left;
         var y = cursorY + collapsedTopMargin;
         var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
-        var height = tableEngine.MeasureHeight(node, width);
+        var height = _tableEngine.MeasureHeight(node, width);
         var size = new SizePt(width, height).Safe().ClampMin(0f, 0f);
 
         var box = new BlockBox(DisplayRole.Block)
@@ -257,6 +275,42 @@ public sealed class BlockLayoutEngine(
     {
         target.Size = source.Size;
         target.Margin = source.Margin;
+    }
+
+    private float ResolveCanonicalBlockHeight(BlockBox node, float contentWidthForChildren)
+    {
+        if (!node.Children.OfType<BlockBox>().Any())
+        {
+            return 0f;
+        }
+
+        var request = float.IsFinite(contentWidthForChildren)
+            ? BlockFormattingRequest.ForTopLevel(node, Math.Max(0f, contentWidthForChildren))
+            : BlockFormattingRequest.ForUnboundedWidth(FormattingContextKind.Block, node);
+        var result = _blockFormattingContext.Format(request);
+
+        var formattedChildren = result.FormattedBlocks
+            .Where(static block => block.Role == DisplayRole.Block)
+            .Where(block => !ReferenceEquals(block, node))
+            .ToList();
+
+        if (formattedChildren.Count == 0)
+        {
+            return 0f;
+        }
+
+        var minY = float.PositiveInfinity;
+        var maxY = float.NegativeInfinity;
+        foreach (var block in formattedChildren)
+        {
+            var margin = block.Style.Margin.Safe();
+            var top = block.Y - margin.Top;
+            var bottom = block.Y + block.Height + margin.Bottom;
+            minY = Math.Min(minY, top);
+            maxY = Math.Max(maxY, bottom);
+        }
+
+        return Math.Max(0f, maxY - minY);
     }
 
 }

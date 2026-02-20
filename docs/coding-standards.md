@@ -46,6 +46,17 @@ Cross-layer calls must always travel forward (Abstractions -> LayoutEngine -> Re
 - **New renderer**: Implement `IFragmentRenderer` and provide a factory. Reuse the dispatcher pattern for traversal.
 - **New diagnostics**: Add to the relevant log helper class (`PdfRendererLog`, `LayoutLog`) instead of ad-hoc `logger.Log...` calls.
 
+### Shared Formatting and Failure Modes
+
+- Route block semantics through shared formatting contracts (`BlockFormattingRequest` / `BlockFormattingResult` via `IBlockFormattingContext`) instead of duplicating behavior in top-level and inline-block paths.
+- Treat inline-block formatting as canonical when block descendants exist. Avoid approximation-only merges (for example, taking `Math.Max` between unrelated height models without context checks).
+- Keep fail-fast scope explicit: unsupported structure errors are allowed for inline-block internal formatting only. Do not widen fail-fast behavior to unrelated contexts without a dedicated spec and tests.
+- Emit deterministic diagnostics payloads:
+  - Preserve stable fragment ordering for snapshot mapping.
+  - Use consistent tie-break rules when coordinates are equal (position, kind, then text key).
+  - Ensure repeated runs on the same machine produce identical payload ordering.
+- For diagnostics ordering changes, update both unit-level assertions (`Html2x.LayoutEngine.Test`) and scenario-level assertions (`Html2x.Test`) to lock behavior at multiple layers.
+
 ## Coding Style
 
 - Follow `.editorconfig` (4-space C#/HTML, 2-space XML). No tabs.

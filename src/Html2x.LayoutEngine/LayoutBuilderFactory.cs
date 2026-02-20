@@ -5,6 +5,7 @@ using Html2x.Abstractions.Layout.Text;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine;
@@ -16,15 +17,17 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
         ArgumentNullException.ThrowIfNull(services);
 
         var angleSharpConfig = Configuration.Default.WithCss();
+        var blockFormattingContext = new BlockFormattingContext();
         
         return new LayoutBuilder(
             new AngleSharpDomProvider(angleSharpConfig),
             new CssStyleComputer(new StyleTraversal(), new CssValueConverter()),
-            new BoxTreeBuilder(services.TextMeasurer),
+            new BoxTreeBuilder(services.TextMeasurer, blockFormattingContext),
             new FragmentBuilder(),
             services.ImageProvider,
             services.TextMeasurer,
-            services.FontSource);
+            services.FontSource,
+            blockFormattingContext);
     }
 
     private sealed class FallbackTextMeasurer : ITextMeasurer

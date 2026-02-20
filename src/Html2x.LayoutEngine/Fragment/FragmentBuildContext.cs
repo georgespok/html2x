@@ -1,23 +1,53 @@
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine.Formatting;
 
 namespace Html2x.LayoutEngine.Fragment;
 
-public sealed class FragmentBuildContext(
-    IImageProvider imageProvider,
-    string htmlDirectory,
-    long maxImageSizeBytes,
-    ITextMeasurer textMeasurer,
-    IFontSource fontSource)
+public sealed class FragmentBuildContext
 {
-    public IImageProvider ImageProvider { get; } = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
+    public FragmentBuildContext(
+        IImageProvider imageProvider,
+        string htmlDirectory,
+        long maxImageSizeBytes,
+        ITextMeasurer textMeasurer,
+        IFontSource fontSource)
+        : this(
+            imageProvider,
+            htmlDirectory,
+            maxImageSizeBytes,
+            textMeasurer,
+            fontSource,
+            new BlockFormattingContext())
+    {
+    }
 
-    public string HtmlDirectory { get; } = htmlDirectory ?? throw new ArgumentNullException(nameof(htmlDirectory));
+    internal FragmentBuildContext(
+        IImageProvider imageProvider,
+        string htmlDirectory,
+        long maxImageSizeBytes,
+        ITextMeasurer textMeasurer,
+        IFontSource fontSource,
+        IBlockFormattingContext blockFormattingContext)
+    {
+        ImageProvider = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
+        HtmlDirectory = htmlDirectory ?? throw new ArgumentNullException(nameof(htmlDirectory));
+        MaxImageSizeBytes = maxImageSizeBytes;
+        TextMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+        FontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
+        BlockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+    }
 
-    public long MaxImageSizeBytes { get; } = maxImageSizeBytes;
+    public IImageProvider ImageProvider { get; }
 
-    public ITextMeasurer TextMeasurer { get; } = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+    public string HtmlDirectory { get; }
 
-    public IFontSource FontSource { get; } = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
+    public long MaxImageSizeBytes { get; }
+
+    public ITextMeasurer TextMeasurer { get; }
+
+    public IFontSource FontSource { get; }
+
+    internal IBlockFormattingContext BlockFormattingContext { get; }
 }

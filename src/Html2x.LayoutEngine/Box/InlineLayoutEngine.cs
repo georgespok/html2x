@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 
@@ -10,22 +11,33 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
     private readonly ILineHeightStrategy _lineHeightStrategy;
     private readonly IFontMetricsProvider _metrics;
     private readonly ITextMeasurer _textMeasurer;
+    private readonly InlineRunFactory _runFactory;
 
     public InlineLayoutEngine()
-        : this(new FontMetricsProvider(), null, new DefaultLineHeightStrategy())
+        : this(new FontMetricsProvider(), null, new DefaultLineHeightStrategy(), new BlockFormattingContext())
     {
     }
 
     public InlineLayoutEngine(IFontMetricsProvider metrics)
-        : this(metrics, null, new DefaultLineHeightStrategy())
+        : this(metrics, null, new DefaultLineHeightStrategy(), new BlockFormattingContext())
     {
     }
 
     public InlineLayoutEngine(IFontMetricsProvider metrics, ITextMeasurer? textMeasurer, ILineHeightStrategy lineHeightStrategy)
+        : this(metrics, textMeasurer, lineHeightStrategy, new BlockFormattingContext())
+    {
+    }
+
+    internal InlineLayoutEngine(
+        IFontMetricsProvider metrics,
+        ITextMeasurer? textMeasurer,
+        ILineHeightStrategy lineHeightStrategy,
+        IBlockFormattingContext blockFormattingContext)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _textMeasurer = textMeasurer ?? new FallbackTextMeasurer(_metrics);
         _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+        _runFactory = new InlineRunFactory(_metrics, blockFormattingContext);
     }
 
     public float MeasureHeight(DisplayNode block, float availableWidth)
@@ -39,8 +51,7 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         var font = _metrics.GetFontKey(block.Style);
         var metrics = _textMeasurer.GetMetrics(font, fontSize);
         var lineHeight = _lineHeightStrategy.GetLineHeight(block.Style, font, fontSize, metrics);
-        var runFactory = new InlineRunFactory(_metrics);
-        var runs = CollectInlineRuns(block, runFactory, _metrics, _textMeasurer, _lineHeightStrategy, availableWidth);
+        var runs = CollectInlineRuns(block, _runFactory, _metrics, _textMeasurer, _lineHeightStrategy, availableWidth);
 
         if (runs.Count == 0)
         {

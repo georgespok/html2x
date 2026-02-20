@@ -1,4 +1,9 @@
+using System.Globalization;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Text;
@@ -8,6 +13,8 @@ namespace Html2x.LayoutEngine.Test.Text;
 
 public class TextLayoutEngineTests
 {
+    private static readonly LayoutBuilderFixture Fixture = new();
+
     [Fact]
     public void Layout_SingleLine_PreservesRunOrder()
     {
@@ -85,6 +92,38 @@ public class TextLayoutEngineTests
         string.Concat(result.Lines.SelectMany(line => line.Runs).Select(r => r.Text)).ShouldBe("ABCDE");
     }
 
+    [Fact]
+    public async Task SnapshotFragmentOrdering_RepeatedRuns_PreservesTraversalOrderAndSequenceIds()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div>
+                  Lead
+                  <div style='height: 10pt;'>Child</div>
+                </div>
+              </body>
+            </html>";
+
+        var runs = new List<IReadOnlyList<string>>();
+        var snapshots = new List<LayoutSnapshot>();
+        for (var iteration = 0; iteration < 3; iteration++)
+        {
+            var layout = await Fixture.BuildLayoutAsync(
+                html,
+                new FakeTextMeasurer(10f, 9f, 3f),
+                new LayoutOptions { PageSize = PaperSizes.A4 });
+            var snapshot = LayoutSnapshotMapper.From(layout);
+            snapshots.Add(snapshot);
+            var signatures = Flatten(snapshot.Pages[0].Fragments).ToList();
+            runs.Add(signatures);
+        }
+
+        runs[1].ShouldBe(runs[0]);
+        runs[2].ShouldBe(runs[0]);
+        AssertSequenceIdsAreMonotonic(snapshots[0].Pages[0].Fragments);
+    }
+
     private static TextLayoutInput BuildInput(float width, float lineHeight, params TextRunInput[] runs)
     {
         return new TextLayoutInput(runs, width, lineHeight);
@@ -121,5 +160,41 @@ public class TextLayoutEngineTests
             MarginLeft: 0f,
             MarginRight: 0f,
             Kind: TextRunKind.LineBreak);
+    }
+
+    private static IEnumerable<string> Flatten(IReadOnlyList<FragmentSnapshot> fragments)
+    {
+        foreach (var fragment in fragments)
+        {
+            var text = fragment.Text ?? string.Empty;
+            yield return $"{fragment.SequenceId}|{fragment.Kind}|{fragment.Y:F3}|{fragment.X:F3}|{text}";
+
+            foreach (var child in Flatten(fragment.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static void AssertSequenceIdsAreMonotonic(IReadOnlyList<FragmentSnapshot> fragments)
+    {
+        var flattened = FlattenSnapshots(fragments)
+            .ToList();
+
+        flattened.Select(static snapshot => snapshot.SequenceId)
+            .ShouldBe(Enumerable.Range(1, flattened.Count).ToList());
+    }
+
+    private static IEnumerable<FragmentSnapshot> FlattenSnapshots(IReadOnlyList<FragmentSnapshot> fragments)
+    {
+        foreach (var fragment in fragments)
+        {
+            yield return fragment;
+
+            foreach (var child in FlattenSnapshots(fragment.Children))
+            {
+                yield return child;
+            }
+        }
     }
 }

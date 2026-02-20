@@ -32,7 +32,7 @@ public class InlineRunFactoryTests
 
         var factory = new InlineRunFactory(new FakeMetricsProvider());
 
-        factory.TryBuildInlineBlockRun(inlineBlock, 1, out _).ShouldBeFalse();
+        factory.TryBuildInlineBlockRun(inlineBlock, 1, inlineLayout: null, out _).ShouldBeFalse();
     }
 
     private sealed class FakeMetricsProvider : IFontMetricsProvider

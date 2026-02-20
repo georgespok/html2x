@@ -1,4 +1,5 @@
 using AngleSharp.Dom;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Style;
 
@@ -56,37 +57,40 @@ public sealed class DisplayTreeBuilder
             BlockFlowNormalization.NormalizeChildrenForBlock(childBlock);
         }
 
-        if (string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase) &&
-            parent != null &&
-            box is BlockBox listItem)
-        {
-            var markerText = ResolveListMarker(parent, box);
-            if (!string.IsNullOrWhiteSpace(markerText))
-            {
-                listItem.MarkerOffset = HtmlCssConstants.Defaults.ListMarkerOffsetPt;
-                var marker = new InlineBox(DisplayRole.Inline)
-                {
-                    TextContent = markerText,
-                    Style = box.Style,
-                    Parent = box
-                };
-
-                box.Children.Insert(0, marker);
-            }
-        }
+        TryInsertListMarker(element, parent, box);
 
         return box;
     }
 
+    private static void TryInsertListMarker(IElement element, DisplayNode? parent, DisplayNode box)
+    {
+        if (!string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Li, StringComparison.OrdinalIgnoreCase) ||
+            parent is null ||
+            box is not BlockBox listItem)
+        {
+            return;
+        }
+
+        var markerText = ResolveListMarker(parent, box);
+        if (string.IsNullOrWhiteSpace(markerText))
+        {
+            return;
+        }
+
+        listItem.MarkerOffset = HtmlCssConstants.Defaults.ListMarkerOffsetPt;
+        var marker = new InlineBox(DisplayRole.Inline)
+        {
+            TextContent = markerText,
+            Style = box.Style,
+            Parent = box
+        };
+
+        box.Children.Insert(0, marker);
+    }
+
     private static string ResolveListMarker(DisplayNode listContainer, DisplayNode listItem)
     {
-        var tag = listContainer.Element?.TagName.ToLowerInvariant();
-        return tag switch
-        {
-            HtmlCssConstants.HtmlTags.Ul => "• ",
-            HtmlCssConstants.HtmlTags.Ol => $"{listContainer.Children.Count + 1}. ",
-            _ => string.Empty
-        };
+        return ListMarkerResolver.ResolveMarkerText(listContainer, listItem);
     }
 
     private static BlockBox CreateInlineBlockContentContainer(InlineBox inlineBlock, StyleNode styleNode)

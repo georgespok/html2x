@@ -8,6 +8,7 @@ using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
+using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Display;
 
@@ -188,6 +189,119 @@ public class BlockFlowTests
         inlineIndex.ShouldBeLessThan(blockIndex);
     }
 
+    [Fact]
+    public async Task InlineBlockInternalBlocks_ApplySpacingAndBoundarySemantics()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 400pt;'>
+                  <span style='display: inline-block; border: 1pt solid #000; padding: 2pt;'>
+                    <div style='height: 10pt; padding-bottom: 5pt; border-bottom: 3pt solid #000; margin-bottom: 12pt;'>First</div>
+                    <div style='height: 8pt; margin-top: 4pt;'>Second</div>
+                  </span>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var inlineBlock = EnumerateFragments(root)
+            .OfType<BlockFragment>()
+            .FirstOrDefault(fragment =>
+                fragment.Style?.Borders?.HasAny == true &&
+                fragment.Children.OfType<LineBoxFragment>()
+                    .SelectMany(line => line.Runs)
+                    .Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
+
+        inlineBlock.ShouldNotBeNull();
+
+        const float expectedFirstBlockHeight = 10f + 5f + 3f;
+        const float expectedCollapsedGap = 12f;
+        const float expectedSecondBlockHeight = 8f;
+        const float expectedOuterPaddingAndBorder = 2f + 2f + 1f + 1f;
+        var expectedTotalHeight = expectedFirstBlockHeight + expectedCollapsedGap + expectedSecondBlockHeight + expectedOuterPaddingAndBorder;
+
+        inlineBlock.Rect.Height.ShouldBe(expectedTotalHeight, 0.5f);
+
+        var lines = inlineBlock.Children.OfType<LineBoxFragment>().ToList();
+        lines.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        var firstLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
+        var secondLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
+
+        secondLine.Rect.Y.ShouldBeGreaterThan(firstLine.Rect.Y);
+        secondLine.Rect.Y.ShouldBeGreaterThanOrEqualTo(firstLine.Rect.Bottom - 0.1f);
+    }
+
+    [Fact]
+    public async Task UnsupportedStructures_OutsideInlineBlock_DoNotTriggerFailFast()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <table>
+                  <tr><td>top-level table</td></tr>
+                </table>
+              </body>
+            </html>";
+
+        var diagnosticsSession = new DiagnosticsSession
+        {
+            Options = new HtmlConverterOptions()
+        };
+
+        var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
+        var layout = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession);
+
+        layout.Pages.Count.ShouldBe(1);
+        diagnosticsSession.Events
+            .Any(e => e.Name == "layout/inline-block/unsupported-structure")
+            .ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task TopLevelAndInlineBlockInternalFlows_ProduceEquivalentBlockMetrics()
+    {
+        const string topLevelHtml = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 300pt; border: 1pt solid #000; padding: 2pt;'>
+                  <div style='height: 10pt; padding-bottom: 5pt; border-bottom: 3pt solid #000; margin-bottom: 12pt;'>First</div>
+                  <div style='height: 8pt; margin-top: 4pt;'>Second</div>
+                </div>
+              </body>
+            </html>";
+
+        const string inlineBlockHtml = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 300pt;'>
+                  <span style='display: inline-block; width: 300pt; border: 1pt solid #000; padding: 2pt;'>
+                    <div style='height: 10pt; padding-bottom: 5pt; border-bottom: 3pt solid #000; margin-bottom: 12pt;'>First</div>
+                    <div style='height: 8pt; margin-top: 4pt;'>Second</div>
+                  </span>
+                </div>
+              </body>
+            </html>";
+
+        var topLevelLayout = await BuildLayoutAsync(topLevelHtml, CreateLinearMeasurer(10f));
+        var inlineBlockLayout = await BuildLayoutAsync(inlineBlockHtml, CreateLinearMeasurer(10f));
+
+        var topLevelContainer = FindContainerWithTexts((BlockFragment)topLevelLayout.Pages[0].Children[0], "First", "Second");
+        var inlineBlockContainer = FindContainerWithTexts((BlockFragment)inlineBlockLayout.Pages[0].Children[0], "First", "Second");
+
+        topLevelContainer.ShouldNotBeNull();
+        inlineBlockContainer.ShouldNotBeNull();
+
+        var topLevelMetrics = ExtractTwoBlockMetrics(topLevelContainer);
+        var inlineBlockMetrics = ExtractTwoBlockMetrics(inlineBlockContainer);
+
+        inlineBlockMetrics.TotalHeight.ShouldBe(topLevelMetrics.TotalHeight, 0.1f);
+        inlineBlockMetrics.FirstBlockHeight.ShouldBe(topLevelMetrics.FirstBlockHeight, 0.1f);
+        inlineBlockMetrics.SecondBlockHeight.ShouldBe(topLevelMetrics.SecondBlockHeight, 0.1f);
+    }
+
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
     {
         return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutOptions
@@ -214,5 +328,57 @@ public class BlockFlowTests
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
             .Returns((8f, 2f));
         return textMeasurer.Object;
+    }
+
+    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
+    {
+        yield return fragment;
+
+        if (fragment is not BlockFragment block)
+        {
+            yield break;
+        }
+
+        foreach (var child in block.Children)
+        {
+            foreach (var nested in EnumerateFragments(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    private static BlockFragment FindContainerWithTexts(BlockFragment root, string firstText, string secondText)
+    {
+        return EnumerateFragments(root)
+            .OfType<BlockFragment>()
+            .FirstOrDefault(fragment => ContainsText(fragment, firstText) && ContainsText(fragment, secondText))
+            ?? throw new ShouldAssertException("Expected to find a container with both text runs.");
+    }
+
+    private static bool ContainsText(BlockFragment fragment, string text)
+    {
+        return EnumerateFragments(fragment)
+            .OfType<BlockFragment>()
+            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
+            .SelectMany(line => line.Runs)
+            .Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static (float TotalHeight, float FirstBlockHeight, float SecondBlockHeight) ExtractTwoBlockMetrics(BlockFragment container)
+    {
+        var lines = EnumerateFragments(container)
+            .OfType<BlockFragment>()
+            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
+            .ToList();
+        lines.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        var firstLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
+        var secondLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
+
+        return (
+            container.Rect.Height,
+            firstLine.Rect.Height,
+            secondLine.Rect.Height);
     }
 }

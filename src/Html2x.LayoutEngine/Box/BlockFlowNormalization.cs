@@ -12,8 +12,8 @@ internal static class BlockFlowNormalization
             return;
         }
 
-        var hasInline = parent.Children.Any(c => c is InlineBox);
-        var hasNonInline = parent.Children.Any(c => c is not InlineBox);
+        var hasInline = parent.Children.Any(IsInlineFlowNode);
+        var hasNonInline = parent.Children.Any(c => !IsInlineFlowNode(c));
 
         // Only create anonymous blocks when inline and block-level nodes coexist.
         if (!hasInline || !hasNonInline)
@@ -27,7 +27,19 @@ internal static class BlockFlowNormalization
 
         foreach (var child in parent.Children)
         {
-            if (child is InlineBox inline)
+            if (TryCreateInlineBlockBoundaryNode(parent, child, out var boundaryNode))
+            {
+                if (inlineBuffer.Count > 0)
+                {
+                    normalized.Add(CreateAnonymousBlock(parent, inlineBuffer));
+                    inlineBuffer.Clear();
+                }
+
+                normalized.Add(boundaryNode);
+                continue;
+            }
+
+            if (IsInlineFlowNode(child) && child is InlineBox inline)
             {
                 inlineBuffer.Add(inline);
                 continue;
@@ -49,6 +61,38 @@ internal static class BlockFlowNormalization
 
         parent.Children.Clear();
         parent.Children.AddRange(normalized);
+    }
+
+    private static bool TryCreateInlineBlockBoundaryNode(BlockBox parent, DisplayNode child, out DisplayNode boundaryNode)
+    {
+        boundaryNode = null!;
+
+        if (!parent.IsInlineBlockContext ||
+            child is not InlineBox inlineBlock ||
+            inlineBlock.Role != DisplayRole.InlineBlock)
+        {
+            return false;
+        }
+
+        var inlineBlockContent = inlineBlock.Children.OfType<BlockBox>().FirstOrDefault();
+        if (inlineBlockContent is null)
+        {
+            return false;
+        }
+
+        boundaryNode = CloneNode(inlineBlockContent, parent);
+        return true;
+    }
+
+    private static bool IsInlineFlowNode(DisplayNode node)
+    {
+        if (node is not InlineBox inline || inline.Role != DisplayRole.Inline)
+        {
+            return false;
+        }
+
+        // Inline nodes that already carry block-level descendants must act as block boundaries.
+        return !inline.Children.Any(static child => child is BlockBox or TableBox);
     }
 
     private static BlockBox CreateAnonymousBlock(DisplayNode parent, List<InlineBox> inlines)

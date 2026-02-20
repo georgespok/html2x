@@ -1,17 +1,47 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
 
-internal sealed class InlineRunFactory(IFontMetricsProvider metrics)
+internal sealed class InlineRunFactory
 {
-    private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+    private readonly IFontMetricsProvider _metrics;
+    private readonly IBlockFormattingContext _blockFormattingContext;
 
-    public bool TryBuildInlineBlockRun(InlineBox inline, int runId, out TextRunInput run)
+    public InlineRunFactory(IFontMetricsProvider metrics)
+        : this(metrics, new BlockFormattingContext())
+    {
+    }
+
+    internal InlineRunFactory(IFontMetricsProvider metrics, IBlockFormattingContext blockFormattingContext)
+    {
+        _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
+        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+    }
+
+    public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
     {
         run = default!;
-        return false;
+        if (inline.Role != DisplayRole.InlineBlock || inlineLayout is null)
+        {
+            return false;
+        }
+
+        var margin = inline.Style.Margin.Safe();
+        run = CreateRun(
+            runId,
+            inline,
+            string.Empty,
+            inline.Style,
+            PaddingLeft: 0f,
+            PaddingRight: 0f,
+            MarginLeft: margin.Left,
+            MarginRight: margin.Right,
+            Kind: TextRunKind.InlineObject,
+            InlineObject: inlineLayout);
+        return true;
     }
 
     public bool TryBuildLineBreakRunFromInlineStyle(InlineBox inline, int runId, out TextRunInput run)
@@ -26,7 +56,7 @@ internal sealed class InlineRunFactory(IFontMetricsProvider metrics)
         ILineHeightStrategy lineHeightStrategy,
         out InlineObjectLayout layout)
     {
-        var builder = new InlineObjectLayoutBuilder(measurer, _metrics, lineHeightStrategy);
+        var builder = new InlineObjectLayoutBuilder(measurer, _metrics, lineHeightStrategy, _blockFormattingContext);
         return builder.TryBuildInlineBlockLayout(inline, availableWidth, out layout);
     }
 
@@ -43,14 +73,10 @@ internal sealed class InlineRunFactory(IFontMetricsProvider metrics)
             return false;
         }
 
-        var font = _metrics.GetFontKey(style);
-        var fontSize = _metrics.GetFontSize(style);
-        run = new TextRunInput(
+        run = CreateRun(
             runId,
             inline,
             string.Empty,
-            font,
-            fontSize,
             style,
             PaddingLeft: 0f,
             PaddingRight: 0f,
@@ -68,15 +94,11 @@ internal sealed class InlineRunFactory(IFontMetricsProvider metrics)
             return false;
         }
 
-        var font = _metrics.GetFontKey(inline.Style);
-        var fontSize = _metrics.GetFontSize(inline.Style);
         var (paddingLeft, paddingRight, marginLeft, marginRight) = GetInlineSpacing(inline);
-        run = new TextRunInput(
+        run = CreateRun(
             runId,
             inline,
             inline.TextContent,
-            font,
-            fontSize,
             inline.Style,
             paddingLeft,
             paddingRight,
@@ -87,6 +109,35 @@ internal sealed class InlineRunFactory(IFontMetricsProvider metrics)
 
     private static bool IsLineBreak(InlineBox inline)
         => string.Equals(inline.Element?.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
+
+    private TextRunInput CreateRun(
+        int runId,
+        InlineBox source,
+        string text,
+        ComputedStyle style,
+        float PaddingLeft,
+        float PaddingRight,
+        float MarginLeft,
+        float MarginRight,
+        TextRunKind Kind = TextRunKind.Normal,
+        InlineObjectLayout? InlineObject = null)
+    {
+        var font = _metrics.GetFontKey(style);
+        var fontSize = _metrics.GetFontSize(style);
+        return new TextRunInput(
+            runId,
+            source,
+            text,
+            font,
+            fontSize,
+            style,
+            PaddingLeft,
+            PaddingRight,
+            MarginLeft,
+            MarginRight,
+            Kind,
+            InlineObject);
+    }
 
     private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(InlineBox inline)
     {

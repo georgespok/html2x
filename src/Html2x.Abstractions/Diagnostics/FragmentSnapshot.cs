@@ -6,6 +6,8 @@ namespace Html2x.Abstractions.Diagnostics;
 
 public sealed class FragmentSnapshot
 {
+    public int SequenceId { get; init; }
+
     public string Kind { get; init; } = string.Empty;
 
     public float X { get; init; }
