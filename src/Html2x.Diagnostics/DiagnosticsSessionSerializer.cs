@@ -69,6 +69,22 @@ public static class DiagnosticsSessionSerializer
                 margin.NextTopMargin,
                 margin.CollapsedTopMargin
             },
+            PaginationTracePayload pagination => new
+            {
+                pagination.Kind,
+                pagination.EventName,
+                pagination.PageNumber,
+                pagination.FragmentId,
+                pagination.FromPage,
+                pagination.ToPage,
+                pagination.LocalY,
+                pagination.RemainingSpace,
+                pagination.RemainingSpaceBefore,
+                pagination.RemainingSpaceAfter,
+                pagination.BlockHeight,
+                pagination.PageContentHeight,
+                pagination.Reason
+            },
             ImageRenderPayload image => new
             {
                 image.Kind,

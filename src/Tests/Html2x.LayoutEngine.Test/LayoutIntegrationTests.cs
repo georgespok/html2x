@@ -453,8 +453,83 @@ public class LayoutIntegrationTests
         lines[1].Rect.Y.ShouldBeGreaterThan(lines[0].Rect.Y);
     }
 
+    [Fact]
+    public async Task Build_WithLongDocument_FlowsBlocksAcrossMultiplePages()
+    {
+        var blocks = Enumerable.Range(1, 14)
+            .Select(static i => $"<div style='height: 120px;'>Block {i}</div>");
+        var html = $"<html><body style='margin: 0;'>{string.Join(string.Empty, blocks)}</body></html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBeGreaterThan(1);
+
+        var renderedBlockLabels = layout.Pages
+            .SelectMany(static page => page.Children.OfType<BlockFragment>())
+            .SelectMany(static block => block.Children.OfType<LineBoxFragment>())
+            .SelectMany(static line => line.Runs)
+            .Select(static run => run.Text.Trim())
+            .Where(static text => text.StartsWith("Block ", StringComparison.Ordinal))
+            .ToList();
+
+        renderedBlockLabels.Count.ShouldBe(14);
+        renderedBlockLabels.ShouldBe(Enumerable.Range(1, 14).Select(static i => $"Block {i}").ToList());
+    }
+
+    [Fact]
+    public async Task Build_WhenSecondBlockDoesNotFit_StartsSecondBlockAtNextPageTop()
+    {
+        // Letter page size is 8.5in x 11in => 612pt x 792pt.
+        // CSS pixel values are converted at 96dpi to points (1px = 0.75pt):
+        // - 860px => 645pt
+        // - 300px => 225pt
+        // Combined flow height is 870pt, which must overflow a Letter content area
+        // once top/bottom margins are applied, so block 2 must move to page 2.
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='height: 860px;'>Block 1</div>
+                <div style='height: 300px;'>Block 2</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.Letter
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBeGreaterThanOrEqualTo(2);
+        layout.Pages[0].Children.Count.ShouldBe(1);
+        layout.Pages[1].Children.Count.ShouldBe(1);
+
+        var first = (BlockFragment)layout.Pages[0].Children[0];
+        var second = (BlockFragment)layout.Pages[1].Children[0];
+        // New-page-top rule: a moved block starts at that page's content top.
+        // We derive this from the produced page margins instead of hard-coding
+        // a margin value so the assertion stays valid if defaults change.
+        var expectedTop = layout.Pages[1].Margins.Top;
+
+        first.Children.OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Any(static run => run.Text.Contains("Block 1", StringComparison.Ordinal))
+            .ShouldBeTrue();
+
+        second.Children.OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Any(static run => run.Text.Contains("Block 2", StringComparison.Ordinal))
+            .ShouldBeTrue();
+
+        second.Rect.Y.ShouldBe(expectedTop, 0.5f);
+    }
+
     
-    //[Fact(Skip = "Disabled while width and height is not implemented")]
     [Fact]
     public async Task LayoutBlockWithPadding_AdjustsContentWidth()
     {

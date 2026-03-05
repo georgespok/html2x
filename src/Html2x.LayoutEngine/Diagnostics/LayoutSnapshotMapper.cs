@@ -54,13 +54,15 @@ public static class LayoutSnapshotMapper
         var pages = new List<LayoutPageSnapshot>(layout.Pages.Count);
         var sequenceId = 0;
 
-        foreach (var page in layout.Pages)
+        for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
+            var page = layout.Pages[pageIndex];
             var fragments = MapFragments(page.Children, ref sequenceId);
+            var pageNumber = page.PageNumber > 0 ? page.PageNumber : pageIndex + 1;
 
             pages.Add(new LayoutPageSnapshot
             {
-                PageNumber = page.PageNumber,
+                PageNumber = pageNumber,
                 PageSize = page.PageSize,
                 Margin = page.Margins,
                 Fragments = fragments
