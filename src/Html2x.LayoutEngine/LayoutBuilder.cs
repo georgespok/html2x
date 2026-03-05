@@ -9,6 +9,7 @@ using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine;
@@ -96,20 +97,40 @@ public class LayoutBuilder
             // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
         });
         
-        var layout = RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments));
+        return RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession));
+    }
+
+    private static HtmlLayout CreateHtmlLayout(
+        LayoutOptions options,
+        Models.BoxTree boxTree,
+        FragmentTree fragments,
+        DiagnosticsSession? diagnosticsSession)
+    {
+        var paginator = new BlockPaginator();
+        var pagination = paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession);
+        return CreateHtmlLayout(pagination);
+    }
+
+    private static HtmlLayout CreateHtmlLayout(PaginationResult pagination)
+    {
+        var layout = new HtmlLayout();
+        foreach (var page in pagination.Pages)
+        {
+            layout.Pages.Add(new LayoutPage(
+                page.PageSize,
+                page.Margins,
+                CreateLayoutPageChildren(page),
+                page.PageNumber));
+        }
 
         return layout;
     }
 
-    private static HtmlLayout CreateHtmlLayout(LayoutOptions options, Models.BoxTree boxTree, FragmentTree fragments)
+    private static IReadOnlyList<Html2x.Abstractions.Layout.Fragments.Fragment> CreateLayoutPageChildren(PageModel page)
     {
-        var newLayout = new HtmlLayout();
-        var pageSize = options.PageSize;
-        var page = new LayoutPage(pageSize,
-            boxTree.Page.Margin,
-            fragments.Blocks);
-        newLayout.Pages.Add(page);
-        return newLayout;
+        return page.Placements
+            .Select(static placement => (Html2x.Abstractions.Layout.Fragments.Fragment)placement.Fragment)
+            .ToList();
     }
 
     private static void PublishEvent(DiagnosticsSession? diagnosticsSession, DiagnosticsEventType eventType, string eventName, string? eventDescription = null) =>
