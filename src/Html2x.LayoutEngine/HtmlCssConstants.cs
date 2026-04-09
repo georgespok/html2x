@@ -22,6 +22,9 @@ public static class HtmlCssConstants
         public const string Span = "span";
         public const string Div = "div";
         public const string Table = "table";
+        public const string Tbody = "tbody";
+        public const string Thead = "thead";
+        public const string Tfoot = "tfoot";
         public const string Tr = "tr";
         public const string Td = "td";
         public const string Th = "th";
@@ -52,6 +55,8 @@ public static class HtmlCssConstants
         public const string Src = "src";
         public const string Width = "width";
         public const string Height = "height";
+        public const string Colspan = "colspan";
+        public const string Rowspan = "rowspan";
     }
 
     /// <summary>
@@ -118,6 +123,9 @@ public static class HtmlCssConstants
         public const string Dashed = "dashed";
         public const string Dotted = "dotted";
         public const string Table = "table";
+        public const string TableRowGroup = "table-row-group";
+        public const string TableHeaderGroup = "table-header-group";
+        public const string TableFooterGroup = "table-footer-group";
         public const string TableRow = "table-row";
         public const string TableCell = "table-cell";
     }

@@ -57,6 +57,15 @@ internal sealed class SkiaFragmentDrawer
     {
         switch (fragment)
         {
+            case TableFragment table:
+                DrawTableFragment(canvas, table);
+                break;
+            case TableRowFragment row:
+                DrawTableRowFragment(canvas, row);
+                break;
+            case TableCellFragment cell:
+                DrawTableCellFragment(canvas, cell);
+                break;
             case BlockFragment block:
                 DrawBlockBackground(canvas, block);
                 DrawBlockBorders(canvas, block);
@@ -77,6 +86,80 @@ internal sealed class SkiaFragmentDrawer
                 break;
             default:
                 throw new NotSupportedException($"Unsupported fragment type: {fragment.GetType().Name}");
+        }
+    }
+
+    private void DrawTableFragment(SKCanvas canvas, TableFragment table)
+    {
+        DrawBlockBackground(canvas, table);
+
+        foreach (var row in table.Rows)
+        {
+            DrawTableRowBackground(canvas, row);
+        }
+
+        foreach (var row in table.Rows)
+        {
+            foreach (var cell in row.Cells)
+            {
+                DrawTableCellBackground(canvas, cell);
+            }
+        }
+
+        DrawBlockBorders(canvas, table);
+
+        foreach (var row in table.Rows)
+        {
+            DrawTableRowBorders(canvas, row);
+        }
+
+        foreach (var row in table.Rows)
+        {
+            foreach (var cell in row.Cells)
+            {
+                DrawTableCellContent(canvas, cell);
+            }
+        }
+    }
+
+    private void DrawTableRowFragment(SKCanvas canvas, TableRowFragment row)
+    {
+        DrawBlockBackground(canvas, row);
+        DrawBlockBorders(canvas, row);
+    }
+
+    private void DrawTableCellFragment(SKCanvas canvas, TableCellFragment cell)
+    {
+        DrawBlockBackground(canvas, cell);
+        DrawBlockBorders(canvas, cell);
+        DrawTableCellContent(canvas, cell);
+    }
+
+    private static void DrawTableRowBackground(SKCanvas canvas, TableRowFragment row)
+    {
+        DrawBlockBackground(canvas, row);
+    }
+
+    private static void DrawTableCellBackground(SKCanvas canvas, TableCellFragment cell)
+    {
+        DrawBlockBackground(canvas, cell);
+    }
+
+    private void DrawTableRowBorders(SKCanvas canvas, TableRowFragment row)
+    {
+        DrawBlockBorders(canvas, row);
+
+        foreach (var cell in row.Cells)
+        {
+            DrawBlockBorders(canvas, cell);
+        }
+    }
+
+    private void DrawTableCellContent(SKCanvas canvas, TableCellFragment cell)
+    {
+        foreach (var child in cell.Children)
+        {
+            DrawFragment(canvas, child);
         }
     }
 

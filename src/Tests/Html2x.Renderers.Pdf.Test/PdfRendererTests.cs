@@ -109,15 +109,13 @@ public class PdfRendererTests
     {
         var layout = new HtmlLayout();
 
-        var block = new BlockFragment
+        var block = new BlockFragment([
+            CreateLineFragment("Edge", 50, 100, 140, 18),
+            CreateLineFragment("Padding", 50, 130, 140, 18)
+        ])
         {
             Rect = new RectangleF(50, 100, 200, 120),
-            Style = new VisualStyle(),
-            Children =
-            {
-                CreateLineFragment("Edge", 50, 100, 140, 18),
-                CreateLineFragment("Padding", 50, 130, 140, 18)
-            }
+            Style = new VisualStyle()
         };
 
         var page = new LayoutPage(

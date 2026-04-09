@@ -5,6 +5,8 @@ using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Diagnostics;
+using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
@@ -172,21 +174,87 @@ public class BlockFlowTests
         var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
 
         var container = (BlockFragment)layout.Pages[0].Children[0];
-        var blockChildren = container.Children.OfType<BlockFragment>().ToList();
-        blockChildren.Count.ShouldBeGreaterThanOrEqualTo(2);
+        var childOrder = container.Children
+            .Select(child => child switch
+            {
+                LineBoxFragment line when line.Runs.Any(run => run.Text.Contains("Inline", StringComparison.OrdinalIgnoreCase)) => "Inline",
+                BlockFragment block when block.Children.OfType<LineBoxFragment>()
+                    .SelectMany(line => line.Runs)
+                    .Any(run => run.Text.Contains("Block", StringComparison.OrdinalIgnoreCase)) => "Block",
+                _ => null
+            })
+            .Where(static label => label is not null)
+            .Cast<string>()
+            .ToList();
 
-        var inlineIndex = blockChildren.FindIndex(b =>
-            b.Children.OfType<LineBoxFragment>()
-                .SelectMany(line => line.Runs)
-                .Any(run => run.Text.Contains("Inline", StringComparison.OrdinalIgnoreCase)));
-        var blockIndex = blockChildren.FindIndex(b =>
-            b.Children.OfType<LineBoxFragment>()
-                .SelectMany(line => line.Runs)
-                .Any(run => run.Text.Contains("Block", StringComparison.OrdinalIgnoreCase)));
+        childOrder.ShouldBe(["Inline", "Block"]);
+    }
 
-        inlineIndex.ShouldBeGreaterThanOrEqualTo(0);
-        blockIndex.ShouldBeGreaterThanOrEqualTo(0);
-        inlineIndex.ShouldBeLessThan(blockIndex);
+    [Fact]
+    public void NormalizeChildrenForBlock_MixedInlineAndInlineBlock_PreservesCanonicalChildSequence()
+    {
+        var row = new BlockBox(DisplayRole.Block)
+        {
+            IsInlineBlockContext = true,
+            Style = new ComputedStyle()
+        };
+
+        row.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = row,
+            TextContent = "Prefix text",
+            Style = new ComputedStyle()
+        });
+
+        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        {
+            Parent = row,
+            Style = new ComputedStyle()
+        };
+
+        var inlineBlockContent = new BlockBox(DisplayRole.Block)
+        {
+            Parent = inlineBlock,
+            IsAnonymous = true,
+            IsInlineBlockContext = true,
+            Style = new ComputedStyle()
+        };
+
+        inlineBlockContent.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = inlineBlockContent,
+            TextContent = "Alpha inline-block",
+            Style = new ComputedStyle()
+        });
+
+        inlineBlock.Children.Add(inlineBlockContent);
+        row.Children.Add(inlineBlock);
+
+        row.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = row,
+            TextContent = "suffix text",
+            Style = new ComputedStyle()
+        });
+
+        BlockFlowNormalization.NormalizeChildrenForBlock(row);
+
+        row.Children.Count.ShouldBe(3);
+
+        var leadingAnonymous = row.Children[0].ShouldBeOfType<BlockBox>();
+        var boundaryBlock = row.Children[1].ShouldBeOfType<InlineBlockBoundaryBox>();
+        var trailingAnonymous = row.Children[2].ShouldBeOfType<BlockBox>();
+
+        leadingAnonymous.IsAnonymous.ShouldBeTrue();
+        boundaryBlock.IsAnonymous.ShouldBeTrue();
+        boundaryBlock.IsInlineBlockContext.ShouldBeTrue();
+        boundaryBlock.SourceInline.ShouldBeSameAs(inlineBlock);
+        boundaryBlock.SourceContentBox.ShouldBeSameAs(inlineBlockContent);
+        trailingAnonymous.IsAnonymous.ShouldBeTrue();
+
+        ExtractInlineText(leadingAnonymous).ShouldBe(["Prefix text"]);
+        ExtractInlineText(boundaryBlock).ShouldBe(["Alpha inline-block"]);
+        ExtractInlineText(trailingAnonymous).ShouldBe(["suffix text"]);
     }
 
     [Fact]
@@ -380,5 +448,15 @@ public class BlockFlowTests
             container.Rect.Height,
             firstLine.Rect.Height,
             secondLine.Rect.Height);
+    }
+
+    private static IReadOnlyList<string> ExtractInlineText(DisplayNode node)
+    {
+        return node.Children
+            .OfType<InlineBox>()
+            .Select(static child => child.TextContent)
+            .Where(static text => !string.IsNullOrWhiteSpace(text))
+            .Select(static text => text!)
+            .ToList();
     }
 }

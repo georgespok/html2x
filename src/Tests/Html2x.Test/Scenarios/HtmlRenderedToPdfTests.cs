@@ -129,6 +129,79 @@ namespace Html2x.Test.Scenarios
             inlineMetrics.LineDeltaY.ShouldBeGreaterThan(0f);
         }
 
+        [Fact]
+        public async Task SharedFormattingInlineBlockCases_ShouldPreserveTextOrderInLayoutSnapshot()
+        {
+            const string html = """
+                <!DOCTYPE html>
+                <html>
+                  <body style='margin:0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                    <div style='width:320pt; margin-bottom: 12pt;'>
+                      Prefix text
+                      <span style='display:inline-block; vertical-align:top; width:190pt; border:1pt solid #222; padding:6pt; margin-right:10pt;'>
+                        Alpha inline-block
+                        <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>First block descendant</div>
+                        <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>
+                          Third block descendant with
+                          <span style='display:inline-block; margin-top:4pt; padding:4pt; border:1pt solid #777;'>
+                            nested inline-block
+                            <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>Nested block descendant A</div>
+                          </span>
+                        </div>
+                      </span>
+                      suffix text
+                    </div>
+                    <div style='width:320pt;'>
+                      text-before
+                      <span style='display:inline-block; vertical-align:top; width:190pt; border:1pt solid #222; padding:6pt; margin-right:10pt;'>
+                        outer-start
+                        <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>block-child-1</div>
+                        <span style='display:inline-block; margin-top:4pt; padding:4pt; border:1pt solid #777;'>
+                          nested-inline-start
+                          <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>nested-block-1</div>
+                          <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>nested-block-2</div>
+                        </span>
+                        <div style='display:block; margin:5pt 0; padding:3pt 4pt; border:1pt dashed #888;'>block-child-2</div>
+                        outer-end
+                      </span>
+                      text-after
+                    </div>
+                  </body>
+                </html>
+                """;
+
+            var converter = new HtmlConverter();
+            var result = await converter.ToPdfAsync(html, DefaultOptions);
+            var page = GetLayoutPageSnapshot(result);
+
+            var orderedTexts = EnumerateText(page.Fragments)
+                .Select(static text => text.Trim())
+                .Where(static text => !string.IsNullOrWhiteSpace(text))
+                .ToList();
+
+            AssertIncreasingOrder(orderedTexts, [
+                "Prefix text",
+                "Alpha inline-block",
+                "First block descendant",
+                "Third block descendant with",
+                "nested inline-block",
+                "Nested block descendant A",
+                "suffix text"
+            ]);
+
+            AssertIncreasingOrder(orderedTexts, [
+                "text-before",
+                "outer-start",
+                "block-child-1",
+                "nested-inline-start",
+                "nested-block-1",
+                "nested-block-2",
+                "block-child-2",
+                "outer-end",
+                "text-after"
+            ]);
+        }
+
         private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
         {
             var endLayoutBuild = result.Diagnostics!.Events.FirstOrDefault(x => x is { Type: DiagnosticsEventType.EndStage, Payload: not null, Name: "LayoutBuild" });
@@ -247,6 +320,20 @@ namespace Html2x.Test.Scenarios
                 {
                     yield return nested;
                 }
+            }
+        }
+
+        private static void AssertIncreasingOrder(IReadOnlyList<string> orderedTexts, IReadOnlyList<string> expectedSequence)
+        {
+            var lastIndex = -1;
+            foreach (var expected in expectedSequence)
+            {
+                var currentIndex = orderedTexts
+                    .Select((text, index) => (text, index))
+                    .First(tuple => string.Equals(tuple.text, expected, StringComparison.Ordinal))
+                    .index;
+                currentIndex.ShouldBeGreaterThan(lastIndex);
+                lastIndex = currentIndex;
             }
         }
     }

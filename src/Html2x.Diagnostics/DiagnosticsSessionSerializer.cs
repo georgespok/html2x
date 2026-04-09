@@ -69,6 +69,25 @@ public static class DiagnosticsSessionSerializer
                 margin.NextTopMargin,
                 margin.CollapsedTopMargin
             },
+            TableLayoutPayload table => new
+            {
+                table.Kind,
+                table.NodePath,
+                table.RowCount,
+                table.DerivedColumnCount,
+                table.RequestedWidth,
+                table.ResolvedWidth,
+                table.Outcome,
+                table.Reason
+            },
+            UnsupportedStructurePayload unsupported => new
+            {
+                unsupported.Kind,
+                unsupported.NodePath,
+                unsupported.StructureKind,
+                unsupported.Reason,
+                unsupported.FormattingContext
+            },
             PaginationTracePayload pagination => new
             {
                 pagination.Kind,

@@ -2,7 +2,7 @@
 
 namespace Html2x.LayoutEngine.Models;
 
-public sealed class BlockBox(DisplayRole role) : DisplayNode(role)
+public class BlockBox(DisplayRole role) : DisplayNode(role)
 {
     public float X { get; set; }
     public float Y { get; set; }

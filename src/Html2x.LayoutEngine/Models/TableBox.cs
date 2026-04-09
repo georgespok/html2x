@@ -1,3 +1,6 @@
-﻿namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Models;
 
-public sealed class TableBox(DisplayRole role) : DisplayNode(role);
+public sealed class TableBox(DisplayRole role) : BlockBox(role)
+{
+    public int DerivedColumnCount { get; set; } = -1;
+}

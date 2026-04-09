@@ -8,6 +8,7 @@ public enum DisplayRole
     ListItem,
     Float,
     Table,
+    TableSection,
     TableRow,
     TableCell
 }

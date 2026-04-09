@@ -25,7 +25,7 @@ public static class LayoutSnapshotMapper
             {
                 var payload = new UnsupportedStructurePayload
                 {
-                    NodePath = BuildNodePath(unsupportedNode),
+                    NodePath = DisplayNodePathBuilder.Build(unsupportedNode),
                     StructureKind = unsupportedNode.Role.ToString(),
                     Reason = "Unsupported structure encountered inside inline-block formatting context.",
                     FormattingContext = FormattingContextKind.InlineBlock
@@ -93,11 +93,75 @@ public static class LayoutSnapshotMapper
     {
         return fragment switch
         {
+            TableFragment table => MapTable(table, ref sequenceId),
+            TableRowFragment row => MapTableRow(row, ref sequenceId),
+            TableCellFragment cell => MapTableCell(cell, ref sequenceId),
             LineBoxFragment line => MapLineBox(line, NextSequenceId(ref sequenceId)),
             BlockFragment block => MapBlock(block, ref sequenceId),
             ImageFragment image => MapImage(image, NextSequenceId(ref sequenceId)),
             RuleFragment rule => MapRule(rule, NextSequenceId(ref sequenceId)),
             _ => MapUnknown(fragment, NextSequenceId(ref sequenceId))
+        };
+    }
+
+    private static FragmentSnapshot MapTable(TableFragment table, ref int sequenceId)
+    {
+        var fragmentSequenceId = NextSequenceId(ref sequenceId);
+        var children = MapFragments(table.Rows, ref sequenceId);
+
+        return new FragmentSnapshot
+        {
+            SequenceId = fragmentSequenceId,
+            Kind = "table",
+            X = table.Rect.X,
+            Y = table.Rect.Y,
+            Size = table.Size,
+            DisplayRole = table.DisplayRole,
+            FormattingContext = table.FormattingContext,
+            MarkerOffset = table.MarkerOffset,
+            DerivedColumnCount = table.DerivedColumnCount,
+            Children = children
+        };
+    }
+
+    private static FragmentSnapshot MapTableRow(TableRowFragment row, ref int sequenceId)
+    {
+        var fragmentSequenceId = NextSequenceId(ref sequenceId);
+        var children = MapFragments(row.Cells, ref sequenceId);
+
+        return new FragmentSnapshot
+        {
+            SequenceId = fragmentSequenceId,
+            Kind = "table-row",
+            X = row.Rect.X,
+            Y = row.Rect.Y,
+            Size = row.Size,
+            DisplayRole = row.DisplayRole,
+            FormattingContext = row.FormattingContext,
+            MarkerOffset = row.MarkerOffset,
+            RowIndex = row.RowIndex,
+            Children = children
+        };
+    }
+
+    private static FragmentSnapshot MapTableCell(TableCellFragment cell, ref int sequenceId)
+    {
+        var fragmentSequenceId = NextSequenceId(ref sequenceId);
+        var children = MapFragments(cell.Children, ref sequenceId);
+
+        return new FragmentSnapshot
+        {
+            SequenceId = fragmentSequenceId,
+            Kind = "table-cell",
+            X = cell.Rect.X,
+            Y = cell.Rect.Y,
+            Size = cell.Size,
+            DisplayRole = cell.DisplayRole,
+            FormattingContext = cell.FormattingContext,
+            MarkerOffset = cell.MarkerOffset,
+            ColumnIndex = cell.ColumnIndex,
+            IsHeader = cell.IsHeader,
+            Children = children
         };
     }
 
@@ -207,21 +271,6 @@ public static class LayoutSnapshotMapper
 
         unsupportedNode = null!;
         return false;
-    }
-
-    private static string BuildNodePath(DisplayNode node)
-    {
-        var segments = new Stack<string>();
-        DisplayNode? current = node;
-
-        while (current is not null)
-        {
-            var tag = current.Element?.TagName?.ToLowerInvariant() ?? current.Role.ToString().ToLowerInvariant();
-            segments.Push(tag);
-            current = current.Parent;
-        }
-
-        return string.Join("/", segments);
     }
 
     private static int NextSequenceId(ref int sequenceId)

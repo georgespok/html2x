@@ -1,4 +1,5 @@
 using AngleSharp;
+using System.Drawing;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
@@ -83,17 +84,17 @@ public class FragmentBuilderTests
         // Assert: One top-level BlockFragment for div
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
-        // Div fragment should have BlockFragment for paragraph AND LineBoxFragment for span text
+        // Div fragment should preserve normalized child order: inline content before the paragraph block.
         AssertFragment(divFragment).HasChildCount(2);
 
-        var pFragment = divFragment.Children[0].ShouldBeOfType<BlockFragment>();
+        var spanLine = divFragment.Children[0].ShouldBeOfType<LineBoxFragment>();
+        spanLine.Runs.Count.ShouldBe(1);
+        spanLine.Runs[0].Text.ShouldBe("Span inside Div");
+
+        var pFragment = divFragment.Children[1].ShouldBeOfType<BlockFragment>();
         var pLine = AssertFragment(pFragment).HasChildCount(1).GetChild<LineBoxFragment>(0);
         pLine.Runs.Count.ShouldBe(1);
         pLine.Runs[0].Text.ShouldBe("Paragraph inside Div");
-
-        var spanLine = divFragment.Children[1].ShouldBeOfType<LineBoxFragment>();
-        spanLine.Runs.Count.ShouldBe(1);
-        spanLine.Runs[0].Text.ShouldBe("Span inside Div");
     }
 
     [Fact]
@@ -119,23 +120,21 @@ public class FragmentBuilderTests
         // Assert: One top-level BlockFragment
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
-        // Outer div has p BlockFragment + span LineBoxFragment
+        // Outer div preserves normalized child order: outer inline content before the nested block.
         AssertFragment(divFragment).HasChildCount(2);
 
-        // P fragment has nested div BlockFragment + text LineBoxFragment
-        var pFragment = divFragment.Children[0].ShouldBeOfType<BlockFragment>();
+        var outerSpanLine = divFragment.Children[0].ShouldBeOfType<LineBoxFragment>();
+        outerSpanLine.Runs[0].Text.ShouldBe("Span inside Div");
+
+        var pFragment = divFragment.Children[1].ShouldBeOfType<BlockFragment>();
         AssertFragment(pFragment).HasChildCount(2);
 
-        var nestedDivFragment = pFragment.Children[0].ShouldBeOfType<BlockFragment>();
-        var nestedSpanLine = AssertFragment(nestedDivFragment).HasChildCount(1).GetChild<LineBoxFragment>(0);
-        nestedSpanLine.Runs[0].Text.ShouldBe("Nested Span inside nested Div");
-
-        var pTextLine = pFragment.Children[1].ShouldBeOfType<LineBoxFragment>();
+        var pTextLine = pFragment.Children[0].ShouldBeOfType<LineBoxFragment>();
         pTextLine.Runs[0].Text.ShouldBe("Paragraph inside Div");
 
-        // Outer span
-        var outerSpanLine = divFragment.Children[1].ShouldBeOfType<LineBoxFragment>();
-        outerSpanLine.Runs[0].Text.ShouldBe("Span inside Div");
+        var nestedDivFragment = pFragment.Children[1].ShouldBeOfType<BlockFragment>();
+        var nestedSpanLine = AssertFragment(nestedDivFragment).HasChildCount(1).GetChild<LineBoxFragment>(0);
+        nestedSpanLine.Runs[0].Text.ShouldBe("Nested Span inside nested Div");
     }
 
     [Fact]
@@ -240,6 +239,152 @@ public class FragmentBuilderTests
     }
 
     [Fact]
+    public void Build_WithTableStructure_EmitsSpecializedTableFragmentsAndPreservesCellText()
+    {
+        var table = new TableBox(DisplayRole.Table)
+        {
+            X = 10,
+            Y = 20,
+            Width = 200,
+            Height = 60,
+            Style = new ComputedStyle()
+        };
+
+        var row = new TableRowBox(DisplayRole.TableRow)
+        {
+            Parent = table,
+            X = 10,
+            Y = 20,
+            Width = 200,
+            Height = 30,
+            Style = new ComputedStyle()
+        };
+
+        var headerCell = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = row,
+            Element = CreateElement("th"),
+            X = 10,
+            Y = 20,
+            Width = 100,
+            Height = 30,
+            Style = new ComputedStyle()
+        };
+        headerCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = headerCell,
+            TextContent = "A",
+            Style = new ComputedStyle()
+        });
+
+        var dataCell = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = row,
+            Element = CreateElement("td"),
+            X = 110,
+            Y = 20,
+            Width = 100,
+            Height = 30,
+            Style = new ComputedStyle()
+        };
+        dataCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = dataCell,
+            TextContent = "B",
+            Style = new ComputedStyle()
+        });
+
+        row.Children.Add(headerCell);
+        row.Children.Add(dataCell);
+        table.Children.Add(row);
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(table);
+
+        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var tableFragment = fragments.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
+        tableFragment.DerivedColumnCount.ShouldBe(2);
+
+        var rowFragment = tableFragment.Rows.ShouldHaveSingleItem();
+        rowFragment.RowIndex.ShouldBe(0);
+
+        var renderedHeaderCell = rowFragment.Cells[0];
+        renderedHeaderCell.ColumnIndex.ShouldBe(0);
+        renderedHeaderCell.IsHeader.ShouldBeTrue();
+        renderedHeaderCell.Children
+            .OfType<LineBoxFragment>()
+            .Any(line => line.Runs.Any(run => run.Text == "A"))
+            .ShouldBeTrue();
+
+        var renderedDataCell = rowFragment.Cells[1];
+        renderedDataCell.ColumnIndex.ShouldBe(1);
+        renderedDataCell.IsHeader.ShouldBeFalse();
+        renderedDataCell.Children
+            .OfType<LineBoxFragment>()
+            .Any(line => line.Runs.Any(run => run.Text == "B"))
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Build_WithHeaderRowFollowedByBodyRow_PreservesTableHierarchyOrderAndHeaderMetadata()
+    {
+        var table = new TableBox(DisplayRole.Table)
+        {
+            X = 10,
+            Y = 20,
+            Width = 200,
+            Height = 60,
+            DerivedColumnCount = 2,
+            Style = new ComputedStyle()
+        };
+
+        var headerRow = new TableRowBox(DisplayRole.TableRow)
+        {
+            Parent = table,
+            X = 10,
+            Y = 20,
+            Width = 200,
+            Height = 30,
+            RowIndex = 0,
+            Style = new ComputedStyle()
+        };
+        headerRow.Children.Add(CreateTableCell(headerRow, "th", "Name", columnIndex: 0, isHeader: true, x: 10, y: 20));
+        headerRow.Children.Add(CreateTableCell(headerRow, "th", "Status", columnIndex: 1, isHeader: true, x: 110, y: 20));
+
+        var bodyRow = new TableRowBox(DisplayRole.TableRow)
+        {
+            Parent = table,
+            X = 10,
+            Y = 50,
+            Width = 200,
+            Height = 30,
+            RowIndex = 1,
+            Style = new ComputedStyle()
+        };
+        bodyRow.Children.Add(CreateTableCell(bodyRow, "td", "Alpha", columnIndex: 0, isHeader: false, x: 10, y: 50));
+        bodyRow.Children.Add(CreateTableCell(bodyRow, "td", "Ready", columnIndex: 1, isHeader: false, x: 110, y: 50));
+
+        table.Children.Add(headerRow);
+        table.Children.Add(bodyRow);
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(table);
+
+        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var tableFragment = fragments.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
+
+        tableFragment.DerivedColumnCount.ShouldBe(2);
+        tableFragment.Rows.Count.ShouldBe(2);
+        tableFragment.Rows[0].RowIndex.ShouldBe(0);
+        tableFragment.Rows[1].RowIndex.ShouldBe(1);
+        tableFragment.Rows[0].Cells.Select(cell => cell.ColumnIndex).ShouldBe([0, 1]);
+        tableFragment.Rows[1].Cells.Select(cell => cell.ColumnIndex).ShouldBe([0, 1]);
+        tableFragment.Rows[0].Cells.All(static cell => cell.IsHeader).ShouldBeTrue();
+        tableFragment.Rows[1].Cells.All(static cell => !cell.IsHeader).ShouldBeTrue();
+        EnumerateTextRuns(tableFragment).ShouldBe(["Name", "Status", "Alpha", "Ready"]);
+    }
+
+    [Fact]
     public void LayoutSnapshotPayload_RepeatedRuns_PreservesTraversalOrderAndSequenceIds()
     {
         var runs = new List<IReadOnlyList<string>>();
@@ -270,6 +415,73 @@ public class FragmentBuilderTests
         sequenceRuns[1].ShouldBe(sequenceRuns[0]);
         sequenceRuns[2].ShouldBe(sequenceRuns[0]);
         sequenceRuns[0].ShouldBe(Enumerable.Range(1, sequenceRuns[0].Count).ToList());
+    }
+
+    [Fact]
+    public void LayoutSnapshotMapper_WithTableFragments_PreservesTableSpecificMetadata()
+    {
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(
+            PaperSizes.A4,
+            new Spacing(),
+            [
+                new TableFragment([
+                    new TableRowFragment([
+                        new TableCellFragment([
+                            new LineBoxFragment
+                            {
+                                Rect = new RectangleF(14f, 18f, 20f, 10f),
+                                Runs = []
+                            }
+                        ])
+                        {
+                            Rect = new RectangleF(10f, 12f, 80f, 28f),
+                            DisplayRole = FragmentDisplayRole.TableCell,
+                            ColumnIndex = 0,
+                            IsHeader = true
+                        },
+                        new TableCellFragment
+                        {
+                            Rect = new RectangleF(90f, 12f, 80f, 28f),
+                            DisplayRole = FragmentDisplayRole.TableCell,
+                            ColumnIndex = 1,
+                            IsHeader = false
+                        }
+                    ])
+                    {
+                        Rect = new RectangleF(10f, 12f, 160f, 28f),
+                        DisplayRole = FragmentDisplayRole.TableRow,
+                        RowIndex = 0
+                    },
+                    new TableRowFragment
+                    {
+                        Rect = new RectangleF(10f, 40f, 160f, 28f),
+                        DisplayRole = FragmentDisplayRole.TableRow,
+                        RowIndex = 1
+                    }
+                ])
+                {
+                    Rect = new RectangleF(10f, 12f, 160f, 56f),
+                    DisplayRole = FragmentDisplayRole.Table,
+                    DerivedColumnCount = 2
+                }
+            ]));
+
+        var snapshot = LayoutSnapshotMapper.From(layout);
+        var table = snapshot.Pages[0].Fragments.ShouldHaveSingleItem();
+
+        table.Kind.ShouldBe("table");
+        table.DerivedColumnCount.ShouldBe(2);
+        table.Children.Count.ShouldBe(2);
+        table.Children[0].Kind.ShouldBe("table-row");
+        table.Children[0].RowIndex.ShouldBe(0);
+        table.Children[0].Children.Count.ShouldBe(2);
+        table.Children[0].Children[0].Kind.ShouldBe("table-cell");
+        table.Children[0].Children[0].ColumnIndex.ShouldBe(0);
+        table.Children[0].Children[0].IsHeader.ShouldBe(true);
+        table.Children[0].Children[1].ColumnIndex.ShouldBe(1);
+        table.Children[0].Children[1].IsHeader.ShouldBe(false);
+        table.Children[1].RowIndex.ShouldBe(1);
     }
 
     // Helpers
@@ -326,6 +538,37 @@ public class FragmentBuilderTests
         {
             run.Origin.Y.ShouldBe(line.BaselineY, 0.01);
         }
+    }
+
+    private static TableCellBox CreateTableCell(
+        TableRowBox parent,
+        string tagName,
+        string text,
+        int columnIndex,
+        bool isHeader,
+        float x,
+        float y)
+    {
+        var cell = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = parent,
+            Element = CreateElement(tagName),
+            X = x,
+            Y = y,
+            Width = 100,
+            Height = 30,
+            ColumnIndex = columnIndex,
+            IsHeader = isHeader,
+            Style = new ComputedStyle()
+        };
+        cell.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = cell,
+            TextContent = text,
+            Style = new ComputedStyle()
+        });
+
+        return cell;
     }
 
     private static IEnumerable<string> EnumerateTextRuns(CoreFragment fragment)

@@ -12,6 +12,9 @@ internal static class DisplayRoleMap
             [HtmlCssConstants.CssValues.InlineBlock] = DisplayRole.InlineBlock,
             [HtmlCssConstants.CssValues.ListItem] = DisplayRole.ListItem,
             [HtmlCssConstants.CssValues.Table] = DisplayRole.Table,
+            [HtmlCssConstants.CssValues.TableRowGroup] = DisplayRole.TableSection,
+            [HtmlCssConstants.CssValues.TableHeaderGroup] = DisplayRole.TableSection,
+            [HtmlCssConstants.CssValues.TableFooterGroup] = DisplayRole.TableSection,
             [HtmlCssConstants.CssValues.TableRow] = DisplayRole.TableRow,
             [HtmlCssConstants.CssValues.TableCell] = DisplayRole.TableCell
         };
@@ -29,6 +32,9 @@ internal static class DisplayRoleMap
         [HtmlCssConstants.HtmlTags.Ol] = DisplayRole.Block,
         [HtmlCssConstants.HtmlTags.Li] = DisplayRole.ListItem,
         [HtmlCssConstants.HtmlTags.Table] = DisplayRole.Table,
+        [HtmlCssConstants.HtmlTags.Tbody] = DisplayRole.TableSection,
+        [HtmlCssConstants.HtmlTags.Thead] = DisplayRole.TableSection,
+        [HtmlCssConstants.HtmlTags.Tfoot] = DisplayRole.TableSection,
         [HtmlCssConstants.HtmlTags.Tr] = DisplayRole.TableRow,
         [HtmlCssConstants.HtmlTags.Td] = DisplayRole.TableCell,
         [HtmlCssConstants.HtmlTags.Th] = DisplayRole.TableCell,

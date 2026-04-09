@@ -8,23 +8,19 @@ internal static class FragmentCoordinateTranslator
 {
     private static readonly OffsetCloneVisitor Visitor = new();
 
+    internal static LayoutFragment CloneWithPlacement(LayoutFragment source, int pageNumber, float x, float y)
+    {
+        var deltaX = x - source.Rect.X;
+        var deltaY = y - source.Rect.Y;
+        return Visitor.Visit(source, pageNumber, deltaX, deltaY);
+    }
+
     internal static BlockFragment CloneBlockWithPlacement(BlockFragment source, int pageNumber, float x, float y)
     {
         var deltaX = x - source.Rect.X;
         var deltaY = y - source.Rect.Y;
 
-        return new BlockFragment
-        {
-            FragmentId = source.FragmentId,
-            PageNumber = pageNumber,
-            Rect = new RectangleF(x, y, source.Rect.Width, source.Rect.Height),
-            ZOrder = source.ZOrder,
-            Style = source.Style,
-            Children = source.Children.Select(child => Visitor.Visit(child, pageNumber, deltaX, deltaY)).ToList(),
-            DisplayRole = source.DisplayRole,
-            FormattingContext = source.FormattingContext,
-            MarkerOffset = source.MarkerOffset
-        };
+        return (BlockFragment)Visitor.Visit(source, pageNumber, deltaX, deltaY);
     }
 
     internal static void RegisterExtensionTranslator<TFragment>(
@@ -46,6 +42,12 @@ internal static class FragmentCoordinateTranslator
             {
                 [typeof(BlockFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
                     CloneNestedBlockWithOffset((BlockFragment)fragment, pageNumber, deltaX, deltaY),
+                [typeof(TableFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
+                    CloneTableWithOffset((TableFragment)fragment, pageNumber, deltaX, deltaY),
+                [typeof(TableRowFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
+                    CloneTableRowWithOffset((TableRowFragment)fragment, pageNumber, deltaX, deltaY),
+                [typeof(TableCellFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
+                    CloneTableCellWithOffset((TableCellFragment)fragment, pageNumber, deltaX, deltaY),
                 [typeof(LineBoxFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
                     CloneLineWithOffset((LineBoxFragment)fragment, pageNumber, deltaX, deltaY),
                 [typeof(ImageFragment)] = static (fragment, pageNumber, deltaX, deltaY) =>
@@ -108,17 +110,75 @@ internal static class FragmentCoordinateTranslator
 
     private static BlockFragment CloneNestedBlockWithOffset(BlockFragment source, int pageNumber, float deltaX, float deltaY)
     {
-        return new BlockFragment
+        return new BlockFragment(
+            source.Children.Select(child => Visitor.Visit(child, pageNumber, deltaX, deltaY)).ToList())
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
             Rect = OffsetRect(source.Rect, deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
-            Children = source.Children.Select(child => Visitor.Visit(child, pageNumber, deltaX, deltaY)).ToList(),
             DisplayRole = source.DisplayRole,
             FormattingContext = source.FormattingContext,
             MarkerOffset = source.MarkerOffset
+        };
+    }
+
+    private static TableFragment CloneTableWithOffset(TableFragment source, int pageNumber, float deltaX, float deltaY)
+    {
+        return new TableFragment(
+            source.Rows
+                .Select(row => CloneTableRowWithOffset(row, pageNumber, deltaX, deltaY))
+                .ToList())
+        {
+            FragmentId = source.FragmentId,
+            PageNumber = pageNumber,
+            Rect = OffsetRect(source.Rect, deltaX, deltaY),
+            ZOrder = source.ZOrder,
+            Style = source.Style,
+            DisplayRole = source.DisplayRole,
+            FormattingContext = source.FormattingContext,
+            MarkerOffset = source.MarkerOffset,
+            DerivedColumnCount = source.DerivedColumnCount
+        };
+    }
+
+    private static TableRowFragment CloneTableRowWithOffset(TableRowFragment source, int pageNumber, float deltaX, float deltaY)
+    {
+        return new TableRowFragment(
+            source.Cells
+                .Select(cell => CloneTableCellWithOffset(cell, pageNumber, deltaX, deltaY))
+                .ToList())
+        {
+            FragmentId = source.FragmentId,
+            PageNumber = pageNumber,
+            Rect = OffsetRect(source.Rect, deltaX, deltaY),
+            ZOrder = source.ZOrder,
+            Style = source.Style,
+            DisplayRole = source.DisplayRole,
+            FormattingContext = source.FormattingContext,
+            MarkerOffset = source.MarkerOffset,
+            RowIndex = source.RowIndex
+        };
+    }
+
+    private static TableCellFragment CloneTableCellWithOffset(TableCellFragment source, int pageNumber, float deltaX, float deltaY)
+    {
+        return new TableCellFragment(
+            source.Children
+                .Select(child => Visitor.Visit(child, pageNumber, deltaX, deltaY))
+                .ToList())
+        {
+            FragmentId = source.FragmentId,
+            PageNumber = pageNumber,
+            Rect = OffsetRect(source.Rect, deltaX, deltaY),
+            ZOrder = source.ZOrder,
+            Style = source.Style,
+            DisplayRole = source.DisplayRole,
+            FormattingContext = source.FormattingContext,
+            MarkerOffset = source.MarkerOffset,
+            ColumnIndex = source.ColumnIndex,
+            IsHeader = source.IsHeader
         };
     }
 

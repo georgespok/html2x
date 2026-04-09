@@ -4,7 +4,7 @@ namespace Html2x.Abstractions.Diagnostics;
 
 public sealed class UnsupportedStructurePayload : IDiagnosticsPayload
 {
-    public string Kind => "layout.inline-block.unsupported-structure";
+    public string Kind => "layout.unsupported-structure";
 
     public string NodePath { get; init; } = string.Empty;
 

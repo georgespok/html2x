@@ -96,6 +96,35 @@ public class LayoutBuilderTests
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
 
+    [Fact]
+    public async Task Build_WithDiagnosticsSession_PublishesStageEvents()
+    {
+        const string html = "<p>ignored by unit test</p>";
+
+        var document = new Mock<IDocument>().Object;
+        var styleTree = new StyleTree();
+        var boxTree = new BoxTree();
+        var fragmentTree = new FragmentTree();
+        fragmentTree.Blocks.Add(new BlockFragment());
+
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
+        _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
+        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+
+        var diagnosticsSession = new DiagnosticsSession();
+
+        await _builder.BuildAsync(html, new LayoutOptions(), diagnosticsSession);
+
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/dom");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/style");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/layout");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/layout-validation");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/inline-measurement");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/fragmentation");
+        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/pagination");
+    }
+
     
 }
 

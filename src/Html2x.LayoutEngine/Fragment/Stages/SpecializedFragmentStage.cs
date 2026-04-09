@@ -46,7 +46,7 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
 
             if (fragment is not null)
             {
-                blockFragment.Children.Add(fragment);
+                blockFragment.AddChild(fragment);
                 NotifySpecial(child, fragment, observers);
             }
 

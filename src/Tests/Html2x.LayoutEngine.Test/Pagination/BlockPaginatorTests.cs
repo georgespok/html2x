@@ -356,11 +356,10 @@ public sealed class BlockPaginatorTests
             ]
         };
 
-        return new BlockFragment
+        return new BlockFragment([line])
         {
             FragmentId = id,
-            Rect = new RectangleF(0f, y, width, height),
-            Children = [line]
+            Rect = new RectangleF(0f, y, width, height)
         };
     }
 }

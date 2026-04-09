@@ -128,6 +128,82 @@ public class InlineFragmentStageTests
     }
 
     [Fact]
+    public void InlineObjectBetweenTextRuns_IsEmittedInOrderWithoutDeferredAppend()
+    {
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 400,
+            Height = 120,
+            Style = new ComputedStyle { FontSizePt = 12 }
+        };
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = root,
+            TextContent = "before",
+            Style = root.Style
+        });
+
+        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        {
+            Parent = root,
+            Style = new ComputedStyle { Padding = new Spacing(2, 2, 2, 2) }
+        };
+
+        var inlineBlockContent = new BlockBox(DisplayRole.Block)
+        {
+            Parent = inlineBlock,
+            IsAnonymous = true,
+            IsInlineBlockContext = true,
+            Width = 80,
+            Height = 20,
+            Style = new ComputedStyle { Padding = new Spacing(2, 2, 2, 2), FontSizePt = 12 }
+        };
+        inlineBlockContent.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = inlineBlockContent,
+            TextContent = "inner",
+            Style = inlineBlockContent.Style
+        });
+
+        inlineBlock.Children.Add(inlineBlockContent);
+        root.Children.Add(inlineBlock);
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = root,
+            TextContent = "after",
+            Style = root.Style
+        });
+
+        var boxTree = new BoxTree();
+        boxTree.Blocks.Add(root);
+
+        var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        var state = new FragmentBuildState(boxTree, context);
+
+        state = new BlockFragmentStage().Execute(state);
+        state = new InlineFragmentStage().Execute(state);
+
+        var fragment = state.Fragments.Blocks.ShouldHaveSingleItem();
+        fragment.Children.Count.ShouldBe(3);
+
+        var before = fragment.Children[0].ShouldBeOfType<LineBoxFragment>();
+        var emittedInlineObject = fragment.Children[1].ShouldBeOfType<BlockFragment>();
+        var after = fragment.Children[2].ShouldBeOfType<LineBoxFragment>();
+
+        before.Runs.Select(static run => run.Text).ShouldBe(["before"]);
+        emittedInlineObject.Children
+            .OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Select(static run => run.Text)
+            .ShouldContain("inner");
+        after.Runs.Select(static run => run.Text).ShouldBe(["after"]);
+    }
+
+    [Fact]
     public void ListItemFallback_ForOrderedList_UsesSiblingOrdinalMarker()
     {
         var root = new BlockBox(DisplayRole.Block)

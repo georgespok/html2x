@@ -265,6 +265,68 @@ public class DisplayTreeBuilderTests
         olBlock.Children[2].Children[1].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("Third");
     }
 
+    [Fact]
+    public async Task Build_WithTableSection_ShouldPreserveSectionRole()
+    {
+        const string html = "<html><body><table><tbody><tr><td>Cell</td></tr></tbody></table></body></html>";
+        var document = await ParseHtml(html);
+        var table = document.QuerySelector("table")!;
+        var tbody = document.QuerySelector("tbody")!;
+        var tr = document.QuerySelector("tr")!;
+        var td = document.QuerySelector("td")!;
+
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = table,
+                        Style = new ComputedStyle(),
+                        Children =
+                        {
+                            new StyleNode
+                            {
+                                Element = tbody,
+                                Style = new ComputedStyle(),
+                                Children =
+                                {
+                                    new StyleNode
+                                    {
+                                        Element = tr,
+                                        Style = new ComputedStyle(),
+                                        Children =
+                                        {
+                                            new StyleNode
+                                            {
+                                                Element = td,
+                                                Style = new ComputedStyle()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var builder = new DisplayTreeBuilder();
+
+        var root = builder.Build(styleTree);
+
+        var tableBox = root.Children[0].ShouldBeOfType<TableBox>();
+        var sectionBox = tableBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableSectionBox>();
+        sectionBox.Element.ShouldBe(tbody);
+        sectionBox.Role.ShouldBe(DisplayRole.TableSection);
+        sectionBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>().Element.ShouldBe(tr);
+    }
+
     private static async Task<IDocument> ParseHtml(string html)
     {
         return await BrowsingContext.New(Configuration.Default)

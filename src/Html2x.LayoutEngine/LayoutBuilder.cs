@@ -75,12 +75,12 @@ public class LayoutBuilder
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options);
 
-        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html, options));
+        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html, options), diagnosticsSession);
         
-        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom));
+        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom), diagnosticsSession);
 
-        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree, diagnosticsSession));
-        RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession));
+        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree, diagnosticsSession), diagnosticsSession);
+        RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession), diagnosticsSession);
         
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(
             boxTree,
@@ -90,14 +90,14 @@ public class LayoutBuilder
                 options.MaxImageSizeBytes,
                 _textMeasurer,
                 _fontSource,
-                _blockFormattingContext)));
+                _blockFormattingContext)), diagnosticsSession);
 
         RunStage("stage/fragmentation", () =>
         {
             // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
-        });
+        }, diagnosticsSession);
         
-        return RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession));
+        return RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession), diagnosticsSession);
     }
 
     private static HtmlLayout CreateHtmlLayout(

@@ -32,5 +32,13 @@ public sealed class FragmentSnapshot
 
     public float? MarkerOffset { get; init; }
 
+    public int? DerivedColumnCount { get; init; }
+
+    public int? RowIndex { get; init; }
+
+    public int? ColumnIndex { get; init; }
+
+    public bool? IsHeader { get; init; }
+
     public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
 }

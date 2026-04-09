@@ -30,10 +30,15 @@ public class BoxTreeBuilder : IBoxTreeBuilder
     {
         var displayTreeBuilder = new DisplayTreeBuilder();
         var displayRoot = displayTreeBuilder.Build(styles);
+        var inlineEngine = new InlineLayoutEngine(
+            new FontMetricsProvider(),
+            _textMeasurer,
+            new DefaultLineHeightStrategy(),
+            _blockFormattingContext);
 
         var blockEngine = new BlockLayoutEngine(
-            new InlineLayoutEngine(new FontMetricsProvider(), _textMeasurer, new DefaultLineHeightStrategy(), _blockFormattingContext),
-            new TableLayoutEngine(),
+            inlineEngine,
+            new TableLayoutEngine(inlineEngine),
             new FloatLayoutEngine(),
             _blockFormattingContext,
             diagnosticsSession);

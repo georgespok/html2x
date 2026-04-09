@@ -21,6 +21,10 @@ internal static class BlockFlowNormalization
             return;
         }
 
+        // Invariant: the normalized child sequence becomes the canonical sibling order for later stages.
+        // Fragment construction must emit children in this same order without reordering.
+        // For mixed inline text around an inline-block boundary, the expected sequence is:
+        // anonymous inline-text block, explicit inline-block boundary placeholder, anonymous trailing inline-text block.
         // Inline and block children cannot coexist directly; wrap inline sequences in anonymous blocks.
         var normalized = new List<DisplayNode>(parent.Children.Count);
         var inlineBuffer = new List<InlineBox>();
@@ -80,7 +84,7 @@ internal static class BlockFlowNormalization
             return false;
         }
 
-        boundaryNode = CloneNode(inlineBlockContent, parent);
+        boundaryNode = CreateInlineBlockBoundaryNode(parent, inlineBlock, inlineBlockContent);
         return true;
     }
 
@@ -92,7 +96,7 @@ internal static class BlockFlowNormalization
         }
 
         // Inline nodes that already carry block-level descendants must act as block boundaries.
-        return !inline.Children.Any(static child => child is BlockBox or TableBox);
+        return !inline.Children.Any(static child => child is BlockBox);
     }
 
     private static BlockBox CreateAnonymousBlock(DisplayNode parent, List<InlineBox> inlines)
@@ -115,16 +119,104 @@ internal static class BlockFlowNormalization
         return anon;
     }
 
+    private static InlineBlockBoundaryBox CreateInlineBlockBoundaryNode(
+        DisplayNode parent,
+        InlineBox sourceInline,
+        BlockBox sourceContentBox)
+    {
+        var boundary = new InlineBlockBoundaryBox(sourceInline, sourceContentBox)
+        {
+            Element = sourceContentBox.Element,
+            Style = sourceContentBox.Style,
+            Parent = parent,
+            IsAnonymous = sourceContentBox.IsAnonymous,
+            TextAlign = sourceContentBox.TextAlign,
+            MarkerOffset = sourceContentBox.MarkerOffset,
+            IsInlineBlockContext = sourceContentBox.IsInlineBlockContext
+        };
+
+        foreach (var child in sourceContentBox.Children)
+        {
+            boundary.Children.Add(CloneNode(child, boundary));
+        }
+
+        return boundary;
+    }
+
     private static DisplayNode CloneNode(DisplayNode source, DisplayNode parent)
     {
         DisplayNode clone = source switch
         {
+            InlineBlockBoundaryBox boundary => new InlineBlockBoundaryBox(boundary.SourceInline, boundary.SourceContentBox)
+            {
+                Element = boundary.Element,
+                Style = boundary.Style,
+                Parent = parent,
+                IsAnonymous = boundary.IsAnonymous,
+                TextAlign = boundary.TextAlign,
+                MarkerOffset = boundary.MarkerOffset,
+                IsInlineBlockContext = boundary.IsInlineBlockContext
+            },
             InlineBox inline => new InlineBox(inline.Role)
             {
                 TextContent = inline.TextContent,
                 Element = inline.Element,
                 Style = inline.Style,
                 Parent = parent
+            },
+            TableBox table => new TableBox(table.Role)
+            {
+                Element = table.Element,
+                Style = table.Style,
+                Parent = parent,
+                X = table.X,
+                Y = table.Y,
+                Width = table.Width,
+                Height = table.Height,
+                Margin = table.Margin,
+                Padding = table.Padding,
+                TextAlign = table.TextAlign,
+                MarkerOffset = table.MarkerOffset,
+                IsAnonymous = table.IsAnonymous,
+                IsInlineBlockContext = table.IsInlineBlockContext
+            },
+            TableSectionBox section => new TableSectionBox(section.Role)
+            {
+                Element = section.Element,
+                Style = section.Style,
+                Parent = parent
+            },
+            TableRowBox row => new TableRowBox(row.Role)
+            {
+                Element = row.Element,
+                Style = row.Style,
+                Parent = parent,
+                X = row.X,
+                Y = row.Y,
+                Width = row.Width,
+                Height = row.Height,
+                Margin = row.Margin,
+                Padding = row.Padding,
+                TextAlign = row.TextAlign,
+                MarkerOffset = row.MarkerOffset,
+                IsAnonymous = row.IsAnonymous,
+                IsInlineBlockContext = row.IsInlineBlockContext
+            },
+            TableCellBox cell => new TableCellBox(cell.Role)
+            {
+                Element = cell.Element,
+                Style = cell.Style,
+                Parent = parent,
+                X = cell.X,
+                Y = cell.Y,
+                Width = cell.Width,
+                Height = cell.Height,
+                Margin = cell.Margin,
+                Padding = cell.Padding,
+                TextAlign = cell.TextAlign,
+                MarkerOffset = cell.MarkerOffset,
+                IsAnonymous = cell.IsAnonymous,
+                IsInlineBlockContext = cell.IsInlineBlockContext
             },
             BlockBox block => new BlockBox(block.Role)
             {
@@ -142,30 +234,6 @@ internal static class BlockFlowNormalization
                 Style = floatBox.Style,
                 Parent = parent,
                 FloatDirection = floatBox.FloatDirection
-            },
-            TableBox table => new TableBox(table.Role)
-            {
-                Element = table.Element,
-                Style = table.Style,
-                Parent = parent
-            },
-            TableSectionBox section => new TableSectionBox(section.Role)
-            {
-                Element = section.Element,
-                Style = section.Style,
-                Parent = parent
-            },
-            TableRowBox row => new TableRowBox(row.Role)
-            {
-                Element = row.Element,
-                Style = row.Style,
-                Parent = parent
-            },
-            TableCellBox cell => new TableCellBox(cell.Role)
-            {
-                Element = cell.Element,
-                Style = cell.Style,
-                Parent = parent
             },
             _ => new BlockBox(source.Role)
             {

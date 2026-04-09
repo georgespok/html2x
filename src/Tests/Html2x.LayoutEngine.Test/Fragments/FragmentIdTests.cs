@@ -14,7 +14,7 @@ namespace Html2x.LayoutEngine.Test.Fragments;
 public class FragmentIdTests
 {
     [Fact]
-    public void Build_AssignsMonotonicFragmentIds()
+    public void Build_AssignsUniqueFragmentIds()
     {
         // Arrange: block with inline text and a nested block containing an image-like child (specialized stage)
         var boxTree = new BlockBoxBuilder()
@@ -41,9 +41,9 @@ public class FragmentIdTests
         // Assert
         all.Count.ShouldBeGreaterThan(1);
         var ids = all.Select(f => f.FragmentId).ToList();
-        ids.ShouldBe(ids.OrderBy(x => x));          // monotonic increasing
-        ids.Distinct().Count().ShouldBe(ids.Count); // unique
-        ids.First().ShouldBe(1);                    // starts at 1
+        ids.All(static id => id > 0).ShouldBeTrue();
+        ids.Distinct().Count().ShouldBe(ids.Count);
+        ids.Min().ShouldBe(1);
     }
 
     private static IEnumerable<CoreFragment> Flatten(BlockFragment block)

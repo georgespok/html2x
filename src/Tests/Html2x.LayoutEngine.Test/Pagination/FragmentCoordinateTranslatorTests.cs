@@ -22,12 +22,63 @@ public sealed class FragmentCoordinateTranslatorTests
             typeof(BlockFragment),
             typeof(ImageFragment),
             typeof(LineBoxFragment),
-            typeof(RuleFragment)
+            typeof(RuleFragment),
+            typeof(TableCellFragment),
+            typeof(TableFragment),
+            typeof(TableRowFragment)
         }
         .OrderBy(static type => type.Name)
         .ToList();
 
         actual.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Paginate_WithBuiltInTableFragments_ShouldCloneTableSubtreeWithoutRegistration()
+    {
+        var paginator = new BlockPaginator();
+        var table = new TableFragment([
+            new TableRowFragment([
+                new TableCellFragment([
+                    new LineBoxFragment
+                    {
+                        FragmentId = 1001,
+                        Rect = new RectangleF(0f, 665f, 20f, 10f),
+                        Runs = []
+                    }
+                ])
+                {
+                    FragmentId = 1000,
+                    Rect = new RectangleF(0f, 660f, 50f, 20f),
+                    ColumnIndex = 0
+                }
+            ])
+            {
+                FragmentId = 100,
+                Rect = new RectangleF(0f, 660f, 100f, 20f),
+                RowIndex = 0
+            }
+        ])
+        {
+            FragmentId = 10,
+            Rect = new RectangleF(0f, 650f, 100f, 40f),
+            DerivedColumnCount = 1
+        };
+
+        var blocks = new List<BlockFragment>
+        {
+            CreateBlock(1, 10f, 70f),
+            table
+        };
+
+        var result = paginator.Paginate(blocks, new SizePt(200f, 100f), new Spacing(10f, 10f, 10f, 10f));
+        var movedTable = result.Pages[1].Placements.ShouldHaveSingleItem().Fragment.ShouldBeOfType<TableFragment>();
+
+        movedTable.PageNumber.ShouldBe(2);
+        movedTable.Rect.Y.ShouldBe(10f);
+        movedTable.Rows.ShouldHaveSingleItem().Rect.Y.ShouldBe(20f);
+        movedTable.Rows[0].Cells.ShouldHaveSingleItem().Rect.Y.ShouldBe(20f);
+        movedTable.Rows[0].Cells[0].Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>().Rect.Y.ShouldBe(25f);
     }
 
     [Fact]
@@ -97,11 +148,10 @@ public sealed class FragmentCoordinateTranslatorTests
             Rect = new RectangleF(0f, y + 5f, 50f, 10f)
         };
 
-        return new BlockFragment
+        return new BlockFragment([child])
         {
             FragmentId = id,
-            Rect = new RectangleF(0f, y, 100f, height),
-            Children = [child]
+            Rect = new RectangleF(0f, y, 100f, height)
         };
     }
 

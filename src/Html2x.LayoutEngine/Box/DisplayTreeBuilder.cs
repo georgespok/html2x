@@ -37,6 +37,9 @@ public sealed class DisplayTreeBuilder
                 FloatDirection = ResolveFloatDirection(styleNode)
             },
             DisplayRole.Table => new TableBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.TableSection => new TableSectionBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.TableRow => new TableRowBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.TableCell => new TableCellBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
             _ => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent }
         };
 

@@ -5,6 +5,7 @@ using Html2x.Abstractions.Layout.Text;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Text;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
@@ -53,6 +54,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         var lookup = state.BlockBindings.ToDictionary(b => b.Source, b => b.Fragment);
         var visited = new HashSet<BlockBox>();
+        var actualBindings = new List<BlockFragmentBinding>(state.BlockBindings.Count);
 
         var metricsProvider = new FontMetricsProvider();
         var textLayout = new TextLayoutEngine(state.Context.TextMeasurer);
@@ -62,12 +64,17 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             new DefaultLineHeightStrategy(),
             state.Context.BlockFormattingContext);
 
-        foreach (var binding in state.BlockBindings)
+        foreach (var block in state.Boxes.Blocks)
         {
-            stage.ProcessBlock(state, binding.Source, binding.Fragment, lookup, visited, state.Observers);
+            if (!lookup.TryGetValue(block, out var fragment))
+            {
+                continue;
+            }
+
+            stage.ProcessBlock(state, block, fragment, lookup, visited, state.Observers, actualBindings);
         }
 
-        return state;
+        return state.WithBlockBindings(actualBindings);
     }
 
     private void ProcessBlock(
@@ -76,31 +83,61 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         BlockFragment fragment,
         IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
         ISet<BlockBox> visited,
-        IReadOnlyList<IFragmentBuildObserver> observers)
+        IReadOnlyList<IFragmentBuildObserver> observers,
+        ICollection<BlockFragmentBinding> actualBindings)
     {
         if (!visited.Add(blockBox))
         {
             return;
         }
 
+        actualBindings.Add(new BlockFragmentBinding(blockBox, fragment));
+
+        var pendingInlineFlow = new List<DisplayNode>();
+        var includeSyntheticListMarker = true;
+
         foreach (var child in blockBox.Children)
         {
+            if (TryQueueInlineFlowChild(child, pendingInlineFlow))
+            {
+                continue;
+            }
+
             switch (child)
             {
                 case BlockBox childBlock when lookup.TryGetValue(childBlock, out var childFragment):
-                    ProcessBlock(state, childBlock, childFragment, lookup, visited, observers);
+                    FlushPendingInlineFlow(state, blockBox, fragment, pendingInlineFlow, ref includeSyntheticListMarker, observers);
+
+                    if (blockBox.Role == DisplayRole.TableRow)
+                    {
+                        fragment.AddChild(childFragment);
+                        ProcessBlock(state, childBlock, childFragment, lookup, visited, observers, actualBindings);
+                        break;
+                    }
+
+                    var placedChild = PlaceChildFragmentInFlow(state, blockBox, fragment, childFragment);
+                    var deltaY = placedChild.Rect.Y - childBlock.Y;
+                    if (Math.Abs(deltaY) > 0.01f)
+                    {
+                        ShiftBlockSubtree(childBlock, deltaY);
+                    }
+
+                    fragment.AddChild(placedChild);
+                    ProcessBlock(state, childBlock, placedChild, lookup, visited, observers, actualBindings);
                     break;
             }
         }
 
-        EmitLineFragments(state, blockBox, fragment, observers);
+        FlushPendingInlineFlow(state, blockBox, fragment, pendingInlineFlow, ref includeSyntheticListMarker, observers);
     }
 
     private void EmitLineFragments(
         FragmentBuildState state,
         BlockBox blockContext,
         BlockFragment parentFragment,
-        IReadOnlyList<IFragmentBuildObserver> observers)
+        IReadOnlyList<IFragmentBuildObserver> observers,
+        IReadOnlyList<DisplayNode>? inlineChildren = null,
+        bool includeSyntheticListMarker = true)
     {
         var padding = blockContext.Padding.Safe();
         var border = Spacing.FromBorderEdges(blockContext.Style.Borders).Safe();
@@ -114,7 +151,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             contentWidth = float.PositiveInfinity;
         }
 
-        var runs = CollectInlineRuns(blockContext, contentWidth, state.Context.TextMeasurer);
+        var runs = CollectInlineRuns(
+            blockContext,
+            inlineChildren ?? blockContext.Children.ToList(),
+            contentWidth,
+            state.Context.TextMeasurer,
+            includeSyntheticListMarker);
         if (runs.Count == 0)
         {
             return;
@@ -157,7 +199,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             var topY = lastLine is null ? contentTop : lastLine.Rect.Bottom;
             var baselineY = topY + GetBaselineAscent(line);
 
-            var lineRuns = BuildLineRuns(
+            var lineContent = BuildSequentialLineContent(
                 state,
                 line,
                 textAlign,
@@ -167,60 +209,18 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 lineIndex,
                 layout.Lines.Count,
                 state.Context.TextMeasurer,
-                observers,
-                out var lineWidthForFragment,
-                out var inlineObjectInsertions);
+                observers);
 
-            if (inlineObjectInsertions.Count == 0)
-            {
-                var storedLine = new LineBoxFragment
-                {
-                    FragmentId = state.ReserveFragmentId(),
-                    PageNumber = state.PageNumber,
-                    Rect = new RectangleF(contentLeft, topY, lineWidthForFragment, line.LineHeight),
-                    BaselineY = baselineY,
-                    LineHeight = line.LineHeight,
-                    Runs = lineRuns,
-                    TextAlign = textAlign?.ToLowerInvariant()
-                };
-
-                parentFragment.Children.Add(storedLine);
-                lastLine = storedLine;
-            }
-            else
-            {
-                var lineStart = 0;
-                foreach (var insertion in inlineObjectInsertions)
-                {
-                    lastLine = AddLineSegment(
-                        state,
-                        parentFragment,
-                        lineRuns,
-                        lineStart,
-                        insertion.TextRunIndex,
-                        contentLeft,
-                        topY,
-                        line.LineHeight,
-                        baselineY,
-                        textAlign,
-                        lastLine);
-                    parentFragment.Children.Add(insertion.Fragment);
-                    lineStart = insertion.TextRunIndex;
-                }
-
-                lastLine = AddLineSegment(
-                    state,
-                    parentFragment,
-                    lineRuns,
-                    lineStart,
-                    lineRuns.Count,
-                    contentLeft,
-                    topY,
-                    line.LineHeight,
-                    baselineY,
-                    textAlign,
-                    lastLine);
-            }
+            lastLine = EmitSequentialLineContent(
+                state,
+                parentFragment,
+                lineContent,
+                contentLeft,
+                topY,
+                line.LineHeight,
+                baselineY,
+                textAlign,
+                lastLine);
 
             foreach (var source in line.Runs.Select(r => r.Source).Distinct())
             {
@@ -237,7 +237,9 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         }
     }
 
-    private List<TextRun> BuildLineRuns(
+    // Keep segmentation local to a single line: text-before, inline object, text-after
+    // becomes exactly three ordered outputs without any deferred reordering pass.
+    private LineContent BuildSequentialLineContent(
         FragmentBuildState state,
         TextLayoutLine line,
         string? textAlign,
@@ -247,45 +249,41 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         int lineIndex,
         int lineCount,
         ITextMeasurer measurer,
-        IReadOnlyList<IFragmentBuildObserver> observers,
-        out float lineWidthForFragment,
-        out List<InlineObjectInsertion> inlineObjectInsertions)
+        IReadOnlyList<IFragmentBuildObserver> observers)
     {
         var justifyExtra = ResolveJustifyExtra(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
         var lineOffsetX = ResolveLineOffset(textAlign, contentWidth, line.LineWidth, line, lineIndex, lineCount);
         var isJustified = justifyExtra > 0f;
-        inlineObjectInsertions = [];
 
         if (isJustified && CountWhitespace(line) > 0)
         {
-            var runs = BuildJustifiedRuns(
+            return BuildJustifiedSequentialLineContent(
                 state,
                 line,
                 contentLeft,
                 baselineY,
                 justifyExtra,
                 measurer,
-                observers,
-                out var justifiedWidth,
-                inlineObjectInsertions);
-            lineWidthForFragment = justifiedWidth;
-            return runs;
+                observers);
         }
 
-        var lineRuns = new List<TextRun>(line.Runs.Count);
+        var items = new List<LineContentItem>();
+        var segmentRuns = new List<TextRun>(line.Runs.Count);
         var currentX = contentLeft + lineOffsetX;
 
         foreach (var run in line.Runs)
         {
             if (run.InlineObject is not null)
             {
+                FlushLineContentSegment(items, segmentRuns);
+
                 var inlineFragment = CreateInlineObjectFragment(
                     state,
                     run.InlineObject,
                     currentX + run.LeftSpacing,
                     baselineY,
                     observers);
-                inlineObjectInsertions.Add(new InlineObjectInsertion(lineRuns.Count, inlineFragment));
+                items.Add(LineContentItem.ForInlineObject(inlineFragment));
                 currentX += run.LeftSpacing + run.Width + run.RightSpacing;
                 continue;
             }
@@ -302,29 +300,27 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 run.Decorations,
                 run.Color);
 
-            lineRuns.Add(textRun);
+            segmentRuns.Add(textRun);
             currentX += run.Width + run.RightSpacing;
         }
 
-        lineWidthForFragment = line.LineWidth;
-        return lineRuns;
+        FlushLineContentSegment(items, segmentRuns);
+        return new LineContent(items);
     }
 
-    private List<TextRun> BuildJustifiedRuns(
+    private LineContent BuildJustifiedSequentialLineContent(
         FragmentBuildState state,
         TextLayoutLine line,
         float contentLeft,
         float baselineY,
         float extraSpace,
         ITextMeasurer measurer,
-        IReadOnlyList<IFragmentBuildObserver> observers,
-        out float lineWidthForFragment,
-        List<InlineObjectInsertion> inlineObjectInsertions)
+        IReadOnlyList<IFragmentBuildObserver> observers)
     {
         var spaceCount = CountWhitespace(line);
         if (spaceCount == 0)
         {
-            lineWidthForFragment = line.LineWidth;
+            var fallbackItems = new List<LineContentItem>();
             var fallbackRuns = new List<TextRun>(line.Runs.Count);
             var fallbackX = contentLeft;
 
@@ -332,13 +328,15 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             {
                 if (run.InlineObject is not null)
                 {
+                    FlushLineContentSegment(fallbackItems, fallbackRuns);
+
                     var inlineFragment = CreateInlineObjectFragment(
                         state,
                         run.InlineObject,
                         fallbackX + run.LeftSpacing,
                         baselineY,
                         observers);
-                    inlineObjectInsertions.Add(new InlineObjectInsertion(fallbackRuns.Count, inlineFragment));
+                    fallbackItems.Add(LineContentItem.ForInlineObject(inlineFragment));
                     fallbackX += run.LeftSpacing + run.Width + run.RightSpacing;
                     continue;
                 }
@@ -357,10 +355,12 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 fallbackX += run.Width + run.RightSpacing;
             }
 
-            return fallbackRuns;
+            FlushLineContentSegment(fallbackItems, fallbackRuns);
+            return new LineContent(fallbackItems);
         }
 
         var perSpaceExtra = extraSpace / spaceCount;
+        var items = new List<LineContentItem>();
         var lineRuns = new List<TextRun>();
         var currentX = contentLeft;
 
@@ -368,13 +368,15 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         {
             if (run.InlineObject is not null)
             {
+                FlushLineContentSegment(items, lineRuns);
+
                 var inlineFragment = CreateInlineObjectFragment(
                     state,
                     run.InlineObject,
                     currentX + run.LeftSpacing,
                     baselineY,
                     observers);
-                inlineObjectInsertions.Add(new InlineObjectInsertion(lineRuns.Count, inlineFragment));
+                items.Add(LineContentItem.ForInlineObject(inlineFragment));
                 currentX += run.LeftSpacing + run.Width + run.RightSpacing;
                 continue;
             }
@@ -413,8 +415,8 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             }
         }
 
-        lineWidthForFragment = line.LineWidth + extraSpace;
-        return lineRuns;
+        FlushLineContentSegment(items, lineRuns);
+        return new LineContent(items);
     }
 
     private static float ResolveLineOffset(
@@ -506,15 +508,20 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
     private List<TextRunInput> CollectInlineRuns(
         BlockBox blockContext,
+        IReadOnlyList<DisplayNode> inlineChildren,
         float availableWidth,
-        ITextMeasurer measurer)
+        ITextMeasurer measurer,
+        bool includeSyntheticListMarker)
     {
         var runs = new List<TextRunInput>();
         var runId = 1;
 
-        TryAppendSyntheticListMarkerRun(blockContext, runs, ref runId);
+        if (includeSyntheticListMarker)
+        {
+            TryAppendSyntheticListMarkerRun(blockContext, runs, ref runId);
+        }
 
-        foreach (var inline in blockContext.Children.OfType<InlineBox>())
+        foreach (var inline in inlineChildren)
         {
             CollectInlineRuns(inline, blockContext.Style, availableWidth, measurer, runs, ref runId);
         }
@@ -644,13 +651,38 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
     }
 
     private void CollectInlineRuns(
-        InlineBox inline,
+        DisplayNode node,
         ComputedStyle blockStyle,
         float availableWidth,
         ITextMeasurer measurer,
         ICollection<TextRunInput> runs,
         ref int runId)
     {
+        switch (node)
+        {
+            case InlineBlockBoundaryBox boundary:
+                if (_runFactory.TryBuildInlineBlockLayout(boundary.SourceInline, availableWidth, measurer, _lineHeightStrategy, out var boundaryLayout) &&
+                    _runFactory.TryBuildInlineBlockRun(boundary.SourceInline, runId, boundaryLayout, out var boundaryRun))
+                {
+                    runs.Add(boundaryRun);
+                    runId++;
+                    return;
+                }
+
+                return;
+            case BlockBox block when IsAnonymousInlineWrapper(block):
+                foreach (var child in block.Children)
+                {
+                    CollectInlineRuns(child, blockStyle, availableWidth, measurer, runs, ref runId);
+                }
+
+                return;
+            case not InlineBox:
+                return;
+        }
+
+        var inline = (InlineBox)node;
+
         if (_runFactory.TryBuildInlineBlockLayout(inline, availableWidth, measurer, _lineHeightStrategy, out var inlineLayout))
         {
             if (_runFactory.TryBuildInlineBlockRun(inline, runId, inlineLayout, out var inlineRun))
@@ -714,45 +746,177 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         return ascent;
     }
 
-    private static LineBoxFragment? AddLineSegment(
+    private static LineBoxFragment CreateLineFragment(
         FragmentBuildState state,
-        BlockFragment parentFragment,
         IReadOnlyList<TextRun> lineRuns,
-        int startIndex,
-        int endIndex,
         float fallbackX,
         float topY,
         float lineHeight,
         float baselineY,
-        string? textAlign,
-        LineBoxFragment? lastLine)
+        string? textAlign)
     {
-        if (endIndex <= startIndex)
-        {
-            return lastLine;
-        }
-
-        var segmentRuns = lineRuns.Skip(startIndex).Take(endIndex - startIndex).ToList();
-        var minX = segmentRuns.Min(static run => run.Origin.X);
-        var maxX = segmentRuns.Max(static run => run.Origin.X + run.AdvanceWidth);
+        var minX = lineRuns.Min(static run => run.Origin.X);
+        var maxX = lineRuns.Max(static run => run.Origin.X + run.AdvanceWidth);
         var width = Math.Max(0f, maxX - minX);
 
-        var line = new LineBoxFragment
+        return new LineBoxFragment
         {
             FragmentId = state.ReserveFragmentId(),
             PageNumber = state.PageNumber,
             Rect = new RectangleF(Math.Min(fallbackX, minX), topY, width, lineHeight),
             BaselineY = baselineY,
             LineHeight = lineHeight,
-            Runs = segmentRuns,
+            Runs = lineRuns.ToList(),
             TextAlign = textAlign?.ToLowerInvariant()
         };
-
-        parentFragment.Children.Add(line);
-        return line;
     }
 
-    private readonly record struct InlineObjectInsertion(int TextRunIndex, BlockFragment Fragment);
+    private static LineBoxFragment? EmitSequentialLineContent(
+        FragmentBuildState state,
+        BlockFragment parentFragment,
+        LineContent lineContent,
+        float contentLeft,
+        float topY,
+        float lineHeight,
+        float baselineY,
+        string? textAlign,
+        LineBoxFragment? lastLine)
+    {
+        foreach (var item in lineContent.Items)
+        {
+            if (item.LineRuns.Count > 0)
+            {
+                lastLine = CreateLineFragment(
+                    state,
+                    item.LineRuns,
+                    contentLeft,
+                    topY,
+                    lineHeight,
+                    baselineY,
+                    textAlign);
+                parentFragment.AddChild(lastLine);
+                continue;
+            }
+
+            if (item.InlineObject is not null)
+            {
+                parentFragment.AddChild(item.InlineObject);
+            }
+        }
+
+        return lastLine;
+    }
+
+    private void FlushPendingInlineFlow(
+        FragmentBuildState state,
+        BlockBox blockContext,
+        BlockFragment parentFragment,
+        List<DisplayNode> pendingInlineFlow,
+        ref bool includeSyntheticListMarker,
+        IReadOnlyList<IFragmentBuildObserver> observers)
+    {
+        if (pendingInlineFlow.Count == 0)
+        {
+            return;
+        }
+
+        EmitLineFragments(
+            state,
+            blockContext,
+            parentFragment,
+            observers,
+            pendingInlineFlow,
+            includeSyntheticListMarker);
+
+        includeSyntheticListMarker = false;
+        pendingInlineFlow.Clear();
+    }
+
+    private static bool TryQueueInlineFlowChild(DisplayNode child, ICollection<DisplayNode> pendingInlineFlow)
+    {
+        switch (child)
+        {
+            case InlineBox:
+            case InlineBlockBoundaryBox:
+                pendingInlineFlow.Add(child);
+                return true;
+            case BlockBox block when IsAnonymousInlineWrapper(block):
+                pendingInlineFlow.Add(block);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsAnonymousInlineWrapper(BlockBox block)
+    {
+        return block.IsAnonymous &&
+               block.Children.Count > 0 &&
+               block.Children.All(static child => child is InlineBox);
+    }
+
+    private BlockFragment PlaceChildFragmentInFlow(
+        FragmentBuildState state,
+        BlockBox parentBlock,
+        BlockFragment parentFragment,
+        BlockFragment childFragment)
+    {
+        var placementY = Math.Max(childFragment.Rect.Y, ResolveNextChildTop(parentBlock, parentFragment));
+        if (Math.Abs(placementY - childFragment.Rect.Y) < 0.01f)
+        {
+            return childFragment;
+        }
+
+        return (BlockFragment)FragmentCoordinateTranslator.CloneWithPlacement(
+            childFragment,
+            state.PageNumber,
+            childFragment.Rect.X,
+            placementY);
+    }
+
+    private static float ResolveNextChildTop(BlockBox parentBlock, BlockFragment parentFragment)
+    {
+        var padding = parentBlock.Padding.Safe();
+        var border = Spacing.FromBorderEdges(parentBlock.Style.Borders).Safe();
+        var contentTop = parentBlock.Y + border.Top + padding.Top;
+
+        if (parentFragment.Children.Count == 0)
+        {
+            return contentTop;
+        }
+
+        return parentFragment.Children[^1].Rect.Bottom;
+    }
+
+    private static void ShiftBlockSubtree(BlockBox root, float deltaY)
+    {
+        root.Y += deltaY;
+
+        foreach (var child in root.Children.OfType<BlockBox>())
+        {
+            ShiftBlockSubtree(child, deltaY);
+        }
+    }
+
+    private static void FlushLineContentSegment(ICollection<LineContentItem> items, List<TextRun> segmentRuns)
+    {
+        if (segmentRuns.Count == 0)
+        {
+            return;
+        }
+
+        items.Add(LineContentItem.ForTextRuns(segmentRuns.ToList()));
+        segmentRuns.Clear();
+    }
+
+    private sealed record LineContent(IReadOnlyList<LineContentItem> Items);
+
+    private sealed record LineContentItem(IReadOnlyList<TextRun> LineRuns, BlockFragment? InlineObject)
+    {
+        public static LineContentItem ForTextRuns(IReadOnlyList<TextRun> lineRuns) => new(lineRuns, null);
+
+        public static LineContentItem ForInlineObject(BlockFragment inlineObject) => new([], inlineObject);
+    }
 
     private sealed class FallbackTextMeasurer : ITextMeasurer
     {

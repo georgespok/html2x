@@ -239,6 +239,279 @@ public class InlineBlockTests
     }
 
     [Fact]
+    public async Task InlineBlock_SharedFormattingCase2_ShouldKeepPrefixInlineBlockAndSuffixInSiblingOrder()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    Prefix text
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      Alpha inline-block
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>First block descendant</div>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>Second block descendant</div>
+                    </span>
+                    suffix text
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var row = FindContainerWithDirectChildren(root, "Prefix text", "Alpha inline-block", "suffix text");
+
+        var childOrder = row.Children
+            .Select(static child => ClassifyDirectChild(child, "Prefix text", "Alpha inline-block", "suffix text"))
+            .Where(static label => label is not null)
+            .Cast<string>()
+            .ToList();
+
+        childOrder.ShouldBe(["Prefix text", "Alpha inline-block", "suffix text"]);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase2_ShouldPlacePrefixAndSuffixBesideInlineBlock()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    Prefix text
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      Alpha inline-block
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>First block descendant</div>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>Second block descendant</div>
+                    </span>
+                    suffix text
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var row = FindContainerWithDirectChildren(root, "Prefix text", "Alpha inline-block", "suffix text");
+        var prefix = row.Children.First(child => ContainsText(child, "Prefix text")).ShouldBeOfType<LineBoxFragment>();
+        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block")).ShouldBeOfType<BlockFragment>();
+        var suffix = row.Children.First(child => ContainsText(child, "suffix text")).ShouldBeOfType<LineBoxFragment>();
+        var prefixRun = prefix.Runs.First(run => run.Text.Contains("Prefix text", StringComparison.OrdinalIgnoreCase));
+        var suffixRun = suffix.Runs.First(run => run.Text.Contains("suffix text", StringComparison.OrdinalIgnoreCase));
+
+        prefix.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
+        suffix.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
+        prefixRun.Origin.X.ShouldBeLessThan(inlineBlock.Rect.X);
+        suffixRun.Origin.X.ShouldBeGreaterThanOrEqualTo(inlineBlock.Rect.Right - 0.1f);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase2_ShouldPreserveFullDescendantTextOrder()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    Prefix text
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      Alpha inline-block
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>First block descendant</div>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>
+                        Third block descendant with
+                        <span style='display: inline-block; margin-top: 4pt; padding: 4pt; border: 1pt solid #777;'>
+                          nested inline-block
+                          <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>Nested block descendant A</div>
+                        </span>
+                      </div>
+                    </span>
+                    suffix text
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+
+        AssertIncreasingOrder(EnumerateOrderedText(root), [
+            "Prefix text",
+            "Alpha inline-block",
+            "First block descendant",
+            "Third block descendant with",
+            "nested inline-block",
+            "Nested block descendant A",
+            "suffix"
+        ]);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase2_ShouldPreserveInheritedFormattingAcrossSiblingsAndInlineBlockContent()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35; color: #222;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    Prefix text
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      Alpha inline-block
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>First block descendant</div>
+                    </span>
+                    suffix text
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var row = FindContainerWithDirectChildren(root, "Prefix text", "Alpha inline-block", "suffix text");
+        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block")).ShouldBeOfType<BlockFragment>();
+
+        var prefixRun = FindRun(row, "Prefix text");
+        var alphaRun = FindRun(inlineBlock, "Alpha inline-block");
+        var suffixRun = FindRun(row, "suffix text");
+        var descendantRun = FindRun(inlineBlock, "First block descendant");
+
+        prefixRun.Font.ShouldBe(alphaRun.Font);
+        prefixRun.Font.ShouldBe(suffixRun.Font);
+        prefixRun.Font.ShouldBe(descendantRun.Font);
+        prefixRun.FontSizePt.ShouldBe(11f, 0.01f);
+        alphaRun.FontSizePt.ShouldBe(prefixRun.FontSizePt, 0.01f);
+        suffixRun.FontSizePt.ShouldBe(prefixRun.FontSizePt, 0.01f);
+        descendantRun.FontSizePt.ShouldBe(prefixRun.FontSizePt, 0.01f);
+
+        var alphaLine = FindLine(inlineBlock, "Alpha inline-block");
+        var descendantLine = FindLine(inlineBlock, "First block descendant");
+
+        alphaLine.LineHeight.ShouldBe(descendantLine.LineHeight, 0.01f);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase3_ShouldKeepTextBeforeInlineBlockAndTextAfterInSiblingOrder()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    text-before
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      outer-start
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-1</div>
+                      <span style='display: inline-block; margin-top: 4pt; padding: 4pt; border: 1pt solid #777;'>
+                        nested-inline-start
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-1</div>
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-2</div>
+                      </span>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-2</div>
+                      outer-end
+                    </span>
+                    text-after
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var row = FindContainerWithDirectChildren(root, "text-before", "outer-start", "text-after");
+
+        var childOrder = row.Children
+            .Select(static child => ClassifyDirectChild(child, "text-before", "outer-start", "text-after"))
+            .Where(static label => label is not null)
+            .Cast<string>()
+            .ToList();
+
+        childOrder.ShouldBe(["text-before", "outer-start", "text-after"]);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase3_ShouldPreserveDeepNestedTextOrder()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    text-before
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      outer-start
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-1</div>
+                      <span style='display: inline-block; margin-top: 4pt; padding: 4pt; border: 1pt solid #777;'>
+                        nested-inline-start
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-1</div>
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-2</div>
+                      </span>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-2</div>
+                      outer-end
+                    </span>
+                    text-after
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+
+        EnumerateOrderedText(root).ShouldBe([
+            "text-before",
+            "outer-start",
+            "block-child-1",
+            "nested-inline-start",
+            "nested-block-1",
+            "nested-block-2",
+            "block-child-2",
+            "outer-end",
+            "text-after"
+        ]);
+    }
+
+    [Fact]
+    public async Task InlineBlock_SharedFormattingCase3_ShouldPlaceLeadingAndTrailingTextBesideInlineBlock()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
+                <div style='width: 320pt;'>
+                  <div style='margin-bottom: 6pt;'>
+                    text-before
+                    <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
+                      outer-start
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-1</div>
+                      <span style='display: inline-block; margin-top: 4pt; padding: 4pt; border: 1pt solid #777;'>
+                        nested-inline-start
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-1</div>
+                        <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>nested-block-2</div>
+                      </span>
+                      <div style='display: block; margin: 5pt 0; padding: 3pt 4pt; border: 1pt dashed #888;'>block-child-2</div>
+                      outer-end
+                    </span>
+                    text-after
+                  </div>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var row = FindContainerWithDirectChildren(root, "text-before", "outer-start", "text-after");
+        var leadingText = row.Children.First(child => ContainsText(child, "text-before")).ShouldBeOfType<LineBoxFragment>();
+        var inlineBlock = row.Children.First(child => ContainsText(child, "outer-start")).ShouldBeOfType<BlockFragment>();
+        var trailingText = row.Children.First(child => ContainsText(child, "text-after")).ShouldBeOfType<LineBoxFragment>();
+        var leadingRun = leadingText.Runs.First(run => run.Text.Contains("text-before", StringComparison.OrdinalIgnoreCase));
+        var trailingRun = trailingText.Runs.First(run => run.Text.Contains("text-after", StringComparison.OrdinalIgnoreCase));
+
+        leadingText.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
+        trailingText.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
+        leadingRun.Origin.X.ShouldBeLessThan(inlineBlock.Rect.X);
+        trailingRun.Origin.X.ShouldBeGreaterThanOrEqualTo(inlineBlock.Rect.Right - 0.1f);
+    }
+
+    [Fact]
     public async Task InlineBlock_UnsupportedInternalStructure_ShouldFailLayoutAndEmitDiagnostics()
     {
         const string html = @"
@@ -302,5 +575,95 @@ public class InlineBlockTests
             .SelectMany(block => block.Children.OfType<LineBoxFragment>())
             .SelectMany(line => line.Runs)
             .Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static BlockFragment FindContainerWithDirectChildren(BlockFragment root, params string[] childTexts)
+    {
+        return EnumerateFragments(root)
+            .OfType<BlockFragment>()
+            .Where(block => CountMatchingDirectChildren(block, childTexts) >= childTexts.Length)
+            .OrderBy(block => block.Children.Count)
+            .First();
+    }
+
+    private static string? ClassifyDirectChild(LayoutFragment fragment, params string[] markers)
+    {
+        return markers.FirstOrDefault(marker => ContainsText(fragment, marker));
+    }
+
+    private static bool ContainsText(LayoutFragment fragment, string text)
+    {
+        return fragment switch
+        {
+            LineBoxFragment line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)),
+            BlockFragment block => ContainsLineText(block, text),
+            _ => false
+        };
+    }
+
+    private static int CountMatchingDirectChildren(BlockFragment block, IReadOnlyList<string> markers)
+    {
+        return block.Children.Count(child => markers.Any(marker => ContainsText(child, marker)));
+    }
+
+    private static IReadOnlyList<string> EnumerateOrderedText(BlockFragment root)
+    {
+        var ordered = new List<string>();
+        AppendOrderedText(root, ordered);
+        return ordered;
+    }
+
+    private static TextRun FindRun(BlockFragment fragment, string text)
+    {
+        return EnumerateFragments(fragment)
+            .OfType<BlockFragment>()
+            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
+            .SelectMany(line => line.Runs)
+            .First(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static LineBoxFragment FindLine(BlockFragment fragment, string text)
+    {
+        return EnumerateFragments(fragment)
+            .OfType<BlockFragment>()
+            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
+            .First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static void AppendOrderedText(LayoutFragment fragment, ICollection<string> ordered)
+    {
+        switch (fragment)
+        {
+            case LineBoxFragment line:
+                var text = string.Concat(line.Runs.Select(run => run.Text)).Trim();
+                if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "•", StringComparison.Ordinal))
+                {
+                    ordered.Add(text);
+                }
+
+                return;
+            case BlockFragment block:
+                foreach (var child in block.Children)
+                {
+                    AppendOrderedText(child, ordered);
+                }
+
+                return;
+        }
+    }
+
+    private static void AssertIncreasingOrder(IReadOnlyList<string> texts, IReadOnlyList<string> expectedOrder)
+    {
+        var currentIndex = -1;
+        foreach (var expected in expectedOrder)
+        {
+            var nextIndex = texts
+                .Select((text, index) => (text, index))
+                .First(pair => pair.index > currentIndex && pair.text.Contains(expected, StringComparison.OrdinalIgnoreCase))
+                .index;
+
+            nextIndex.ShouldBeGreaterThan(currentIndex);
+            currentIndex = nextIndex;
+        }
     }
 }
