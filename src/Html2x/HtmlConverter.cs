@@ -1,6 +1,6 @@
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Html2x.Files;
 using Html2x.Fonts;
 using Html2x.LayoutEngine;
@@ -52,44 +52,55 @@ public class HtmlConverter
         var measurer = new SkiaTextMeasurer(fontSource);
         var imageProvider = new FileSystemImageProvider();
 
-        AddDiagnosticsEvent(
-            session,
-            DiagnosticsEventType.StartStage,
+        session?.Events.Add(DiagnosticsEventFactory.StageStarted(
             "LayoutBuild",
-            new HtmlPayload { Html = html.Trim() });
+            new HtmlPayload { Html = html.Trim() }));
 
         var layoutBuilder = _layoutBuilderFactory.Create(new LayoutServices(measurer, fontSource, imageProvider))
                             ?? throw new InvalidOperationException("Layout factory returned null.");
 
-        var layout = await layoutBuilder.BuildAsync(html, options.Layout, session);
+        HtmlLayout layout;
+        try
+        {
+            layout = await layoutBuilder.BuildAsync(html, options.Layout, session);
+        }
+        catch (Exception exception)
+        {
+            session?.Events.Add(DiagnosticsEventFactory.StageFailed("LayoutBuild", exception.Message));
+            session?.Events.Add(DiagnosticsEventFactory.StageSkipped("PdfRender", "Skipped because LayoutBuild failed."));
+            throw;
+        }
 
-        AddDiagnosticsEvent(
-            session,
-            DiagnosticsEventType.EndStage,
+        session?.Events.Add(DiagnosticsEventFactory.StageSucceeded(
             "LayoutBuild",
             new LayoutSnapshotPayload
             {
                 Snapshot = LayoutSnapshotMapper.From(layout)
-            });
+            }));
 
         var renderer = new PdfRenderer(fileDirectory);
 
-        AddDiagnosticsEvent(
-            session,
-            DiagnosticsEventType.StartStage,
+        session?.Events.Add(DiagnosticsEventFactory.StageStarted(
             "PdfRender",
-            null);
+            null));
 
-        var pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session);
+        byte[] pdfBytes;
+        try
+        {
+            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session);
+        }
+        catch (Exception exception)
+        {
+            session?.Events.Add(DiagnosticsEventFactory.StageFailed("PdfRender", exception.Message));
+            throw;
+        }
 
-        AddDiagnosticsEvent(
-            session,
-            DiagnosticsEventType.EndStage,
+        session?.Events.Add(DiagnosticsEventFactory.StageSucceeded(
             "PdfRender", new RenderSummaryPayload()
             {
                 PdfSize = pdfBytes.Length,
                 PageCount = layout.Pages.Count
-            });
+            }));
 
         return new Html2PdfResult(pdfBytes)
         {
@@ -101,25 +112,20 @@ public class HtmlConverter
         DiagnosticsSession? session,
         DiagnosticsEventType type,
         string name,
-        IDiagnosticsPayload? payload)
-    {
-        if (session is null)
-        {
-            return;
-        }
-
-        session.Events.Add(new DiagnosticsEvent
+        IDiagnosticsPayload? payload) =>
+        session?.Events.Add(new DiagnosticsEvent
         {
             Type = type,
             Name = name,
             Timestamp = DateTimeOffset.UtcNow,
             Payload = payload
         });
-    }
 
     private static InvalidOperationException CreateFontPathException(string message, DiagnosticsSession? session)
     {
         AddDiagnosticsEvent(session, DiagnosticsEventType.Error, "FontPath", null);
+        session?.Events.Add(DiagnosticsEventFactory.StageFailed("LayoutBuild", message));
+        session?.Events.Add(DiagnosticsEventFactory.StageSkipped("PdfRender", "Skipped because LayoutBuild failed."));
 
         var exception = new InvalidOperationException(message);
         if (session is not null)

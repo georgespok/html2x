@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;

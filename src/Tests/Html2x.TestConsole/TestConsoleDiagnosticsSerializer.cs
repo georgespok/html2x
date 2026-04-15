@@ -1,0 +1,84 @@
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics;
+
+namespace Html2x.TestConsole;
+
+internal static class TestConsoleDiagnosticsSerializer
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    public static string ToJson(DiagnosticsSession session, ConsoleOptions options)
+    {
+        if (session is null)
+        {
+            throw new ArgumentNullException(nameof(session));
+        }
+
+        var envelope = new TestConsoleDiagnosticsEnvelope(
+            TestConsoleRunDiagnostics.From(options),
+            TestConsoleEnvironmentDiagnostics.Capture(),
+            DiagnosticsSessionSerializer.ToSerializableObject(session));
+
+        return JsonSerializer.Serialize(envelope, JsonOptions);
+    }
+}
+
+internal sealed record TestConsoleDiagnosticsEnvelope(
+    TestConsoleRunDiagnostics TestConsole,
+    TestConsoleEnvironmentDiagnostics Environment,
+    object DiagnosticsSession);
+
+internal sealed record TestConsoleRunDiagnostics(
+    string InputPath,
+    string OutputPath,
+    bool DiagnosticsEnabled,
+    bool DiagnosticsActive,
+    bool EnableDebugging,
+    bool Interactive,
+    string? SelectedSamplePath,
+    IReadOnlyList<string> RawArguments)
+{
+    public static TestConsoleRunDiagnostics From(ConsoleOptions options)
+    {
+        return new TestConsoleRunDiagnostics(
+            options.InputPath,
+            options.OutputPath,
+            options.DiagnosticsEnabled,
+            options.DiagnosticsEnabled || !string.IsNullOrWhiteSpace(options.DiagnosticsJson),
+            options.EnableDebugging,
+            options.Interactive,
+            options.SelectedSamplePath,
+            options.RawArguments.ToArray());
+    }
+}
+
+internal sealed record TestConsoleEnvironmentDiagnostics(
+    string WorkingDirectory,
+    string ApplicationBaseDirectory,
+    string OsDescription,
+    string FrameworkDescription,
+    string ProcessArchitecture,
+    string CurrentCulture,
+    string CurrentUICulture)
+{
+    public static TestConsoleEnvironmentDiagnostics Capture()
+    {
+        return new TestConsoleEnvironmentDiagnostics(
+            Directory.GetCurrentDirectory(),
+            AppContext.BaseDirectory,
+            RuntimeInformation.OSDescription,
+            RuntimeInformation.FrameworkDescription,
+            RuntimeInformation.ProcessArchitecture.ToString(),
+            CultureInfo.CurrentCulture.Name,
+            CultureInfo.CurrentUICulture.Name);
+    }
+}

@@ -68,6 +68,16 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         var diagnostics = exception.Data["Diagnostics"] as DiagnosticsSession;
         Assert.NotNull(diagnostics);
         Assert.Contains(diagnostics.Events, e => e.Type == DiagnosticsEventType.Error && e.Name == "FontPath");
+        Assert.Contains(diagnostics.Events, e =>
+            e.Name == "LayoutBuild" &&
+            e.Type == DiagnosticsEventType.Error &&
+            e.StageState == DiagnosticStageState.Failed &&
+            e.Description == "PdfOptions.FontPath must be provided before layout can begin.");
+        Assert.Contains(diagnostics.Events, e =>
+            e.Name == "PdfRender" &&
+            e.Type == DiagnosticsEventType.EndStage &&
+            e.StageState == DiagnosticStageState.Skipped &&
+            e.Description == "Skipped because LayoutBuild failed.");
     }
 
     [Fact]
@@ -88,6 +98,53 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         var diagnostics = exception.Data["Diagnostics"] as DiagnosticsSession;
         Assert.NotNull(diagnostics);
         Assert.Contains(diagnostics.Events, e => e.Type == DiagnosticsEventType.Error && e.Name == "FontPath");
+        Assert.Contains(diagnostics.Events, e =>
+            e.Name == "LayoutBuild" &&
+            e.Type == DiagnosticsEventType.Error &&
+            e.StageState == DiagnosticStageState.Failed &&
+            e.Description == exception.Message);
+        Assert.Contains(diagnostics.Events, e =>
+            e.Name == "PdfRender" &&
+            e.Type == DiagnosticsEventType.EndStage &&
+            e.StageState == DiagnosticStageState.Skipped &&
+            e.Description == "Skipped because LayoutBuild failed.");
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_WithDiagnostics_EmitsCanonicalStageLifecycleStates()
+    {
+        const string html = "<html><body><p>Hello diagnostics</p></body></html>";
+        var options = new HtmlConverterOptions
+        {
+            Pdf = new PdfOptions
+            {
+                FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+        var result = await _htmlConverter.ToPdfAsync(html, options);
+
+        Assert.NotNull(result.Diagnostics);
+        Assert.Contains(result.Diagnostics.Events, e =>
+            e.Name == "LayoutBuild" &&
+            e.Type == DiagnosticsEventType.StartStage &&
+            e.StageState == DiagnosticStageState.Started);
+        Assert.Contains(result.Diagnostics.Events, e =>
+            e.Name == "LayoutBuild" &&
+            e.Type == DiagnosticsEventType.EndStage &&
+            e.StageState == DiagnosticStageState.Succeeded);
+        Assert.Contains(result.Diagnostics.Events, e =>
+            e.Name == "PdfRender" &&
+            e.Type == DiagnosticsEventType.StartStage &&
+            e.StageState == DiagnosticStageState.Started);
+        Assert.Contains(result.Diagnostics.Events, e =>
+            e.Name == "PdfRender" &&
+            e.Type == DiagnosticsEventType.EndStage &&
+            e.StageState == DiagnosticStageState.Succeeded);
     }
 
 }

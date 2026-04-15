@@ -9,53 +9,75 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 {
     private const string HtmlSamplesFolder = "html";
 
-        public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    {
+        var runContext = ConsoleRunContext.FromArguments(context.Arguments);
+        if (!string.IsNullOrWhiteSpace(settings.Input))
         {
-            if (!string.IsNullOrWhiteSpace(settings.Input))
-            {
-                return await RunConversionAsync(settings, settings.Input!);
-            }
-    
-            return await RunInteractiveLoopAsync(settings, cancellationToken);
+            return await RunConversionAsync(
+                settings,
+                settings.Input!,
+                runContext,
+                interactive: false,
+                selectedSamplePath: null);
         }
-    
-        private static async Task<int> RunConversionAsync(RenderSettings settings, string inputPath)
+
+        return await RunInteractiveLoopAsync(settings, runContext, cancellationToken);
+    }
+
+    private static async Task<int> RunConversionAsync(
+        RenderSettings settings,
+        string inputPath,
+        ConsoleRunContext runContext,
+        bool interactive,
+        string? selectedSamplePath)
+    {
+        var paths = ConsolePathResolver.Resolve(settings, inputPath, selectedSamplePath);
+        var options = new ConsoleOptions(
+            paths.InputPath,
+            paths.OutputPath,
+            settings.Diagnostics,
+            settings.DiagnosticsJson,
+            settings.EnableDebugging,
+            runContext.RawArguments,
+            interactive,
+            paths.SelectedSamplePath);
+        var service = new HtmlConversionService(options);
+
+        var (result, actualOutputPath) = await service.ExecuteAsync().ConfigureAwait(false);
+
+        if (result == 0)
         {
-            var outputPath = ResolveOutputPath(settings, inputPath);
-            var options = new ConsoleOptions(inputPath, outputPath, settings.Diagnostics, 
-                settings.DiagnosticsJson, settings.EnableDebugging);
-            var service = new HtmlConversionService(options);
-    
-            var (result, actualOutputPath) = await service.ExecuteAsync().ConfigureAwait(false);
-            
-            if (result == 0)
+            OpenInBrowser(paths.InputPath);
+            if (actualOutputPath != null)
             {
-                OpenInBrowser(inputPath); // inputPath is already absolute due to ConsoleOptions
-                if (actualOutputPath != null) // Ensure actualOutputPath is not null
-                {
-                    OpenInBrowser(actualOutputPath);
-                }
+                OpenInBrowser(actualOutputPath);
             }
-            
-            return result;
         }
-    
-        private static void OpenInBrowser(string path)
+
+        return result;
+    }
+
+    private static void OpenInBrowser(string path)
+    {
+        try
         {
-            try
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[yellow]Could not open '{path}': {ex.Message}[/]");
-            }
+                FileName = path,
+                UseShellExecute = true
+            });
         }
-    private static async Task<int> RunInteractiveLoopAsync(RenderSettings settings, CancellationToken cancellationToken)
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[yellow]Could not open '{path}': {ex.Message}[/]");
+        }
+    }
+
+    private static async Task<int> RunInteractiveLoopAsync(
+        RenderSettings settings,
+        ConsoleRunContext runContext,
+        CancellationToken cancellationToken)
     {
         if (Console.IsInputRedirected)
         {
@@ -89,7 +111,12 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
                 return 0;
             }
 
-            var result = await RunConversionAsync(settings, selection.FullPath!).ConfigureAwait(false);
+            var result = await RunConversionAsync(
+                settings,
+                selection.FullPath!,
+                runContext,
+                interactive: true,
+                selectedSamplePath: selection.FullPath).ConfigureAwait(false);
             if (result != 0)
             {
                 return result;
@@ -97,18 +124,6 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
         }
 
         return 0;
-    }
-
-    private static string ResolveOutputPath(RenderSettings settings, string? inputPath)
-    {
-        if (!string.IsNullOrWhiteSpace(settings.Output))
-        {
-            return settings.Output;
-        }
-
-        var fileName = Path.GetFileNameWithoutExtension(inputPath);
-        var safeName = string.IsNullOrWhiteSpace(fileName) ? "output" : fileName;
-        return $"{safeName}.pdf";
     }
 
     private static SampleChoice PromptForSample(IReadOnlyList<SampleChoice> samples)

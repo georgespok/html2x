@@ -1,6 +1,8 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Models;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -109,19 +111,15 @@ public static class LayoutSnapshotMapper
         var fragmentSequenceId = NextSequenceId(ref sequenceId);
         var children = MapFragments(table.Rows, ref sequenceId);
 
-        return new FragmentSnapshot
-        {
-            SequenceId = fragmentSequenceId,
-            Kind = "table",
-            X = table.Rect.X,
-            Y = table.Rect.Y,
-            Size = table.Size,
-            DisplayRole = table.DisplayRole,
-            FormattingContext = table.FormattingContext,
-            MarkerOffset = table.MarkerOffset,
-            DerivedColumnCount = table.DerivedColumnCount,
-            Children = children
-        };
+        return CreateSnapshot(
+            table,
+            fragmentSequenceId,
+            "table",
+            children,
+            displayRole: table.DisplayRole,
+            formattingContext: table.FormattingContext,
+            markerOffset: table.MarkerOffset,
+            derivedColumnCount: table.DerivedColumnCount);
     }
 
     private static FragmentSnapshot MapTableRow(TableRowFragment row, ref int sequenceId)
@@ -129,19 +127,15 @@ public static class LayoutSnapshotMapper
         var fragmentSequenceId = NextSequenceId(ref sequenceId);
         var children = MapFragments(row.Cells, ref sequenceId);
 
-        return new FragmentSnapshot
-        {
-            SequenceId = fragmentSequenceId,
-            Kind = "table-row",
-            X = row.Rect.X,
-            Y = row.Rect.Y,
-            Size = row.Size,
-            DisplayRole = row.DisplayRole,
-            FormattingContext = row.FormattingContext,
-            MarkerOffset = row.MarkerOffset,
-            RowIndex = row.RowIndex,
-            Children = children
-        };
+        return CreateSnapshot(
+            row,
+            fragmentSequenceId,
+            "table-row",
+            children,
+            displayRole: row.DisplayRole,
+            formattingContext: row.FormattingContext,
+            markerOffset: row.MarkerOffset,
+            rowIndex: row.RowIndex);
     }
 
     private static FragmentSnapshot MapTableCell(TableCellFragment cell, ref int sequenceId)
@@ -149,20 +143,16 @@ public static class LayoutSnapshotMapper
         var fragmentSequenceId = NextSequenceId(ref sequenceId);
         var children = MapFragments(cell.Children, ref sequenceId);
 
-        return new FragmentSnapshot
-        {
-            SequenceId = fragmentSequenceId,
-            Kind = "table-cell",
-            X = cell.Rect.X,
-            Y = cell.Rect.Y,
-            Size = cell.Size,
-            DisplayRole = cell.DisplayRole,
-            FormattingContext = cell.FormattingContext,
-            MarkerOffset = cell.MarkerOffset,
-            ColumnIndex = cell.ColumnIndex,
-            IsHeader = cell.IsHeader,
-            Children = children
-        };
+        return CreateSnapshot(
+            cell,
+            fragmentSequenceId,
+            "table-cell",
+            children,
+            displayRole: cell.DisplayRole,
+            formattingContext: cell.FormattingContext,
+            markerOffset: cell.MarkerOffset,
+            columnIndex: cell.ColumnIndex,
+            isHeader: cell.IsHeader);
     }
 
     private static FragmentSnapshot MapBlock(BlockFragment block, ref int sequenceId)
@@ -170,18 +160,14 @@ public static class LayoutSnapshotMapper
         var fragmentSequenceId = NextSequenceId(ref sequenceId);
         var children = MapFragments(block.Children, ref sequenceId);
 
-        return new FragmentSnapshot
-        {
-            SequenceId = fragmentSequenceId,
-            Kind = "block",
-            X = block.Rect.X,
-            Y = block.Rect.Y,
-            Size = block.Size,
-            DisplayRole = block.DisplayRole,
-            FormattingContext = block.FormattingContext,
-            MarkerOffset = block.MarkerOffset,
-            Children = children
-        };
+        return CreateSnapshot(
+            block,
+            fragmentSequenceId,
+            "block",
+            children,
+            displayRole: block.DisplayRole,
+            formattingContext: block.FormattingContext,
+            markerOffset: block.MarkerOffset);
     }
 
     private static FragmentSnapshot MapLineBox(LineBoxFragment line, int sequenceId)
@@ -190,60 +176,88 @@ public static class LayoutSnapshotMapper
             ? null
             : string.Concat(line.Runs.Select(r => r.Text));
 
-        return new FragmentSnapshot
-        {
-            SequenceId = sequenceId,
-            Kind = "line",
-            X = line.Rect.X,
-            Y = line.Rect.Y,
-            Size = line.Size,
-            Text = text,
-            Children = []
-        };
+        return CreateSnapshot(
+            line,
+            sequenceId,
+            "line",
+            [],
+            color: ResolveLineColor(line),
+            text: text);
     }
 
     private static FragmentSnapshot MapImage(ImageFragment image, int sequenceId)
     {
-        return new FragmentSnapshot
-        {
-            SequenceId = sequenceId,
-            Kind = "image",
-            X = image.Rect.X,
-            Y = image.Rect.Y,
-            Size = image.Size,
-            ContentX = image.ContentRect.X,
-            ContentY = image.ContentRect.Y,
-            ContentSize = image.ContentSize,
-            Borders = image.Style?.Borders,
-            Children = []
-        };
+        return CreateSnapshot(
+            image,
+            sequenceId,
+            "image",
+            [],
+            contentX: image.ContentRect.X,
+            contentY: image.ContentRect.Y,
+            contentSize: image.ContentSize);
     }
 
     private static FragmentSnapshot MapRule(RuleFragment rule, int sequenceId)
     {
-        return new FragmentSnapshot
-        {
-            SequenceId = sequenceId,
-            Kind = "rule",
-            X = rule.Rect.X,
-            Y = rule.Rect.Y,
-            Size = rule.Size,
-            Children = []
-        };
+        return CreateSnapshot(rule, sequenceId, "rule", []);
     }
 
     private static FragmentSnapshot MapUnknown(LayoutFragment fragment, int sequenceId)
     {
+        return CreateSnapshot(fragment, sequenceId, fragment.GetType().Name.ToLowerInvariant(), []);
+    }
+
+    private static FragmentSnapshot CreateSnapshot(
+        LayoutFragment fragment,
+        int sequenceId,
+        string kind,
+        IReadOnlyList<FragmentSnapshot> children,
+        ColorRgba? color = null,
+        string? text = null,
+        float? contentX = null,
+        float? contentY = null,
+        SizePt? contentSize = null,
+        FragmentDisplayRole? displayRole = null,
+        FormattingContextKind? formattingContext = null,
+        float? markerOffset = null,
+        int? derivedColumnCount = null,
+        int? rowIndex = null,
+        int? columnIndex = null,
+        bool? isHeader = null)
+    {
+        var style = fragment.Style;
         return new FragmentSnapshot
         {
             SequenceId = sequenceId,
-            Kind = fragment.GetType().Name.ToLowerInvariant(),
+            Kind = kind,
             X = fragment.Rect.X,
             Y = fragment.Rect.Y,
             Size = fragment.Size,
-            Children = []
+            Color = color ?? style.Color,
+            BackgroundColor = style.BackgroundColor,
+            Margin = style.Margin,
+            Padding = style.Padding,
+            WidthPt = style.WidthPt,
+            HeightPt = style.HeightPt,
+            Display = style.Display,
+            Text = text,
+            ContentX = contentX,
+            ContentY = contentY,
+            ContentSize = contentSize,
+            Borders = style.Borders,
+            DisplayRole = displayRole,
+            FormattingContext = formattingContext,
+            MarkerOffset = markerOffset,
+            DerivedColumnCount = derivedColumnCount,
+            RowIndex = rowIndex,
+            ColumnIndex = columnIndex,
+            IsHeader = isHeader,
+            Children = children
         };
     }
+
+    private static ColorRgba? ResolveLineColor(LineBoxFragment line)
+        => line.Style?.Color ?? line.Runs.FirstOrDefault(static run => run.Color is not null)?.Color;
 
     private static bool TryFindUnsupportedInlineBlockStructure(DisplayNode root, out DisplayNode unsupportedNode)
     {

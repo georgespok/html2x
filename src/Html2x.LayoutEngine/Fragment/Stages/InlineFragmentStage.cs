@@ -2,7 +2,6 @@ using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
-using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
@@ -191,12 +190,13 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         string textAlign,
         IReadOnlyList<IFragmentBuildObserver> observers)
     {
-        var lastLine = FindLastLine(parentFragment);
+        var nextTopY = ResolveNextInlineFlowTop(parentFragment, contentTop);
+        LineBoxFragment? lastLine = null;
 
         for (var lineIndex = 0; lineIndex < layout.Lines.Count; lineIndex++)
         {
             var line = layout.Lines[lineIndex];
-            var topY = lastLine is null ? contentTop : lastLine.Rect.Bottom;
+            var topY = nextTopY;
             var baselineY = topY + GetBaselineAscent(line);
 
             var lineContent = BuildSequentialLineContent(
@@ -221,6 +221,7 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 baselineY,
                 textAlign,
                 lastLine);
+            nextTopY = topY + line.LineHeight;
 
             foreach (var source in line.Runs.Select(r => r.Source).Distinct())
             {
@@ -712,22 +713,14 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         }
     }
 
-    private static LineBoxFragment? FindLastLine(BlockFragment parentFragment)
+    private static float ResolveNextInlineFlowTop(BlockFragment parentFragment, float contentTop)
     {
         if (parentFragment.Children.Count == 0)
         {
-            return null;
+            return contentTop;
         }
 
-        for (var i = parentFragment.Children.Count - 1; i >= 0; i--)
-        {
-            if (parentFragment.Children[i] is LineBoxFragment line)
-            {
-                return line;
-            }
-        }
-
-        return null;
+        return Math.Max(contentTop, parentFragment.Children[^1].Rect.Bottom);
     }
 
     private static float GetBaselineAscent(TextLayoutLine line)

@@ -1,4 +1,4 @@
-﻿namespace Html2x.Diagnostics;
+namespace Html2x.Abstractions.Diagnostics;
 
 public enum ImageStatus
 {

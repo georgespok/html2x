@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -66,10 +65,23 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
             .ToList();
         oversizedEventNames.ShouldContain("layout/pagination/oversized-block");
 
-        var oversizedPayload = oversized.Diagnostics!.Events
+        var paginationEvents = oversized.Diagnostics!.Events
+            .Where(static e => e.Payload is PaginationTracePayload)
+            .ToList();
+        paginationEvents.Select(static e => e.Name).ShouldBe(paginationEvents
+            .Select(static e => ((PaginationTracePayload)e.Payload!).EventName));
+        paginationEvents.All(static e => e.Context is not null).ShouldBeTrue();
+        paginationEvents.All(static e => e.Severity is not null).ShouldBeTrue();
+
+        var oversizedEvent = oversized.Diagnostics!.Events
             .Where(static e => e.Name == "layout/pagination/oversized-block")
-            .Select(static e => (PaginationTracePayload)e.Payload!)
             .First();
+        oversizedEvent.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        oversizedEvent.Context!.ElementIdentity.ShouldStartWith("fragment#");
+
+        var oversizedPayload = (PaginationTracePayload)oversizedEvent.Payload!;
+        oversizedPayload.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        oversizedPayload.Context!.StructuralPath.ShouldStartWith("page[");
         oversizedPayload.BlockHeight.GetValueOrDefault()
             .ShouldBeGreaterThan(oversizedPayload.PageContentHeight.GetValueOrDefault());
 

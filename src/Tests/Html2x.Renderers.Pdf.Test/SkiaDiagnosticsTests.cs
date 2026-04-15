@@ -6,7 +6,6 @@ using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.File;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
 using Moq;
 using Shouldly;
@@ -31,10 +30,14 @@ public class SkiaDiagnosticsTests
         var pdf = await renderer.RenderAsync(layout, options, session);
         pdf.ShouldNotBeNull();
 
-        var evt = session.Events.SingleOrDefault(e => e.Name == "ImageRender");
-        evt.ShouldNotBeNull("Expected ImageRender diagnostics event");
+        var evt = session.Events.SingleOrDefault(e => e.Name == "image/render");
+        evt.ShouldNotBeNull("Expected image/render diagnostics event");
+        evt!.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        evt.Context.ShouldNotBeNull();
+        evt.Context!.ElementIdentity.ShouldBe("img");
+        evt.Context.RawUserInput.ShouldBe("missing.png");
 
-        var payload = evt!.Payload as ImageRenderPayload;
+        var payload = evt.Payload as ImageRenderPayload;
         payload.ShouldNotBeNull();
         payload!.Src.ShouldBe("missing.png");
         payload.Status.ShouldBe(ImageStatus.Missing);

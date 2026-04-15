@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Diagnostics gap sample</title>
+</head>
+<body style="font-family: Arial, sans-serif; font-size: 12px; line-height: 16px; margin: 24px;">
+  <div style="font-size: 24px; margin: 0 0 12px 0;">Diagnostics gap sample</div>
+
+  <p>
+    This ordinary report text should remain available to diagnostics when raw
+    user input capture is enabled.
+  </p>
+
+  <section style="text-shadow: 1px 1px 2px #999;">
+    <div style="font-size: 18px; margin: 0 0 12px 0;">Unsupported style coverage</div>
+    <p class="invalid-style" style="color: #224488; border-left: 4px solid #cc0000; width: not-a-length; padding: 1px 2px 3px 4px 5px;">
+      This paragraph includes invalid and unsupported style input for diagnostic coverage.
+    </p>
+  </section>
+
+  <table style="width: 480px; border-collapse: collapse;">
+    <thead>
+      <tr>
+        <th style="border: 1px solid #333; padding: 6px;">Region</th>
+        <th style="border: 1px solid #333; padding: 6px;">Amount</th>
+        <th style="border: 1px solid #333; padding: 6px;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #333; padding: 6px;">North</td>
+        <td style="border: 1px solid #333; padding: 6px;">$1200</td>
+        <td style="border: 1px solid #333; padding: 6px;">Approved</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #333; padding: 6px;">South</td>
+        <td style="border: 1px solid #333; padding: 6px;">$850</td>
+        <td style="border: 1px solid #333; padding: 6px;">Review</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The image below intentionally references a local file that is not present so
+    image diagnostics can report missing image handling without using an external service.
+  </p>
+
+  <p>
+    Before image
+    <img src="missing-diagnostics-image.png" width="180" height="80" alt="Missing diagnostics sample image">
+    after image.
+  </p>
+</body>
+</html>

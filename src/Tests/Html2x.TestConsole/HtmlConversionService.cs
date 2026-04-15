@@ -1,5 +1,4 @@
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;
@@ -15,7 +14,7 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
             return (1, null);
         }
 
-        var outputPath = ResolveOutputPath(options.OutputPath);
+        var outputPath = options.OutputPath;
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
         using var loggerFactory = CreateLoggerFactory();
@@ -40,7 +39,7 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
                 var diagnosticsPath = Path.GetFullPath(options.DiagnosticsJson);
                 Directory.CreateDirectory(Path.GetDirectoryName(diagnosticsPath)!);
 
-                var json = DiagnosticsSessionSerializer.ToJson(session);
+                var json = TestConsoleDiagnosticsSerializer.ToJson(session, options);
                 await File.WriteAllTextAsync(diagnosticsPath, json);
 
                 logger.LogInformation("Diagnostics written to {DiagnosticsPath}", diagnosticsPath);
@@ -66,17 +65,6 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
             });
             builder.SetMinimumLevel(LogLevel.Information);
         });
-
-    private static string ResolveOutputPath(string requestedPath)
-    {
-        if (Path.IsPathRooted(requestedPath))
-        {
-            return requestedPath;
-        }
-
-        var tempDir = Path.GetTempPath();
-        return Path.Combine(tempDir, requestedPath);
-    }
 
     private static async Task<Html2PdfResult> RenderPdfAsync(
         HtmlConverter converter,
@@ -106,6 +94,6 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         };
 
         var result = await converter.ToPdfAsync(htmlContent, options);
-        return result; 
+        return result;
     }
 }

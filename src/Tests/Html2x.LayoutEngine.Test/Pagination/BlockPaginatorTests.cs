@@ -152,8 +152,20 @@ public sealed class BlockPaginatorTests
             "layout/pagination/page-created",
             "layout/pagination/block-placed"
         ]);
+        traceEvents.Select(static e => e.Severity).ShouldBe([
+            DiagnosticSeverity.Info,
+            DiagnosticSeverity.Info,
+            DiagnosticSeverity.Info,
+            DiagnosticSeverity.Info,
+            DiagnosticSeverity.Info
+        ]);
+        traceEvents.All(static e => e.Context is not null).ShouldBeTrue();
 
         var movedPayload = (PaginationTracePayload)traceEvents[2].Payload!;
+        movedPayload.EventName.ShouldBe("layout/pagination/block-moved-next-page");
+        movedPayload.Severity.ShouldBe(DiagnosticSeverity.Info);
+        movedPayload.Context.ShouldNotBeNull();
+        movedPayload.Context!.StructuralPath.ShouldBe("page[2]/fragment[32]");
         movedPayload.FromPage.ShouldBe(1);
         movedPayload.ToPage.ShouldBe(2);
         movedPayload.FragmentId.ShouldBe(32);
@@ -199,6 +211,29 @@ public sealed class BlockPaginatorTests
             .ToList();
 
         firstPlacements.ShouldBe(secondPlacements);
+    }
+
+    [Fact]
+    public void Paginate_WhenInvokedTwiceWithSameInput_ProducesStableDiagnosticsContext()
+    {
+        // Arrange
+        var paginator = new BlockPaginator();
+        var blocks = new List<BlockFragment>
+        {
+            CreateBlock(44, y: 10f, width: 100f, height: 35f),
+            CreateBlock(45, y: 50f, width: 100f, height: 120f)
+        };
+        var pageSize = new SizePt(200f, 100f);
+        var margins = new Spacing(10f, 10f, 10f, 10f);
+        var firstDiagnostics = new DiagnosticsSession();
+        var secondDiagnostics = new DiagnosticsSession();
+
+        // Act
+        _ = paginator.Paginate(blocks, pageSize, margins, firstDiagnostics);
+        _ = paginator.Paginate(blocks, pageSize, margins, secondDiagnostics);
+
+        // Assert
+        ExtractTraceContract(firstDiagnostics).ShouldBe(ExtractTraceContract(secondDiagnostics));
     }
 
     [Fact]
@@ -324,6 +359,19 @@ public sealed class BlockPaginatorTests
             FragmentId = id,
             Rect = new RectangleF(0f, y, width, height)
         };
+    }
+
+    private static IReadOnlyList<(string Name, DiagnosticSeverity? Severity, string? StructuralPath, string PayloadEventName)>
+        ExtractTraceContract(DiagnosticsSession diagnostics)
+    {
+        return diagnostics.Events
+            .Where(static e => e.Payload is PaginationTracePayload)
+            .Select(static e =>
+            {
+                var payload = (PaginationTracePayload)e.Payload!;
+                return (e.Name, e.Severity, e.Context?.StructuralPath, payload.EventName);
+            })
+            .ToList();
     }
 
     private static BlockFragment CreateBlockWithLine(

@@ -15,6 +15,11 @@ public static class DiagnosticsSessionSerializer
 
     public static string ToJson(DiagnosticsSession session)
     {
+        return JsonSerializer.Serialize(ToSerializableObject(session), JsonOptions);
+    }
+
+    public static object ToSerializableObject(DiagnosticsSession session)
+    {
         if (session is null)
         {
             throw new ArgumentNullException(nameof(session));
@@ -28,18 +33,37 @@ public static class DiagnosticsSessionSerializer
             Events = session.Events.Select(MapEvent).ToArray()
         };
 
-        return JsonSerializer.Serialize(envelope, JsonOptions);
+        return envelope;
     }
 
     private static DiagnosticsEventEnvelope MapEvent(DiagnosticsEvent @event)
     {
         return new DiagnosticsEventEnvelope
         {
-            Type = @event.Type,
+            Type = @event.Type.ToString(),
             Name = @event.Name,
+            Description = @event.Description,
             Timestamp = @event.Timestamp,
+            Severity = @event.Severity?.ToString(),
+            StageState = @event.StageState?.ToString(),
+            Context = MapContext(@event.Context),
+            RawUserInput = @event.RawUserInput,
             Payload = MapPayload(@event.Payload)
         };
+    }
+
+    private static DiagnosticsContextEnvelope? MapContext(DiagnosticContext? context)
+    {
+        return context is null
+            ? null
+            : new DiagnosticsContextEnvelope
+            {
+                Selector = context.Selector,
+                ElementIdentity = context.ElementIdentity,
+                StyleDeclaration = context.StyleDeclaration,
+                StructuralPath = context.StructuralPath,
+                RawUserInput = context.RawUserInput
+            };
     }
 
     private static object? MapPayload(IDiagnosticsPayload? payload)
@@ -49,7 +73,10 @@ public static class DiagnosticsSessionSerializer
             HtmlPayload html => new
             {
                 html.Kind,
-                html.Html
+                html.Html,
+                html.ImageStatus,
+                html.AppliedImageScale,
+                html.ImageWarning
             },
             LayoutSnapshotPayload layout => new
             {
@@ -69,17 +96,7 @@ public static class DiagnosticsSessionSerializer
                 margin.NextTopMargin,
                 margin.CollapsedTopMargin
             },
-            TableLayoutPayload table => new
-            {
-                table.Kind,
-                table.NodePath,
-                table.RowCount,
-                table.DerivedColumnCount,
-                table.RequestedWidth,
-                table.ResolvedWidth,
-                table.Outcome,
-                table.Reason
-            },
+            TableLayoutPayload table => MapTablePayload(table),
             UnsupportedStructurePayload unsupported => new
             {
                 unsupported.Kind,
@@ -88,32 +105,77 @@ public static class DiagnosticsSessionSerializer
                 unsupported.Reason,
                 unsupported.FormattingContext
             },
-            PaginationTracePayload pagination => new
+            PaginationTracePayload pagination => MapPaginationPayload(pagination),
+            StyleDiagnosticPayload style => new
             {
-                pagination.Kind,
-                pagination.EventName,
-                pagination.PageNumber,
-                pagination.FragmentId,
-                pagination.FromPage,
-                pagination.ToPage,
-                pagination.LocalY,
-                pagination.RemainingSpace,
-                pagination.RemainingSpaceBefore,
-                pagination.RemainingSpaceAfter,
-                pagination.BlockHeight,
-                pagination.PageContentHeight,
-                pagination.Reason
+                style.Kind,
+                style.PropertyName,
+                style.RawValue,
+                style.NormalizedValue,
+                style.Decision,
+                style.Reason,
+                Context = MapContext(style.Context)
             },
-            ImageRenderPayload image => new
-            {
-                image.Kind,
-                image.Src,
-                RenderedWidth = image.RenderedSize.Width,
-                RenderedHeight = image.RenderedSize.Height,
-                image.Status
-            },
+            ImageRenderPayload image => MapImagePayload(image),
             null => null,
             _ => new { payload.Kind }
+        };
+    }
+
+    private static object MapTablePayload(TableLayoutPayload table)
+    {
+        return new
+        {
+            table.Kind,
+            table.NodePath,
+            table.TablePath,
+            table.RowCount,
+            table.DerivedColumnCount,
+            table.RequestedWidth,
+            table.ResolvedWidth,
+            table.Outcome,
+            table.Reason,
+            table.RowContexts,
+            table.CellContexts,
+            table.ColumnContexts,
+            table.GroupContexts
+        };
+    }
+
+    private static object MapPaginationPayload(PaginationTracePayload pagination)
+    {
+        return new
+        {
+            pagination.Kind,
+            pagination.EventName,
+            Severity = pagination.Severity.ToString(),
+            Context = MapContext(pagination.Context),
+            pagination.PageNumber,
+            pagination.FragmentId,
+            pagination.FromPage,
+            pagination.ToPage,
+            pagination.LocalY,
+            pagination.RemainingSpace,
+            pagination.RemainingSpaceBefore,
+            pagination.RemainingSpaceAfter,
+            pagination.BlockHeight,
+            pagination.PageContentHeight,
+            pagination.Reason
+        };
+    }
+
+    private static object MapImagePayload(ImageRenderPayload image)
+    {
+        return new
+        {
+            image.Kind,
+            image.Src,
+            Severity = image.Severity.ToString(),
+            Context = MapContext(image.Context),
+            RenderedWidth = image.RenderedSize.Width,
+            RenderedHeight = image.RenderedSize.Height,
+            Status = image.Status.ToString(),
+            image.Borders
         };
     }
 
@@ -130,12 +192,35 @@ public static class DiagnosticsSessionSerializer
 
     private sealed class DiagnosticsEventEnvelope
     {
-        public DiagnosticsEventType Type { get; init; }
+        public string Type { get; init; } = string.Empty;
 
         public string Name { get; init; } = string.Empty;
 
+        public string? Description { get; init; }
+
         public DateTimeOffset Timestamp { get; init; }
 
+        public string? Severity { get; init; }
+
+        public string? StageState { get; init; }
+
+        public DiagnosticsContextEnvelope? Context { get; init; }
+
+        public string? RawUserInput { get; init; }
+
         public object? Payload { get; init; }
+    }
+
+    private sealed class DiagnosticsContextEnvelope
+    {
+        public string? Selector { get; init; }
+
+        public string? ElementIdentity { get; init; }
+
+        public string? StyleDeclaration { get; init; }
+
+        public string? StructuralPath { get; init; }
+
+        public string? RawUserInput { get; init; }
     }
 }

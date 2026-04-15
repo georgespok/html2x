@@ -1,6 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Shouldly;
 using Xunit.Abstractions;
 

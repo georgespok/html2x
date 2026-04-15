@@ -2,7 +2,6 @@ using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf;
@@ -15,6 +14,7 @@ internal sealed class ImageRenderer
     private readonly PdfOptions _options;
     private readonly string _htmlDirectory;
     private readonly DiagnosticsSession? _diagnostics;
+    private const string ImageRenderEvent = "image/render";
 
     public ImageRenderer(PdfOptions options, DiagnosticsSession? diagnosticsSession)
     {
@@ -105,14 +105,29 @@ internal sealed class ImageRenderer
             return;
         }
 
+        var severity = status == ImageStatus.Ok
+            ? DiagnosticSeverity.Info
+            : DiagnosticSeverity.Warning;
+        var context = new DiagnosticContext(
+            Selector: null,
+            ElementIdentity: "img",
+            StyleDeclaration: null,
+            StructuralPath: $"image:{fragment.Src}",
+            RawUserInput: fragment.Src);
+
         _diagnostics.Events.Add(new DiagnosticsEvent
         {
             Type = DiagnosticsEventType.Trace,
-            Name = "ImageRender",
+            Name = ImageRenderEvent,
             Timestamp = DateTimeOffset.UtcNow,
+            Severity = severity,
+            Context = context,
+            RawUserInput = fragment.Src,
             Payload = new ImageRenderPayload
             {
                 Src = fragment.Src,
+                Severity = severity,
+                Context = context,
                 RenderedSize = new Abstractions.Measurements.Units.SizePt(width, height),
                 Status = status,
                 Borders = fragment.Style?.Borders

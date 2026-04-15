@@ -162,10 +162,12 @@ public sealed class BlockLayoutEngine
             contentWidthForChildren,
             contentYForChildren);
         var canonicalBlockHeight = ResolveCanonicalBlockHeight(node, contentWidthForChildren);
+        var sequentialContentHeight = ResolveSequentialContentHeight(node, contentWidthForChildren);
         var contentHeight = _measurement.ResolveContentHeight(
             node,
             contentWidthForChildren,
-            _ => Math.Max(nestedBlocksHeight, canonicalBlockHeight));
+            _ => Math.Max(nestedBlocksHeight, canonicalBlockHeight),
+            sequentialContentHeight);
         var contentSize = new SizePt(measurement.ResolvedWidth, contentHeight).Safe().ClampMin(0f, 0f);
 
         node.X = x;
@@ -260,7 +262,8 @@ public sealed class BlockLayoutEngine
                 result.UnsupportedReason ?? "Unsupported table structure.",
                 result.RowCount,
                 result.RequestedWidth,
-                result.ResolvedWidth);
+                result.ResolvedWidth,
+                groupContexts: BuildTableGroupContexts(node));
 
             return CreateZeroHeightUnsupportedPlaceholder(node, x, y, result.ResolvedWidth, margin);
         }
@@ -271,10 +274,65 @@ public sealed class BlockLayoutEngine
             result.Rows.Count,
             result.DerivedColumnCount,
             result.RequestedWidth,
-            result.ResolvedWidth);
+            result.ResolvedWidth,
+            BuildTableRowContexts(result),
+            BuildTableCellContexts(result),
+            BuildTableColumnContexts(result),
+            BuildTableGroupContexts(node));
 
         node.DerivedColumnCount = result.DerivedColumnCount;
         return MaterializeTableBlock(node, result, x, y, margin);
+    }
+
+    private static IReadOnlyList<TableRowDiagnosticContext> BuildTableRowContexts(TableLayoutResult result)
+    {
+        return result.Rows
+            .Select(static row => new TableRowDiagnosticContext(
+                row.RowIndex,
+                row.Cells.Count,
+                row.Height))
+            .ToList();
+    }
+
+    private static IReadOnlyList<TableCellDiagnosticContext> BuildTableCellContexts(TableLayoutResult result)
+    {
+        return result.Rows
+            .SelectMany(static row => row.Cells.Select(cell => new TableCellDiagnosticContext(
+                row.RowIndex,
+                cell.ColumnIndex,
+                cell.IsHeader,
+                cell.Width,
+                cell.Height)))
+            .ToList();
+    }
+
+    private static IReadOnlyList<TableColumnDiagnosticContext> BuildTableColumnContexts(TableLayoutResult result)
+    {
+        return result.ColumnWidths
+            .Select(static (width, index) => new TableColumnDiagnosticContext(index, width))
+            .ToList();
+    }
+
+    private static IReadOnlyList<TableGroupDiagnosticContext> BuildTableGroupContexts(TableBox table)
+    {
+        var groups = table.Children
+            .OfType<TableSectionBox>()
+            .Select(static section => new TableGroupDiagnosticContext(
+                section.Element?.TagName.ToLowerInvariant() ?? "section",
+                section.Children.OfType<TableRowBox>().Count()))
+            .ToList();
+
+        if (groups.Count > 0)
+        {
+            return groups;
+        }
+
+        return
+        [
+            new TableGroupDiagnosticContext(
+                "direct",
+                table.Children.OfType<TableRowBox>().Count())
+        ];
     }
 
     private TableBox MaterializeTableBlock(
@@ -461,6 +519,108 @@ public sealed class BlockLayoutEngine
         }
 
         return Math.Max(0f, maxY - minY);
+    }
+
+    private float ResolveSequentialContentHeight(BlockBox node, float contentWidth)
+    {
+        var currentY = 0f;
+        var previousBottomMargin = 0f;
+        var pendingInlineFlow = new List<InlineBox>();
+
+        foreach (var child in node.Children)
+        {
+            if (TryAppendInlineFlowMeasurementNode(child, pendingInlineFlow))
+            {
+                continue;
+            }
+
+            currentY = FlushInlineFlowHeight(node, pendingInlineFlow, contentWidth, currentY, ref previousBottomMargin);
+
+            switch (child)
+            {
+                case TableBox table:
+                {
+                    var margin = table.Style.Margin.Safe();
+                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
+                    currentY += collapsedTop + table.Height;
+                    previousBottomMargin = margin.Bottom;
+                    break;
+                }
+                case BlockBox block:
+                {
+                    var margin = block.Style.Margin.Safe();
+                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
+                    currentY += collapsedTop + block.Height;
+                    previousBottomMargin = margin.Bottom;
+                    break;
+                }
+            }
+        }
+
+        currentY = FlushInlineFlowHeight(node, pendingInlineFlow, contentWidth, currentY, ref previousBottomMargin);
+        return Math.Max(0f, currentY + previousBottomMargin);
+    }
+
+    private static bool TryAppendInlineFlowMeasurementNode(DisplayNode node, ICollection<InlineBox> pendingInlineFlow)
+    {
+        switch (node)
+        {
+            case InlineBox inline:
+                pendingInlineFlow.Add(inline);
+                return true;
+            case InlineBlockBoundaryBox boundary:
+                pendingInlineFlow.Add(boundary.SourceInline);
+                return true;
+            case BlockBox block when IsAnonymousInlineWrapper(block):
+                foreach (var inline in block.Children.OfType<InlineBox>())
+                {
+                    pendingInlineFlow.Add(inline);
+                }
+
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static bool IsAnonymousInlineWrapper(BlockBox block)
+    {
+        return block.IsAnonymous &&
+               block.Children.Count > 0 &&
+               block.Children.All(static child => child is InlineBox);
+    }
+
+    private float FlushInlineFlowHeight(
+        BlockBox source,
+        List<InlineBox> pendingInlineFlow,
+        float contentWidth,
+        float currentY,
+        ref float previousBottomMargin)
+    {
+        if (pendingInlineFlow.Count == 0)
+        {
+            return currentY;
+        }
+
+        currentY += previousBottomMargin;
+        previousBottomMargin = 0f;
+
+        var measurementBlock = new BlockBox(DisplayRole.Block)
+        {
+            Element = source.Element,
+            Style = source.Style,
+            TextAlign = source.TextAlign,
+            MarkerOffset = source.MarkerOffset
+        };
+
+        foreach (var inline in pendingInlineFlow)
+        {
+            measurementBlock.Children.Add(inline);
+        }
+
+        var inlineHeight = _inlineEngine.MeasureHeight(measurementBlock, contentWidth);
+        pendingInlineFlow.Clear();
+        return currentY + inlineHeight;
     }
 
     private static DisplayNode MapTableContentNode(DisplayNode source, DisplayNode parent)

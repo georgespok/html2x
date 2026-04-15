@@ -1,12 +1,10 @@
 using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.Abstractions.Diagnostics;
-using Moq;
 using Shouldly;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -65,6 +63,35 @@ public class InlineBlockTests
 
         parentLineText.ShouldNotContain("Inline-block A");
         parentLineText.ShouldNotContain("Inline-block B");
+    }
+
+    [Fact]
+    public async Task InlineBlock_AfterBlockSibling_ShouldStartBelowPreviousBlock()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 200pt; border: 1pt solid #000; padding: 4pt;'>
+                  <div><strong>Inline-block atomic:</strong></div>
+                  <span style='display: inline-block; border: 1pt solid #000; padding: 2pt;'>Box A</span>
+                  <span style='display: inline-block; border: 1pt solid #000; padding: 2pt;'>Box B</span>
+                </div>
+              </body>
+            </html>";
+
+        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+
+        var root = (BlockFragment)layout.Pages[0].Children[0];
+        var heading = FindLine(root, "Inline-block atomic:");
+        var inlineBlockA = FindLine(root, "Box A");
+        var inlineBlockB = FindLine(root, "Box B");
+        var inlineBlockAContainer = FindInlineBlock(root, "Box A");
+        var inlineBlockBContainer = FindInlineBlock(root, "Box B");
+
+        inlineBlockA.Rect.Y.ShouldBeGreaterThanOrEqualTo(heading.Rect.Bottom - 0.1f);
+        inlineBlockB.Rect.Y.ShouldBeGreaterThanOrEqualTo(heading.Rect.Bottom - 0.1f);
+        root.Rect.Bottom.ShouldBeGreaterThanOrEqualTo(inlineBlockAContainer.Rect.Bottom - 0.1f);
+        root.Rect.Bottom.ShouldBeGreaterThanOrEqualTo(inlineBlockBContainer.Rect.Bottom - 0.1f);
     }
 
     [Fact]
@@ -628,6 +655,15 @@ public class InlineBlockTests
             .OfType<BlockFragment>()
             .SelectMany(block => block.Children.OfType<LineBoxFragment>())
             .First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static BlockFragment FindInlineBlock(BlockFragment fragment, string text)
+    {
+        return EnumerateFragments(fragment)
+            .OfType<BlockFragment>()
+            .First(block =>
+                block.FormattingContext == FormattingContextKind.InlineBlock &&
+                ContainsText(block, text));
     }
 
     private static void AppendOrderedText(LayoutFragment fragment, ICollection<string> ordered)

@@ -1,6 +1,7 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
@@ -23,7 +24,7 @@ public sealed class CssStyleComputer(
     {
     }
 
-    public StyleTree Compute(IDocument doc)
+    public StyleTree Compute(IDocument doc, DiagnosticsSession? diagnosticsSession = null)
     {
         var tree = new StyleTree();
 
@@ -33,21 +34,24 @@ public sealed class CssStyleComputer(
         }
 
         var bodyStyle = body.ComputeCurrentStyle();
-        ApplyPageMargins(tree, bodyStyle, body);
+        ApplyPageMargins(tree, bodyStyle, body, diagnosticsSession);
 
-        tree.Root = _traversal.Build(body, MapStyle);
+        tree.Root = _traversal.Build(body, (element, parentStyle) => MapStyle(element, parentStyle, diagnosticsSession));
         return tree;
     }
 
-    private ComputedStyle MapStyle(IElement element, ComputedStyle? parentStyle)
+    private ComputedStyle MapStyle(
+        IElement element,
+        ComputedStyle? parentStyle,
+        DiagnosticsSession? diagnosticsSession)
     {
         var css = element.ComputeCurrentStyle();
 
         var style = new ComputedStyleBuilder();
 
         ApplyTypography(css, style, parentStyle);
-        ApplySpacing(css, element, style);
-        ApplyDimensions(css, element, style);
+        ApplySpacing(css, element, style, diagnosticsSession);
+        ApplyDimensions(css, element, style, diagnosticsSession);
         ApplyDisplay(css, style);
 
         ApplyBorders(css, style);
@@ -62,48 +66,56 @@ public sealed class CssStyleComputer(
             : display.Trim().ToLowerInvariant();
     }
 
-    private void ApplyDimensions(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
+    private void ApplyDimensions(
+        ICssStyleDeclaration css,
+        IElement element,
+        ComputedStyleBuilder style,
+        DiagnosticsSession? diagnosticsSession)
     {
-        var width = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Width, element);
+        var width = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Width, element, diagnosticsSession);
         if (width.HasValue)
         {
             style.WidthPt = width.Value;
         }
 
-        var minWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinWidth, element);
+        var minWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinWidth, element, diagnosticsSession);
         if (minWidth.HasValue)
         {
             style.MinWidthPt = minWidth.Value;
         }
 
-        var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element);
+        var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element, diagnosticsSession);
         if (maxWidth.HasValue)
         {
             style.MaxWidthPt = maxWidth.Value;
         }
 
-        var height = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Height, element);
+        var height = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Height, element, diagnosticsSession);
         if (height.HasValue)
         {
             style.HeightPt = height.Value;
         }
 
-        var minHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinHeight, element);
+        var minHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinHeight, element, diagnosticsSession);
         if (minHeight.HasValue)
         {
             style.MinHeightPt = minHeight.Value;
         }
 
-        var maxHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxHeight, element);
+        var maxHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxHeight, element, diagnosticsSession);
         if (maxHeight.HasValue)
         {
             style.MaxHeightPt = maxHeight.Value;
         }
     }
 
-    private float? GetDimensionWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    private float? GetDimensionWithLogging(
+        ICssStyleDeclaration css,
+        string property,
+        IElement element,
+        DiagnosticsSession? diagnosticsSession)
     {
-        var rawValue = css.GetPropertyValue(property);
+        var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
 
         if (string.IsNullOrWhiteSpace(rawValue))
         {
@@ -121,23 +133,54 @@ public sealed class CssStyleComputer(
         var unsupportedUnit = DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/unsupported-declaration",
+                element,
+                property,
+                trimmed,
+                null,
+                "Unsupported",
+                $"Unsupported unit '{unsupportedUnit}' for {property}.");
             return null;
         }
 
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/ignored-declaration",
+                element,
+                property,
+                trimmed,
+                null,
+                "Ignored",
+                $"Unable to parse {property} as a supported length.");
             return null;
         }
 
         if (points < 0)
         {
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/ignored-declaration",
+                element,
+                property,
+                trimmed,
+                points.ToString(CultureInfo.InvariantCulture),
+                "Ignored",
+                $"Negative dimension value for {property} was ignored.");
             return null;
         }
 
         return points;
     }
 
-    private void ApplyPageMargins(StyleTree tree, ICssStyleDeclaration styles, IElement element)
+    private void ApplyPageMargins(
+        StyleTree tree,
+        ICssStyleDeclaration styles,
+        IElement element,
+        DiagnosticsSession? diagnosticsSession)
     {
         var margin = ParseSpacingWithOverrides(
             styles,
@@ -146,7 +189,8 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            element);
+            element,
+            diagnosticsSession);
 
         tree.Page.Margin = margin;
     }
@@ -159,49 +203,54 @@ public sealed class CssStyleComputer(
         string bottomProperty,
         string leftProperty,
         IElement element,
+        DiagnosticsSession? diagnosticsSession,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        ApplySpacingShorthand(css, shorthandProperty, element, setTop, setRight, setBottom, setLeft);
-        OverrideSpacingSide(css, topProperty, element, setTop);
-        OverrideSpacingSide(css, rightProperty, element, setRight);
-        OverrideSpacingSide(css, bottomProperty, element, setBottom);
-        OverrideSpacingSide(css, leftProperty, element, setLeft);
+        ApplySpacingShorthand(css, shorthandProperty, element, diagnosticsSession, setTop, setRight, setBottom, setLeft);
+        OverrideSpacingSide(css, topProperty, element, diagnosticsSession, setTop);
+        OverrideSpacingSide(css, rightProperty, element, diagnosticsSession, setRight);
+        OverrideSpacingSide(css, bottomProperty, element, diagnosticsSession, setBottom);
+        OverrideSpacingSide(css, leftProperty, element, diagnosticsSession, setLeft);
     }
 
     private void OverrideSpacingSide(
         ICssStyleDeclaration css,
         string property,
         IElement element,
+        DiagnosticsSession? diagnosticsSession,
         Action<float> setter)
     {
-        var raw = css.GetPropertyValue(property);
+        var raw = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
+
         if (string.IsNullOrWhiteSpace(raw))
         {
             return;
         }
 
-        setter(GetSpacingWithLogging(css, property, element));
+        setter(GetSpacingWithLogging(css, property, element, diagnosticsSession));
     }
 
     private void ApplySpacingShorthand(
         ICssStyleDeclaration css,
         string shorthandProperty,
         IElement element,
+        DiagnosticsSession? diagnosticsSession,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        var shorthandValue = css.GetPropertyValue(shorthandProperty);
+        var shorthandValue = InlineStyleSource.GetValue(element, shorthandProperty) ?? css.GetPropertyValue(shorthandProperty);
+
         if (string.IsNullOrWhiteSpace(shorthandValue))
         {
             return;
         }
 
-        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, out var parsedValues))
+        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, diagnosticsSession, out var parsedValues))
         {
             return;
         }
@@ -372,7 +421,11 @@ public sealed class CssStyleComputer(
         return HtmlCssConstants.Defaults.FontFamily;
     }
 
-    private void ApplySpacing(ICssStyleDeclaration css, IElement element, ComputedStyleBuilder style)
+    private void ApplySpacing(
+        ICssStyleDeclaration css,
+        IElement element,
+        ComputedStyleBuilder style,
+        DiagnosticsSession? diagnosticsSession)
     {
         var margin = ParseSpacingWithOverrides(
             css,
@@ -381,7 +434,8 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.MarginRight,
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
-            element);
+            element,
+            diagnosticsSession);
 
         style.Margin = margin;
 
@@ -392,7 +446,8 @@ public sealed class CssStyleComputer(
             HtmlCssConstants.CssProperties.PaddingRight,
             HtmlCssConstants.CssProperties.PaddingBottom,
             HtmlCssConstants.CssProperties.PaddingLeft,
-            element);
+            element,
+            diagnosticsSession);
 
         style.Padding = new Spacing(
             Math.Max(0, padding.Top),
@@ -408,7 +463,8 @@ public sealed class CssStyleComputer(
         string rightProperty,
         string bottomProperty,
         string leftProperty,
-        IElement element)
+        IElement element,
+        DiagnosticsSession? diagnosticsSession)
     {
         var top = 0f;
         var right = 0f;
@@ -423,6 +479,7 @@ public sealed class CssStyleComputer(
             bottomProperty,
             leftProperty,
             element,
+            diagnosticsSession,
             value => top = value,
             value => right = value,
             value => bottom = value,
@@ -435,6 +492,7 @@ public sealed class CssStyleComputer(
         string property,
         string shorthandValue,
         IElement element,
+        DiagnosticsSession? diagnosticsSession,
         out List<float> parsedValues)
     {
         parsedValues = [];
@@ -449,17 +507,64 @@ public sealed class CssStyleComputer(
             return false;
         }
 
+        if (tokens.Length > 4)
+        {
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/ignored-declaration",
+                element,
+                property,
+                shorthandValue.Trim(),
+                null,
+                "Ignored",
+                $"{property} shorthand has {tokens.Length} values; expected 1 to 4.");
+            return false;
+        }
+
         foreach (var token in tokens)
         {
             var unsupportedUnit = DetectUnsupportedUnit(token);
             if (unsupportedUnit != null)
             {
+                StyleDiagnosticEmitter.Emit(
+                    diagnosticsSession,
+                    "style/unsupported-declaration",
+                    element,
+                    property,
+                    token,
+                    null,
+                    "Unsupported",
+                    $"Unsupported unit '{unsupportedUnit}' for {property}.");
                 return false;
             }
 
             if (!_converter.TryGetLengthPt(token, out var points))
             {
+                StyleDiagnosticEmitter.Emit(
+                    diagnosticsSession,
+                    "style/ignored-declaration",
+                    element,
+                    property,
+                    token,
+                    null,
+                    "Ignored",
+                    $"Unable to parse {property} token as a supported length.");
                 return false;
+            }
+
+            if (points < 0)
+            {
+                var decision = CreateNegativeSpacingDecision(property, points);
+
+                StyleDiagnosticEmitter.Emit(
+                    diagnosticsSession,
+                    decision.EventName,
+                    element,
+                    property,
+                    token,
+                    decision.NormalizedValue,
+                    decision.Decision,
+                    decision.Reason);
             }
 
             parsedValues.Add(points);
@@ -511,9 +616,13 @@ public sealed class CssStyleComputer(
         setColor(ParseBorderColor(colorRaw));
     }
 
-    private float GetSpacingWithLogging(ICssStyleDeclaration css, string property, IElement element)
+    private float GetSpacingWithLogging(
+        ICssStyleDeclaration css,
+        string property,
+        IElement element,
+        DiagnosticsSession? diagnosticsSession)
     {
-        var rawValue = css.GetPropertyValue(property);
+        var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
         
         // If no value provided, return default (0) without logging
         if (string.IsNullOrWhiteSpace(rawValue))
@@ -527,6 +636,15 @@ public sealed class CssStyleComputer(
         var unsupportedUnit = DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/unsupported-declaration",
+                element,
+                property,
+                trimmed,
+                null,
+                "Unsupported",
+                $"Unsupported unit '{unsupportedUnit}' for {property}.");
             return 0;
         }
 
@@ -534,43 +652,59 @@ public sealed class CssStyleComputer(
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
             // Value provided but couldn't be parsed (non-numeric, etc.)
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                "style/ignored-declaration",
+                element,
+                property,
+                trimmed,
+                null,
+                "Ignored",
+                $"Unable to parse {property} as a supported length.");
             return 0;
+        }
+
+        if (points < 0)
+        {
+            var decision = CreateNegativeSpacingDecision(property, points);
+
+            StyleDiagnosticEmitter.Emit(
+                diagnosticsSession,
+                decision.EventName,
+                element,
+                property,
+                trimmed,
+                decision.NormalizedValue,
+                decision.Decision,
+                decision.Reason);
         }
 
         return points;
     }
 
+    private static (
+        string EventName,
+        string Decision,
+        string NormalizedValue,
+        string Reason) CreateNegativeSpacingDecision(string property, float points)
+    {
+        var isPadding = property.StartsWith("padding", StringComparison.OrdinalIgnoreCase);
+        return isPadding
+            ? (
+                "style/partially-applied-declaration",
+                "PartiallyApplied",
+                "0",
+                "Negative padding value was clamped to zero.")
+            : (
+                "style/applied-declaration",
+                "Applied",
+                points.ToString(CultureInfo.InvariantCulture),
+                "Negative spacing value was applied and may affect layout.");
+    }
+
     private static string? DetectUnsupportedUnit(string trimmed)
     {
-        // Supported units: px, pt
-        // Check for common unsupported units: em, rem, %, in, cm, mm, vh, vw, etc.
-        if (trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.EndsWith("pt", StringComparison.OrdinalIgnoreCase))
-        {
-            return null; // Supported unit
-        }
-
-        // Check for unit suffixes (2-3 characters at the end)
-        if (trimmed.Length >= 3)
-        {
-            var lastTwo = trimmed.Substring(trimmed.Length - 2, 2).ToLowerInvariant();
-            var lastThree = trimmed.Length >= 4 ? trimmed.Substring(trimmed.Length - 3, 3).ToLowerInvariant() : null;
-
-            // Common unsupported units
-            if (lastTwo == "em" || lastTwo == "in" || lastTwo == "cm" || lastTwo == "mm" ||
-                lastTwo == "vh" || lastTwo == "vw" || lastTwo == "ex" || lastTwo == "ch" ||
-                lastTwo == "pc" || trimmed.EndsWith("%"))
-            {
-                return lastTwo == "%" ? "%" : lastTwo;
-            }
-
-            if (lastThree == "rem")
-            {
-                return lastThree;
-            }
-        }
-
-        return null; // No unit detected or unit is not recognized as unsupported
+        return CssLengthUnitClassifier.DetectUnsupportedUnit(trimmed);
     }
 
     private static BorderLineStyle ParseBorderStyle(string? raw)

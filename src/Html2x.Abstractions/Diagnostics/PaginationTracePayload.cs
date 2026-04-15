@@ -6,6 +6,10 @@ public sealed class PaginationTracePayload : IDiagnosticsPayload
 
     public string EventName { get; init; } = string.Empty;
 
+    public DiagnosticSeverity Severity { get; init; } = DiagnosticSeverity.Info;
+
+    public DiagnosticContext? Context { get; init; }
+
     public int PageNumber { get; init; }
 
     public int? FragmentId { get; init; }

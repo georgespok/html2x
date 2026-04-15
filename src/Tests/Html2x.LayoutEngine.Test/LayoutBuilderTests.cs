@@ -67,7 +67,7 @@ public class LayoutBuilderTests
         fragmentTree.Blocks.Add(expectedBlock);
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
         _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
             .Returns(fragmentTree);
@@ -91,7 +91,7 @@ public class LayoutBuilderTests
         layout.Pages[0].Children[0].ShouldBeSameAs(expectedBlock);
 
         _domProvider.Verify(x => x.LoadAsync(html, options), Times.Once);
-        _styleComputer.Verify(x => x.Compute(document), Times.Once);
+        _styleComputer.Verify(x => x.Compute(document, It.IsAny<DiagnosticsSession?>()), Times.Once);
         _boxTreeBuilder.Verify(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>()), Times.Once);
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
@@ -108,7 +108,7 @@ public class LayoutBuilderTests
         fragmentTree.Blocks.Add(new BlockFragment());
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document)).Returns(styleTree);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
         _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
 
@@ -123,6 +123,82 @@ public class LayoutBuilderTests
         diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/inline-measurement");
         diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/fragmentation");
         diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/pagination");
+    }
+
+    [Fact]
+    public async Task Build_WithDiagnosticsSession_PublishesStartedAndSucceededLifecycleDiagnostics()
+    {
+        const string html = "<p>ignored by unit test</p>";
+
+        var document = new Mock<IDocument>().Object;
+        var styleTree = new StyleTree();
+        var boxTree = new BoxTree();
+        var fragmentTree = new FragmentTree();
+        fragmentTree.Blocks.Add(new BlockFragment());
+
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
+        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+
+        var diagnosticsSession = new DiagnosticsSession();
+
+        await _builder.BuildAsync(html, new LayoutOptions(), diagnosticsSession);
+
+        var stageNames = new[]
+        {
+            "stage/dom",
+            "stage/style",
+            "stage/layout",
+            "stage/layout-validation",
+            "stage/inline-measurement",
+            "stage/fragmentation",
+            "stage/pagination"
+        };
+
+        foreach (var stageName in stageNames)
+        {
+            diagnosticsSession.Events.ShouldContain(e =>
+                e.Name == stageName &&
+                e.Type == DiagnosticsEventType.StartStage &&
+                e.StageState == DiagnosticStageState.Started);
+            diagnosticsSession.Events.ShouldContain(e =>
+                e.Name == stageName &&
+                e.Type == DiagnosticsEventType.EndStage &&
+                e.StageState == DiagnosticStageState.Succeeded);
+        }
+    }
+
+    [Fact]
+    public async Task Build_WhenStageThrows_PublishesFailedLifecycleDiagnosticAndRethrows()
+    {
+        const string html = "<p>ignored by unit test</p>";
+        const string failureMessage = "Style computation failed.";
+
+        var document = new Mock<IDocument>().Object;
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>()))
+            .Throws(new InvalidOperationException(failureMessage));
+
+        var diagnosticsSession = new DiagnosticsSession();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _builder.BuildAsync(html, new LayoutOptions(), diagnosticsSession));
+
+        exception.Message.ShouldBe(failureMessage);
+        diagnosticsSession.Events.ShouldContain(e =>
+            e.Name == "stage/style" &&
+            e.Type == DiagnosticsEventType.StartStage &&
+            e.StageState == DiagnosticStageState.Started);
+        diagnosticsSession.Events.ShouldContain(e =>
+            e.Name == "stage/style" &&
+            e.Type == DiagnosticsEventType.Error &&
+            e.StageState == DiagnosticStageState.Failed &&
+            e.Description == failureMessage);
+        diagnosticsSession.Events.ShouldNotContain(e =>
+            e.Name == "stage/style" &&
+            e.Type == DiagnosticsEventType.EndStage &&
+            e.StageState == DiagnosticStageState.Succeeded);
     }
 
     

@@ -1,10 +1,9 @@
-﻿using Html2x.Abstractions.Diagnostics;
-
-namespace Html2x.Diagnostics;
+namespace Html2x.Abstractions.Diagnostics;
 
 public sealed class HtmlPayload : IDiagnosticsPayload
 {
     public string Kind => "html";
+
     public required string Html { get; init; }
 
     /// <summary>Status of the most recent image processed (ok, missing, oversize).</summary>

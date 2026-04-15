@@ -10,5 +10,13 @@ public class DiagnosticsEvent
 
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.Now;
 
+    public DiagnosticSeverity? Severity { get; init; }
+
+    public DiagnosticStageState? StageState { get; init; }
+
+    public DiagnosticContext? Context { get; init; }
+
+    public string? RawUserInput { get; init; }
+
     public IDiagnosticsPayload? Payload { get; init; }
 }

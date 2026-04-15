@@ -75,9 +75,9 @@ public class LayoutBuilder
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options);
 
-        var dom = await RunStage("stage/dom", async () => await _domProvider.LoadAsync(html, options), diagnosticsSession);
+        var dom = await RunStageAsync("stage/dom", () => _domProvider.LoadAsync(html, options), diagnosticsSession);
         
-        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom), diagnosticsSession);
+        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession);
 
         var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree, diagnosticsSession), diagnosticsSession);
         RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession), diagnosticsSession);
@@ -133,25 +133,48 @@ public class LayoutBuilder
             .ToList();
     }
 
-    private static void PublishEvent(DiagnosticsSession? diagnosticsSession, DiagnosticsEventType eventType, string eventName, string? eventDescription = null) =>
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = eventType,
-            Name = eventName,
-            Description = eventDescription
-        });
-
     private static T RunStage<T>(string stage, Func<T> action, DiagnosticsSession? diagnosticsSession = null)
     {
-        var result = action();
-        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, stage);
-        return result;
+        diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageStarted(stage));
+        try
+        {
+            var result = action();
+            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageSucceeded(stage));
+            return result;
+        }
+        catch (Exception exception)
+        {
+            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageFailed(stage, exception.Message));
+            throw;
+        }
     }
 
     private static void RunStage(string stage, Action action, DiagnosticsSession? diagnosticsSession = null)
     {
-        action();
-        PublishEvent(diagnosticsSession, DiagnosticsEventType.EndStage, stage);
+        RunStage<object?>(stage, () =>
+        {
+            action();
+            return null;
+        }, diagnosticsSession);
+    }
+
+    private static async Task<T> RunStageAsync<T>(
+        string stage,
+        Func<Task<T>> action,
+        DiagnosticsSession? diagnosticsSession = null)
+    {
+        diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageStarted(stage));
+        try
+        {
+            var result = await action();
+            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageSucceeded(stage));
+            return result;
+        }
+        catch (Exception exception)
+        {
+            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageFailed(stage, exception.Message));
+            throw;
+        }
     }
 }
 

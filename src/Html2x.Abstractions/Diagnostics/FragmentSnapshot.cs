@@ -16,6 +16,20 @@ public sealed class FragmentSnapshot
 
     public SizePt Size { get; init; }
 
+    public ColorRgba? Color { get; init; }
+
+    public ColorRgba? BackgroundColor { get; init; }
+
+    public Spacing? Margin { get; init; }
+
+    public Spacing? Padding { get; init; }
+
+    public float? WidthPt { get; init; }
+
+    public float? HeightPt { get; init; }
+
+    public string? Display { get; init; }
+
     public string? Text { get; init; }
 
     public float? ContentX { get; init; }

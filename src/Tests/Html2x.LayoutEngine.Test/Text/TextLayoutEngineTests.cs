@@ -1,4 +1,3 @@
-using System.Globalization;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Layout.Styles;

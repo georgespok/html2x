@@ -14,7 +14,11 @@ public static class TableLayoutDiagnostics
         int rowCount,
         int derivedColumnCount,
         float? requestedWidth,
-        float? resolvedWidth)
+        float? resolvedWidth,
+        IReadOnlyList<TableRowDiagnosticContext>? rowContexts = null,
+        IReadOnlyList<TableCellDiagnosticContext>? cellContexts = null,
+        IReadOnlyList<TableColumnDiagnosticContext>? columnContexts = null,
+        IReadOnlyList<TableGroupDiagnosticContext>? groupContexts = null)
     {
         Emit(
             diagnosticsSession,
@@ -23,11 +27,16 @@ public static class TableLayoutDiagnostics
             new TableLayoutPayload
             {
                 NodePath = nodePath,
+                TablePath = nodePath,
                 RowCount = rowCount,
                 DerivedColumnCount = derivedColumnCount,
                 RequestedWidth = requestedWidth,
                 ResolvedWidth = resolvedWidth,
-                Outcome = "Supported"
+                Outcome = "Supported",
+                RowContexts = rowContexts ?? [],
+                CellContexts = cellContexts ?? [],
+                ColumnContexts = columnContexts ?? [],
+                GroupContexts = groupContexts ?? []
             });
     }
 
@@ -39,7 +48,11 @@ public static class TableLayoutDiagnostics
         int rowCount = 0,
         float? requestedWidth = null,
         float? resolvedWidth = null,
-        FormattingContextKind formattingContext = FormattingContextKind.Block)
+        FormattingContextKind formattingContext = FormattingContextKind.Block,
+        IReadOnlyList<TableRowDiagnosticContext>? rowContexts = null,
+        IReadOnlyList<TableCellDiagnosticContext>? cellContexts = null,
+        IReadOnlyList<TableColumnDiagnosticContext>? columnContexts = null,
+        IReadOnlyList<TableGroupDiagnosticContext>? groupContexts = null)
     {
         Emit(
             diagnosticsSession,
@@ -60,12 +73,17 @@ public static class TableLayoutDiagnostics
             new TableLayoutPayload
             {
                 NodePath = nodePath,
+                TablePath = nodePath,
                 RowCount = rowCount,
                 DerivedColumnCount = null,
                 RequestedWidth = requestedWidth,
                 ResolvedWidth = resolvedWidth,
                 Outcome = "Unsupported",
-                Reason = reason
+                Reason = reason,
+                RowContexts = rowContexts ?? [],
+                CellContexts = cellContexts ?? [],
+                ColumnContexts = columnContexts ?? [],
+                GroupContexts = groupContexts ?? []
             });
     }
 

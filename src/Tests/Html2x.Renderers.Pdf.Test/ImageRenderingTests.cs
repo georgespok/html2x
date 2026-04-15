@@ -6,7 +6,6 @@ using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.File;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.Diagnostics;
 using Html2x.Renderers.Pdf.Pipeline;
 using Moq;
 using Shouldly;
@@ -51,6 +50,40 @@ public class ImageRenderingTests
 
         images[2].RenderedSize.Width.ShouldBe(140, 1);
         images[2].RenderedSize.Height.ShouldBe(70, 1);
+    }
+
+    [Fact]
+    public async Task Render_ImageDiagnostics_ShouldUseCanonicalEventAndContext()
+    {
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(
+            new SizePt(612, 792),
+            new Spacing(24, 24, 24, 24),
+            new List<Fragment>
+            {
+                CreateImageFragment(24, 60, 120, 80, ImageStatus.Missing, src: "missing.png")
+            }));
+
+        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+
+        bytes.ShouldNotBeNull();
+
+        var evt = diagnostics.Events.ShouldHaveSingleItem();
+        evt.Name.ShouldBe("image/render");
+        evt.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        evt.Context.ShouldNotBeNull();
+        evt.Context!.ElementIdentity.ShouldBe("img");
+        evt.Context.StructuralPath.ShouldBe("image:missing.png");
+        evt.RawUserInput.ShouldBe("missing.png");
+
+        var payload = evt.Payload.ShouldBeOfType<ImageRenderPayload>();
+        payload.Src.ShouldBe("missing.png");
+        payload.Status.ShouldBe(ImageStatus.Missing);
+        payload.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        payload.Context.ShouldNotBeNull();
+        payload.Context!.RawUserInput.ShouldBe("missing.png");
+        payload.RenderedSize.Width.ShouldBe(120, 1);
+        payload.RenderedSize.Height.ShouldBe(80, 1);
     }
 
     [Fact]
@@ -174,7 +207,8 @@ public class ImageRenderingTests
         float width,
         float height,
         ImageStatus status,
-        BorderEdges? borders = null)
+        BorderEdges? borders = null,
+        string? src = null)
     {
         const string dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAuMB9p8S9F0AAAAASUVORK5CYII=";
 
@@ -183,7 +217,7 @@ public class ImageRenderingTests
 
         return new ImageFragment
         {
-            Src = dataUri,
+            Src = src ?? dataUri,
             AuthoredSizePx = new SizePx(width, height),
             IntrinsicSizePx = new SizePx(width, height),
             Rect = new RectangleF(x, y, width, height),
@@ -197,7 +231,7 @@ public class ImageRenderingTests
     private static List<ImageRenderPayload> GetImageRenderPayloads(DiagnosticsSession diagnostics)
     {
         return diagnostics.Events
-            .Where(e => e.Name == "ImageRender")
+            .Where(e => e.Name == "image/render")
             .Select(e => e.Payload)
             .OfType<ImageRenderPayload>()
             .ToList();
