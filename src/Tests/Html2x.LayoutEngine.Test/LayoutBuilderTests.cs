@@ -68,7 +68,8 @@ public class LayoutBuilderTests
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
+            .Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
             .Returns(fragmentTree);
 
@@ -92,7 +93,9 @@ public class LayoutBuilderTests
 
         _domProvider.Verify(x => x.LoadAsync(html, options), Times.Once);
         _styleComputer.Verify(x => x.Compute(document, It.IsAny<DiagnosticsSession?>()), Times.Once);
-        _boxTreeBuilder.Verify(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>()), Times.Once);
+        _boxTreeBuilder.Verify(
+            x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()),
+            Times.Once);
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
 
@@ -109,7 +112,8 @@ public class LayoutBuilderTests
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
+            .Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
 
         var diagnosticsSession = new DiagnosticsSession();
@@ -126,6 +130,53 @@ public class LayoutBuilderTests
     }
 
     [Fact]
+    public async Task Build_WithDiagnosticsSession_PublishesGeometrySnapshotPayload()
+    {
+        const string html = "<p>ignored by unit test</p>";
+
+        var document = new Mock<IDocument>().Object;
+        var styleTree = new StyleTree();
+        var boxTree = new BoxTree();
+        boxTree.Blocks.Add(new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle(),
+            UsedGeometry = UsedGeometry.FromBorderBox(new System.Drawing.RectangleF(10f, 20f, 100f, 40f), new Spacing(), new Spacing())
+        });
+
+        var fragmentTree = new FragmentTree();
+        fragmentTree.Blocks.Add(new BlockFragment
+        {
+            FragmentId = 7,
+            PageNumber = 1,
+            Rect = new System.Drawing.RectangleF(10f, 20f, 100f, 40f),
+            DisplayRole = FragmentDisplayRole.Block,
+            Style = new VisualStyle()
+        });
+
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
+            .Returns(boxTree);
+        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+
+        var diagnosticsSession = new DiagnosticsSession();
+
+        await _builder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter }, diagnosticsSession);
+
+        var geometryEvent = diagnosticsSession.Events
+            .SingleOrDefault(static e => e.Name == "layout/geometry-snapshot");
+
+        geometryEvent.ShouldNotBeNull();
+        geometryEvent!.Payload.ShouldBeOfType<GeometrySnapshotPayload>();
+
+        var payload = (GeometrySnapshotPayload)geometryEvent.Payload!;
+        payload.Snapshot.Boxes.Count.ShouldBe(1);
+        payload.Snapshot.Fragments.PageCount.ShouldBe(1);
+        payload.Snapshot.Pagination.Count.ShouldBe(1);
+        payload.Snapshot.Pagination[0].Placements.ShouldHaveSingleItem().FragmentId.ShouldBe(7);
+    }
+
+    [Fact]
     public async Task Build_WithDiagnosticsSession_PublishesStartedAndSucceededLifecycleDiagnostics()
     {
         const string html = "<p>ignored by unit test</p>";
@@ -138,7 +189,8 @@ public class LayoutBuilderTests
 
         _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
         _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>())).Returns(boxTree);
+        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
+            .Returns(boxTree);
         _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
 
         var diagnosticsSession = new DiagnosticsSession();

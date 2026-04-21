@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
@@ -9,16 +10,21 @@ internal sealed class InlineRunFactory
 {
     private readonly IFontMetricsProvider _metrics;
     private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly IImageLayoutResolver? _imageResolver;
 
     public InlineRunFactory(IFontMetricsProvider metrics)
-        : this(metrics, new BlockFormattingContext())
+        : this(metrics, new BlockFormattingContext(), imageResolver: null)
     {
     }
 
-    internal InlineRunFactory(IFontMetricsProvider metrics, IBlockFormattingContext blockFormattingContext)
+    internal InlineRunFactory(
+        IFontMetricsProvider metrics,
+        IBlockFormattingContext blockFormattingContext,
+        IImageLayoutResolver? imageResolver = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _imageResolver = imageResolver;
     }
 
     public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
@@ -56,7 +62,12 @@ internal sealed class InlineRunFactory
         ILineHeightStrategy lineHeightStrategy,
         out InlineObjectLayout layout)
     {
-        var builder = new InlineObjectLayoutBuilder(measurer, _metrics, lineHeightStrategy, _blockFormattingContext);
+        var builder = new InlineObjectLayoutBuilder(
+            measurer,
+            _metrics,
+            lineHeightStrategy,
+            _blockFormattingContext,
+            _imageResolver);
         return builder.TryBuildInlineBlockLayout(inline, availableWidth, out layout);
     }
 

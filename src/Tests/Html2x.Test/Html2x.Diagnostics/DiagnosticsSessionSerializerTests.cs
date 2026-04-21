@@ -197,6 +197,72 @@ public sealed class DiagnosticsSessionSerializerTests
         });
         session.Events.Add(new DiagnosticsEvent
         {
+            Name = "layout/geometry-snapshot",
+            Payload = new GeometrySnapshotPayload
+            {
+                Snapshot = new GeometrySnapshot
+                {
+                    Boxes =
+                    [
+                        new BoxGeometrySnapshot
+                        {
+                            SequenceId = 1,
+                            Path = "html/body/div",
+                            Kind = "block",
+                            TagName = "div",
+                            X = 10,
+                            Y = 20,
+                            Size = new SizePt(100, 40),
+                            ContentX = 14,
+                            ContentY = 24,
+                            ContentSize = new SizePt(92, 32),
+                            MarkerOffset = 0
+                        }
+                    ],
+                    Fragments = new LayoutSnapshot
+                    {
+                        PageCount = 1,
+                        Pages =
+                        [
+                            new LayoutPageSnapshot
+                            {
+                                PageNumber = 1,
+                                Fragments =
+                                [
+                                    new FragmentSnapshot
+                                    {
+                                        Kind = "block",
+                                        Size = new SizePt(100, 40)
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    Pagination =
+                    [
+                        new PaginationPageSnapshot
+                        {
+                            PageNumber = 1,
+                            Placements =
+                            [
+                                new PaginationPlacementSnapshot
+                                {
+                                    FragmentId = 7,
+                                    Kind = "Block",
+                                    PageNumber = 1,
+                                    OrderIndex = 0,
+                                    X = 10,
+                                    Y = 20,
+                                    Size = new SizePt(100, 40)
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        });
+        session.Events.Add(new DiagnosticsEvent
+        {
             Name = "unknown",
             Payload = new UnknownPayload()
         });
@@ -236,7 +302,14 @@ public sealed class DiagnosticsSessionSerializerTests
         fragment.GetProperty("padding").GetProperty("left").GetSingle().ShouldBe(8);
         fragment.GetProperty("display").GetString().ShouldBe("block");
 
-        events[4].GetProperty("payload").GetProperty("kind").GetString().ShouldBe("test.unknown");
+        var geometry = events[4].GetProperty("payload");
+        geometry.GetProperty("kind").GetString().ShouldBe("layout.geometry");
+        geometry.GetProperty("snapshot").GetProperty("boxes")[0].GetProperty("path").GetString()
+            .ShouldBe("html/body/div");
+        geometry.GetProperty("snapshot").GetProperty("pagination")[0].GetProperty("placements")[0].GetProperty("fragmentId")
+            .GetInt32().ShouldBe(7);
+
+        events[5].GetProperty("payload").GetProperty("kind").GetString().ShouldBe("test.unknown");
     }
 
     private sealed class UnknownPayload : IDiagnosticsPayload

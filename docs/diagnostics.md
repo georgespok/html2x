@@ -59,6 +59,18 @@ Layout snapshots now carry visual verification fields when the fragment has them
 - Margin, padding, border, width, height, and display.
 - Existing fragment metadata such as display role, formatting context, table row index, cell column index, and header status.
 
+Geometry diagnostics also emit `layout/geometry-snapshot` with one payload that combines:
+
+- block box geometry from the box tree
+- fragment geometry from the final `HtmlLayout`
+- pagination placements from the paginator
+
+The box portion includes border and content rectangles, baseline when present, marker offset, and overflow allowance. Use this payload when geometry drift is suspected across layout, fragment building, and pagination.
+
+The mapper is intentionally strict. If a laid out block reaches diagnostics without `UsedGeometry`, snapshot generation fails instead of silently reconstructing geometry from legacy scalar fields.
+
+When adding new fragment runtime types through internal fragment adapters, pagination diagnostics remain valid only after a matching translator is registered in `FragmentCoordinateTranslator`.
+
 Table diagnostics use `layout/table` for supported and unsupported table layout decisions. The payload keeps the existing summary fields and adds row, cell, column, and group context collections when available. Unsupported table structures also emit `layout/table/unsupported-structure`.
 
 Pagination diagnostics use `layout/pagination/*` event names and include matching payload `EventName`, canonical severity, and diagnostic context. Oversized blocks are warnings; ordinary page creation, placement, movement, and empty-document traces are informational.

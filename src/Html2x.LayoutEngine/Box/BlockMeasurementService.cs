@@ -5,13 +5,6 @@ namespace Html2x.LayoutEngine.Box;
 
 internal sealed class BlockMeasurementService
 {
-    private readonly IInlineLayoutEngine _inlineEngine;
-
-    public BlockMeasurementService(IInlineLayoutEngine inlineEngine)
-    {
-        _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
-    }
-
     public BlockMeasurementBasis Prepare(BlockBox box, float availableWidth)
     {
         ArgumentNullException.ThrowIfNull(box);
@@ -48,16 +41,11 @@ internal sealed class BlockMeasurementService
 
     public float ResolveContentHeight(
         BlockBox box,
-        float contentWidth,
-        Func<float, float> measureNestedContent,
+        float resolvedContentHeight,
         float minimumContentHeight = 0f)
     {
         ArgumentNullException.ThrowIfNull(box);
-        ArgumentNullException.ThrowIfNull(measureNestedContent);
-
-        var inlineHeight = _inlineEngine.MeasureHeight(box, contentWidth);
-        var nestedBlocksHeight = measureNestedContent(contentWidth);
-        var contentHeight = Math.Max(minimumContentHeight, Math.Max(inlineHeight, nestedBlocksHeight));
+        var contentHeight = Math.Max(minimumContentHeight, resolvedContentHeight);
         var style = box.Style;
 
         if (style.HeightPt.HasValue)

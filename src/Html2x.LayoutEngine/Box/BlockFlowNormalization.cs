@@ -132,6 +132,7 @@ internal static class BlockFlowNormalization
             IsAnonymous = sourceContentBox.IsAnonymous,
             TextAlign = sourceContentBox.TextAlign,
             MarkerOffset = sourceContentBox.MarkerOffset,
+            UsedGeometry = sourceContentBox.UsedGeometry,
             IsInlineBlockContext = sourceContentBox.IsInlineBlockContext
         };
 
@@ -155,6 +156,7 @@ internal static class BlockFlowNormalization
                 IsAnonymous = boundary.IsAnonymous,
                 TextAlign = boundary.TextAlign,
                 MarkerOffset = boundary.MarkerOffset,
+                UsedGeometry = boundary.UsedGeometry,
                 IsInlineBlockContext = boundary.IsInlineBlockContext
             },
             InlineBox inline => new InlineBox(inline.Role)
@@ -177,6 +179,7 @@ internal static class BlockFlowNormalization
                 Padding = table.Padding,
                 TextAlign = table.TextAlign,
                 MarkerOffset = table.MarkerOffset,
+                UsedGeometry = table.UsedGeometry,
                 IsAnonymous = table.IsAnonymous,
                 IsInlineBlockContext = table.IsInlineBlockContext
             },
@@ -199,6 +202,7 @@ internal static class BlockFlowNormalization
                 Padding = row.Padding,
                 TextAlign = row.TextAlign,
                 MarkerOffset = row.MarkerOffset,
+                UsedGeometry = row.UsedGeometry,
                 IsAnonymous = row.IsAnonymous,
                 IsInlineBlockContext = row.IsInlineBlockContext
             },
@@ -215,17 +219,64 @@ internal static class BlockFlowNormalization
                 Padding = cell.Padding,
                 TextAlign = cell.TextAlign,
                 MarkerOffset = cell.MarkerOffset,
+                UsedGeometry = cell.UsedGeometry,
                 IsAnonymous = cell.IsAnonymous,
                 IsInlineBlockContext = cell.IsInlineBlockContext
+            },
+            ImageBox image => new ImageBox(image.Role)
+            {
+                Element = image.Element,
+                Style = image.Style,
+                Parent = parent,
+                X = image.X,
+                Y = image.Y,
+                Width = image.Width,
+                Height = image.Height,
+                Margin = image.Margin,
+                Padding = image.Padding,
+                TextAlign = image.TextAlign,
+                MarkerOffset = image.MarkerOffset,
+                UsedGeometry = image.UsedGeometry,
+                IsAnonymous = image.IsAnonymous,
+                IsInlineBlockContext = image.IsInlineBlockContext,
+                Src = image.Src,
+                AuthoredSizePx = image.AuthoredSizePx,
+                IntrinsicSizePx = image.IntrinsicSizePx,
+                IsMissing = image.IsMissing,
+                IsOversize = image.IsOversize
+            },
+            RuleBox rule => new RuleBox(rule.Role)
+            {
+                Element = rule.Element,
+                Style = rule.Style,
+                Parent = parent,
+                X = rule.X,
+                Y = rule.Y,
+                Width = rule.Width,
+                Height = rule.Height,
+                Margin = rule.Margin,
+                Padding = rule.Padding,
+                TextAlign = rule.TextAlign,
+                MarkerOffset = rule.MarkerOffset,
+                UsedGeometry = rule.UsedGeometry,
+                IsAnonymous = rule.IsAnonymous,
+                IsInlineBlockContext = rule.IsInlineBlockContext
             },
             BlockBox block => new BlockBox(block.Role)
             {
                 Element = block.Element,
                 Style = block.Style,
                 Parent = parent,
+                X = block.X,
+                Y = block.Y,
+                Width = block.Width,
+                Height = block.Height,
+                Margin = block.Margin,
+                Padding = block.Padding,
                 IsAnonymous = block.IsAnonymous,
                 TextAlign = block.TextAlign,
                 MarkerOffset = block.MarkerOffset,
+                UsedGeometry = block.UsedGeometry,
                 IsInlineBlockContext = block.IsInlineBlockContext
             },
             FloatBox floatBox => new FloatBox(floatBox.Role)

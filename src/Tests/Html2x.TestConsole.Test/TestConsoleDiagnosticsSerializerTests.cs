@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
-using Html2x.TestConsole;
 using Shouldly;
 
 namespace Html2x.TestConsole.Test;

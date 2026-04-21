@@ -6,6 +6,7 @@ using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
@@ -30,7 +31,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
+        var fragments = BuildFragments(boxTree);
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -38,6 +39,29 @@ public class FragmentBuilderTests
         fragment.Rect.Y.ShouldBe(20f);
         fragment.Rect.Width.ShouldBe(100f);
         fragment.Rect.Height.ShouldBe(50f);
+    }
+
+    [Fact]
+    public void Build_WithUsedGeometry_UsesGeometryRectForBlockFragments()
+    {
+        var block = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle(),
+            UsedGeometry = UsedGeometry.FromBorderBox(
+                new RectangleF(10f, 20f, 100f, 50f),
+                new Spacing(3f, 4f, 5f, 6f),
+                new Spacing(1f, 1f, 1f, 1f),
+                markerOffset: 8f)
+        };
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(block);
+
+        var fragments = BuildFragments(tree);
+
+        var fragment = fragments.Blocks.ShouldHaveSingleItem();
+        fragment.Rect.ShouldBe(new RectangleF(10f, 20f, 100f, 50f));
+        fragment.MarkerOffset.ShouldBe(8f);
     }
 
     [Fact]
@@ -54,7 +78,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
+        var fragments = BuildFragments(boxTree);
 
         // Assert
         var fragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -79,7 +103,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
+        var fragments = BuildFragments(boxTree);
 
         // Assert: One top-level BlockFragment for div
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -115,7 +139,7 @@ public class FragmentBuilderTests
             .BuildTree();
 
         // Act
-        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
+        var fragments = BuildFragments(boxTree);
 
         // Assert: One top-level BlockFragment
         var divFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
@@ -165,7 +189,7 @@ public class FragmentBuilderTests
 
         boxTree.Blocks.Add(ulBlock);
 
-        var fragments = CreateFragmentBuilder().Build(boxTree, CreateContext());
+        var fragments = BuildFragments(boxTree);
 
         var ulFragment = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
@@ -231,7 +255,7 @@ public class FragmentBuilderTests
         var tree = new BoxTree();
         tree.Blocks.Add(root);
 
-        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var fragments = BuildFragments(tree);
         var parent = AssertFragmentTree(fragments).HasBlockCount(1).GetBlock(0);
 
         var orderedTexts = EnumerateTextRuns(parent).ToList();
@@ -301,7 +325,7 @@ public class FragmentBuilderTests
         var tree = new BoxTree();
         tree.Blocks.Add(table);
 
-        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var fragments = BuildFragments(tree);
         var tableFragment = fragments.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
         tableFragment.DerivedColumnCount.ShouldBe(2);
 
@@ -370,7 +394,7 @@ public class FragmentBuilderTests
         var tree = new BoxTree();
         tree.Blocks.Add(table);
 
-        var fragments = CreateFragmentBuilder().Build(tree, CreateContext());
+        var fragments = BuildFragments(tree);
         var tableFragment = fragments.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
 
         tableFragment.DerivedColumnCount.ShouldBe(2);
@@ -392,7 +416,7 @@ public class FragmentBuilderTests
 
         for (var iteration = 0; iteration < 3; iteration++)
         {
-            var fragmentTree = CreateFragmentBuilder().Build(BuildAmbiguousTopLevelOrderTree(), CreateContext());
+            var fragmentTree = BuildFragments(BuildAmbiguousTopLevelOrderTree());
             var layout = new HtmlLayout();
             layout.Pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), fragmentTree.Blocks));
 
@@ -489,6 +513,13 @@ public class FragmentBuilderTests
 
     private static BlockBoxBuilder BuildBoxTree() => new BlockBoxBuilder();
 
+    private static FragmentTree BuildFragments(BoxTree tree)
+    {
+        var context = CreateContext();
+        PrepareInlineLayouts(tree, context);
+        return CreateFragmentBuilder().Build(tree, context);
+    }
+
     private static FragmentBuildContext CreateContext()
     {
         var textMeasurer = new Mock<ITextMeasurer>();
@@ -507,6 +538,47 @@ public class FragmentBuilderTests
             (long)(10 * 1024 * 1024),
             textMeasurer.Object,
             fontSource.Object);
+    }
+
+    private static void PrepareInlineLayouts(BoxTree boxTree, FragmentBuildContext context)
+    {
+        var inlineEngine = new InlineLayoutEngine(new FontMetricsProvider(), context.TextMeasurer, new DefaultLineHeightStrategy());
+
+        foreach (var block in boxTree.Blocks)
+        {
+            PrepareInlineLayout(block, inlineEngine);
+        }
+    }
+
+    private static void PrepareInlineLayout(BlockBox block, IInlineLayoutEngine inlineEngine)
+    {
+        var padding = block.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
+        var contentLeft = block.X + padding.Left + border.Left;
+        var contentTop = block.Y + padding.Top + border.Top;
+        var contentWidth = Math.Max(0f, block.Width - padding.Horizontal - border.Horizontal);
+
+        inlineEngine.Layout(
+            block,
+            new InlineLayoutRequest(
+                contentLeft,
+                contentTop,
+                contentWidth));
+
+        foreach (var child in block.Children.OfType<BlockBox>())
+        {
+            if (child is InlineBlockBoundaryBox)
+            {
+                continue;
+            }
+
+            if (child.IsAnonymous && child.Children.All(static grandChild => grandChild is InlineBox))
+            {
+                continue;
+            }
+
+            PrepareInlineLayout(child, inlineEngine);
+        }
     }
 
     private static FragmentTreeAssertion AssertFragmentTree(FragmentTree tree)

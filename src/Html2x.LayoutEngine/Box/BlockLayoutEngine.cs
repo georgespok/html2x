@@ -1,3 +1,4 @@
+using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
@@ -16,13 +17,22 @@ public sealed class BlockLayoutEngine
     private readonly IFloatLayoutEngine _floatEngine;
     private readonly DiagnosticsSession? _diagnosticsSession;
     private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly IImageLayoutResolver _imageResolver;
+    private readonly BlockLayoutStrategyRegistry _layoutStrategies;
 
     public BlockLayoutEngine(
         IInlineLayoutEngine inlineEngine,
         ITableLayoutEngine tableEngine,
         IFloatLayoutEngine floatEngine,
         DiagnosticsSession? diagnosticsSession = null)
-        : this(inlineEngine, tableEngine, floatEngine, new BlockFormattingContext(), diagnosticsSession)
+        : this(
+            inlineEngine,
+            tableEngine,
+            floatEngine,
+            new BlockFormattingContext(),
+            new ImageLayoutResolver(),
+            BlockLayoutStrategyRegistry.CreateDefault(),
+            diagnosticsSession)
     {
     }
 
@@ -31,13 +41,17 @@ public sealed class BlockLayoutEngine
         ITableLayoutEngine tableEngine,
         IFloatLayoutEngine floatEngine,
         IBlockFormattingContext blockFormattingContext,
+        IImageLayoutResolver imageResolver,
+        BlockLayoutStrategyRegistry layoutStrategies,
         DiagnosticsSession? diagnosticsSession = null)
     {
         _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
-        _measurement = new BlockMeasurementService(_inlineEngine);
+        _measurement = new BlockMeasurementService();
         _tableEngine = tableEngine ?? throw new ArgumentNullException(nameof(tableEngine));
         _floatEngine = floatEngine ?? throw new ArgumentNullException(nameof(floatEngine));
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _imageResolver = imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
+        _layoutStrategies = layoutStrategies ?? throw new ArgumentNullException(nameof(layoutStrategies));
         _diagnosticsSession = diagnosticsSession;
     }
 
@@ -63,37 +77,26 @@ public sealed class BlockLayoutEngine
 
         foreach (var child in candidates)
         {
-            switch (child)
+            if (child is not BlockBox block)
             {
-                case TableBox table:
-                {
-                    var marginTop = table.Style.Margin.Safe().Top;
-                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
-                    var tableBlock = LayoutTable(table, contentX, currentY, contentWidth, collapsedTop);
-                    tree.Blocks.Add(tableBlock);
-                    currentY = tableBlock.Y + tableBlock.Height;
-                    previousBottomMargin = tableBlock.Margin.Bottom;
-                    break;
-                }
-                case BlockBox box:
-                {
-                    var marginTop = box.Style.Margin.Safe().Top;
-                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
-                    PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
-                    var block = LayoutBlock(
-                        box,
-                        contentX,
-                        currentY,
-                        contentWidth,
-                        contentY,
-                        previousBottomMargin,
-                        collapsedTop);
-                    tree.Blocks.Add(block);
-                    currentY = block.Y + block.Height;
-                    previousBottomMargin = block.Margin.Bottom;
-                    break;
-                }
+                continue;
             }
+
+            var marginTop = block.Style.Margin.Safe().Top;
+            var collapsedTop = Math.Max(previousBottomMargin, marginTop);
+            PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
+            var laidOutBlock = LayoutBlock(
+                block,
+                new BlockLayoutRequest(
+                    contentX,
+                    currentY,
+                    contentWidth,
+                    contentY,
+                    previousBottomMargin,
+                    collapsedTop));
+            tree.Blocks.Add(laidOutBlock);
+            currentY = laidOutBlock.Y + laidOutBlock.Height;
+            previousBottomMargin = laidOutBlock.Margin.Bottom;
         }
 
         return tree;
@@ -123,34 +126,35 @@ public sealed class BlockLayoutEngine
         return hasInline && !hasBlockOrTable;
     }
 
-    private BlockBox LayoutBlock(
-        BlockBox node,
-        float contentX,
-        float cursorY,
-        float contentWidth,
-        float parentContentTop,
-        float previousBottomMargin,
-        float collapsedTopMargin)
+    private BlockBox LayoutBlock(BlockBox node, BlockLayoutRequest request)
     {
-        var measurement = _measurement.Prepare(node, contentWidth);
+        return _layoutStrategies.Layout(this, node, request);
+    }
+
+    internal BlockBox LayoutStandardBlock(BlockBox node, BlockLayoutRequest request)
+    {
+        var measurement = _measurement.Prepare(node, request.ContentWidth);
         var margin = measurement.Margin;
         var padding = measurement.Padding;
         var border = measurement.Border;
 
-        var rawX = contentX + margin.Left;
-        var rawY = cursorY + collapsedTopMargin;
-        var x = Math.Max(rawX, contentX);
-        var y = Math.Max(rawY, parentContentTop);
+        var rawX = request.ContentX + margin.Left;
+        var rawY = request.CursorY + request.CollapsedTopMargin;
+        var x = Math.Max(rawX, request.ContentX);
+        var y = Math.Max(rawY, request.ParentContentTop);
 
         // Content width accounts for padding and borders
         var contentWidthForChildren = measurement.ContentWidth;
         var contentXForChildren = x + padding.Left + border.Left;
         var contentYForChildren = y + padding.Top + border.Top;
+        var inlineContentX = x + padding.Left + border.Left;
 
         if (node.MarkerOffset > 0f)
         {
             contentXForChildren += node.MarkerOffset;
         }
+
+        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
         // use inline engine for height estimation (use content width)
         _floatEngine.PlaceFloats(node, x, y, measurement.ResolvedWidth); 
@@ -162,21 +166,88 @@ public sealed class BlockLayoutEngine
             contentWidthForChildren,
             contentYForChildren);
         var canonicalBlockHeight = ResolveCanonicalBlockHeight(node, contentWidthForChildren);
-        var sequentialContentHeight = ResolveSequentialContentHeight(node, contentWidthForChildren);
+        var inlineLayout = _inlineEngine.Layout(
+            node,
+            new InlineLayoutRequest(
+                inlineContentX,
+                contentYForChildren,
+                contentWidthForChildren));
+        var sequentialContentHeight = inlineLayout.TotalHeight;
+        var resolvedContentHeight = Math.Max(
+            sequentialContentHeight,
+            Math.Max(nestedBlocksHeight, canonicalBlockHeight));
         var contentHeight = _measurement.ResolveContentHeight(
             node,
-            contentWidthForChildren,
-            _ => Math.Max(nestedBlocksHeight, canonicalBlockHeight),
+            resolvedContentHeight,
             sequentialContentHeight);
         var contentSize = new SizePt(measurement.ResolvedWidth, contentHeight).Safe().ClampMin(0f, 0f);
+        var usedGeometry = CreateUsedGeometry(
+            x,
+            y,
+            contentSize.Width,
+            contentSize.Height + padding.Vertical + border.Vertical,
+            padding,
+            border,
+            markerOffset: node.MarkerOffset);
 
-        node.X = x;
-        node.Y = y;
-        node.Width = contentSize.Width; // Total width (for fragment Rect)
-        node.Height = contentSize.Height + padding.Vertical + border.Vertical;
         node.Margin = margin;
         node.Padding = padding;
         node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        node.UsedGeometry = usedGeometry;
+
+        return node;
+    }
+
+    internal BlockBox LayoutImageBlock(ImageBox node, BlockLayoutRequest request)
+    {
+        var measurement = _measurement.Prepare(node, request.ContentWidth);
+        var image = _imageResolver.Resolve(node, measurement.ContentWidth);
+        var padding = measurement.Padding;
+        var border = measurement.Border;
+        var rawX = request.ContentX + measurement.Margin.Left;
+        var rawY = request.CursorY + request.CollapsedTopMargin;
+        var x = Math.Max(rawX, request.ContentX);
+        var y = Math.Max(rawY, request.ParentContentTop);
+
+        node.Src = image.Src;
+        node.AuthoredSizePx = image.AuthoredSizePx;
+        node.IntrinsicSizePx = image.IntrinsicSizePx;
+        node.IsMissing = image.IsMissing;
+        node.IsOversize = image.IsOversize;
+        node.Margin = measurement.Margin;
+        node.Padding = padding;
+        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        node.UsedGeometry = CreateUsedGeometry(
+            x,
+            y,
+            image.TotalWidth,
+            image.TotalHeight,
+            padding,
+            border,
+            markerOffset: node.MarkerOffset);
+
+        return node;
+    }
+
+    internal BlockBox LayoutRuleBlock(RuleBox node, BlockLayoutRequest request)
+    {
+        var measurement = _measurement.Prepare(node, request.ContentWidth);
+        var rawX = request.ContentX + measurement.Margin.Left;
+        var rawY = request.CursorY + request.CollapsedTopMargin;
+        var x = Math.Max(rawX, request.ContentX);
+        var y = Math.Max(rawY, request.ParentContentTop);
+
+        node.Margin = measurement.Margin;
+        node.Padding = measurement.Padding;
+        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        node.UsedGeometry = CreateUsedGeometry(
+            x,
+            y,
+            measurement.ResolvedWidth,
+            measurement.Padding.Vertical + measurement.Border.Vertical,
+            measurement.Padding,
+            measurement.Border,
+            markerOffset: node.MarkerOffset);
 
         return node;
     }
@@ -193,37 +264,26 @@ public sealed class BlockLayoutEngine
 
         for (var i = 0; i < parent.Children.Count; i++)
         {
-            switch (parent.Children[i])
+            if (parent.Children[i] is not BlockBox childBlock)
             {
-                case TableBox tableChild:
-                {
-                    var marginTop = tableChild.Style.Margin.Safe().Top;
-                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
-                    PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
-                    var laidOutTable = LayoutTable(tableChild, contentX, currentY, contentWidth, collapsedTop);
-                    parent.Children[i] = laidOutTable;
-                    currentY = laidOutTable.Y + laidOutTable.Height;
-                    previousBottomMargin = laidOutTable.Margin.Bottom;
-                    break;
-                }
-                case BlockBox blockChild:
-                {
-                    var marginTop = blockChild.Style.Margin.Safe().Top;
-                    var collapsedTop = Math.Max(previousBottomMargin, marginTop);
-                    PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
-                    LayoutBlock(
-                        blockChild,
-                        contentX,
-                        currentY,
-                        contentWidth,
-                        parentContentTop,
-                        previousBottomMargin,
-                        collapsedTop);
-                    currentY = blockChild.Y + blockChild.Height;
-                    previousBottomMargin = blockChild.Margin.Bottom;
-                    break;
-                }
+                continue;
             }
+
+            var marginTop = childBlock.Style.Margin.Safe().Top;
+            var collapsedTop = Math.Max(previousBottomMargin, marginTop);
+            PublishMarginCollapse(previousBottomMargin, marginTop, collapsedTop);
+            var laidOutChild = LayoutBlock(
+                childBlock,
+                new BlockLayoutRequest(
+                    contentX,
+                    currentY,
+                    contentWidth,
+                    parentContentTop,
+                    previousBottomMargin,
+                    collapsedTop));
+            parent.Children[i] = laidOutChild;
+            currentY = laidOutChild.Y + laidOutChild.Height;
+            previousBottomMargin = laidOutChild.Margin.Bottom;
         }
 
         return Math.Max(0, (currentY + previousBottomMargin) - cursorY);
@@ -244,14 +304,14 @@ public sealed class BlockLayoutEngine
         });
     }
 
-    private TableBox LayoutTable(TableBox node, float contentX, float cursorY, float contentWidth, float collapsedTopMargin)
+    internal TableBox LayoutTableBlock(TableBox node, BlockLayoutRequest request)
     {
         var s = node.Style;
         var margin = s.Margin.Safe();
 
-        var x = contentX + margin.Left;
-        var y = cursorY + collapsedTopMargin;
-        var width = Math.Max(0, contentWidth - margin.Left - margin.Right);
+        var x = request.ContentX + margin.Left;
+        var y = request.CursorY + request.CollapsedTopMargin;
+        var width = Math.Max(0, request.ContentWidth - margin.Left - margin.Right);
         var result = _tableEngine.Layout(node, width);
         if (!result.IsSupported)
         {
@@ -280,8 +340,7 @@ public sealed class BlockLayoutEngine
             BuildTableColumnContexts(result),
             BuildTableGroupContexts(node));
 
-        node.DerivedColumnCount = result.DerivedColumnCount;
-        return MaterializeTableBlock(node, result, x, y, margin);
+        return ApplyTableLayout(node, result, x, y, margin);
     }
 
     private static IReadOnlyList<TableRowDiagnosticContext> BuildTableRowContexts(TableLayoutResult result)
@@ -335,48 +394,32 @@ public sealed class BlockLayoutEngine
         ];
     }
 
-    private TableBox MaterializeTableBlock(
-        TableBox sourceTable,
+    private TableBox ApplyTableLayout(
+        TableBox table,
         TableLayoutResult result,
         float x,
         float y,
         Spacing margin)
     {
-        var tableBlock = CreateTableBlock(sourceTable, x, y, result.ResolvedWidth, result.Height, margin);
+        table.Margin = margin;
+        table.Padding = table.Style.Padding.Safe();
+        table.TextAlign = table.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        table.DerivedColumnCount = result.DerivedColumnCount;
+        table.UsedGeometry = CreateUsedGeometry(
+            x,
+            y,
+            result.ResolvedWidth,
+            result.Height,
+            table.Style.Padding.Safe(),
+            Spacing.FromBorderEdges(table.Style.Borders).Safe(),
+            markerOffset: table.MarkerOffset);
 
         foreach (var rowResult in result.Rows)
         {
-            tableBlock.Children.Add(MapTableRowBlock(rowResult, tableBlock, x, y, result.ResolvedWidth));
+            ApplyTableRowLayout(rowResult, x, y, result.ResolvedWidth);
         }
 
-        return tableBlock;
-    }
-
-    private static TableBox CreateTableBlock(
-        TableBox sourceTable,
-        float x,
-        float y,
-        float width,
-        float height,
-        Spacing margin)
-    {
-        return new TableBox(DisplayRole.Table)
-        {
-            Parent = sourceTable.Parent,
-            Element = sourceTable.Element,
-            Style = sourceTable.Style,
-            X = x,
-            Y = y,
-            Width = width,
-            Height = height,
-            Margin = margin,
-            Padding = sourceTable.Padding,
-            TextAlign = sourceTable.TextAlign,
-            MarkerOffset = sourceTable.MarkerOffset,
-            DerivedColumnCount = sourceTable.DerivedColumnCount,
-            IsAnonymous = sourceTable.IsAnonymous,
-            IsInlineBlockContext = sourceTable.IsInlineBlockContext
-        };
+        return table;
     }
 
     private static TableBox CreateZeroHeightUnsupportedPlaceholder(
@@ -386,97 +429,99 @@ public sealed class BlockLayoutEngine
         float width,
         Spacing margin)
     {
-        return CreateTableBlock(sourceTable, x, y, width, 0f, margin);
+        sourceTable.Margin = margin;
+        sourceTable.Padding = sourceTable.Style.Padding.Safe();
+        sourceTable.TextAlign = sourceTable.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        sourceTable.DerivedColumnCount = 0;
+        sourceTable.UsedGeometry = CreateUsedGeometry(
+            x,
+            y,
+            width,
+            0f,
+            sourceTable.Style.Padding.Safe(),
+            Spacing.FromBorderEdges(sourceTable.Style.Borders).Safe(),
+            markerOffset: sourceTable.MarkerOffset);
+        sourceTable.Children.Clear();
+        return sourceTable;
     }
 
-    private TableRowBox MapTableRowBlock(
+    private void ApplyTableRowLayout(
         TableLayoutRowResult rowResult,
-        TableBox tableBlock,
         float tableX,
         float tableY,
         float tableWidth)
     {
-        var rowBlock = new TableRowBox(DisplayRole.TableRow)
-        {
-            Parent = tableBlock,
-            Element = rowResult.SourceRow.Element,
-            Style = rowResult.SourceRow.Style,
-            X = tableX,
-            Y = tableY + rowResult.Y,
-            Width = tableWidth,
-            Height = rowResult.Height,
-            Margin = rowResult.SourceRow.Margin,
-            Padding = rowResult.SourceRow.Padding,
-            RowIndex = rowResult.RowIndex,
-            TextAlign = rowResult.SourceRow.TextAlign,
-            MarkerOffset = rowResult.SourceRow.MarkerOffset,
-            IsAnonymous = rowResult.SourceRow.IsAnonymous,
-            IsInlineBlockContext = rowResult.SourceRow.IsInlineBlockContext
-        };
+        var rowBlock = rowResult.SourceRow;
+        rowBlock.Margin = rowBlock.Style.Margin.Safe();
+        rowBlock.Padding = rowBlock.Style.Padding.Safe();
+        rowBlock.RowIndex = rowResult.RowIndex;
+        rowBlock.TextAlign = rowBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        rowBlock.UsedGeometry = rowResult.UsedGeometry?.Translate(tableX, tableY) ?? CreateUsedGeometry(
+            tableX,
+            tableY + rowResult.Y,
+            tableWidth,
+            rowResult.Height,
+            rowBlock.Style.Padding.Safe(),
+            Spacing.FromBorderEdges(rowBlock.Style.Borders).Safe(),
+            markerOffset: rowBlock.MarkerOffset);
 
         foreach (var placement in rowResult.Cells)
         {
-            rowBlock.Children.Add(MapTableCellBlock(placement, rowBlock, tableX, tableY));
+            ApplyTableCellLayout(placement, tableX, tableY);
         }
-
-        return rowBlock;
     }
 
-    private TableCellBox MapTableCellBlock(
+    private void ApplyTableCellLayout(
         TableLayoutCellPlacement placement,
-        TableRowBox rowBlock,
         float tableX,
         float tableY)
     {
-        var sourceCell = placement.SourceCell;
-        var cellBlock = new TableCellBox(DisplayRole.TableCell)
-        {
-            Parent = rowBlock,
-            Element = sourceCell.Element,
-            Style = sourceCell.Style,
-            X = tableX + placement.X,
-            Y = tableY + placement.Y,
-            Width = placement.Width,
-            Height = placement.Height,
-            Margin = sourceCell.Style.Margin.Safe(),
-            Padding = sourceCell.Style.Padding.Safe(),
-            ColumnIndex = placement.ColumnIndex,
-            IsHeader = placement.IsHeader,
-            TextAlign = sourceCell.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign,
-            MarkerOffset = sourceCell.MarkerOffset,
-            IsAnonymous = sourceCell.IsAnonymous,
-            IsInlineBlockContext = sourceCell.IsInlineBlockContext
-        };
+        var cellBlock = placement.SourceCell;
+        cellBlock.Margin = cellBlock.Style.Margin.Safe();
+        cellBlock.Padding = cellBlock.Style.Padding.Safe();
+        cellBlock.ColumnIndex = placement.ColumnIndex;
+        cellBlock.IsHeader = placement.IsHeader;
+        cellBlock.TextAlign = cellBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        cellBlock.UsedGeometry = placement.UsedGeometry?.Translate(tableX, tableY) ?? CreateUsedGeometry(
+            tableX + placement.X,
+            tableY + placement.Y,
+            placement.Width,
+            placement.Height,
+            cellBlock.Style.Padding.Safe(),
+            Spacing.FromBorderEdges(cellBlock.Style.Borders).Safe(),
+            markerOffset: cellBlock.MarkerOffset);
 
-        foreach (var child in sourceCell.Children)
-        {
-            cellBlock.Children.Add(MapTableContentNode(child, cellBlock));
-        }
-
-        LayoutMappedBlockChildren(cellBlock);
-        return cellBlock;
+        LayoutTableCellContent(cellBlock);
     }
 
-    private void LayoutMappedBlockChildren(BlockBox block)
+    private void LayoutTableCellContent(TableCellBox cell)
     {
-        var padding = block.Padding.Safe();
-        var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
-        var contentX = block.X + padding.Left + border.Left;
-        var contentY = block.Y + padding.Top + border.Top;
-        var contentWidth = Math.Max(0f, block.Width - padding.Horizontal - border.Horizontal);
+        var padding = cell.Padding.Safe();
+        var border = Spacing.FromBorderEdges(cell.Style.Borders).Safe();
+        var geometry = cell.UsedGeometry;
+        var inlineContentX = cell.X + padding.Left + border.Left;
+        var contentX = geometry?.ContentBoxRect.X ?? cell.X + padding.Left + border.Left;
+        var contentY = geometry?.ContentBoxRect.Y ?? cell.Y + padding.Top + border.Top;
+        var contentWidth = geometry?.ContentBoxRect.Width ?? Math.Max(0f, cell.Width - padding.Horizontal - border.Horizontal);
 
-        if (block.MarkerOffset > 0f)
+        if (cell.MarkerOffset > 0f)
         {
-            contentX += block.MarkerOffset;
-            contentWidth = Math.Max(0f, contentWidth - block.MarkerOffset);
+            contentX += cell.MarkerOffset;
+            contentWidth = Math.Max(0f, contentWidth - cell.MarkerOffset);
         }
 
         LayoutChildBlocks(
-            block,
+            cell,
             contentX,
             contentY,
             contentWidth,
             contentY);
+        cell.InlineLayout = _inlineEngine.Layout(
+            cell,
+            new InlineLayoutRequest(
+                inlineContentX,
+                contentY,
+                contentWidth));
     }
 
     private static void CopyPageTo(PageBox target, PageBox source)
@@ -521,222 +566,23 @@ public sealed class BlockLayoutEngine
         return Math.Max(0f, maxY - minY);
     }
 
-    private float ResolveSequentialContentHeight(BlockBox node, float contentWidth)
+    private static UsedGeometry CreateUsedGeometry(
+        float x,
+        float y,
+        float width,
+        float height,
+        Spacing padding,
+        Spacing border,
+        float? baseline = null,
+        float markerOffset = 0f,
+        bool allowsOverflow = false)
     {
-        var currentY = 0f;
-        var previousBottomMargin = 0f;
-        var pendingInlineFlow = new List<InlineBox>();
-
-        foreach (var child in node.Children)
-        {
-            if (TryAppendInlineFlowMeasurementNode(child, pendingInlineFlow))
-            {
-                continue;
-            }
-
-            currentY = FlushInlineFlowHeight(node, pendingInlineFlow, contentWidth, currentY, ref previousBottomMargin);
-
-            switch (child)
-            {
-                case TableBox table:
-                {
-                    var margin = table.Style.Margin.Safe();
-                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
-                    currentY += collapsedTop + table.Height;
-                    previousBottomMargin = margin.Bottom;
-                    break;
-                }
-                case BlockBox block:
-                {
-                    var margin = block.Style.Margin.Safe();
-                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
-                    currentY += collapsedTop + block.Height;
-                    previousBottomMargin = margin.Bottom;
-                    break;
-                }
-            }
-        }
-
-        currentY = FlushInlineFlowHeight(node, pendingInlineFlow, contentWidth, currentY, ref previousBottomMargin);
-        return Math.Max(0f, currentY + previousBottomMargin);
+        return UsedGeometry.FromBorderBox(
+            new RectangleF(x, y, width, height),
+            padding,
+            border,
+            baseline,
+            markerOffset,
+            allowsOverflow);
     }
-
-    private static bool TryAppendInlineFlowMeasurementNode(DisplayNode node, ICollection<InlineBox> pendingInlineFlow)
-    {
-        switch (node)
-        {
-            case InlineBox inline:
-                pendingInlineFlow.Add(inline);
-                return true;
-            case InlineBlockBoundaryBox boundary:
-                pendingInlineFlow.Add(boundary.SourceInline);
-                return true;
-            case BlockBox block when IsAnonymousInlineWrapper(block):
-                foreach (var inline in block.Children.OfType<InlineBox>())
-                {
-                    pendingInlineFlow.Add(inline);
-                }
-
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool IsAnonymousInlineWrapper(BlockBox block)
-    {
-        return block.IsAnonymous &&
-               block.Children.Count > 0 &&
-               block.Children.All(static child => child is InlineBox);
-    }
-
-    private float FlushInlineFlowHeight(
-        BlockBox source,
-        List<InlineBox> pendingInlineFlow,
-        float contentWidth,
-        float currentY,
-        ref float previousBottomMargin)
-    {
-        if (pendingInlineFlow.Count == 0)
-        {
-            return currentY;
-        }
-
-        currentY += previousBottomMargin;
-        previousBottomMargin = 0f;
-
-        var measurementBlock = new BlockBox(DisplayRole.Block)
-        {
-            Element = source.Element,
-            Style = source.Style,
-            TextAlign = source.TextAlign,
-            MarkerOffset = source.MarkerOffset
-        };
-
-        foreach (var inline in pendingInlineFlow)
-        {
-            measurementBlock.Children.Add(inline);
-        }
-
-        var inlineHeight = _inlineEngine.MeasureHeight(measurementBlock, contentWidth);
-        pendingInlineFlow.Clear();
-        return currentY + inlineHeight;
-    }
-
-    private static DisplayNode MapTableContentNode(DisplayNode source, DisplayNode parent)
-    {
-        DisplayNode mapped = source switch
-        {
-            TableBox table => new TableBox(table.Role)
-            {
-                Parent = parent,
-                Element = table.Element,
-                Style = table.Style,
-                X = table.X,
-                Y = table.Y,
-                Width = table.Width,
-                Height = table.Height,
-                Margin = table.Margin,
-                Padding = table.Padding,
-                DerivedColumnCount = table.DerivedColumnCount,
-                TextAlign = table.TextAlign,
-                MarkerOffset = table.MarkerOffset,
-                IsAnonymous = table.IsAnonymous,
-                IsInlineBlockContext = table.IsInlineBlockContext
-            },
-            TableSectionBox section => new TableSectionBox(section.Role)
-            {
-                Parent = parent,
-                Element = section.Element,
-                Style = section.Style
-            },
-            TableRowBox row => new TableRowBox(row.Role)
-            {
-                Parent = parent,
-                Element = row.Element,
-                Style = row.Style,
-                X = row.X,
-                Y = row.Y,
-                Width = row.Width,
-                Height = row.Height,
-                Margin = row.Margin,
-                Padding = row.Padding,
-                RowIndex = row.RowIndex,
-                TextAlign = row.TextAlign,
-                MarkerOffset = row.MarkerOffset,
-                IsAnonymous = row.IsAnonymous,
-                IsInlineBlockContext = row.IsInlineBlockContext
-            },
-            TableCellBox cell => new TableCellBox(cell.Role)
-            {
-                Parent = parent,
-                Element = cell.Element,
-                Style = cell.Style,
-                X = cell.X,
-                Y = cell.Y,
-                Width = cell.Width,
-                Height = cell.Height,
-                Margin = cell.Margin,
-                Padding = cell.Padding,
-                ColumnIndex = cell.ColumnIndex,
-                IsHeader = cell.IsHeader,
-                TextAlign = cell.TextAlign,
-                MarkerOffset = cell.MarkerOffset,
-                IsAnonymous = cell.IsAnonymous,
-                IsInlineBlockContext = cell.IsInlineBlockContext
-            },
-            InlineBox inline => new InlineBox(inline.Role)
-            {
-                Parent = parent,
-                Element = inline.Element,
-                Style = inline.Style,
-                TextContent = inline.TextContent,
-                Width = inline.Width,
-                Height = inline.Height,
-                BaselineOffset = inline.BaselineOffset,
-                Fragment = inline.Fragment
-            },
-            InlineBlockBoundaryBox boundary => new InlineBlockBoundaryBox(boundary.SourceInline, boundary.SourceContentBox)
-            {
-                Parent = parent,
-                Element = boundary.Element,
-                Style = boundary.Style,
-                X = boundary.X,
-                Y = boundary.Y,
-                Width = boundary.Width,
-                Height = boundary.Height,
-                Margin = boundary.Margin,
-                Padding = boundary.Padding,
-                TextAlign = boundary.TextAlign,
-                MarkerOffset = boundary.MarkerOffset,
-                IsAnonymous = boundary.IsAnonymous,
-                IsInlineBlockContext = boundary.IsInlineBlockContext
-            },
-            BlockBox block => new BlockBox(block.Role)
-            {
-                Parent = parent,
-                Element = block.Element,
-                Style = block.Style,
-                X = block.X,
-                Y = block.Y,
-                Width = block.Width,
-                Height = block.Height,
-                Margin = block.Margin,
-                Padding = block.Padding,
-                TextAlign = block.TextAlign,
-                MarkerOffset = block.MarkerOffset,
-                IsAnonymous = block.IsAnonymous,
-                IsInlineBlockContext = block.IsInlineBlockContext
-            },
-            _ => throw new NotSupportedException($"Unsupported display node type: {source.GetType().Name}")
-        };
-
-        foreach (var child in source.Children)
-        {
-            mapped.Children.Add(MapTableContentNode(child, mapped));
-        }
-
-        return mapped;
-    }
-
 }

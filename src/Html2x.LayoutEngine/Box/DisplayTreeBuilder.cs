@@ -24,10 +24,10 @@ public sealed class DisplayTreeBuilder
 
         DisplayNode box = display switch
         {
-            DisplayRole.Block => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.Block => CreateBlockLevelBox(display, element, styleNode.Style, parent),
             DisplayRole.Inline => new InlineBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
             DisplayRole.InlineBlock => new InlineBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
-            DisplayRole.ListItem => new BlockBox(display) { Element = element, Style = styleNode.Style, Parent = parent },
+            DisplayRole.ListItem => CreateBlockLevelBox(display, element, styleNode.Style, parent),
             DisplayRole.Float => new FloatBox(display)
             {
                 Element = element,
@@ -97,18 +97,56 @@ public sealed class DisplayTreeBuilder
 
     private static BlockBox CreateInlineBlockContentContainer(InlineBox inlineBlock, StyleNode styleNode)
     {
-        var contentBox = new BlockBox(DisplayRole.Block)
-        {
-            Element = styleNode.Element,
-            Style = styleNode.Style,
-            Parent = inlineBlock,
-            IsAnonymous = true,
-            TextAlign = styleNode.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign,
-            IsInlineBlockContext = true
-        };
+        var contentBox = CreateBlockLevelBox(DisplayRole.Block, styleNode.Element, styleNode.Style, inlineBlock);
+        contentBox.IsInlineBlockContext = true;
+        contentBox.TextAlign = styleNode.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
         inlineBlock.Children.Add(contentBox);
         return contentBox;
+    }
+
+    private static BlockBox CreateBlockLevelBox(
+        DisplayRole role,
+        IElement element,
+        ComputedStyle style,
+        DisplayNode? parent)
+    {
+        var isAnonymous = role == DisplayRole.Block && parent is InlineBox;
+
+        return IsRuleElement(element)
+            ? new RuleBox(role)
+            {
+                Element = element,
+                Style = style,
+                Parent = parent,
+                IsAnonymous = isAnonymous
+            }
+            : IsImageElement(element)
+                ? new ImageBox(role)
+                {
+                    Element = element,
+                    Style = style,
+                    Parent = parent,
+                    IsAnonymous = isAnonymous,
+                    Src = element.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? string.Empty
+                }
+                : new BlockBox(role)
+                {
+                    Element = element,
+                    Style = style,
+                    Parent = parent,
+                    IsAnonymous = isAnonymous
+                };
+    }
+
+    private static bool IsImageElement(IElement element)
+    {
+        return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Img, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsRuleElement(IElement element)
+    {
+        return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Hr, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsListContainer(IElement element)

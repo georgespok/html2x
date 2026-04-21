@@ -79,7 +79,13 @@ public class LayoutBuilder
         
         var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession);
 
-        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(styleTree, diagnosticsSession), diagnosticsSession);
+        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(
+            styleTree,
+            diagnosticsSession,
+            new BoxTreeBuildContext(
+                _imageProvider,
+                options.HtmlDirectory,
+                options.MaxImageSizeBytes)), diagnosticsSession);
         RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession), diagnosticsSession);
         
         var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(
@@ -108,7 +114,9 @@ public class LayoutBuilder
     {
         var paginator = new BlockPaginator();
         var pagination = paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession);
-        return CreateHtmlLayout(pagination);
+        var layout = CreateHtmlLayout(pagination);
+        PublishGeometrySnapshot(boxTree, layout, pagination, diagnosticsSession);
+        return layout;
     }
 
     private static HtmlLayout CreateHtmlLayout(PaginationResult pagination)
@@ -131,6 +139,29 @@ public class LayoutBuilder
         return page.Placements
             .Select(static placement => (Html2x.Abstractions.Layout.Fragments.Fragment)placement.Fragment)
             .ToList();
+    }
+
+    private static void PublishGeometrySnapshot(
+        Models.BoxTree boxTree,
+        HtmlLayout layout,
+        PaginationResult pagination,
+        DiagnosticsSession? diagnosticsSession)
+    {
+        if (diagnosticsSession is null)
+        {
+            return;
+        }
+
+        diagnosticsSession.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.Trace,
+            Name = "layout/geometry-snapshot",
+            Severity = DiagnosticSeverity.Info,
+            Payload = new GeometrySnapshotPayload
+            {
+                Snapshot = GeometrySnapshotMapper.From(boxTree, layout, pagination)
+            }
+        });
     }
 
     private static T RunStage<T>(string stage, Func<T> action, DiagnosticsSession? diagnosticsSession = null)

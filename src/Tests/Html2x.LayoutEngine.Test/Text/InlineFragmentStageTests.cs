@@ -3,6 +3,7 @@ using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using AngleSharp;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Fragment.Stages;
 using Html2x.LayoutEngine.Models;
@@ -30,6 +31,7 @@ public class InlineFragmentStageTests
             .BuildTree();
 
         var context = CreateContext(new FakeTextMeasurer(0f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
         
         // Act
@@ -65,6 +67,7 @@ public class InlineFragmentStageTests
             .BuildTree();
 
         var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -89,6 +92,7 @@ public class InlineFragmentStageTests
             .BuildTree();
 
         var context = CreateContext(new SizeBasedTextMeasurer(5f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -113,6 +117,7 @@ public class InlineFragmentStageTests
             .BuildTree();
 
         var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -182,6 +187,7 @@ public class InlineFragmentStageTests
         boxTree.Blocks.Add(root);
 
         var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -235,6 +241,7 @@ public class InlineFragmentStageTests
         boxTree.Blocks.Add(root);
 
         var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
         var state = new FragmentBuildState(boxTree, context);
 
         state = new BlockFragmentStage().Execute(state);
@@ -266,6 +273,47 @@ public class InlineFragmentStageTests
             (long)(10 * 1024 * 1024),
             textMeasurer,
             fontSource.Object);
+    }
+
+    private static void PrepareInlineLayouts(BoxTree boxTree, FragmentBuildContext context)
+    {
+        var inlineEngine = new InlineLayoutEngine(new FontMetricsProvider(), context.TextMeasurer, new DefaultLineHeightStrategy());
+
+        foreach (var block in boxTree.Blocks)
+        {
+            PrepareInlineLayout(block, inlineEngine);
+        }
+    }
+
+    private static void PrepareInlineLayout(BlockBox block, IInlineLayoutEngine inlineEngine)
+    {
+        var padding = block.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
+        var contentLeft = block.X + padding.Left + border.Left;
+        var contentTop = block.Y + padding.Top + border.Top;
+        var contentWidth = Math.Max(0f, block.Width - padding.Horizontal - border.Horizontal);
+
+        inlineEngine.Layout(
+            block,
+            new InlineLayoutRequest(
+                contentLeft,
+                contentTop,
+                contentWidth));
+
+        foreach (var child in block.Children.OfType<BlockBox>())
+        {
+            if (child is InlineBlockBoundaryBox)
+            {
+                continue;
+            }
+
+            if (child.IsAnonymous && child.Children.All(static grandChild => grandChild is InlineBox))
+            {
+                continue;
+            }
+
+            PrepareInlineLayout(child, inlineEngine);
+        }
     }
 
     private static BlockBox CreateListItem(string text, DisplayNode parent)

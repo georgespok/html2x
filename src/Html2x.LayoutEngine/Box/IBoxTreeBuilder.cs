@@ -5,5 +5,5 @@ namespace Html2x.LayoutEngine.Box;
 
 public interface IBoxTreeBuilder
 {
-    BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null);
+    BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, BoxTreeBuildContext? context = null);
 }

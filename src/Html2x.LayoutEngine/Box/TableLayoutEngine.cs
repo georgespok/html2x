@@ -1,3 +1,5 @@
+using System.Drawing;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using AngleSharp.Dom;
 
@@ -8,16 +10,18 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
     private const float DefaultRowHeight = 20f;
     private readonly IInlineLayoutEngine _inlineEngine;
     private readonly BlockMeasurementService _measurement;
+    private readonly IImageLayoutResolver _imageResolver;
 
     public TableLayoutEngine()
-        : this(new InlineLayoutEngine())
+        : this(new InlineLayoutEngine(), new ImageLayoutResolver())
     {
     }
 
-    internal TableLayoutEngine(IInlineLayoutEngine inlineEngine)
+    internal TableLayoutEngine(IInlineLayoutEngine inlineEngine, IImageLayoutResolver? imageResolver = null)
     {
         _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
-        _measurement = new BlockMeasurementService(_inlineEngine);
+        _measurement = new BlockMeasurementService();
+        _imageResolver = imageResolver ?? new ImageLayoutResolver();
     }
 
     public TableLayoutResult Layout(TableBox table, float availableWidth)
@@ -270,7 +274,15 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
                     X = currentX,
                     Y = currentRowY,
                     Width = width,
-                    Height = rowHeight
+                    Height = rowHeight,
+                    UsedGeometry = CreateUsedGeometry(
+                        currentX,
+                        currentRowY,
+                        width,
+                        rowHeight,
+                        sourceCell.Style.Padding.Safe(),
+                        Spacing.FromBorderEdges(sourceCell.Style.Borders).Safe(),
+                        markerOffset: sourceCell.MarkerOffset)
                 });
                 currentX += width;
             }
@@ -281,7 +293,15 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
                 RowIndex = rowIndex,
                 Y = currentRowY,
                 Cells = placements,
-                Height = rowHeight
+                Height = rowHeight,
+                UsedGeometry = CreateUsedGeometry(
+                    0f,
+                    currentRowY,
+                    columnWidths.Sum(),
+                    rowHeight,
+                    row.Style.Padding.Safe(),
+                    Spacing.FromBorderEdges(row.Style.Borders).Safe(),
+                    markerOffset: row.MarkerOffset)
             });
             currentRowY += rowHeight;
         }
@@ -292,10 +312,11 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
     private float MeasureTableCellHeight(TableCellBox cell, float assignedWidth)
     {
         var measurement = _measurement.Prepare(cell, assignedWidth);
+        var inlineLayout = _inlineEngine.Layout(cell, InlineLayoutRequest.ForMeasurement(measurement.ContentWidth));
+        var nestedHeight = MeasureStackedChildBlockHeights(cell.Children, measurement.ContentWidth);
         var contentHeight = _measurement.ResolveContentHeight(
             cell,
-            measurement.ContentWidth,
-            contentWidth => MeasureStackedChildBlockHeights(cell.Children, contentWidth));
+            Math.Max(inlineLayout.TotalHeight, nestedHeight));
 
         return Math.Max(0f, contentHeight + measurement.Padding.Vertical + measurement.Border.Vertical);
     }
@@ -311,11 +332,24 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
 
     private float MeasureBlockLikeHeight(BlockBox block, float availableWidth)
     {
+        if (block is ImageBox imageBox)
+        {
+            var imageMeasurement = _measurement.Prepare(imageBox, availableWidth);
+            return _imageResolver.Resolve(imageBox, imageMeasurement.ContentWidth).TotalHeight;
+        }
+
+        if (block is RuleBox ruleBox)
+        {
+            var ruleMeasurement = _measurement.Prepare(ruleBox, availableWidth);
+            return Math.Max(0f, ruleMeasurement.Padding.Vertical + ruleMeasurement.Border.Vertical);
+        }
+
         var measurement = _measurement.Prepare(block, availableWidth);
+        var inlineLayout = _inlineEngine.Layout(block, InlineLayoutRequest.ForMeasurement(measurement.ContentWidth));
+        var nestedHeight = MeasureStackedChildBlockHeights(block.Children, measurement.ContentWidth);
         var contentHeight = _measurement.ResolveContentHeight(
             block,
-            measurement.ContentWidth,
-            contentWidth => MeasureStackedChildBlockHeights(block.Children, contentWidth));
+            Math.Max(inlineLayout.TotalHeight, nestedHeight));
 
         return Math.Max(0f, contentHeight + measurement.Padding.Vertical + measurement.Border.Vertical);
     }
@@ -337,5 +371,25 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
         {
             return new TableStructureValidationResult(false, structureKind, reason);
         }
+    }
+
+    private static UsedGeometry CreateUsedGeometry(
+        float x,
+        float y,
+        float width,
+        float height,
+        Spacing padding,
+        Spacing border,
+        float? baseline = null,
+        float markerOffset = 0f,
+        bool allowsOverflow = false)
+    {
+        return UsedGeometry.FromBorderBox(
+            new RectangleF(x, y, width, height),
+            padding,
+            border,
+            baseline,
+            markerOffset,
+            allowsOverflow);
     }
 }

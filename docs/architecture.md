@@ -36,15 +36,15 @@ Renderer (PDF via SkiaSharp)
 - **Responsibility**: Translate styled elements into layout boxes that encode formatting contexts, dimensions, and flow.
 - **Input**: Style tree with computed values.
 - **Output**: Box hierarchy representing block and inline flows plus page level metrics.
-- **Implementation pattern**: `BoxTreeBuilder` feeds `DisplayTreeBuilder`, `BlockLayoutEngine`, `InlineLayoutEngine`, and friends to produce immutable boxes plus pagination hints.
-- **Extension rules**: Add new formatting contexts by introducing specialized box builders while keeping the resulting model immutable. Share geometry or measurement helpers via `Html2x.Abstractions` to prevent duplicated math.
+- **Implementation pattern**: `BoxTreeBuilder` feeds `DisplayTreeBuilder`, `BlockLayoutEngine`, `InlineLayoutEngine`, and friends to produce resolved display nodes plus page level metrics. Block-level layout carries `UsedGeometry`, and inline layout stores `InlineLayoutResult` on the owning block so later stages project geometry instead of remeasuring it.
+- **Extension rules**: Add new formatting contexts by introducing specialized display nodes or internal layout strategies while keeping geometry authority inside layout. Share geometry or measurement helpers via `Html2x.Abstractions` to prevent duplicated math.
 
 ### Fragment Tree (Lines and Pages)
 - **Responsibility**: Convert boxes into positioned fragments, paginate content, and assemble `LayoutPage` instances.
 - **Input**: Box tree enriched with geometry and page settings.
 - **Output**: Fragment collection containing `LineBoxFragment`, `TextRun`, `ImageFragment`, and block containers ready for rendering.
-- **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) while collaborating with `TextRunFactory`, `DefaultLineHeightStrategy`, and `TextWrapper` for whitespace-aware wrapping. Text width and metrics come from the injected `ITextMeasurer`.
-- **Extension rules**: Introducing new fragment types requires updating interfaces and records in `Html2x.Abstractions` plus renderer dispatchers. Keep pagination logic self-contained to maintain deterministic outputs.
+- **Implementation pattern**: `FragmentBuilder` executes staged visitors (block, inline, specialized, z-order) as a projection over stored box geometry. `InlineFragmentStage` replays stored line and inline-object geometry, while `BlockPaginator` and `FragmentCoordinateTranslator` only translate fragment coordinates per page.
+- **Extension rules**: Introducing new fragment types requires updating interfaces and records in `Html2x.Abstractions` plus renderer dispatchers. If a new adapter emits a new fragment runtime type instead of reusing the built-in block, table, line, image, or rule fragments, pagination also needs a matching translator registration.
 
 ### Renderer (SkiaSharp)
 - **Responsibility**: Serialize fragments into the final artifact. The default implementation renders PDF via SkiaSharp.
@@ -84,8 +84,8 @@ Renderer (PDF via SkiaSharp)
 - **Components**:
   - `AngleSharpDomProvider` for DOM loading and normalization.
   - `CssStyleComputer`, `UserAgentDefaults`, `StyleTraversal`, and `DefaultStyleDomFilter` for cascade logic.
-  - `BoxTreeBuilder`, `DisplayTreeBuilder`, inline/float/table layout engines, and pagination utilities.
-  - `FragmentBuilder` with staged visitors, `TextRunFactory`, `TextWrapper`, `DefaultLineHeightStrategy`, and the `LayoutBuilder`/`LayoutLog` facades. Text metrics and widths are supplied by the injected `ITextMeasurer`.
+  - `BoxTreeBuilder`, `DisplayTreeBuilder`, block/inline/float/table layout engines, image resolution, and pagination utilities.
+  - `FragmentBuilder` with staged visitors, internal registries for block layout strategies, inline node measurers, and fragment adapters, plus the `LayoutBuilder`/`LayoutLog` facades. Text metrics and widths are supplied by the injected `ITextMeasurer`.
 - **Inputs and outputs**: Accepts HTML with `PageSize`, returns an `HtmlLayout` ready for rendering.
 - **Extension guidance**:
   1. Keep stage logic deterministic. If a feature needs external data, pass it in through abstractions.
@@ -143,7 +143,9 @@ Renderer (PDF via SkiaSharp)
 Diagnostics can be switched on per call by setting `HtmlConverterOptions.Diagnostics.EnableDiagnostics = true`. When enabled, `HtmlConverter` builds a `DiagnosticsSession` that collects time-stamped events plus payloads describing what happened.
 
 - Event flow: `StartStage/LayoutBuild` (stores trimmed HTML), `EndStage/LayoutBuild` (stores a `layout.snapshot` built by `LayoutSnapshotMapper`), `StartStage/PdfRender`, `EndStage/PdfRender` (stores a `render.summary` with `pageCount` and `pdfSize` in bytes).
-- Payload contracts: `HtmlPayload`, `LayoutSnapshotPayload` (pages, margins, fragment rectangles and text), and `RenderSummaryPayload` implement `IDiagnosticsPayload` with a `Kind` marker so serializers can discriminate.
+- Payload contracts: `HtmlPayload`, `LayoutSnapshotPayload` (pages, margins, fragment rectangles and text), `GeometrySnapshotPayload` (box geometry, fragment geometry, and pagination placements), and `RenderSummaryPayload` implement `IDiagnosticsPayload` with a `Kind` marker so serializers can discriminate.
+- Geometry contract note: `docs/geometry-contract.md` defines the single-source-of-truth rules for block geometry plus the guardrail diagnostics added during the migration.
+- Failure mode: geometry diagnostics now assume layout has already assigned `UsedGeometry`. Missing geometry is treated as a contract violation rather than being reconstructed from compatibility fields.
 - JSON export: `Html2x.Diagnostics.DiagnosticsSessionSerializer.ToJson(session)` produces indented, camelCase JSON with relaxed escaping. The TestConsole accepts `--diagnostics` and `--diagnostics-json <path>` or you can run `src/Tests/Html2x.TestConsole/diagnostics/run-diagnostics-json.ps1` to render a PDF and write `build/diagnostics/session.json`.
 - Consumption: `Html2PdfResult.Diagnostics` returns the session so hosts can persist it, diff snapshots between runs, or feed it into visualization tools.
 - Extensibility: emit new payloads by implementing `IDiagnosticsPayload` and adding a mapper entry in `DiagnosticsSessionSerializer`. Stage-level markers can be added in pipeline stages by passing the `DiagnosticsSession` through.

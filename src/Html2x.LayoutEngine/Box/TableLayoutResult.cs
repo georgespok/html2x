@@ -49,30 +49,76 @@ public sealed class TableLayoutResult
 
 public sealed class TableLayoutRowResult
 {
+    private UsedGeometry? _usedGeometry;
+    private float _y;
+    private float _height;
+
     public required TableRowBox SourceRow { get; init; }
 
     public int RowIndex { get; init; }
 
-    public float Y { get; init; }
+    public float Y
+    {
+        get => _usedGeometry?.Y ?? _y;
+        init => _y = value;
+    }
+
+    public UsedGeometry? UsedGeometry
+    {
+        get => _usedGeometry;
+        init => _usedGeometry = value;
+    }
 
     public IReadOnlyList<TableLayoutCellPlacement> Cells { get; init; } = [];
 
-    public float Height { get; init; }
+    public float Height
+    {
+        get => _usedGeometry?.Height ?? _height;
+        init => _height = value;
+    }
 }
 
 public sealed class TableLayoutCellPlacement
 {
+    private UsedGeometry? _usedGeometry;
+    private float _x;
+    private float _y;
+    private float _width;
+    private float _height;
+
     public required TableCellBox SourceCell { get; init; }
 
     public int ColumnIndex { get; init; }
 
     public bool IsHeader { get; init; }
 
-    public float X { get; init; }
+    public float X
+    {
+        get => _usedGeometry?.X ?? _x;
+        init => _x = value;
+    }
 
-    public float Y { get; init; }
+    public float Y
+    {
+        get => _usedGeometry?.Y ?? _y;
+        init => _y = value;
+    }
 
-    public float Width { get; init; }
+    public float Width
+    {
+        get => _usedGeometry?.Width ?? _width;
+        init => _width = value;
+    }
 
-    public float Height { get; init; }
+    public float Height
+    {
+        get => _usedGeometry?.Height ?? _height;
+        init => _height = value;
+    }
+
+    public UsedGeometry? UsedGeometry
+    {
+        get => _usedGeometry;
+        init => _usedGeometry = value;
+    }
 }

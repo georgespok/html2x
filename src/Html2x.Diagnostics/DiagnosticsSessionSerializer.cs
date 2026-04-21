@@ -83,6 +83,11 @@ public static class DiagnosticsSessionSerializer
                 layout.Kind,
                 layout.Snapshot
             },
+            GeometrySnapshotPayload geometry => new
+            {
+                geometry.Kind,
+                geometry.Snapshot
+            },
             RenderSummaryPayload summary => new
             {
                 summary.Kind,

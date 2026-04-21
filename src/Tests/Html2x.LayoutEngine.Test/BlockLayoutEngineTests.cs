@@ -7,6 +7,7 @@ using Shouldly;
 using Xunit.Abstractions;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using System.Drawing;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -27,13 +28,14 @@ public class BlockLayoutEngineTests
         _inlineEngine = new Mock<IInlineLayoutEngine>();
         _tableLayoutEngine = new Mock<ITableLayoutEngine>();
         _floatLayoutEngine = new Mock<IFloatLayoutEngine>();
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(0f));
     }
     
     [Fact]
     public void Layout_BlockHeightIncludesPadding()
     {
         // Arrange
-        _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(24f);
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(24f));
 
         var root = new BlockBoxBuilder()
             .Block(0, 0, 0, 0, style: new ComputedStyle())
@@ -49,12 +51,48 @@ public class BlockLayoutEngineTests
             .Height.ShouldBe(24f + 10f + 6f);
     }
 
+    [Fact]
+    public void Layout_Block_PopulatesUsedGeometryAndKeepsCompatibilityAccessorsInSync()
+    {
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(24f));
+
+        var style = new ComputedStyle
+        {
+            Padding = new Spacing(4f, 5f, 6f, 7f),
+            Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+        };
+
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Parent = root,
+            Style = style,
+            MarkerOffset = 9f
+        });
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var block = result.Blocks.ShouldHaveSingleItem();
+        block.UsedGeometry.ShouldNotBeNull();
+
+        var geometry = block.UsedGeometry!.Value;
+        geometry.BorderBoxRect.ShouldBe(new RectangleF(block.X, block.Y, block.Width, block.Height));
+        geometry.ContentBoxRect.X.ShouldBe(block.X + 9f);
+        geometry.ContentBoxRect.Y.ShouldBe(block.Y + 6f);
+        geometry.ContentBoxRect.Width.ShouldBe(block.Width - 16f);
+        geometry.ContentBoxRect.Height.ShouldBe(block.Height - 14f);
+        geometry.MarkerOffset.ShouldBe(9f);
+    }
+
 
     [Fact]
     public void Layout_MixedInlineAndBlock_ProducesAnonymousBlockForInlineRun()
     {
         // Arrange
-        _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(10f);
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(10f));
 
         var root = new BlockBoxBuilder()
             .Inline("root inline")
@@ -79,7 +117,7 @@ public class BlockLayoutEngineTests
     [Fact]
     public void Layout_AnonymousBlock_DoesNotInheritWidthOrHeightConstraints()
     {
-        _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(10f);
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(10f));
 
         var root = new BlockBox(DisplayRole.Block)
         {
@@ -115,7 +153,7 @@ public class BlockLayoutEngineTests
     public void Layout_BlockOnlyChildren_DoesNotCreateAnonymousBlocks()
     {
         // Arrange
-        _inlineEngine.Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>())).Returns(12f);
+        _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(12f));
 
         var root = new BlockBoxBuilder()
             .Block(style: new())
@@ -156,6 +194,16 @@ public class BlockLayoutEngineTests
     [Fact]
     public void Layout_TableNode_ProducesNestedTableRowAndCellBlocks()
     {
+        var firstRowSource = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
+        var firstCellSource = new TableCellBox(DisplayRole.TableCell) { Parent = firstRowSource, Style = new ComputedStyle() };
+        var secondCellSource = new TableCellBox(DisplayRole.TableCell) { Parent = firstRowSource, Style = new ComputedStyle() };
+        firstRowSource.Children.Add(firstCellSource);
+        firstRowSource.Children.Add(secondCellSource);
+
+        var secondRowSource = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
+        var thirdCellSource = new TableCellBox(DisplayRole.TableCell) { Parent = secondRowSource, Style = new ComputedStyle() };
+        secondRowSource.Children.Add(thirdCellSource);
+
         _tableLayoutEngine
             .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
             .Returns(new TableLayoutResult
@@ -168,7 +216,7 @@ public class BlockLayoutEngineTests
                 [
                     new TableLayoutRowResult
                     {
-                        SourceRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() },
+                        SourceRow = firstRowSource,
                         RowIndex = 0,
                         Y = 0f,
                         Height = 20f,
@@ -176,7 +224,7 @@ public class BlockLayoutEngineTests
                         [
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell) { Style = new ComputedStyle() },
+                                SourceCell = firstCellSource,
                                 ColumnIndex = 0,
                                 X = 0f,
                                 Y = 0f,
@@ -185,7 +233,7 @@ public class BlockLayoutEngineTests
                             },
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell) { Style = new ComputedStyle() },
+                                SourceCell = secondCellSource,
                                 ColumnIndex = 1,
                                 X = 60f,
                                 Y = 0f,
@@ -196,7 +244,7 @@ public class BlockLayoutEngineTests
                     },
                     new TableLayoutRowResult
                     {
-                        SourceRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() },
+                        SourceRow = secondRowSource,
                         RowIndex = 1,
                         Y = 20f,
                         Height = 20f,
@@ -204,7 +252,7 @@ public class BlockLayoutEngineTests
                         [
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell) { Style = new ComputedStyle() },
+                                SourceCell = thirdCellSource,
                                 ColumnIndex = 0,
                                 X = 0f,
                                 Y = 20f,
@@ -220,6 +268,8 @@ public class BlockLayoutEngineTests
         {
             Style = new ComputedStyle()
         };
+        root.Children.Add(firstRowSource);
+        root.Children.Add(secondRowSource);
 
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
 
@@ -230,31 +280,119 @@ public class BlockLayoutEngineTests
         table.Children.Count.ShouldBe(2);
 
         var firstRow = table.Children[0].ShouldBeOfType<TableRowBox>();
+        firstRow.ShouldBeSameAs(firstRowSource);
         firstRow.Role.ShouldBe(DisplayRole.TableRow);
         firstRow.Y.ShouldBe(0f);
         firstRow.Children.Count.ShouldBe(2);
 
         var firstCell = firstRow.Children[0].ShouldBeOfType<TableCellBox>();
+        firstCell.ShouldBeSameAs(firstCellSource);
         firstCell.Role.ShouldBe(DisplayRole.TableCell);
         firstCell.X.ShouldBe(0f);
         firstCell.Width.ShouldBe(60f);
 
         var secondCell = firstRow.Children[1].ShouldBeOfType<TableCellBox>();
+        secondCell.ShouldBeSameAs(secondCellSource);
         secondCell.X.ShouldBe(60f);
         secondCell.Width.ShouldBe(60f);
 
         var secondRow = table.Children[1].ShouldBeOfType<TableRowBox>();
+        secondRow.ShouldBeSameAs(secondRowSource);
         secondRow.Role.ShouldBe(DisplayRole.TableRow);
         secondRow.Y.ShouldBe(20f);
-        secondRow.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>().Role.ShouldBe(DisplayRole.TableCell);
+        var thirdCell = secondRow.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
+        thirdCell.ShouldBeSameAs(thirdCellSource);
+        thirdCell.Role.ShouldBe(DisplayRole.TableCell);
+    }
+
+    [Fact]
+    public void Layout_TableMaterialization_PopulatesUsedGeometryForTableRowAndCellBlocks()
+    {
+        var rowSource = new TableRowBox(DisplayRole.TableRow)
+        {
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(1f, 2f, 3f, 4f)
+            }
+        };
+        var cellSource = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = rowSource,
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(2f, 4f, 6f, 8f)
+            }
+        };
+        rowSource.Children.Add(cellSource);
+
+        _tableLayoutEngine
+            .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
+            .Returns(new TableLayoutResult
+            {
+                ResolvedWidth = 120f,
+                DerivedColumnCount = 1,
+                ColumnWidths = [120f],
+                Height = 20f,
+                Rows =
+                [
+                    new TableLayoutRowResult
+                    {
+                        SourceRow = rowSource,
+                        RowIndex = 0,
+                        Y = 0f,
+                        Height = 20f,
+                        Cells =
+                        [
+                            new TableLayoutCellPlacement
+                            {
+                                SourceCell = cellSource,
+                                ColumnIndex = 0,
+                                X = 0f,
+                                Y = 0f,
+                                Width = 120f,
+                                Height = 20f
+                            }
+                        ]
+                    }
+                ]
+            });
+
+        var root = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(rowSource);
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
+        var row = table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
+        var cell = row.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
+
+        table.UsedGeometry.ShouldNotBeNull();
+        row.UsedGeometry.ShouldNotBeNull();
+        cell.UsedGeometry.ShouldNotBeNull();
+
+        row.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(row.X, row.Y, row.Width, row.Height));
+        row.UsedGeometry.Value.ContentBoxRect.X.ShouldBe(row.X + 4f);
+        row.UsedGeometry.Value.ContentBoxRect.Y.ShouldBe(row.Y + 1f);
+        cell.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(cell.X, cell.Y, cell.Width, cell.Height));
+        cell.UsedGeometry.Value.ContentBoxRect.X.ShouldBe(cell.X + 8f);
+        cell.UsedGeometry.Value.ContentBoxRect.Y.ShouldBe(cell.Y + 2f);
     }
 
     [Fact]
     public void Layout_BlockContainerWithNestedTable_PreservesTableInChildFlow()
     {
+        var tableRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
+        var leftCell = new TableCellBox(DisplayRole.TableCell) { Parent = tableRow, Style = new ComputedStyle() };
+        var rightCell = new TableCellBox(DisplayRole.TableCell) { Parent = tableRow, Style = new ComputedStyle() };
+        tableRow.Children.Add(leftCell);
+        tableRow.Children.Add(rightCell);
+
         _inlineEngine
-            .Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>()))
-            .Returns<DisplayNode, float>((node, _) => node.Element?.TagName == "H2" ? 12f : 0f);
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Returns<BlockBox, InlineLayoutRequest>((node, _) => CreateInlineLayoutResult(node.Element?.TagName == "H2" ? 12f : 0f));
         _tableLayoutEngine
             .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
             .Returns(new TableLayoutResult
@@ -267,7 +405,7 @@ public class BlockLayoutEngineTests
                 [
                     new TableLayoutRowResult
                     {
-                        SourceRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() },
+                        SourceRow = tableRow,
                         RowIndex = 0,
                         Y = 0f,
                         Height = 40f,
@@ -275,7 +413,7 @@ public class BlockLayoutEngineTests
                         [
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell) { Style = new ComputedStyle() },
+                                SourceCell = leftCell,
                                 ColumnIndex = 0,
                                 X = 0f,
                                 Y = 0f,
@@ -284,7 +422,7 @@ public class BlockLayoutEngineTests
                             },
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell) { Style = new ComputedStyle() },
+                                SourceCell = rightCell,
                                 ColumnIndex = 1,
                                 X = 60f,
                                 Y = 0f,
@@ -312,6 +450,8 @@ public class BlockLayoutEngineTests
             Element = Mock.Of<AngleSharp.Dom.IElement>(e => e.TagName == "TABLE"),
             Style = new ComputedStyle()
         });
+        var table = (TableBox)section.Children[1];
+        table.Children.Add(tableRow);
 
         var root = new BlockBox(DisplayRole.Block)
         {
@@ -329,19 +469,32 @@ public class BlockLayoutEngineTests
         heading.Y.ShouldBe(0f);
         heading.Height.ShouldBe(12f);
 
-        var table = laidOutSection.Children[1].ShouldBeOfType<TableBox>();
-        table.Role.ShouldBe(DisplayRole.Table);
-        table.Y.ShouldBe(12f);
-        table.Height.ShouldBe(40f);
-        table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>().Role.ShouldBe(DisplayRole.TableRow);
+        var laidOutTable = laidOutSection.Children[1].ShouldBeOfType<TableBox>();
+        laidOutTable.Role.ShouldBe(DisplayRole.Table);
+        laidOutTable.Y.ShouldBe(12f);
+        laidOutTable.Height.ShouldBe(40f);
+        var laidOutRow = laidOutTable.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
+        laidOutRow.ShouldBeSameAs(tableRow);
+        laidOutRow.Role.ShouldBe(DisplayRole.TableRow);
     }
 
     [Fact]
     public void Layout_TableGeometryFromTableLayoutEngine_IsMaterializedWithoutRecalculation()
     {
+        var rowSource = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
+        var cellSource = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = rowSource,
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(7.5f, 7.5f, 7.5f, 7.5f)
+            }
+        };
+        rowSource.Children.Add(cellSource);
+
         _inlineEngine
-            .Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>()))
-            .Returns(999f);
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Returns(CreateInlineLayoutResult(999f));
         _tableLayoutEngine
             .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
             .Returns(new TableLayoutResult
@@ -354,7 +507,7 @@ public class BlockLayoutEngineTests
                 [
                     new TableLayoutRowResult
                     {
-                        SourceRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() },
+                        SourceRow = rowSource,
                         RowIndex = 0,
                         Y = 0f,
                         Height = 29.5f,
@@ -362,13 +515,7 @@ public class BlockLayoutEngineTests
                         [
                             new TableLayoutCellPlacement
                             {
-                                SourceCell = new TableCellBox(DisplayRole.TableCell)
-                                {
-                                    Style = new ComputedStyle
-                                    {
-                                        Padding = new Spacing(7.5f, 7.5f, 7.5f, 7.5f)
-                                    }
-                                },
+                                SourceCell = cellSource,
                                 ColumnIndex = 0,
                                 X = 0f,
                                 Y = 0f,
@@ -384,6 +531,7 @@ public class BlockLayoutEngineTests
         {
             Style = new ComputedStyle()
         };
+        root.Children.Add(rowSource);
 
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
 
@@ -400,11 +548,16 @@ public class BlockLayoutEngineTests
     public void Layout_TableCellContent_IsMappedIntoMaterializedCellTree()
     {
         _inlineEngine
-            .Setup(x => x.MeasureHeight(It.IsAny<DisplayNode>(), It.IsAny<float>()))
-            .Returns(0f);
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Returns(CreateInlineLayoutResult(0f));
 
+        var sourceRow = new TableRowBox(DisplayRole.TableRow)
+        {
+            Style = new ComputedStyle()
+        };
         var sourceCell = new TableCellBox(DisplayRole.TableCell)
         {
+            Parent = sourceRow,
             Style = new ComputedStyle()
         };
         sourceCell.Children.Add(new InlineBox(DisplayRole.Inline)
@@ -426,6 +579,7 @@ public class BlockLayoutEngineTests
             Style = new ComputedStyle()
         });
         sourceCell.Children.Add(nestedBlock);
+        sourceRow.Children.Add(sourceCell);
 
         _tableLayoutEngine
             .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
@@ -439,7 +593,7 @@ public class BlockLayoutEngineTests
                 [
                     new TableLayoutRowResult
                     {
-                        SourceRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() },
+                        SourceRow = sourceRow,
                         RowIndex = 0,
                         Y = 0f,
                         Height = 30f,
@@ -463,6 +617,7 @@ public class BlockLayoutEngineTests
         {
             Style = new ComputedStyle()
         };
+        root.Children.Add(sourceRow);
 
         var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
 
@@ -472,11 +627,14 @@ public class BlockLayoutEngineTests
             .ShouldBeOfType<TableRowBox>()
             .Children.ShouldHaveSingleItem()
             .ShouldBeOfType<TableCellBox>();
+        cell.ShouldBeSameAs(sourceCell);
 
         var inlineChild = cell.Children[0].ShouldBeOfType<InlineBox>();
+        inlineChild.ShouldBeSameAs(sourceCell.Children[0]);
         inlineChild.TextContent.ShouldBe("alpha");
 
         var mappedNestedBlock = cell.Children[1].ShouldBeOfType<BlockBox>();
+        mappedNestedBlock.ShouldBeSameAs(nestedBlock);
         mappedNestedBlock.Parent.ShouldBeSameAs(cell);
         mappedNestedBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>().TextContent.ShouldBe("beta");
     }
@@ -528,6 +686,11 @@ public class BlockLayoutEngineTests
     
     private BlockLayoutEngine CreateBlockLayoutEngine() => 
         new(_inlineEngine.Object, _tableLayoutEngine.Object, _floatLayoutEngine.Object);
+
+    private static InlineLayoutResult CreateInlineLayoutResult(float totalHeight)
+    {
+        return new InlineLayoutResult([], totalHeight, 0f);
+    }
 
     private static void NormalizeForBlockLayout(DisplayNode root)
     {

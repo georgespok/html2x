@@ -5,6 +5,18 @@ namespace Html2x.LayoutEngine.Fragment.Stages;
 
 public sealed class BlockFragmentStage : IFragmentBuildStage
 {
+    private readonly FragmentAdapterRegistry _fragmentAdapters;
+
+    public BlockFragmentStage()
+        : this(FragmentAdapterRegistry.CreateDefault())
+    {
+    }
+
+    internal BlockFragmentStage(FragmentAdapterRegistry fragmentAdapters)
+    {
+        _fragmentAdapters = fragmentAdapters ?? throw new ArgumentNullException(nameof(fragmentAdapters));
+    }
+
     public FragmentBuildState Execute(FragmentBuildState state)
     {
         if (state is null)
@@ -16,7 +28,7 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
 
         foreach (var block in state.Boxes.Blocks)
         {
-            var fragment = CreateFragmentRecursive(block, bindings, state.Observers, state);
+            var fragment = CreateFragmentRecursive(block, bindings, state.Observers, state, _fragmentAdapters);
             state.Fragments.Blocks.Add(fragment);
         }
 
@@ -27,9 +39,10 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
         BlockBox blockBox,
         ICollection<BlockFragmentBinding> bindings,
         IReadOnlyList<IFragmentBuildObserver> observers,
-        FragmentBuildState state)
+        FragmentBuildState state,
+        FragmentAdapterRegistry fragmentAdapters)
     {
-        var fragment = BlockFragmentFactory.Create(blockBox, state);
+        var fragment = fragmentAdapters.CreateBlockFragment(blockBox, state);
 
         bindings.Add(new BlockFragmentBinding(blockBox, fragment));
 
@@ -38,9 +51,9 @@ public sealed class BlockFragmentStage : IFragmentBuildStage
             observer.OnBlockFragmentCreated(blockBox, fragment);
         }
 
-        foreach (var child in blockBox.Children.OfType<BlockBox>())
+        foreach (var child in DisplayNodeTraversal.EnumerateBlockChildren(blockBox))
         {
-            _ = CreateFragmentRecursive(child, bindings, observers, state);
+            _ = CreateFragmentRecursive(child, bindings, observers, state, fragmentAdapters);
         }
 
         return fragment;

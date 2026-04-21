@@ -1,6 +1,7 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
@@ -10,7 +11,8 @@ internal sealed class InlineObjectLayoutBuilder(
     ITextMeasurer measurer,
     IFontMetricsProvider metrics,
     ILineHeightStrategy lineHeightStrategy,
-    IBlockFormattingContext blockFormattingContext)
+    IBlockFormattingContext blockFormattingContext,
+    IImageLayoutResolver? imageResolver = null)
 {
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -18,6 +20,7 @@ internal sealed class InlineObjectLayoutBuilder(
     private readonly InlineRunFactory _runFactory = new(metrics, blockFormattingContext);
     private readonly TextLayoutEngine _layoutEngine = new(measurer);
     private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+    private readonly IImageLayoutResolver _imageResolver = imageResolver ?? new ImageLayoutResolver();
 
     public bool TryBuildInlineBlockLayout(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
     {
@@ -37,6 +40,28 @@ internal sealed class InlineObjectLayoutBuilder(
         var padding = contentBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(contentBox.Style.Borders).Safe();
         var contentAvailableWidth = ResolveContentWidth(availableWidth, padding, border);
+
+        if (contentBox is ImageBox imageBox)
+        {
+            var image = _imageResolver.Resolve(imageBox, contentAvailableWidth);
+            imageBox.Src = image.Src;
+            imageBox.AuthoredSizePx = image.AuthoredSizePx;
+            imageBox.IntrinsicSizePx = image.IntrinsicSizePx;
+            imageBox.IsMissing = image.IsMissing;
+            imageBox.IsOversize = image.IsOversize;
+            var resolvedLineHeight = ResolveLineHeight(contentBox);
+            var resolvedBaseline = Math.Max(resolvedLineHeight, image.TotalHeight);
+
+            layout = new InlineObjectLayout(
+                contentBox,
+                new TextLayoutResult([], image.ContentHeight, image.ContentWidth),
+                image.ContentWidth,
+                image.ContentHeight,
+                image.TotalWidth,
+                image.TotalHeight,
+                resolvedBaseline);
+            return true;
+        }
 
         var lineHeight = ResolveLineHeight(contentBox);
         var runs = CollectInlineRuns(contentBox, contentAvailableWidth);
