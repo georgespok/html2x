@@ -23,7 +23,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ConvertSimpleHtmlToPdf_ShouldGenerateValidPdf()
+    public async Task ToPdfAsync_HtmlIsSimple_GenerateValidPdf()
     {
         // Arrange
         const string html = @"<!DOCTYPE html>
@@ -51,7 +51,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task MissingFontPath_ShouldThrowAndEmitDiagnostics()
+    public async Task ToPdfAsync_FontPathIsMissing_ThrowAndEmitDiagnostics()
     {
         var options = new HtmlConverterOptions
         {
@@ -81,7 +81,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task InvalidFontPath_ShouldThrowAndEmitDiagnostics()
+    public async Task ToPdfAsync_FontPathIsInvalid_ThrowAndEmitDiagnostics()
     {
         var options = new HtmlConverterOptions
         {
@@ -111,7 +111,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ToPdfAsync_WithDiagnostics_EmitsCanonicalStageLifecycleStates()
+    public async Task ToPdfAsync_DiagnosticsAreEnabled_EmitCanonicalStageLifecycleStates()
     {
         const string html = "<html><body><p>Hello diagnostics</p></body></html>";
         var options = new HtmlConverterOptions
@@ -147,5 +147,49 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             e.StageState == DiagnosticStageState.Succeeded);
     }
 
+    [Fact]
+    public async Task ToPdfAsync_DiagnosticsEnabled_UsesSingleResolvedFontPath()
+    {
+        const string html = """
+            <html>
+              <body>
+                <p style="font-family: Inter; font-size: 14pt;">One owner for font resolution.</p>
+              </body>
+            </html>
+            """;
+
+        var options = new HtmlConverterOptions
+        {
+            Pdf = new PdfOptions
+            {
+                FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+        var result = await _htmlConverter.ToPdfAsync(html, options);
+
+        Assert.NotNull(result.Diagnostics);
+
+        var fontEvents = result.Diagnostics.Events
+            .Where(static x => x.Name == "font/resolve")
+            .Select(static x => x.Payload)
+            .OfType<FontResolutionPayload>()
+            .Where(static x => x.Outcome == "Resolved")
+            .ToList();
+
+        var measurement = Assert.Single(fontEvents, static x => x.Consumer == "SkiaTextMeasurer");
+        var fragmentStage = Assert.Single(fontEvents, static x => x.Consumer == "InlineFragmentStage");
+
+        Assert.Equal("FontPathSource", measurement.Owner);
+        Assert.Equal(measurement.SourceId, fragmentStage.SourceId);
+        Assert.Equal(measurement.FilePath, fragmentStage.FilePath);
+        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), measurement.ConfiguredPath);
+        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), fragmentStage.ConfiguredPath);
+        Assert.DoesNotContain(fontEvents, static x => x.Consumer == "SkiaFontCache");
+    }
 }
 

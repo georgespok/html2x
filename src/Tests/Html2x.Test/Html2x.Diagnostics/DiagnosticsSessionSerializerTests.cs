@@ -12,7 +12,7 @@ namespace Html2x.Test.Html2x.Diagnostics;
 public sealed class DiagnosticsSessionSerializerTests
 {
     [Fact]
-    public void ToJson_EventWithCanonicalFields_SerializesSeverityLifecycleContextAndRawInput()
+    public void ToJson_CanonicalEvent_SerializesLifecycleAndRawInput()
     {
         var session = new DiagnosticsSession
         {
@@ -310,6 +310,52 @@ public sealed class DiagnosticsSessionSerializerTests
             .GetInt32().ShouldBe(7);
 
         events[5].GetProperty("payload").GetProperty("kind").GetString().ShouldBe("test.unknown");
+    }
+
+    [Fact]
+    public void ToJson_FontResolutionPayload_SerializesOwnerConsumerAndOutcome()
+    {
+        var session = new DiagnosticsSession
+        {
+            StartTime = DateTimeOffset.Parse("2026-04-14T10:00:00Z"),
+            EndTime = DateTimeOffset.Parse("2026-04-14T10:00:01Z"),
+            Options = new HtmlConverterOptions()
+        };
+
+        session.Events.Add(new DiagnosticsEvent
+        {
+            Name = "font/resolve",
+            Severity = DiagnosticSeverity.Info,
+            Payload = new FontResolutionPayload
+            {
+                Owner = "FontPathSource",
+                Consumer = "SkiaFontCache",
+                RequestedFamily = "Inter",
+                RequestedWeight = FontWeight.W700,
+                RequestedStyle = FontStyle.Italic,
+                ResolvedFamily = "Inter",
+                ResolvedWeight = FontWeight.W400,
+                ResolvedStyle = FontStyle.Normal,
+                SourceId = "Fonts\\Inter-Regular.ttf",
+                ConfiguredPath = "Fonts",
+                FilePath = "Fonts\\Inter-Regular.ttf",
+                FaceIndex = 0,
+                Outcome = "Resolved"
+            }
+        });
+
+        var json = DiagnosticsSessionSerializer.ToJson(session);
+
+        using var document = JsonDocument.Parse(json);
+        var payload = document.RootElement.GetProperty("events")[0].GetProperty("payload");
+
+        payload.GetProperty("kind").GetString().ShouldBe("font.resolution");
+        payload.GetProperty("owner").GetString().ShouldBe("FontPathSource");
+        payload.GetProperty("consumer").GetString().ShouldBe("SkiaFontCache");
+        payload.GetProperty("requestedWeight").GetString().ShouldBe("W700");
+        payload.GetProperty("resolvedWeight").GetString().ShouldBe("W400");
+        payload.GetProperty("outcome").GetString().ShouldBe("Resolved");
+        payload.GetProperty("configuredPath").GetString().ShouldBe("Fonts");
     }
 
     private sealed class UnknownPayload : IDiagnosticsPayload

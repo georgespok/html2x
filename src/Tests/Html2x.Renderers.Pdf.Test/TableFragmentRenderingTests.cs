@@ -15,7 +15,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public sealed class TableFragmentRenderingTests
 {
     [Fact]
-    public void DrawPage_TableAndCellBorders_ShouldPaintExpectedColors()
+    public void DrawPage_TableAndCellBorders_PaintExpectedColors()
     {
         var tableBorder = new ColorRgba(0xBE, 0x12, 0x3C, 0xFF);
         var cellBorder = new ColorRgba(0x1D, 0x4E, 0xD8, 0xFF);
@@ -54,7 +54,7 @@ public sealed class TableFragmentRenderingTests
     }
 
     [Fact]
-    public void DrawPage_TableAndCellBackgrounds_ShouldPaintCellBeforeDescendants()
+    public void DrawPage_TableAndCellBackgrounds_PaintCellBeforeDescendants()
     {
         var tableBackground = new ColorRgba(0xE5, 0xE7, 0xEB, 0xFF);
         var cellBackground = new ColorRgba(0xBB, 0xF7, 0xD0, 0xFF);
@@ -92,7 +92,7 @@ public sealed class TableFragmentRenderingTests
     }
 
     [Fact]
-    public void DrawPage_RowAndCellBackgrounds_ShouldPreferCellFillInsideCellBounds()
+    public void DrawPage_RowAndCellBackgrounds_PreferCellFillInsideCellBounds()
     {
         var rowBackground = new ColorRgba(0xD1, 0xD5, 0xDB, 0xFF);
         var cellBackground = new ColorRgba(0xFE, 0xF3, 0xC7, 0xFF);

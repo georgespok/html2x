@@ -62,7 +62,7 @@ public sealed class CssValueConverter : ICssValueConverter
         if (trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase) &&
             float.TryParse(trimmed[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var pixels))
         {
-            points = (float)(pixels * (72.0 / 96.0));
+            points = CssUnitConversion.CssPxToPt(pixels);
             return true;
         }
 

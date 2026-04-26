@@ -14,7 +14,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class SkiaDeterminismTests
 {
     [Fact]
-    public async Task RenderTwice_ShouldProduceIdenticalWordGeometry()
+    public async Task RenderTwice_ProduceIdenticalWordGeometry()
     {
         var layout1 = CreateSimpleLayout();
         var layout2 = CreateSimpleLayout();

@@ -1,12 +1,11 @@
-using System.Reflection;
-using Html2x.Renderers.Pdf.Pipeline;
+using System.Xml.Linq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test.Dependencies;
 
 public sealed class RendererIsolationTests
 {
-    private static readonly string[] ForbiddenNamespaces =
+    private static readonly string[] ForbiddenReferences =
     [
         "Html2x.LayoutEngine",
         "Html2x.LayoutEngine.Style",
@@ -14,102 +13,72 @@ public sealed class RendererIsolationTests
     ];
 
     [Fact]
-    public void RendererAssembly_ShouldNotReferenceLayoutEngine()
+    public void RendererProject_ProjectReferences_ExcludeLayoutEngine()
     {
-        var assembly = typeof(PdfRenderer).Assembly;
-        var referenced = assembly
-            .GetReferencedAssemblies()
-            .Select(a => a.Name)
+        var projectFile = FindRepositoryFile(
+            "src",
+            "Html2x.Renderers.Pdf",
+            "Html2x.Renderers.Pdf.csproj");
+
+        var references = ReadProjectReferences(projectFile)
+            .Select(Path.GetFileNameWithoutExtension)
             .ToArray();
 
-        referenced.ShouldContain("Html2x.Abstractions");
-        referenced.ShouldNotContain("Html2x.LayoutEngine");
+        references.ShouldContain("Html2x.Abstractions");
+        references.ShouldNotContain("Html2x.LayoutEngine");
     }
 
     [Fact]
-    public void RendererTypes_ShouldNotExposeLayoutEngineTypes()
+    public void RendererSource_ImportsAreDeclared_DoesNotImportLayoutEngineNamespaces()
     {
-        var assembly = typeof(PdfRenderer).Assembly;
-        var violations = new List<string>();
+        var projectDirectory = Path.GetDirectoryName(FindRepositoryFile(
+            "src",
+            "Html2x.Renderers.Pdf",
+            "Html2x.Renderers.Pdf.csproj"))!;
+        var sourceFiles = Directory.EnumerateFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
+                                  !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .ToArray();
 
-        foreach (var type in assembly.GetTypes()
-                     .Where(t => t.Namespace?.StartsWith("Html2x.Renderers.Pdf", StringComparison.Ordinal) == true))
-        {
-            InspectTypeMembers(type, violations);
-        }
+        var violations = sourceFiles
+            .SelectMany(file => File.ReadLines(file)
+                .Select((line, index) => new SourceLine(file, index + 1, line)))
+            .Where(line => ForbiddenReferences.Any(reference =>
+                line.Text.Contains(reference, StringComparison.Ordinal)))
+            .Select(line => $"{Path.GetFileName(line.File)}:{line.LineNumber}: {line.Text.Trim()}")
+            .ToArray();
 
         violations.ShouldBeEmpty();
     }
 
-    private static void InspectTypeMembers(Type type, ICollection<string> violations)
+    private static IReadOnlyList<string> ReadProjectReferences(string projectFile)
     {
-        var bindingFlags = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
-                           BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        var document = XDocument.Load(projectFile);
 
-        foreach (var field in type.GetFields(bindingFlags))
-        {
-            CheckType(field.FieldType, $"{type.FullName}.{field.Name}", violations);
-        }
+        return document.Descendants("ProjectReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .Where(static value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(projectFile)!, value!)))
+            .ToArray();
+    }
 
-        foreach (var property in type.GetProperties(bindingFlags))
+    private static string FindRepositoryFile(params string[] pathParts)
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
         {
-            CheckType(property.PropertyType, $"{type.FullName}.{property.Name}", violations);
-        }
-
-        foreach (var method in type.GetMethods(bindingFlags))
-        {
-            CheckType(method.ReturnType, $"{type.FullName}.{method.Name} return", violations);
-            foreach (var parameter in method.GetParameters())
+            var candidate = Path.Combine([current.FullName, .. pathParts]);
+            if (File.Exists(candidate))
             {
-                CheckType(parameter.ParameterType,
-                    $"{type.FullName}.{method.Name}({parameter.Name})", violations);
+                return candidate;
             }
+
+            current = current.Parent;
         }
 
-        foreach (var nested in type.GetNestedTypes(bindingFlags))
-        {
-            InspectTypeMembers(nested, violations);
-        }
+        throw new FileNotFoundException(
+            $"Could not find repository file '{Path.Combine(pathParts)}' from '{AppContext.BaseDirectory}'.");
     }
 
-    private static void CheckType(Type type, string context, ICollection<string> violations)
-    {
-        if (type == typeof(void))
-        {
-            return;
-        }
-
-        if (TypeUsesForbiddenNamespace(type))
-        {
-            violations.Add($"{context} -> {type.FullName}");
-        }
-    }
-
-    private static bool TypeUsesForbiddenNamespace(Type type)
-    {
-        if (type.Namespace is not null &&
-            ForbiddenNamespaces.Any(ns => type.FullName?.StartsWith(ns, StringComparison.Ordinal) == true))
-        {
-            return true;
-        }
-
-        if (type.HasElementType && type.GetElementType() is { } elementType &&
-            TypeUsesForbiddenNamespace(elementType))
-        {
-            return true;
-        }
-
-        if (type.IsGenericType)
-        {
-            foreach (var argument in type.GetGenericArguments())
-            {
-                if (TypeUsesForbiddenNamespace(argument))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
+    private sealed record SourceLine(string File, int LineNumber, string Text);
 }

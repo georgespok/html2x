@@ -3,11 +3,15 @@ using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
+/// <summary>
+/// Projects assembled layout output into diagnostic snapshots and validates fragment structures that cross layout boundaries.
+/// </summary>
 public static class LayoutSnapshotMapper
 {
     private static readonly HashSet<DisplayRole> UnsupportedInlineBlockRoles =
@@ -54,12 +58,12 @@ public static class LayoutSnapshotMapper
         }
 
         var pages = new List<LayoutPageSnapshot>(layout.Pages.Count);
-        var sequenceId = 0;
+        var fragmentMapper = new FragmentSnapshotMapper();
 
         for (var pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
             var page = layout.Pages[pageIndex];
-            var fragments = MapFragments(page.Children, ref sequenceId);
+            var fragments = fragmentMapper.MapFragments(page.Children);
             var pageNumber = page.PageNumber > 0 ? page.PageNumber : pageIndex + 1;
 
             pages.Add(new LayoutPageSnapshot
@@ -78,98 +82,6 @@ public static class LayoutSnapshotMapper
         };
     }
 
-    private static IReadOnlyList<FragmentSnapshot> MapFragments(
-        IEnumerable<LayoutFragment> fragments,
-        ref int sequenceId)
-    {
-        var snapshots = new List<FragmentSnapshot>();
-        foreach (var fragment in fragments)
-        {
-            snapshots.Add(MapFragment(fragment, ref sequenceId));
-        }
-
-        return snapshots;
-    }
-
-    private static FragmentSnapshot MapFragment(LayoutFragment fragment, ref int sequenceId)
-    {
-        return fragment switch
-        {
-            TableFragment table => MapTable(table, ref sequenceId),
-            TableRowFragment row => MapTableRow(row, ref sequenceId),
-            TableCellFragment cell => MapTableCell(cell, ref sequenceId),
-            LineBoxFragment line => MapLineBox(line, NextSequenceId(ref sequenceId)),
-            BlockFragment block => MapBlock(block, ref sequenceId),
-            ImageFragment image => MapImage(image, NextSequenceId(ref sequenceId)),
-            RuleFragment rule => MapRule(rule, NextSequenceId(ref sequenceId)),
-            _ => MapUnknown(fragment, NextSequenceId(ref sequenceId))
-        };
-    }
-
-    private static FragmentSnapshot MapTable(TableFragment table, ref int sequenceId)
-    {
-        var fragmentSequenceId = NextSequenceId(ref sequenceId);
-        var children = MapFragments(table.Rows, ref sequenceId);
-
-        return CreateSnapshot(
-            table,
-            fragmentSequenceId,
-            "table",
-            children,
-            displayRole: table.DisplayRole,
-            formattingContext: table.FormattingContext,
-            markerOffset: table.MarkerOffset,
-            derivedColumnCount: table.DerivedColumnCount);
-    }
-
-    private static FragmentSnapshot MapTableRow(TableRowFragment row, ref int sequenceId)
-    {
-        var fragmentSequenceId = NextSequenceId(ref sequenceId);
-        var children = MapFragments(row.Cells, ref sequenceId);
-
-        return CreateSnapshot(
-            row,
-            fragmentSequenceId,
-            "table-row",
-            children,
-            displayRole: row.DisplayRole,
-            formattingContext: row.FormattingContext,
-            markerOffset: row.MarkerOffset,
-            rowIndex: row.RowIndex);
-    }
-
-    private static FragmentSnapshot MapTableCell(TableCellFragment cell, ref int sequenceId)
-    {
-        var fragmentSequenceId = NextSequenceId(ref sequenceId);
-        var children = MapFragments(cell.Children, ref sequenceId);
-
-        return CreateSnapshot(
-            cell,
-            fragmentSequenceId,
-            "table-cell",
-            children,
-            displayRole: cell.DisplayRole,
-            formattingContext: cell.FormattingContext,
-            markerOffset: cell.MarkerOffset,
-            columnIndex: cell.ColumnIndex,
-            isHeader: cell.IsHeader);
-    }
-
-    private static FragmentSnapshot MapBlock(BlockFragment block, ref int sequenceId)
-    {
-        var fragmentSequenceId = NextSequenceId(ref sequenceId);
-        var children = MapFragments(block.Children, ref sequenceId);
-
-        return CreateSnapshot(
-            block,
-            fragmentSequenceId,
-            "block",
-            children,
-            displayRole: block.DisplayRole,
-            formattingContext: block.FormattingContext,
-            markerOffset: block.MarkerOffset);
-    }
-
     private static FragmentSnapshot MapLineBox(LineBoxFragment line, int sequenceId)
     {
         var text = line.Runs is null
@@ -182,7 +94,10 @@ public static class LayoutSnapshotMapper
             "line",
             [],
             color: ResolveLineColor(line),
-            text: text);
+            text: text,
+            occupiedX: line.OccupiedRect.X,
+            occupiedY: line.OccupiedRect.Y,
+            occupiedSize: new SizePt(line.OccupiedRect.Width, line.OccupiedRect.Height));
     }
 
     private static FragmentSnapshot MapImage(ImageFragment image, int sequenceId)
@@ -217,13 +132,18 @@ public static class LayoutSnapshotMapper
         float? contentX = null,
         float? contentY = null,
         SizePt? contentSize = null,
+        float? occupiedX = null,
+        float? occupiedY = null,
+        SizePt? occupiedSize = null,
         FragmentDisplayRole? displayRole = null,
         FormattingContextKind? formattingContext = null,
         float? markerOffset = null,
         int? derivedColumnCount = null,
         int? rowIndex = null,
         int? columnIndex = null,
-        bool? isHeader = null)
+        bool? isHeader = null,
+        string? metadataOwner = null,
+        string? metadataConsumer = null)
     {
         var style = fragment.Style;
         return new FragmentSnapshot
@@ -244,6 +164,9 @@ public static class LayoutSnapshotMapper
             ContentX = contentX,
             ContentY = contentY,
             ContentSize = contentSize,
+            OccupiedX = occupiedX,
+            OccupiedY = occupiedY,
+            OccupiedSize = occupiedSize,
             Borders = style.Borders,
             DisplayRole = displayRole,
             FormattingContext = formattingContext,
@@ -252,8 +175,36 @@ public static class LayoutSnapshotMapper
             RowIndex = rowIndex,
             ColumnIndex = columnIndex,
             IsHeader = isHeader,
+            MetadataOwner = metadataOwner,
+            MetadataConsumer = metadataConsumer,
             Children = children
         };
+    }
+
+    private static FragmentSnapshot CreateBlockLikeSnapshot(
+        BlockFragment fragment,
+        int sequenceId,
+        string kind,
+        IReadOnlyList<FragmentSnapshot> children,
+        int? derivedColumnCount = null,
+        int? rowIndex = null,
+        int? columnIndex = null,
+        bool? isHeader = null)
+    {
+        return CreateSnapshot(
+            fragment,
+            sequenceId,
+            kind,
+            children,
+            displayRole: fragment.DisplayRole,
+            formattingContext: fragment.FormattingContext,
+            markerOffset: fragment.MarkerOffset,
+            derivedColumnCount: derivedColumnCount,
+            rowIndex: rowIndex,
+            columnIndex: columnIndex,
+            isHeader: isHeader,
+            metadataOwner: FragmentAdapterRegistry.MetadataOwnerName,
+            metadataConsumer: nameof(LayoutSnapshotMapper));
     }
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)
@@ -287,9 +238,92 @@ public static class LayoutSnapshotMapper
         return false;
     }
 
-    private static int NextSequenceId(ref int sequenceId)
+    private sealed class FragmentSnapshotMapper
     {
-        sequenceId++;
-        return sequenceId;
+        private int _sequenceId;
+
+        public IReadOnlyList<FragmentSnapshot> MapFragments(IEnumerable<LayoutFragment> fragments)
+        {
+            var snapshots = new List<FragmentSnapshot>();
+            foreach (var fragment in fragments)
+            {
+                snapshots.Add(MapFragment(fragment));
+            }
+
+            return snapshots;
+        }
+
+        private FragmentSnapshot MapFragment(LayoutFragment fragment)
+        {
+            return fragment switch
+            {
+                TableFragment table => MapTable(table),
+                TableRowFragment row => MapTableRow(row),
+                TableCellFragment cell => MapTableCell(cell),
+                LineBoxFragment line => MapLineBox(line, NextSequenceId()),
+                BlockFragment block => MapBlock(block),
+                ImageFragment image => MapImage(image, NextSequenceId()),
+                RuleFragment rule => MapRule(rule, NextSequenceId()),
+                _ => MapUnknown(fragment, NextSequenceId())
+            };
+        }
+
+        private FragmentSnapshot MapTable(TableFragment table)
+        {
+            var fragmentSequenceId = NextSequenceId();
+            var children = MapFragments(table.Rows);
+
+            return CreateBlockLikeSnapshot(
+                table,
+                fragmentSequenceId,
+                "table",
+                children,
+                derivedColumnCount: table.DerivedColumnCount);
+        }
+
+        private FragmentSnapshot MapTableRow(TableRowFragment row)
+        {
+            var fragmentSequenceId = NextSequenceId();
+            var children = MapFragments(row.Cells);
+
+            return CreateBlockLikeSnapshot(
+                row,
+                fragmentSequenceId,
+                "table-row",
+                children,
+                rowIndex: row.RowIndex);
+        }
+
+        private FragmentSnapshot MapTableCell(TableCellFragment cell)
+        {
+            var fragmentSequenceId = NextSequenceId();
+            var children = MapFragments(cell.Children);
+
+            return CreateBlockLikeSnapshot(
+                cell,
+                fragmentSequenceId,
+                "table-cell",
+                children,
+                columnIndex: cell.ColumnIndex,
+                isHeader: cell.IsHeader);
+        }
+
+        private FragmentSnapshot MapBlock(BlockFragment block)
+        {
+            var fragmentSequenceId = NextSequenceId();
+            var children = MapFragments(block.Children);
+
+            return CreateBlockLikeSnapshot(
+                block,
+                fragmentSequenceId,
+                "block",
+                children);
+        }
+
+        private int NextSequenceId()
+        {
+            _sequenceId++;
+            return _sequenceId;
+        }
     }
 }

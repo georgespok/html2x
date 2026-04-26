@@ -10,4 +10,6 @@ public sealed record ResolvedFont(
     FontWeight Weight,
     FontStyle Style,
     string SourceId,
-    string? FilePath = null);
+    string? FilePath = null,
+    int FaceIndex = 0,
+    string? ConfiguredPath = null);

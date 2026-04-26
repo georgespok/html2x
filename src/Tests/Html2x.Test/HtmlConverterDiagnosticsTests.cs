@@ -71,4 +71,90 @@ public sealed class HtmlConverterDiagnosticsTests
         ignoredPadding.Context.ElementIdentity.ShouldBe("section#invoice");
         ignoredPadding.Context.StyleDeclaration.ShouldBe("padding: 1px 2px 3px 4px 5px");
     }
+
+    [Fact]
+    public async Task ToPdfAsync_EmptyFontDirectory_EmitsFontResolutionFailureDiagnostics()
+    {
+        const string html = "<html><body><p>Missing font evidence</p></body></html>";
+        var tempDirectory = Directory.CreateTempSubdirectory();
+
+        try
+        {
+            var options = new HtmlConverterOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableDiagnostics = true
+                },
+                Pdf = new PdfOptions
+                {
+                    FontPath = tempDirectory.FullName
+                }
+            };
+
+            var converter = new HtmlConverter();
+            var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
+
+            var diagnostics = exception.Data["Diagnostics"].ShouldBeOfType<DiagnosticsSession>();
+            var payload = diagnostics.Events
+                .Where(static x => x.Name == "font/resolve")
+                .Select(static x => x.Payload)
+                .OfType<FontResolutionPayload>()
+                .Single(static x => x.Consumer == "SkiaTextMeasurer" && x.Outcome == "Failed");
+
+            payload.Owner.ShouldBe("FontPathSource");
+            payload.ConfiguredPath.ShouldBe(tempDirectory.FullName);
+            payload.Reason.ShouldNotBeNull();
+            payload.Reason.ShouldContain("not found in directory");
+        }
+        finally
+        {
+            tempDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_InvalidFontFile_EmitsFontResolutionFailureDiagnostics()
+    {
+        const string html = "<html><body><p>Invalid font evidence</p></body></html>";
+        var tempDirectory = Directory.CreateTempSubdirectory();
+
+        try
+        {
+            var invalidFontPath = Path.Combine(tempDirectory.FullName, "invalid.ttf");
+            await File.WriteAllTextAsync(invalidFontPath, "not-a-real-font");
+
+            var options = new HtmlConverterOptions
+            {
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableDiagnostics = true
+                },
+                Pdf = new PdfOptions
+                {
+                    FontPath = invalidFontPath
+                }
+            };
+
+            var converter = new HtmlConverter();
+            var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
+
+            var diagnostics = exception.Data["Diagnostics"].ShouldBeOfType<DiagnosticsSession>();
+            var payload = diagnostics.Events
+                .Where(static x => x.Name == "font/resolve")
+                .Select(static x => x.Payload)
+                .OfType<FontResolutionPayload>()
+                .Single(static x => x.Consumer == "SkiaTextMeasurer" && x.Outcome == "Failed");
+
+            payload.Owner.ShouldBe("FontPathSource");
+            payload.ConfiguredPath.ShouldBe(invalidFontPath);
+            payload.FilePath.ShouldBeNull();
+            payload.Reason.ShouldNotBeNull();
+            payload.Reason.ShouldContain("Failed to load font file");
+        }
+        finally
+        {
+            tempDirectory.Delete(recursive: true);
+        }
+    }
 }

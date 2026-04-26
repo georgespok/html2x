@@ -84,7 +84,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WithNestedBlocksAndInlines_ProducesExpectedFragments()
+    public async Task Build_NestedBlocksAndInlines_ProducesExpectedFragments()
     {
         const string html =
             "<html><body><div><span>Span inside Div</span><p>Paragraph inside Div<div>Nested Div inside Paragraph<span>Nested Span inside nested Div</span></div></p></div></body></html>";
@@ -137,7 +137,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WithH1H6_ProducesExpectedHeadingHeight()
+    public async Task Build_H1H6_ProducesExpectedHeadingHeight()
     {
         const string html = @"
             <html>             
@@ -175,7 +175,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WithIndependentBorderSides_ProducesExpectedFragmentsAsync()
+    public async Task Build_IndependentBorderSides_ProducesExpectedFragmentsAsync()
     {
         // Arrange: Block with border: 1px solid red and padding: 10px
         // Expected: Content width = 100px - 10px (left) - 10px (right) = 80px
@@ -223,7 +223,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WithBorderAndPadding_OffsetsInlineContentByBorderPlusPadding()
+    public async Task Build_BorderAndPadding_OffsetsInlineContentByBorderPlusPadding()
     {
         // Arrange: padding 12px (9pt) and border 4px (3pt) should shift inline content by 12pt.
         const string html = @"
@@ -282,10 +282,10 @@ public class LayoutIntegrationTests
             .FirstOrDefault(fragment => fragment is not null);
 
         image.ShouldNotBeNull();
-        image!.Rect.Width.ShouldBe(118f, 0.5f);
-        image.Rect.Height.ShouldBe(98f, 0.5f);
-        image.ContentRect.Width.ShouldBe(100f, 0.5f);
-        image.ContentRect.Height.ShouldBe(80f, 0.5f);
+        image!.Rect.Width.ShouldBe(93f, 0.5f);
+        image.Rect.Height.ShouldBe(78f, 0.5f);
+        image.ContentRect.Width.ShouldBe(75f, 0.5f);
+        image.ContentRect.Height.ShouldBe(60f, 0.5f);
     }
 
     [Fact]
@@ -319,13 +319,45 @@ public class LayoutIntegrationTests
         image.ContentRect.Height.ShouldBe(0f);
     }
 
-    [Fact]
-    public async Task Build_WithFixedWidth_UsesSpecifiedWidth()
+    [Theory]
+    [InlineData("margin: 0;", "width: 200px;", 150f)]
+    [InlineData("margin: 200px;", "min-width: 400px;", 300f)]
+    public async Task Build_WhenWidthConstraintApplies_ShouldResolveBlockWidth(
+        string bodyStyle,
+        string divStyle,
+        float expectedWidth)
     {
-        const string html = @"
+        var html = $@"
+            <html>
+              <body style='{bodyStyle}'>
+                <div style='{divStyle}'>Content</div>
+              </body>
+            </html>";
+
+        var layoutOptions = new LayoutOptions
+        {
+            PageSize = PaperSizes.A4
+        };
+
+        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+
+        layout.Pages.Count.ShouldBe(1);
+        var div = (BlockFragment)layout.Pages[0].Children[0];
+        div.Rect.Width.ShouldBe(expectedWidth, 0.5f);
+    }
+
+    [Theory]
+    [InlineData("height: 100px;", 75f)]
+    [InlineData("min-height: 120px;", 90f)]
+    [InlineData("height: 300px; max-height: 100px;", 75f)]
+    public async Task Build_WhenHeightConstraintApplies_ShouldResolveBlockHeight(
+        string divStyle,
+        float expectedHeight)
+    {
+        var html = $@"
             <html>
               <body style='margin: 0;'>
-                <div style='width: 200px;'>Content</div>
+                <div style='{divStyle}'>Hi</div>
               </body>
             </html>";
 
@@ -338,99 +370,11 @@ public class LayoutIntegrationTests
 
         layout.Pages.Count.ShouldBe(1);
         var div = (BlockFragment)layout.Pages[0].Children[0];
-        div.Rect.Width.ShouldBe(150f, 0.5f);
+        div.Rect.Height.ShouldBe(expectedHeight, 0.5f);
     }
 
     [Fact]
-    public async Task Build_WithMinWidth_OverridesAvailableWidth()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 200px;'>
-                <div style='min-width: 400px;'>Content</div>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var div = (BlockFragment)layout.Pages[0].Children[0];
-        div.Rect.Width.ShouldBe(300f, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_WithFixedHeight_UsesSpecifiedHeight()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div style='height: 100px;'>Content</div>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var div = (BlockFragment)layout.Pages[0].Children[0];
-        div.Rect.Height.ShouldBe(75f, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_WithMinHeight_ClampsContentHeight()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div style='min-height: 120px;'>Hi</div>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var div = (BlockFragment)layout.Pages[0].Children[0];
-        div.Rect.Height.ShouldBe(90f, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_WithMaxHeight_ClampsSpecifiedHeight()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div style='height: 300px; max-height: 100px;'>Hi</div>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutOptions
-        {
-            PageSize = PaperSizes.A4
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var div = (BlockFragment)layout.Pages[0].Children[0];
-        div.Rect.Height.ShouldBe(75f, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_WithBr_SplitsInlineContentIntoSeparateLines()
+    public async Task Build_Br_SplitsInlineContentIntoSeparateLines()
     {
         const string html = @"
             <html>
@@ -454,7 +398,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WithLongDocument_FlowsBlocksAcrossMultiplePages()
+    public async Task Build_LongDocument_FlowsBlocksAcrossMultiplePages()
     {
         var blocks = Enumerable.Range(1, 14)
             .Select(static i => $"<div style='height: 120px;'>Block {i}</div>");
@@ -482,7 +426,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_WhenSecondBlockDoesNotFit_StartsSecondBlockAtNextPageTop()
+    public async Task Build_SecondBlockDoesNotFit_StartsSecondBlockAtNextPageTop()
     {
         // Letter page size is 8.5in x 11in => 612pt x 792pt.
         // CSS pixel values are converted at 96dpi to points (1px = 0.75pt):
@@ -559,7 +503,6 @@ public class LayoutIntegrationTests
         lineBox.Rect.Y.ShouldBe(15f, 0.5f);
     }
 
-    //[Fact(Skip = "Disabled while width and height is not implemented")]
     [Fact]
     public async Task LayoutInlineWithPadding_AffectsHorizontalSpacing()
     {
@@ -582,20 +525,10 @@ public class LayoutIntegrationTests
         // Assert: Padding should affect horizontal spacing
         // For inline elements, padding affects the spacing around the content
         layout.Pages.Count.ShouldBe(1);
-        if (layout.Pages[0].Children.Count > 0)
-        {
-            var block = (BlockFragment)layout.Pages[0].Children[0];
-            if (block.Children.Count > 0)
-            {
-                var lineBox = (LineBoxFragment)block.Children[0];
-                // Verify padding is applied (check that text run has spacing)
-                lineBox.Runs.Count.ShouldBeGreaterThan(0);
-                // The inline element's padding should be reflected in the layout
-                // Padding offsets the text position within the block
-                // Text should be offset by left padding (7.5pt)
-                lineBox.Runs[0].Origin.X.ShouldBe(lineBox.Rect.X + 7.5f, 0.5f);
-            }
-        }
+        var block = layout.Pages[0].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
+        var lineBox = block.Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>();
+        lineBox.Runs.Count.ShouldBeGreaterThan(0);
+        lineBox.Runs[0].Origin.X.ShouldBe(lineBox.Rect.X + 7.5f, 0.5f);
     }
 
     [Fact]
@@ -656,7 +589,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_ShouldReturnBlockFragment()
+    public async Task Build_ParagraphContainsLineBreak_ReturnSingleBlockFragment()
     {
         // Arrange: Inline element with padding: 10px (7.5pt) inside a block
         const string html = @"
@@ -678,6 +611,7 @@ public class LayoutIntegrationTests
         page.Children.Count.ShouldBe(1);
         var block = page.Children[0] as BlockFragment;
         block.ShouldNotBeNull();
+        block!.Children.OfType<LineBoxFragment>().Count().ShouldBe(2);
     }
 
     private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
@@ -795,7 +729,7 @@ public class LayoutIntegrationTests
             .Returns((9f, 3f));
 
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         return new FragmentBuildContext(
@@ -816,7 +750,7 @@ public class LayoutIntegrationTests
             .Returns((9f, 3f));
 
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         var services = new LayoutServices(textMeasurer.Object, fontSource.Object, imageProvider);

@@ -5,10 +5,14 @@ using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
 
+/// <summary>
+/// Converts computed styles into display nodes, then applies block layout geometry using the active layout context.
+/// </summary>
 public class BoxTreeBuilder : IBoxTreeBuilder
 {
-    private readonly ITextMeasurer? _textMeasurer;
-    private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly DisplayTreeBuilder _displayTreeBuilder;
+    private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy;
+    private readonly BoxLayoutEngineFactory _layoutEngineFactory;
 
     public BoxTreeBuilder()
         : this(textMeasurer: null, new BlockFormattingContext())
@@ -21,32 +25,43 @@ public class BoxTreeBuilder : IBoxTreeBuilder
     }
 
     internal BoxTreeBuilder(ITextMeasurer? textMeasurer, IBlockFormattingContext blockFormattingContext)
+        : this(
+            new DisplayTreeBuilder(),
+            new UnsupportedLayoutModePolicy(),
+            new BoxLayoutEngineFactory(textMeasurer, blockFormattingContext))
     {
-        _textMeasurer = textMeasurer;
-        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
     }
 
-    public BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, BoxTreeBuildContext? context = null)
+    private BoxTreeBuilder(
+        DisplayTreeBuilder displayTreeBuilder,
+        UnsupportedLayoutModePolicy unsupportedLayoutModePolicy,
+        BoxLayoutEngineFactory layoutEngineFactory)
     {
-        var displayTreeBuilder = new DisplayTreeBuilder();
-        var displayRoot = displayTreeBuilder.Build(styles);
-        var imageResolver = new ImageLayoutResolver(context);
-        var inlineEngine = new InlineLayoutEngine(
-            new FontMetricsProvider(),
-            _textMeasurer,
-            new DefaultLineHeightStrategy(),
-            _blockFormattingContext,
-            Text.InlineNodeMeasurerRegistry.CreateDefault(),
-            imageResolver);
+        _displayTreeBuilder = displayTreeBuilder ?? throw new ArgumentNullException(nameof(displayTreeBuilder));
+        _unsupportedLayoutModePolicy = unsupportedLayoutModePolicy
+                                       ?? throw new ArgumentNullException(nameof(unsupportedLayoutModePolicy));
+        _layoutEngineFactory = layoutEngineFactory ?? throw new ArgumentNullException(nameof(layoutEngineFactory));
+    }
 
-        var blockEngine = new BlockLayoutEngine(
-            inlineEngine,
-            new TableLayoutEngine(inlineEngine, imageResolver),
-            new FloatLayoutEngine(),
-            _blockFormattingContext,
-            imageResolver,
-            BlockLayoutStrategyRegistry.CreateDefault(),
-            diagnosticsSession);
+    public DisplayNode BuildDisplayTree(StyleTree styles, DiagnosticsSession? diagnosticsSession = null)
+    {
+        ArgumentNullException.ThrowIfNull(styles);
+
+        var displayRoot = _displayTreeBuilder.Build(styles);
+        _unsupportedLayoutModePolicy.Report(displayRoot, diagnosticsSession);
+        return displayRoot;
+    }
+
+    public BoxTree BuildLayoutGeometry(
+        DisplayNode displayRoot,
+        StyleTree styles,
+        DiagnosticsSession? diagnosticsSession = null,
+        BoxTreeBuildContext? context = null)
+    {
+        ArgumentNullException.ThrowIfNull(displayRoot);
+        ArgumentNullException.ThrowIfNull(styles);
+
+        var blockEngine = _layoutEngineFactory.Create(diagnosticsSession, context);
 
         var page = new PageBox
         {
@@ -54,5 +69,11 @@ public class BoxTreeBuilder : IBoxTreeBuilder
         };
 
         return blockEngine.Layout(displayRoot, page);
+    }
+
+    public BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, BoxTreeBuildContext? context = null)
+    {
+        var displayRoot = BuildDisplayTree(styles, diagnosticsSession);
+        return BuildLayoutGeometry(displayRoot, styles, diagnosticsSession, context);
     }
 }

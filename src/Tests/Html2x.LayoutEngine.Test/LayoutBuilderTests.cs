@@ -14,13 +14,24 @@ using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Style;
 using Moq;
 using Shouldly;
-
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
 
 public class LayoutBuilderTests
 {
+    private static readonly string[] LayoutStageNames =
+    [
+        "stage/dom",
+        "stage/style",
+        "stage/display-tree",
+        "stage/layout-geometry",
+        "stage/layout-validation",
+        "stage/fragment-projection",
+        "stage/pagination"
+    ];
+
     private readonly Mock<IBoxTreeBuilder> _boxTreeBuilder;
     private readonly LayoutBuilder _builder;
 
@@ -46,12 +57,13 @@ public class LayoutBuilderTests
     }
 
     [Fact]
-    public async Task Build_ShouldOrchestratePipelineAndReturnLayout()
+    public async Task BuildAsync_PipelineSucceeds_ReturnPaginatedLayout()
     {
         // Arrange
         const string html = "<p>ignored by unit test</p>";
 
         var document = new Mock<IDocument>().Object;
+        var displayRoot = new BlockBox(DisplayRole.Block);
         var styleTree = new StyleTree
             { Page = { Margin = new Spacing(10, 11, 12, 13) } };
         var boxTree = new BoxTree
@@ -66,12 +78,7 @@ public class LayoutBuilderTests
         var fragmentTree = new FragmentTree();
         fragmentTree.Blocks.Add(expectedBlock);
 
-        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
-            .Returns(boxTree);
-        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
-            .Returns(fragmentTree);
+        SetupSuccessfulPipeline(html, document, displayRoot, styleTree, boxTree, fragmentTree);
 
         var options = new LayoutOptions
         {
@@ -89,58 +96,60 @@ public class LayoutBuilderTests
         layout.Pages[0].Margins.Right.ShouldBe(11);
         layout.Pages[0].Margins.Bottom.ShouldBe(12);
         layout.Pages[0].Margins.Left.ShouldBe(13);
-        layout.Pages[0].Children[0].ShouldBeSameAs(expectedBlock);
+        var pageBlock = layout.Pages[0].Children[0].ShouldBeOfType<BlockFragment>();
+        pageBlock.ShouldNotBeSameAs(expectedBlock);
+        pageBlock.FragmentId.ShouldBe(expectedBlock.FragmentId);
+        pageBlock.Rect.ShouldBe(expectedBlock.Rect);
 
         _domProvider.Verify(x => x.LoadAsync(html, options), Times.Once);
         _styleComputer.Verify(x => x.Compute(document, It.IsAny<DiagnosticsSession?>()), Times.Once);
         _boxTreeBuilder.Verify(
-            x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()),
+            x => x.BuildDisplayTree(styleTree, It.IsAny<DiagnosticsSession?>()),
+            Times.Once);
+        _boxTreeBuilder.Verify(
+            x => x.BuildLayoutGeometry(displayRoot, styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()),
             Times.Once);
         _fragmentBuilder.Verify(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()), Times.Once);
     }
 
     [Fact]
-    public async Task Build_WithDiagnosticsSession_PublishesStageEvents()
+    public async Task BuildAsync_DiagnosticsSessionIsProvided_PublishStageEvents()
     {
         const string html = "<p>ignored by unit test</p>";
 
         var document = new Mock<IDocument>().Object;
+        var displayRoot = new BlockBox(DisplayRole.Block);
         var styleTree = new StyleTree();
         var boxTree = new BoxTree();
         var fragmentTree = new FragmentTree();
         fragmentTree.Blocks.Add(new BlockFragment());
 
-        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
-            .Returns(boxTree);
-        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+        SetupSuccessfulPipeline(html, document, displayRoot, styleTree, boxTree, fragmentTree);
 
         var diagnosticsSession = new DiagnosticsSession();
 
         await _builder.BuildAsync(html, new LayoutOptions(), diagnosticsSession);
 
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/dom");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/style");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/layout");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/layout-validation");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/inline-measurement");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/fragmentation");
-        diagnosticsSession.Events.Select(e => e.Name).ShouldContain("stage/pagination");
+        var eventNames = diagnosticsSession.Events.Select(static e => e.Name).ToList();
+        foreach (var stageName in LayoutStageNames)
+        {
+            eventNames.ShouldContain(stageName);
+        }
     }
 
     [Fact]
-    public async Task Build_WithDiagnosticsSession_PublishesGeometrySnapshotPayload()
+    public async Task BuildAsync_DiagnosticsSessionIsProvided_PublishGeometrySnapshotPayload()
     {
         const string html = "<p>ignored by unit test</p>";
 
         var document = new Mock<IDocument>().Object;
+        var displayRoot = new BlockBox(DisplayRole.Block);
         var styleTree = new StyleTree();
         var boxTree = new BoxTree();
         boxTree.Blocks.Add(new BlockBox(DisplayRole.Block)
         {
             Style = new ComputedStyle(),
-            UsedGeometry = UsedGeometry.FromBorderBox(new System.Drawing.RectangleF(10f, 20f, 100f, 40f), new Spacing(), new Spacing())
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(new System.Drawing.RectangleF(10f, 20f, 100f, 40f), new Spacing(), new Spacing())
         });
 
         var fragmentTree = new FragmentTree();
@@ -153,11 +162,7 @@ public class LayoutBuilderTests
             Style = new VisualStyle()
         });
 
-        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
-            .Returns(boxTree);
-        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+        SetupSuccessfulPipeline(html, document, displayRoot, styleTree, boxTree, fragmentTree);
 
         var diagnosticsSession = new DiagnosticsSession();
 
@@ -177,38 +182,24 @@ public class LayoutBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithDiagnosticsSession_PublishesStartedAndSucceededLifecycleDiagnostics()
+    public async Task BuildAsync_DiagnosticsSession_PublishesLifecycleEvents()
     {
         const string html = "<p>ignored by unit test</p>";
 
         var document = new Mock<IDocument>().Object;
+        var displayRoot = new BlockBox(DisplayRole.Block);
         var styleTree = new StyleTree();
         var boxTree = new BoxTree();
         var fragmentTree = new FragmentTree();
         fragmentTree.Blocks.Add(new BlockFragment());
 
-        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
-        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
-        _boxTreeBuilder.Setup(x => x.Build(styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
-            .Returns(boxTree);
-        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>())).Returns(fragmentTree);
+        SetupSuccessfulPipeline(html, document, displayRoot, styleTree, boxTree, fragmentTree);
 
         var diagnosticsSession = new DiagnosticsSession();
 
         await _builder.BuildAsync(html, new LayoutOptions(), diagnosticsSession);
 
-        var stageNames = new[]
-        {
-            "stage/dom",
-            "stage/style",
-            "stage/layout",
-            "stage/layout-validation",
-            "stage/inline-measurement",
-            "stage/fragmentation",
-            "stage/pagination"
-        };
-
-        foreach (var stageName in stageNames)
+        foreach (var stageName in LayoutStageNames)
         {
             diagnosticsSession.Events.ShouldContain(e =>
                 e.Name == stageName &&
@@ -222,7 +213,7 @@ public class LayoutBuilderTests
     }
 
     [Fact]
-    public async Task Build_WhenStageThrows_PublishesFailedLifecycleDiagnosticAndRethrows()
+    public async Task BuildAsync_StageThrows_PublishFailedLifecycleDiagnosticAndRethrow()
     {
         const string html = "<p>ignored by unit test</p>";
         const string failureMessage = "Style computation failed.";
@@ -253,7 +244,23 @@ public class LayoutBuilderTests
             e.StageState == DiagnosticStageState.Succeeded);
     }
 
-    
+    private void SetupSuccessfulPipeline(
+        string html,
+        IDocument document,
+        BlockBox displayRoot,
+        StyleTree styleTree,
+        BoxTree boxTree,
+        FragmentTree fragmentTree)
+    {
+        _domProvider.Setup(x => x.LoadAsync(html, It.IsAny<LayoutOptions>())).ReturnsAsync(document);
+        _styleComputer.Setup(x => x.Compute(document, It.IsAny<DiagnosticsSession?>())).Returns(styleTree);
+        _boxTreeBuilder.Setup(x => x.BuildDisplayTree(styleTree, It.IsAny<DiagnosticsSession?>()))
+            .Returns(displayRoot);
+        _boxTreeBuilder.Setup(x => x.BuildLayoutGeometry(displayRoot, styleTree, It.IsAny<DiagnosticsSession?>(), It.IsAny<BoxTreeBuildContext?>()))
+            .Returns(boxTree);
+        _fragmentBuilder.Setup(x => x.Build(boxTree, It.IsAny<FragmentBuildContext>()))
+            .Returns(fragmentTree);
+    }
 }
 
 

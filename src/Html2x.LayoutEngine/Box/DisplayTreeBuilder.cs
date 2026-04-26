@@ -158,22 +158,25 @@ public sealed class DisplayTreeBuilder
 
     private static DisplayRole GetDisplayRole(StyleNode node)
     {
-        var el = node.Element;
-        if (string.Equals(el.TagName, HtmlCssConstants.HtmlTags.Img, StringComparison.OrdinalIgnoreCase) &&
-            el.ClassList.Contains(HtmlCssConstants.CssClasses.Hero))
+        if (IsFloating(node.Style))
         {
             return DisplayRole.Float;
         }
 
-        return DisplayRoleMap.Resolve(node.Style.Display, el.LocalName);
+        return DisplayRoleMap.Resolve(node.Style.Display, node.Element.LocalName);
+    }
+
+    private static bool IsFloating(ComputedStyle style)
+    {
+        return string.Equals(style.FloatDirection, HtmlCssConstants.CssValues.Left, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(style.FloatDirection, HtmlCssConstants.CssValues.Right, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveFloatDirection(StyleNode node)
     {
-        // In future — derive from CSS property
-        return node.Element.ClassList.Contains(HtmlCssConstants.CssClasses.Hero)
-            ? HtmlCssConstants.CssValues.Right
-            : HtmlCssConstants.CssValues.Left;
+        return IsFloating(node.Style)
+            ? node.Style.FloatDirection
+            : HtmlCssConstants.Defaults.FloatDirection;
     }
 
     private static void AppendChildNodes(StyleNode styleNode, DisplayNode box, TextNormalizationState textState)

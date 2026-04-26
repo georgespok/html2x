@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using System.Drawing;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -15,7 +16,6 @@ public class BlockLayoutEngineTests
 {
     private readonly Mock<IInlineLayoutEngine> _inlineEngine;
     private readonly Mock<ITableLayoutEngine> _tableLayoutEngine;
-    private readonly Mock<IFloatLayoutEngine> _floatLayoutEngine;
     
     private static PageBox DefaultPage() => new()
     {
@@ -27,7 +27,6 @@ public class BlockLayoutEngineTests
     {
         _inlineEngine = new Mock<IInlineLayoutEngine>();
         _tableLayoutEngine = new Mock<ITableLayoutEngine>();
-        _floatLayoutEngine = new Mock<IFloatLayoutEngine>();
         _inlineEngine.Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>())).Returns(CreateInlineLayoutResult(0f));
     }
     
@@ -85,6 +84,140 @@ public class BlockLayoutEngineTests
         geometry.ContentBoxRect.Width.ShouldBe(block.Width - 16f);
         geometry.ContentBoxRect.Height.ShouldBe(block.Height - 14f);
         geometry.MarkerOffset.ShouldBe(9f);
+    }
+
+    [Fact]
+    public void Layout_BlockContentGeometry_AccountsForPaddingBorderAndMarkerOffset()
+    {
+        InlineLayoutRequest? capturedRequest = null;
+        _inlineEngine
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Callback<BlockBox, InlineLayoutRequest>((_, request) => capturedRequest = request)
+            .Returns(CreateInlineLayoutResult(18f));
+
+        var style = new ComputedStyle
+        {
+            Padding = new Spacing(3f, 4f, 5f, 7f),
+            Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+        };
+
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(new BlockBox(DisplayRole.ListItem)
+        {
+            Parent = root,
+            Style = style,
+            MarkerOffset = 11f
+        });
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var block = result.Blocks.ShouldHaveSingleItem();
+        var geometry = block.UsedGeometry.ShouldNotBeNull();
+        geometry.ContentBoxRect.ShouldBe(new RectangleF(
+            block.X + 9f,
+            block.Y + 5f,
+            block.Width - 15f,
+            block.Height - 12f));
+        geometry.MarkerOffset.ShouldBe(11f);
+
+        capturedRequest.ShouldNotBeNull();
+        capturedRequest.Value.ContentLeft.ShouldBe(geometry.ContentBoxRect.X + geometry.MarkerOffset);
+        capturedRequest.Value.AvailableWidth.ShouldBe(geometry.ContentBoxRect.Width - geometry.MarkerOffset);
+    }
+
+    [Fact]
+    public void Layout_BlockHeightPolicy_AppliesExplicitHeightAfterFlowHeights()
+    {
+        _inlineEngine
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Returns(CreateInlineLayoutResult(10f));
+
+        var parent = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle
+            {
+                HeightPt = 12f
+            }
+        };
+        parent.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Parent = parent,
+            Style = new ComputedStyle
+            {
+                HeightPt = 30f
+            }
+        });
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(parent);
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var laidOutParent = result.Blocks.ShouldHaveSingleItem();
+        laidOutParent.Height.ShouldBe(12f);
+        laidOutParent.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>().Height.ShouldBe(30f);
+    }
+
+    [Fact]
+    public void BlockBox_PostLayoutSetters_DoNotMutateUsedGeometry()
+    {
+        var block = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle
+            {
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            },
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 0f, 100f, 40f),
+                new Spacing(),
+                new Spacing(2f, 2f, 2f, 2f))
+        };
+
+        var originalGeometry = block.UsedGeometry;
+
+        Should.Throw<InvalidOperationException>(() => block.X = 1f);
+        Should.Throw<InvalidOperationException>(() => block.Y = 1f);
+        Should.Throw<InvalidOperationException>(() => block.Width = 1f);
+        Should.Throw<InvalidOperationException>(() => block.Height = 1f);
+        Should.Throw<InvalidOperationException>(() => block.MarkerOffset = 1f);
+        block.Padding = new Spacing(3f, 5f, 7f, 11f);
+
+        block.UsedGeometry.ShouldBe(originalGeometry);
+        block.UsedGeometry!.Value.ContentBoxRect.ShouldBe(new RectangleF(2f, 2f, 96f, 36f));
+    }
+
+    [Fact]
+    public void Layout_ListItemMarkerOffset_ShiftsInlineContentOrigin()
+    {
+        InlineLayoutRequest? capturedRequest = null;
+        _inlineEngine
+            .Setup(x => x.Layout(
+                It.Is<BlockBox>(block => block.Role == DisplayRole.ListItem),
+                It.IsAny<InlineLayoutRequest>()))
+            .Callback<BlockBox, InlineLayoutRequest>((_, request) => capturedRequest = request)
+            .Returns(CreateInlineLayoutResult(10f));
+
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(new BlockBox(DisplayRole.ListItem)
+        {
+            Parent = root,
+            Style = new ComputedStyle(),
+            MarkerOffset = 12f
+        });
+
+        _ = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        capturedRequest.ShouldNotBeNull();
+        capturedRequest.Value.ContentLeft.ShouldBe(12f);
+        capturedRequest.Value.AvailableWidth.ShouldBe(188f);
     }
 
 
@@ -214,53 +347,23 @@ public class BlockLayoutEngineTests
                 Height = 40f,
                 Rows =
                 [
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = firstRowSource,
-                        RowIndex = 0,
-                        Y = 0f,
-                        Height = 20f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = firstCellSource,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 0f,
-                                Width = 60f,
-                                Height = 20f
-                            },
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = secondCellSource,
-                                ColumnIndex = 1,
-                                X = 60f,
-                                Y = 0f,
-                                Width = 60f,
-                                Height = 20f
-                            }
-                        ]
-                    },
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = secondRowSource,
-                        RowIndex = 1,
-                        Y = 20f,
-                        Height = 20f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = thirdCellSource,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 20f,
-                                Width = 60f,
-                                Height = 20f
-                            }
-                        ]
-                    }
+                    CreateTableRowResult(
+                        firstRowSource,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        20f,
+                        CreateTableCellPlacement(firstCellSource, 0, 0f, 0f, 60f, 20f),
+                        CreateTableCellPlacement(secondCellSource, 1, 60f, 0f, 60f, 20f)),
+                    CreateTableRowResult(
+                        secondRowSource,
+                        1,
+                        0f,
+                        20f,
+                        120f,
+                        20f,
+                        CreateTableCellPlacement(thirdCellSource, 0, 0f, 20f, 60f, 20f))
                 ]
             });
 
@@ -306,7 +409,7 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
-    public void Layout_TableMaterialization_PopulatesUsedGeometryForTableRowAndCellBlocks()
+    public void Layout_TableMaterialization_PopulatesRowAndCellGeometry()
     {
         var rowSource = new TableRowBox(DisplayRole.TableRow)
         {
@@ -335,25 +438,14 @@ public class BlockLayoutEngineTests
                 Height = 20f,
                 Rows =
                 [
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = rowSource,
-                        RowIndex = 0,
-                        Y = 0f,
-                        Height = 20f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = cellSource,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 0f,
-                                Width = 120f,
-                                Height = 20f
-                            }
-                        ]
-                    }
+                    CreateTableRowResult(
+                        rowSource,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        20f,
+                        CreateTableCellPlacement(cellSource, 0, 0f, 0f, 120f, 20f))
                 ]
             });
 
@@ -382,6 +474,134 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
+    public void Layout_TablePaddingAndBorder_PlacesCellsInContentBox()
+    {
+        var rowSource = new TableRowBox(DisplayRole.TableRow)
+        {
+            Style = new ComputedStyle()
+        };
+        var cellSource = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = rowSource,
+            Style = new ComputedStyle()
+        };
+        rowSource.Children.Add(cellSource);
+
+        _tableLayoutEngine
+            .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
+            .Returns(new TableLayoutResult
+            {
+                ResolvedWidth = 120f,
+                DerivedColumnCount = 1,
+                ColumnWidths = [104f],
+                Height = 20f,
+                Rows =
+                [
+                    CreateTableRowResult(
+                        rowSource,
+                        0,
+                        0f,
+                        0f,
+                        104f,
+                        20f,
+                        CreateTableCellPlacement(cellSource, 0, 0f, 0f, 104f, 20f))
+                ]
+            });
+
+        var root = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(4f, 5f, 6f, 7f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        root.Children.Add(rowSource);
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
+        var row = table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
+        var cell = row.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
+
+        table.Width.ShouldBe(120f);
+        table.Height.ShouldBe(34f);
+        table.UsedGeometry!.Value.ContentBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
+        row.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
+        cell.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
+    }
+
+    [Fact]
+    public void Layout_TableCellContent_PlacesNestedBlockAtCellContentBox()
+    {
+        var sourceRow = new TableRowBox(DisplayRole.TableRow)
+        {
+            Style = new ComputedStyle()
+        };
+        var sourceCell = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = sourceRow,
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(3f, 4f, 5f, 6f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        var nestedBlock = new BlockBox(DisplayRole.Block)
+        {
+            Parent = sourceCell,
+            Style = new ComputedStyle
+            {
+                HeightPt = 7f
+            }
+        };
+        sourceCell.Children.Add(nestedBlock);
+        sourceRow.Children.Add(sourceCell);
+
+        _tableLayoutEngine
+            .Setup(x => x.Layout(It.IsAny<TableBox>(), It.IsAny<float>()))
+            .Returns(new TableLayoutResult
+            {
+                ResolvedWidth = 120f,
+                DerivedColumnCount = 1,
+                ColumnWidths = [120f],
+                Height = 30f,
+                Rows =
+                [
+                    CreateTableRowResult(
+                        sourceRow,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        30f,
+                        CreateTableCellPlacement(sourceCell, 0, 0f, 0f, 120f, 30f))
+                ]
+            });
+
+        var root = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(sourceRow);
+
+        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+
+        var cell = result.Blocks
+            .ShouldHaveSingleItem().ShouldBeOfType<TableBox>()
+            .Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>()
+            .Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
+        var cellContent = cell.UsedGeometry.ShouldNotBeNull().ContentBoxRect;
+        var laidOutNestedBlock = cell.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+
+        laidOutNestedBlock.ShouldBeSameAs(nestedBlock);
+        laidOutNestedBlock.UsedGeometry.ShouldNotBeNull();
+        laidOutNestedBlock.X.ShouldBe(cellContent.X);
+        laidOutNestedBlock.Y.ShouldBe(cellContent.Y);
+        laidOutNestedBlock.Width.ShouldBe(cellContent.Width);
+    }
+
+    [Fact]
     public void Layout_BlockContainerWithNestedTable_PreservesTableInChildFlow()
     {
         var tableRow = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
@@ -403,34 +623,15 @@ public class BlockLayoutEngineTests
                 Height = 40f,
                 Rows =
                 [
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = tableRow,
-                        RowIndex = 0,
-                        Y = 0f,
-                        Height = 40f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = leftCell,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 0f,
-                                Width = 60f,
-                                Height = 40f
-                            },
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = rightCell,
-                                ColumnIndex = 1,
-                                X = 60f,
-                                Y = 0f,
-                                Width = 60f,
-                                Height = 40f
-                            }
-                        ]
-                    }
+                    CreateTableRowResult(
+                        tableRow,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        40f,
+                        CreateTableCellPlacement(leftCell, 0, 0f, 0f, 60f, 40f),
+                        CreateTableCellPlacement(rightCell, 1, 60f, 0f, 60f, 40f))
                 ]
             });
 
@@ -479,7 +680,7 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
-    public void Layout_TableGeometryFromTableLayoutEngine_IsMaterializedWithoutRecalculation()
+    public void Layout_TableGeometry_MaterializesWithoutRecalculation()
     {
         var rowSource = new TableRowBox(DisplayRole.TableRow) { Style = new ComputedStyle() };
         var cellSource = new TableCellBox(DisplayRole.TableCell)
@@ -505,25 +706,14 @@ public class BlockLayoutEngineTests
                 Height = 29.5f,
                 Rows =
                 [
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = rowSource,
-                        RowIndex = 0,
-                        Y = 0f,
-                        Height = 29.5f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = cellSource,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 0f,
-                                Width = 120f,
-                                Height = 29.5f
-                            }
-                        ]
-                    }
+                    CreateTableRowResult(
+                        rowSource,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        29.5f,
+                        CreateTableCellPlacement(cellSource, 0, 0f, 0f, 120f, 29.5f))
                 ]
             });
 
@@ -591,25 +781,14 @@ public class BlockLayoutEngineTests
                 Height = 30f,
                 Rows =
                 [
-                    new TableLayoutRowResult
-                    {
-                        SourceRow = sourceRow,
-                        RowIndex = 0,
-                        Y = 0f,
-                        Height = 30f,
-                        Cells =
-                        [
-                            new TableLayoutCellPlacement
-                            {
-                                SourceCell = sourceCell,
-                                ColumnIndex = 0,
-                                X = 0f,
-                                Y = 0f,
-                                Width = 120f,
-                                Height = 30f
-                            }
-                        ]
-                    }
+                    CreateTableRowResult(
+                        sourceRow,
+                        0,
+                        0f,
+                        0f,
+                        120f,
+                        30f,
+                        CreateTableCellPlacement(sourceCell, 0, 0f, 0f, 120f, 30f))
                 ]
             });
 
@@ -640,7 +819,7 @@ public class BlockLayoutEngineTests
     }
 
     [Fact]
-    public void Layout_UnsupportedTable_EmitsUnsupportedStructureDiagnosticsAndSkipsRows()
+    public void Layout_UnsupportedTable_EmitsDiagnosticsAndSkipsRows()
     {
         var diagnosticsSession = new DiagnosticsSession();
         _tableLayoutEngine
@@ -664,7 +843,6 @@ public class BlockLayoutEngineTests
         var result = new BlockLayoutEngine(
             _inlineEngine.Object,
             _tableLayoutEngine.Object,
-            _floatLayoutEngine.Object,
             diagnosticsSession).Layout(root, DefaultPage());
 
         var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
@@ -685,11 +863,52 @@ public class BlockLayoutEngineTests
     }
     
     private BlockLayoutEngine CreateBlockLayoutEngine() => 
-        new(_inlineEngine.Object, _tableLayoutEngine.Object, _floatLayoutEngine.Object);
+        new(_inlineEngine.Object, _tableLayoutEngine.Object);
 
     private static InlineLayoutResult CreateInlineLayoutResult(float totalHeight)
     {
         return new InlineLayoutResult([], totalHeight, 0f);
+    }
+
+    private static UsedGeometry CreateTableGeometry(BlockBox box, float x, float y, float width, float height)
+    {
+        return BoxGeometryFactory.FromBorderBox(
+            new RectangleF(x, y, width, height),
+            box.Style.Padding.Safe(),
+            Spacing.FromBorderEdges(box.Style.Borders).Safe(),
+            markerOffset: box.MarkerOffset);
+    }
+
+    private static TableLayoutRowResult CreateTableRowResult(
+        TableRowBox row,
+        int rowIndex,
+        float x,
+        float y,
+        float width,
+        float height,
+        params TableLayoutCellPlacement[] cells)
+    {
+        return new TableLayoutRowResult(
+            row,
+            rowIndex,
+            CreateTableGeometry(row, x, y, width, height),
+            cells);
+    }
+
+    private static TableLayoutCellPlacement CreateTableCellPlacement(
+        TableCellBox cell,
+        int columnIndex,
+        float x,
+        float y,
+        float width,
+        float height,
+        bool isHeader = false)
+    {
+        return new TableLayoutCellPlacement(
+            cell,
+            columnIndex,
+            isHeader,
+            CreateTableGeometry(cell, x, y, width, height));
     }
 
     private static void NormalizeForBlockLayout(DisplayNode root)

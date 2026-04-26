@@ -40,4 +40,15 @@ public class TableFragmentContractsTests
         table.Rows[0].Cells[0].IsHeader.ShouldBeTrue();
         table.Rows[0].Cells[0].Children.ShouldHaveSingleItem().ShouldBeSameAs(line);
     }
+
+    [Fact]
+    public void TableFragmentFamily_ReusesTypedChildViews()
+    {
+        var cell = new TableCellFragment();
+        var row = new TableRowFragment([cell]);
+        var table = new TableFragment([row]);
+
+        table.Rows.ShouldBeSameAs(table.Rows);
+        row.Cells.ShouldBeSameAs(row.Cells);
+    }
 }

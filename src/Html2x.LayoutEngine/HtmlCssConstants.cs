@@ -85,6 +85,8 @@ public static class HtmlCssConstants
         public const string LineHeight = "line-height";
         public const string TextDecoration = "text-decoration";
         public const string Display = "display";
+        public const string Float = "float";
+        public const string Position = "position";
         public const string Color = "color";
         public const string BackgroundColor = "background-color";
         public const string Width = "width";
@@ -115,9 +117,13 @@ public static class HtmlCssConstants
         public const string Inline = "inline";
         public const string InlineBlock = "inline-block";
         public const string ListItem = "list-item";
+        public const string Flex = "flex";
         public const string Left = "left";
         public const string Right = "right";
         public const string None = "none";
+        public const string Static = "static";
+        public const string Relative = "relative";
+        public const string Absolute = "absolute";
         public const string Zero = "0";
         public const string Solid = "solid";
         public const string Dashed = "dashed";
@@ -156,6 +162,7 @@ public static class HtmlCssConstants
         public const string Color = "#000000";
         public const string TextAlign = "left";
         public const string FloatDirection = "none";
+        public const string Position = "static";
         public const int DefaultFontSizePt = 12;
         public const float ListMarkerOffsetPt = 12f;
     }

@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using Html2x.Abstractions.File;
+using Html2x.Abstractions.Layout.Fonts;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using SkiaSharp;
 
@@ -19,8 +21,8 @@ namespace Html2x.Renderers.Pdf.Drawing;
 /// Normalize font selection across fragments by mapping a layout <see cref="FontKey"/> to a stable Skia typeface.
 /// </item>
 /// <item>
-/// Support an explicit file-backed font via the renderer option <c>PdfOptions.FontPath</c> when provided, and fall
-/// back to system font resolution otherwise.
+/// Consume converter-owned resolved font output when available, and delegate direct renderer-only fallback to
+/// <see cref="RendererFallbackFontResolver"/> when no shared font source exists.
 /// </item>
 /// </list>
 ///
@@ -32,122 +34,84 @@ internal sealed class SkiaFontCache : IDisposable
 {
     private readonly IFileDirectory _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
-    private readonly string? _fontPath;
-    private readonly ConcurrentDictionary<FontKey, SKTypeface> _typefaces = new();
-    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesByPath = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<FontKey, SKTypeface> _typefacesFromDirectory = new();
-    private readonly Lazy<IReadOnlyList<FontFaceEntry>> _directoryFaces;
+    private readonly IFontSource? _fontSource;
+    private readonly RendererFallbackFontResolver _fallbackFontResolver;
+    private readonly ConcurrentDictionary<FontKey, ResolvedFont> _resolvedFonts = new();
+    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId = new(StringComparer.OrdinalIgnoreCase);
 
     internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory)
-        : this(fontPath, fileDirectory, new SkiaTypefaceFactory())
+        : this(fontPath, fileDirectory, typefaceFactory: new SkiaTypefaceFactory(), fontSource: null)
     {
     }
 
-    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory, IFontSource? fontSource)
+        : this(fontPath, fileDirectory, new SkiaTypefaceFactory(), fontSource)
     {
-        _fontPath = string.IsNullOrWhiteSpace(fontPath) ? null : fontPath;
+    }
+
+    internal SkiaFontCache(
+        string? fontPath,
+        IFileDirectory fileDirectory,
+        ISkiaTypefaceFactory typefaceFactory,
+        IFontSource? fontSource = null)
+    {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
-        _directoryFaces = new Lazy<IReadOnlyList<FontFaceEntry>>(LoadDirectoryFaces, LazyThreadSafetyMode.ExecutionAndPublication);
+        _fontSource = fontSource;
+        _fallbackFontResolver = new RendererFallbackFontResolver(fontPath, _fileDirectory, _typefaceFactory);
     }
 
     public SKTypeface GetTypeface(FontKey key)
     {
-        if (_fontPath is not null && _fileDirectory.FileExists(_fontPath))
+        if (_fontSource is not null)
         {
-            return _typefacesByPath.GetOrAdd(_fontPath, path =>
-            {
-                var fromFile = _typefaceFactory.FromFile(path);
-                return fromFile ?? SKTypeface.Default;
-            });
+            var resolved = _resolvedFonts.GetOrAdd(key, static (fontKey, source) => source.Resolve(fontKey, nameof(SkiaFontCache)), _fontSource);
+            return _typefacesBySourceId.GetOrAdd(resolved.SourceId, _ => LoadResolvedTypeface(key, resolved));
         }
 
-        if (_fontPath is not null && _fileDirectory.DirectoryExists(_fontPath))
-        {
-            return _typefacesFromDirectory.GetOrAdd(key, ResolveFromDirectoryOrFallbackToSystem);
-        }
-
-        return _typefaces.GetOrAdd(key, ResolveFromSystem);
+        return _fallbackFontResolver.GetTypeface(key);
     }
 
-    private SKTypeface ResolveFromDirectoryOrFallbackToSystem(FontKey key)
+    public SKTypeface GetTypeface(TextRun run)
     {
-        var fromDirectory = TryResolveFromDirectory(key);
-        if (fromDirectory is not null)
-        {
-            return fromDirectory;
-        }
+        ArgumentNullException.ThrowIfNull(run);
 
-        return _typefaces.GetOrAdd(key, ResolveFromSystem);
+        return run.ResolvedFont is null
+            ? GetTypeface(run.Font)
+            : _typefacesBySourceId.GetOrAdd(run.ResolvedFont.SourceId, _ => LoadResolvedTypeface(run.Font, run.ResolvedFont));
     }
 
-    private SKTypeface ResolveFromSystem(FontKey key)
+    private SKTypeface LoadResolvedTypeface(FontKey key, ResolvedFont resolved)
     {
-        var style = new SKFontStyle(MapWeight(key.Weight), SKFontStyleWidth.Normal, MapSlant(key.Style));
-        var familyCandidates = GetFamilyCandidates(key.Family);
-
-        foreach (var family in familyCandidates)
+        var path = resolved.FilePath;
+        if (string.IsNullOrWhiteSpace(path) || !_fileDirectory.FileExists(path))
         {
-            var tf = _typefaceFactory.FromFamilyName(family, style);
-            if (tf is not null)
-            {
-                return tf;
-            }
+            throw CreateFontResolutionException(
+                "Resolved font did not provide a usable file path.",
+                key,
+                resolved,
+                path);
         }
 
-        var defaultFamily = SKTypeface.Default.FamilyName;
-        if (!string.IsNullOrWhiteSpace(defaultFamily))
-        {
-            var fallback = _typefaceFactory.FromFamilyName(defaultFamily, style);
-            if (fallback is not null)
-            {
-                return fallback;
-            }
-        }
+        var typeface = resolved.FaceIndex > 0
+            ? _typefaceFactory.FromFile(path, resolved.FaceIndex)
+            : _typefaceFactory.FromFile(path);
 
-        return SKTypeface.Default;
-    }
-
-    private SKTypeface? TryResolveFromDirectory(FontKey key)
-    {
-        var faces = _directoryFaces.Value;
-        if (faces.Count == 0)
-        {
-            return null;
-        }
-
-        var best = FontDirectoryIndex.FindBestMatch(faces, key);
-        if (best is null)
-        {
-            return null;
-        }
-
-        if (best.FaceIndex > 0)
-        {
-            return _typefaceFactory.FromFile(best.Path, best.FaceIndex);
-        }
-
-        return _typefaceFactory.FromFile(best.Path);
-    }
-
-    private IReadOnlyList<FontFaceEntry> LoadDirectoryFaces()
-    {
-        if (_fontPath is null || !_fileDirectory.DirectoryExists(_fontPath))
-        {
-            return [];
-        }
-
-        return FontDirectoryIndex.Build(_fileDirectory, _typefaceFactory, _fontPath);
+        return typeface ?? throw CreateFontResolutionException(
+            resolved.FaceIndex > 0
+                ? $"Failed to load font file '{path}' (face {resolved.FaceIndex})."
+                : $"Failed to load font file '{path}'.",
+            key,
+            resolved,
+            path);
     }
 
     public void Dispose()
     {
         var disposedHandles = new HashSet<IntPtr>();
 
-        DisposeTypefaces(_typefaces.Values, disposedHandles);
-        DisposeTypefaces(_typefacesByPath.Values, disposedHandles);
-
-        // No directory typefaces to dispose because the index stores metadata only.
+        DisposeTypefaces(_typefacesBySourceId.Values, disposedHandles);
+        _fallbackFontResolver.Dispose();
     }
 
     private static void DisposeTypefaces(IEnumerable<SKTypeface> typefaces, HashSet<IntPtr> disposedHandles)
@@ -173,46 +137,31 @@ internal sealed class SkiaFontCache : IDisposable
         return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
     }
 
-    private static IEnumerable<string> GetFamilyCandidates(string family)
+    private static InvalidOperationException CreateFontResolutionException(
+        string message,
+        FontKey requested,
+        ResolvedFont resolved,
+        string? path)
     {
-        if (string.IsNullOrWhiteSpace(family))
+        var exception = new InvalidOperationException(message);
+        exception.Data["DiagnosticsName"] = "FontPath";
+        exception.Data["RequestedFamily"] = requested.Family;
+        exception.Data["RequestedWeight"] = requested.Weight;
+        exception.Data["RequestedStyle"] = requested.Style;
+        exception.Data["FontFamily"] = resolved.Family;
+        exception.Data["FontWeight"] = resolved.Weight;
+        exception.Data["FontStyle"] = resolved.Style;
+        exception.Data["FontSourceId"] = resolved.SourceId;
+        exception.Data["FontConfiguredPath"] = resolved.ConfiguredPath;
+        exception.Data["FontFilePath"] = resolved.FilePath;
+        exception.Data["FontFaceIndex"] = resolved.FaceIndex;
+
+        if (!string.IsNullOrWhiteSpace(path))
         {
-            yield return SKTypeface.Default.FamilyName;
-            yield break;
+            exception.Data["FontResolvedPath"] = path;
         }
 
-        yield return family;
-
-        if (string.Equals(family, "Arial", StringComparison.OrdinalIgnoreCase))
-        {
-            yield return "Liberation Sans";
-            yield return "Helvetica";
-        }
-
-        yield return SKTypeface.Default.FamilyName;
+        return exception;
     }
-
-    private static SKFontStyleWeight MapWeight(FontWeight weight) =>
-        weight switch
-        {
-            FontWeight.W100 => SKFontStyleWeight.Thin,
-            FontWeight.W200 => SKFontStyleWeight.ExtraLight,
-            FontWeight.W300 => SKFontStyleWeight.Light,
-            FontWeight.W400 => SKFontStyleWeight.Normal,
-            FontWeight.W500 => SKFontStyleWeight.Medium,
-            FontWeight.W600 => SKFontStyleWeight.SemiBold,
-            FontWeight.W700 => SKFontStyleWeight.Bold,
-            FontWeight.W800 => SKFontStyleWeight.ExtraBold,
-            FontWeight.W900 => SKFontStyleWeight.Black,
-            _ => SKFontStyleWeight.Normal
-        };
-
-    private static SKFontStyleSlant MapSlant(FontStyle style) =>
-        style switch
-        {
-            FontStyle.Italic => SKFontStyleSlant.Italic,
-            FontStyle.Oblique => SKFontStyleSlant.Oblique,
-            _ => SKFontStyleSlant.Upright
-        };
 
 }

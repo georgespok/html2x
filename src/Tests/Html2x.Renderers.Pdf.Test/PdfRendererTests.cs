@@ -15,7 +15,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class PdfRendererTests
 {
     [Fact]
-    public async Task RenderAsync_ShouldCreatePdfFile()
+    public async Task RenderAsync_LayoutIsValid_CreatePdfFile()
     {
         // Arrange
         var layout = CreateSimpleLayout();
@@ -36,7 +36,7 @@ public class PdfRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_BlockRespectsChildOffsets()
+    public async Task RenderAsync_BlockHasChildOffsets_RespectChildOffsets()
     {
         // Arrange
         var layout = CreateLayoutWithOffsetBlock();
@@ -59,6 +59,38 @@ public class PdfRendererTests
 
         var verticalGap = Math.Abs(edgeWord.BoundingBox.Top - paddedWord.BoundingBox.Top);
         verticalGap.ShouldBeGreaterThan(25f); // padding pushes second word further down the page
+    }
+
+    [Fact]
+    public async Task RenderAsync_FragmentsAreRendered_DoesNotMutateLayoutGeometry()
+    {
+        var line = CreateLineFragment("Stable", 24, 40, 120, 18);
+        var block = new BlockFragment([line])
+        {
+            Rect = new RectangleF(20, 30, 180, 80),
+            Style = new VisualStyle()
+        };
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(
+            new SizePt(300, 300),
+            new Spacing(0, 0, 0, 0),
+            new List<Fragment> { block },
+            1,
+            new ColorRgba(255, 255, 255, 255)));
+        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
+        var renderer = new PdfRenderer(fileDirectory.Object);
+        var options = new PdfOptions { FontPath = string.Empty };
+        var originalBlockRect = block.Rect;
+        var originalLineRect = line.Rect;
+        var originalRunOrigin = line.Runs.ShouldHaveSingleItem().Origin;
+
+        var pdfBytes = await renderer.RenderAsync(layout, options);
+
+        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        layout.Pages.ShouldHaveSingleItem().Children.ShouldHaveSingleItem().ShouldBeSameAs(block);
+        block.Rect.ShouldBe(originalBlockRect);
+        line.Rect.ShouldBe(originalLineRect);
+        line.Runs.ShouldHaveSingleItem().Origin.ShouldBe(originalRunOrigin);
     }
 
     private static HtmlLayout CreateSimpleLayout()

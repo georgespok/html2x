@@ -40,7 +40,7 @@ public sealed class LayoutBuilderFixture
     public static IFontSource CreateFontSource()
     {
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
         return fontSource.Object;
     }

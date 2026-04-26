@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
@@ -11,20 +12,23 @@ internal sealed class InlineRunFactory
     private readonly IFontMetricsProvider _metrics;
     private readonly IBlockFormattingContext _blockFormattingContext;
     private readonly IImageLayoutResolver? _imageResolver;
+    private readonly DiagnosticsSession? _diagnosticsSession;
 
     public InlineRunFactory(IFontMetricsProvider metrics)
-        : this(metrics, new BlockFormattingContext(), imageResolver: null)
+        : this(metrics, new BlockFormattingContext(), imageResolver: null, diagnosticsSession: null)
     {
     }
 
     internal InlineRunFactory(
         IFontMetricsProvider metrics,
         IBlockFormattingContext blockFormattingContext,
-        IImageLayoutResolver? imageResolver = null)
+        IImageLayoutResolver? imageResolver = null,
+        DiagnosticsSession? diagnosticsSession = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
         _imageResolver = imageResolver;
+        _diagnosticsSession = diagnosticsSession;
     }
 
     public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
@@ -67,13 +71,33 @@ internal sealed class InlineRunFactory
             _metrics,
             lineHeightStrategy,
             _blockFormattingContext,
-            _imageResolver);
+            _imageResolver,
+            _diagnosticsSession);
         return builder.TryBuildInlineBlockLayout(inline, availableWidth, out layout);
     }
 
     public bool TryBuildLineBreakRunFromBlockContext(InlineBox inline, ComputedStyle blockStyle, int runId, out TextRunInput run)
     {
         return TryBuildLineBreakRun(inline, blockStyle, runId, out run);
+    }
+
+    internal TextRunInput CreateSyntheticLineBreakRun(ComputedStyle style, int runId)
+    {
+        var source = new InlineBox(DisplayRole.Inline)
+        {
+            Style = style
+        };
+
+        return CreateRun(
+            runId,
+            source,
+            string.Empty,
+            style,
+            PaddingLeft: 0f,
+            PaddingRight: 0f,
+            MarginLeft: 0f,
+            MarginRight: 0f,
+            Kind: TextRunKind.LineBreak);
     }
 
     private bool TryBuildLineBreakRun(InlineBox inline, ComputedStyle style, int runId, out TextRunInput run)

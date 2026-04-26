@@ -15,7 +15,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class SkiaDiagnosticsTests
 {
     [Fact]
-    public async Task MissingImage_ShouldEmitDiagnosticsWithSource()
+    public async Task MissingImage_EmitDiagnosticsWithSource()
     {
         var session = new DiagnosticsSession
         {
@@ -56,6 +56,7 @@ public class SkiaDiagnosticsTests
                 IntrinsicSizePx = new SizePx(50, 40),
                 IsMissing = true,
                 Rect = new RectangleF(20, 30, 50, 40),
+                ContentRect = new RectangleF(20, 30, 50, 40),
                 Style = new VisualStyle()
             }
         };

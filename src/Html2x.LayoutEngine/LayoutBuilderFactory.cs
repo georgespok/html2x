@@ -1,7 +1,4 @@
 using AngleSharp;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
@@ -10,6 +7,9 @@ using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine;
 
+/// <summary>
+/// Creates the default layout pipeline with shared formatting-context ownership.
+/// </summary>
 public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
 {
     public LayoutBuilder Create(LayoutServices services)
@@ -17,7 +17,7 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
         ArgumentNullException.ThrowIfNull(services);
 
         var angleSharpConfig = Configuration.Default.WithCss();
-        var blockFormattingContext = new BlockFormattingContext();
+        var blockFormattingContext = CreateBlockFormattingContext();
         
         return new LayoutBuilder(
             new AngleSharpDomProvider(angleSharpConfig),
@@ -30,20 +30,8 @@ public sealed class LayoutBuilderFactory : ILayoutBuilderFactory
             blockFormattingContext);
     }
 
-    private sealed class FallbackTextMeasurer : ITextMeasurer
+    private static IBlockFormattingContext CreateBlockFormattingContext()
     {
-        private readonly FontMetricsProvider _metricsProvider = new();
-
-        public float MeasureWidth(FontKey font, float sizePt, string text) =>
-            _metricsProvider.MeasureTextWidth(font, sizePt, text);
-
-        public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) =>
-            _metricsProvider.GetMetrics(font, sizePt);
-    }
-
-    private sealed class NullFontSource : IFontSource
-    {
-        public ResolvedFont Resolve(FontKey requested) =>
-            new(requested.Family, requested.Weight, requested.Style, "fallback");
+        return new BlockFormattingContext();
     }
 }

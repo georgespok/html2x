@@ -23,7 +23,7 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
     };
 
     [Fact]
-    public async Task ToPdf_DiagnosticsGapSample_ExportsStyleStageSnapshotTableImageAndRawInput()
+    public async Task ToPdf_DiagnosticsGapSample_ExportsDiagnosticPayloads()
     {
         var htmlPath = Path.Combine(
             GetRepositoryRoot(),

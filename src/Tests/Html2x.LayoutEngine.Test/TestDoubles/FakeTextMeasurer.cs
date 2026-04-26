@@ -3,6 +3,9 @@ using Html2x.Abstractions.Layout.Text;
 
 namespace Html2x.LayoutEngine.Test.TestDoubles;
 
+/// <summary>
+/// Provides deterministic text measurements for layout tests.
+/// </summary>
 public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float descent) : ITextMeasurer
 {
     public float MeasureWidth(FontKey font, float sizePt, string text)
@@ -17,6 +20,6 @@ public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float des
 
     public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt)
     {
-        return (_ascent: ascent, _descent: descent);
+        return (ascent, descent);
     }
 }

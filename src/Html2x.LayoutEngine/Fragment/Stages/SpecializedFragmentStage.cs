@@ -47,16 +47,15 @@ public sealed class SpecializedFragmentStage : IFragmentBuildStage
         IReadOnlyList<IFragmentBuildObserver> observers,
         FragmentAdapterRegistry fragmentAdapters)
     {
+        var ownFragment = CreateSpecialFragment(state, blockBox, fragmentAdapters);
+        if (ownFragment is not null)
+        {
+            blockFragment.AddChild(ownFragment);
+            NotifySpecial(blockBox, ownFragment, observers);
+        }
+
         foreach (var child in blockBox.Children)
         {
-            var fragment = CreateSpecialFragment(state, child, fragmentAdapters);
-
-            if (fragment is not null)
-            {
-                blockFragment.AddChild(fragment);
-                NotifySpecial(child, fragment, observers);
-            }
-
             if (child is BlockBox nested && lookup.TryGetValue(nested, out var nestedFragment))
             {
                 AppendSpecializedFragments(state, nested, nestedFragment, lookup, observers, fragmentAdapters);

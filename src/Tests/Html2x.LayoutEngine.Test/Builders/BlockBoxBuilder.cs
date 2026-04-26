@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test.Builders;
 
@@ -81,15 +82,19 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder Block(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null)
     {
-        return Attach(new BlockBox(DisplayRole.Block)
+        var resolvedStyle = style ?? new ComputedStyle { FontSizePt = fontSize };
+        var block = new BlockBox(DisplayRole.Block)
         {
-            X = x,
-            Y = y,
-            Width = width,
-            Height = height,
-            Style = style ?? new ComputedStyle { FontSizePt = fontSize },
+            Style = resolvedStyle,
             Parent = _block
-        });
+        };
+        block.UsedGeometry = BoxGeometryFactory.FromBorderBox(
+            new System.Drawing.RectangleF(x, y, width, height),
+            resolvedStyle.Padding.Safe(),
+            Spacing.FromBorderEdges(resolvedStyle.Borders).Safe(),
+            markerOffset: block.MarkerOffset);
+
+        return Attach(block);
     }
 
     public BlockBoxBuilder Block(ComputedStyle? style = null)

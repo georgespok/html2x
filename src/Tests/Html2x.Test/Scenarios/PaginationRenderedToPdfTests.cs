@@ -21,7 +21,7 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
     };
 
     [Fact]
-    public async Task ToPdf_WithSameLongInput_ProducesDeterministicPaginationSnapshot()
+    public async Task ToPdf_SameLongInput_ProducesDeterministicPaginationSnapshot()
     {
         var blocks = Enumerable.Range(1, 14)
             .Select(static i => $"<div style='height: 300px;'>Block {i}</div>");
@@ -43,7 +43,7 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
     }
 
     [Fact]
-    public async Task ToPdf_WithOversizedAndEmptyContent_EmitsPaginationDiagnostics()
+    public async Task ToPdf_OversizedAndEmptyContent_EmitsPaginationDiagnostics()
     {
         var oversizedHtml = """
             <html>

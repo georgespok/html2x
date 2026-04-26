@@ -80,6 +80,17 @@ internal static class GeometryInvariantValidator
         var sourceFragments = EnumerateFragments(result.Fragments.Blocks)
             .ToDictionary(static fragment => fragment.FragmentId);
 
+        foreach (var snapshot in result.Snapshot.Fragments.Pages.SelectMany(static page => FlattenSnapshots(page.Fragments)))
+        {
+            if (snapshot.Kind is not ("block" or "table" or "table-row" or "table-cell"))
+            {
+                continue;
+            }
+
+            snapshot.MetadataOwner.ShouldBe("FragmentAdapterRegistry", snapshotText);
+            snapshot.MetadataConsumer.ShouldBe("LayoutSnapshotMapper", snapshotText);
+        }
+
         foreach (var page in result.Pagination.Pages)
         {
             foreach (var placement in page.Placements)
@@ -135,6 +146,20 @@ internal static class GeometryInvariantValidator
             foreach (var nested in EnumerateFragments(child))
             {
                 yield return nested;
+            }
+        }
+    }
+
+    private static IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> FlattenSnapshots(
+        IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> snapshots)
+    {
+        foreach (var snapshot in snapshots)
+        {
+            yield return snapshot;
+
+            foreach (var child in FlattenSnapshots(snapshot.Children))
+            {
+                yield return child;
             }
         }
     }

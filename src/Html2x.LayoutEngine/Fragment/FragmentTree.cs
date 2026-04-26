@@ -8,10 +8,4 @@ public sealed class FragmentTree
     ///     Top-level block fragments representing flow content of the page.
     /// </summary>
     public List<BlockFragment> Blocks { get; } = [];
-
-    /// <summary>
-    ///     Optional flattened list of all fragments (useful for rendering order).
-    /// </summary>
-    public List<Abstractions.Layout.Fragments.Fragment> All { get; } = [];
-
 }

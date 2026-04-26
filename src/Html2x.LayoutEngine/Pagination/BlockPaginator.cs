@@ -8,14 +8,24 @@ namespace Html2x.LayoutEngine.Pagination;
 
 /// <summary>
 /// Creates a paged view of already measured block fragments.
-/// Foundational implementation keeps all blocks on the first page.
+/// Places whole block fragments across pages and translates fragment coordinates by cloning.
 /// </summary>
 public sealed class BlockPaginator
 {
     private const string InitialPageReason = "InitialPage";
     private const string OverflowPageReason = "Overflow";
     private const float FitEpsilon = 0.001f;
-    private const float PositionEpsilon = 0.001f;
+    private readonly FragmentCoordinateTranslator _coordinateTranslator;
+
+    public BlockPaginator()
+        : this(FragmentCoordinateTranslator.CreateDefault())
+    {
+    }
+
+    internal BlockPaginator(FragmentCoordinateTranslator coordinateTranslator)
+    {
+        _coordinateTranslator = coordinateTranslator ?? throw new ArgumentNullException(nameof(coordinateTranslator));
+    }
 
     public PaginationResult Paginate(
         IReadOnlyList<BlockFragment> blocks,
@@ -26,76 +36,69 @@ public sealed class BlockPaginator
         ArgumentNullException.ThrowIfNull(blocks);
         var orderedBlocks = ToDeterministicOrder(blocks);
 
-        var pageNumber = 1;
         var contentTop = margins.Top;
         var contentBottom = pageSize.Height - margins.Bottom;
+        var paginationState = new PaginationBuildState(
+            pageSize,
+            margins,
+            contentTop,
+            contentBottom,
+            GetInitialCursorY(orderedBlocks, contentTop),
+            orderedBlocks.Count);
 
-        PaginationDiagnostics.EmitPageCreated(diagnosticsSession, pageNumber, InitialPageReason);
+        PaginationDiagnostics.EmitPageCreated(diagnosticsSession, paginationState.PageNumber, InitialPageReason);
 
         if (orderedBlocks.Count == 0)
         {
-            PaginationDiagnostics.EmitEmptyDocument(diagnosticsSession, pageNumber);
+            PaginationDiagnostics.EmitEmptyDocument(diagnosticsSession, paginationState.PageNumber);
         }
 
-        var pages = new List<PageModel>();
-        var placements = new List<BlockFragmentPlacement>(orderedBlocks.Count);
-        var cursorY = GetInitialCursorY(orderedBlocks, contentTop);
         var pageContentHeight = contentBottom - contentTop;
 
         for (var i = 0; i < orderedBlocks.Count; i++)
         {
             var block = orderedBlocks[i];
             var blockHeight = block.Rect.Height;
-            var remainingSpace = GetRemainingSpace(contentBottom, cursorY);
+            var remainingSpace = paginationState.RemainingSpace;
 
-            if (ShouldStartNewPage(placements, blockHeight, remainingSpace))
+            if (paginationState.ShouldStartNewPage(blockHeight))
             {
-                AdvanceToNextPage(
+                paginationState.AdvanceToNextPage(
                     diagnosticsSession,
-                    pages,
-                    pageSize,
-                    margins,
-                    contentTop,
-                    contentBottom,
                     block,
                     blockHeight,
-                    remainingSpace,
-                    ref pageNumber,
-                    ref placements,
-                    ref cursorY);
+                    remainingSpace);
             }
 
-            remainingSpace = GetRemainingSpace(contentBottom, cursorY);
+            remainingSpace = paginationState.RemainingSpace;
             var isOversized = IsOversizedBlock(blockHeight, pageContentHeight);
             if (isOversized)
             {
                 PaginationDiagnostics.EmitOversizedBlock(
                     diagnosticsSession,
-                    pageNumber,
+                    paginationState.PageNumber,
                     block.FragmentId,
                     blockHeight,
                     pageContentHeight);
             }
 
-            var placementY = ResolvePlacementY(block, pageNumber, cursorY);
-            var placedFragment = CreatePlacedFragment(block, pageNumber, placementY);
-            placements.Add(CreatePlacement(placedFragment, pageNumber, isOversized, i));
+            var placementY = ResolvePlacementY(block, paginationState.PageNumber, paginationState.CursorY);
+            var placedFragment = CreatePlacedFragment(block, paginationState.PageNumber, placementY);
+            paginationState.AddPlacement(CreatePlacement(placedFragment, paginationState.PageNumber, isOversized, i));
 
             PaginationDiagnostics.EmitBlockPlaced(
                 diagnosticsSession,
-                pageNumber,
+                paginationState.PageNumber,
                 placedFragment.FragmentId,
                 placedFragment.Rect.Y,
                 placedFragment.Rect.Height,
                 remainingSpace,
                 remainingSpace - placedFragment.Rect.Height);
 
-            cursorY = placementY + placedFragment.Rect.Height;
+            paginationState.AdvanceCursorTo(placementY + placedFragment.Rect.Height);
         }
 
-        pages.Add(CreatePage(pageNumber, pageSize, margins, contentTop, contentBottom, placements));
-
-        return CreateResult(pages);
+        return CreateResult(paginationState.Complete());
     }
 
     private static PageModel CreatePage(
@@ -115,14 +118,6 @@ public sealed class BlockPaginator
             ContentBottom = contentBottom,
             Placements = placements
         };
-    }
-
-    private static bool ShouldStartNewPage(
-        IReadOnlyCollection<BlockFragmentPlacement> placements,
-        float blockHeight,
-        float remainingSpace)
-    {
-        return placements.Count > 0 && !FitsInRemainingSpace(blockHeight, remainingSpace);
     }
 
     private static bool FitsInRemainingSpace(float blockHeight, float remainingSpace)
@@ -146,22 +141,12 @@ public sealed class BlockPaginator
         return contentBottom - cursorY;
     }
 
-    private static BlockFragment CreatePlacedFragment(
+    private BlockFragment CreatePlacedFragment(
         BlockFragment source,
         int pageNumber,
         float placementY)
     {
-        if (CanReuseSourcePlacement(source, pageNumber, placementY))
-        {
-            return source;
-        }
-
-        return FragmentCoordinateTranslator.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
-    }
-
-    private static bool CanReuseSourcePlacement(BlockFragment source, int pageNumber, float placementY)
-    {
-        return pageNumber == 1 && Math.Abs(source.Rect.Y - placementY) <= PositionEpsilon;
+        return _coordinateTranslator.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
     }
 
     private static float ResolvePlacementY(BlockFragment block, int pageNumber, float cursorY)
@@ -210,33 +195,68 @@ public sealed class BlockPaginator
         };
     }
 
-    private static void AdvanceToNextPage(
-        DiagnosticsSession? diagnosticsSession,
-        ICollection<PageModel> pages,
+    private sealed class PaginationBuildState(
         SizePt pageSize,
         Spacing margins,
         float contentTop,
         float contentBottom,
-        BlockFragment block,
-        float blockHeight,
-        float remainingSpace,
-        ref int pageNumber,
-        ref List<BlockFragmentPlacement> placements,
-        ref float cursorY)
+        float initialCursorY,
+        int placementCapacity)
     {
-        PaginationDiagnostics.EmitBlockMovedNextPage(
-            diagnosticsSession,
-            pageNumber,
-            pageNumber + 1,
-            block.FragmentId,
-            remainingSpace,
-            blockHeight);
+        private readonly List<PageModel> _pages = [];
+        private List<BlockFragmentPlacement> _placements = new(placementCapacity);
 
-        pages.Add(CreatePage(pageNumber, pageSize, margins, contentTop, contentBottom, placements));
-        pageNumber++;
-        placements = [];
-        cursorY = contentTop;
-        PaginationDiagnostics.EmitPageCreated(diagnosticsSession, pageNumber, OverflowPageReason);
+        public int PageNumber { get; private set; } = 1;
+
+        public float CursorY { get; private set; } = initialCursorY;
+
+        public float RemainingSpace => GetRemainingSpace(contentBottom, CursorY);
+
+        public bool ShouldStartNewPage(float blockHeight)
+        {
+            return _placements.Count > 0 && !FitsInRemainingSpace(blockHeight, RemainingSpace);
+        }
+
+        public void AddPlacement(BlockFragmentPlacement placement)
+        {
+            _placements.Add(placement);
+        }
+
+        public void AdvanceCursorTo(float cursorY)
+        {
+            CursorY = cursorY;
+        }
+
+        public void AdvanceToNextPage(
+            DiagnosticsSession? diagnosticsSession,
+            BlockFragment block,
+            float blockHeight,
+            float remainingSpace)
+        {
+            PaginationDiagnostics.EmitBlockMovedNextPage(
+                diagnosticsSession,
+                PageNumber,
+                PageNumber + 1,
+                block.FragmentId,
+                remainingSpace,
+                blockHeight);
+
+            _pages.Add(CreateCurrentPage());
+            PageNumber++;
+            _placements = [];
+            CursorY = contentTop;
+            PaginationDiagnostics.EmitPageCreated(diagnosticsSession, PageNumber, OverflowPageReason);
+        }
+
+        public IReadOnlyList<PageModel> Complete()
+        {
+            _pages.Add(CreateCurrentPage());
+            return _pages;
+        }
+
+        private PageModel CreateCurrentPage()
+        {
+            return CreatePage(PageNumber, pageSize, margins, contentTop, contentBottom, _placements);
+        }
     }
-
 }

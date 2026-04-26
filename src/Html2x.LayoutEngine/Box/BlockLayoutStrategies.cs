@@ -2,6 +2,9 @@ using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
 
+/// <summary>
+/// Carries placement inputs for laying out one block-level node in the current block flow.
+/// </summary>
 internal readonly record struct BlockLayoutRequest(
     float ContentX,
     float CursorY,
@@ -10,6 +13,9 @@ internal readonly record struct BlockLayoutRequest(
     float PreviousBottomMargin,
     float CollapsedTopMargin);
 
+/// <summary>
+/// Defines a specialized handler for block-like nodes inside the current block formatting context.
+/// </summary>
 internal interface IBlockLayoutStrategy
 {
     bool CanLayout(BlockBox node);
@@ -17,6 +23,9 @@ internal interface IBlockLayoutStrategy
     BlockBox Layout(BlockLayoutEngine engine, BlockBox node, BlockLayoutRequest request);
 }
 
+/// <summary>
+/// Selects the first registered block layout strategy that can handle a block-like node.
+/// </summary>
 internal sealed class BlockLayoutStrategyRegistry
 {
     private readonly IReadOnlyList<IBlockLayoutStrategy> _strategies;
@@ -36,7 +45,6 @@ internal sealed class BlockLayoutStrategyRegistry
     {
         return
         [
-            new TableBlockLayoutStrategy(),
             new ImageBlockLayoutStrategy(),
             new RuleBlockLayoutStrategy(),
             new StandardBlockLayoutStrategy()
@@ -56,16 +64,6 @@ internal sealed class BlockLayoutStrategyRegistry
         }
 
         return strategy.Layout(engine, node, request);
-    }
-
-    private sealed class TableBlockLayoutStrategy : IBlockLayoutStrategy
-    {
-        public bool CanLayout(BlockBox node) => node is TableBox;
-
-        public BlockBox Layout(BlockLayoutEngine engine, BlockBox node, BlockLayoutRequest request)
-        {
-            return engine.LayoutTableBlock((TableBox)node, request);
-        }
     }
 
     private sealed class ImageBlockLayoutStrategy : IBlockLayoutStrategy

@@ -70,7 +70,7 @@ public class FragmentIdTests
             .Returns((0f, 0f));
 
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         return new FragmentBuildContext(new NoopImageProvider(), ".", 1024 * 1024, textMeasurer.Object, fontSource.Object);

@@ -99,7 +99,10 @@ public static class DiagnosticsSessionSerializer
                 margin.Kind,
                 margin.PreviousBottomMargin,
                 margin.NextTopMargin,
-                margin.CollapsedTopMargin
+                margin.CollapsedTopMargin,
+                margin.Owner,
+                margin.Consumer,
+                margin.FormattingContext
             },
             TableLayoutPayload table => MapTablePayload(table),
             UnsupportedStructurePayload unsupported => new
@@ -120,6 +123,24 @@ public static class DiagnosticsSessionSerializer
                 style.Decision,
                 style.Reason,
                 Context = MapContext(style.Context)
+            },
+            FontResolutionPayload font => new
+            {
+                font.Kind,
+                font.Owner,
+                font.Consumer,
+                font.RequestedFamily,
+                RequestedWeight = font.RequestedWeight.ToString(),
+                RequestedStyle = font.RequestedStyle.ToString(),
+                font.ResolvedFamily,
+                ResolvedWeight = font.ResolvedWeight?.ToString(),
+                ResolvedStyle = font.ResolvedStyle?.ToString(),
+                font.SourceId,
+                font.ConfiguredPath,
+                font.FilePath,
+                font.FaceIndex,
+                font.Outcome,
+                font.Reason
             },
             ImageRenderPayload image => MapImagePayload(image),
             null => null,

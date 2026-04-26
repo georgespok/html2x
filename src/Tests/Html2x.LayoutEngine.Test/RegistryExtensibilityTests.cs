@@ -12,13 +12,14 @@ using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test;
 
 public sealed class RegistryExtensibilityTests
 {
     [Fact]
-    public void Layout_WithCustomBlockStrategy_UsesInjectedStrategy()
+    public void Layout_CustomBlockStrategy_UsesInjectedStrategy()
     {
         var inlineEngine = new Mock<IInlineLayoutEngine>();
         inlineEngine
@@ -45,7 +46,6 @@ public sealed class RegistryExtensibilityTests
         var engine = new BlockLayoutEngine(
             inlineEngine.Object,
             Mock.Of<ITableLayoutEngine>(),
-            Mock.Of<IFloatLayoutEngine>(),
             new BlockFormattingContext(),
             new ImageLayoutResolver(),
             strategies);
@@ -61,7 +61,7 @@ public sealed class RegistryExtensibilityTests
     }
 
     [Fact]
-    public void Layout_WithCustomInlineNodeMeasurer_UsesInjectedMeasurerBeforeDefaultTextHandling()
+    public void Layout_CustomInlineMeasurer_UsesInjectedMeasurerFirst()
     {
         var block = new BlockBox(DisplayRole.Block)
         {
@@ -96,12 +96,12 @@ public sealed class RegistryExtensibilityTests
     }
 
     [Fact]
-    public void Build_WithCustomBlockFragmentAdapter_UsesInjectedAdapter()
+    public void Build_CustomBlockFragmentAdapter_UsesInjectedAdapter()
     {
         var block = new BadgeBlockBox
         {
             Style = new ComputedStyle(),
-            UsedGeometry = UsedGeometry.FromBorderBox(new RectangleF(10f, 20f, 40f, 15f), new Spacing(), new Spacing())
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(new RectangleF(10f, 20f, 40f, 15f), new Spacing(), new Spacing())
         };
 
         var tree = new BoxTree();
@@ -120,19 +120,19 @@ public sealed class RegistryExtensibilityTests
     }
 
     [Fact]
-    public void Build_WithCustomSpecialFragmentAdapter_UsesInjectedAdapter()
+    public void Build_CustomSpecialFragmentAdapter_UsesInjectedAdapter()
     {
         var root = new BlockBox(DisplayRole.Block)
         {
             Style = new ComputedStyle(),
-            UsedGeometry = UsedGeometry.FromBorderBox(new RectangleF(0f, 0f, 100f, 30f), new Spacing(), new Spacing()),
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(new RectangleF(0f, 0f, 100f, 30f), new Spacing(), new Spacing()),
             InlineLayout = InlineLayoutResult.Empty
         };
         var rule = new RuleBox(DisplayRole.Block)
         {
             Parent = root,
             Style = new ComputedStyle(),
-            UsedGeometry = UsedGeometry.FromBorderBox(new RectangleF(0f, 0f, 100f, 2f), new Spacing(), new Spacing())
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(new RectangleF(0f, 0f, 100f, 2f), new Spacing(), new Spacing())
         };
         root.Children.Add(rule);
 
@@ -148,8 +148,9 @@ public sealed class RegistryExtensibilityTests
 
         var fragments = new FragmentBuilder([], adapters).Build(tree, CreateFragmentContext());
         var rootFragment = fragments.Blocks.ShouldHaveSingleItem();
+        var ruleFragment = rootFragment.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
 
-        rootFragment.Children.Any(static child => child is BadgeSpecialFragment).ShouldBeTrue();
+        ruleFragment.Children.Any(static child => child is BadgeSpecialFragment).ShouldBeTrue();
     }
 
     private static PageBox CreatePage()
@@ -164,7 +165,7 @@ public sealed class RegistryExtensibilityTests
     private static FragmentBuildContext CreateFragmentContext()
     {
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(source => source.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(source => source.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         return new FragmentBuildContext(
@@ -187,7 +188,7 @@ public sealed class RegistryExtensibilityTests
             node.Margin = node.Style.Margin.Safe();
             node.Padding = node.Style.Padding.Safe();
             node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-            node.UsedGeometry = UsedGeometry.FromBorderBox(
+            node.UsedGeometry = BoxGeometryFactory.FromBorderBox(
                 new RectangleF(request.ContentX, request.CursorY + request.CollapsedTopMargin, 33f, 11f),
                 node.Padding,
                 Spacing.FromBorderEdges(node.Style.Borders).Safe(),
@@ -200,9 +201,7 @@ public sealed class RegistryExtensibilityTests
     {
         public bool TryMeasure(
             DisplayNode node,
-            InlineMeasurementContext context,
-            ICollection<TextRunInput> runs,
-            ref int nextRunId)
+            InlineMeasurementContext context)
         {
             if (node is not InlineBox inline || !string.Equals(inline.TextContent, "[badge]", StringComparison.Ordinal))
             {
@@ -216,7 +215,7 @@ public sealed class RegistryExtensibilityTests
                 TextContent = "custom-badge"
             };
 
-            return context.TryAppendTextRun(synthetic, runs, ref nextRunId);
+            return context.TryAppendTextRun(synthetic);
         }
     }
 

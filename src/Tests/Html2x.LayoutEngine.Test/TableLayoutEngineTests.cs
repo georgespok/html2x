@@ -1,3 +1,4 @@
+using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
@@ -5,6 +6,7 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using Moq;
 using Shouldly;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -57,6 +59,153 @@ public class TableLayoutEngineTests
 
         result.IsSupported.ShouldBeTrue();
         result.ColumnWidths.ShouldBe([200f, 200f]);
+    }
+
+    [Fact]
+    public void Layout_TablePaddingAndBorder_SplitsContentWidthAcrossDerivedColumns()
+    {
+        var table = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle
+            {
+                WidthPt = 120f,
+                Padding = new Spacing(0f, 10f, 0f, 10f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        table.Children.Add(CreateRow(
+            CreateCell(),
+            CreateCell()));
+
+        var result = Layout(table, availableWidth: 200f);
+
+        result.IsSupported.ShouldBeTrue();
+        result.ResolvedWidth.ShouldBe(120f);
+        result.ColumnWidths.ShouldBe([48f, 48f]);
+        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(96f);
+        result.Rows[0].Cells[1].X.ShouldBe(48f);
+    }
+
+    [Fact]
+    public void Layout_TableSizing_UsesBlockMeasurementPolicy()
+    {
+        var table = new TableBox(DisplayRole.Table)
+        {
+            MarkerOffset = 7f,
+            Style = new ComputedStyle
+            {
+                Margin = new Spacing(0f, 20f, 0f, 10f),
+                MinWidthPt = 120f,
+                MaxWidthPt = 150f,
+                Padding = new Spacing(0f, 5f, 0f, 5f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        table.Children.Add(CreateRow(
+            CreateCell(),
+            CreateCell()));
+
+        var result = Layout(table, availableWidth: 100f);
+
+        result.ResolvedWidth.ShouldBe(120f);
+        result.ColumnWidths.ShouldBe([49.5f, 49.5f]);
+        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(99f);
+    }
+
+    [Fact]
+    public void Layout_TableExplicitWidth_ClampsToMaxWidth()
+    {
+        var table = CreateTable(
+            widthPt: 220f,
+            CreateRow(
+                CreateCell(),
+                CreateCell()));
+        table.Style = table.Style with
+        {
+            MaxWidthPt = 150f
+        };
+
+        var result = Layout(table, availableWidth: 300f);
+
+        result.ResolvedWidth.ShouldBe(150f);
+        result.ColumnWidths.ShouldBe([75f, 75f]);
+    }
+
+    [Fact]
+    public void Layout_RowPaddingAndBorder_PlacesCellsInsideRowContentBox()
+    {
+        var row = new TableRowBox(DisplayRole.TableRow)
+        {
+            Style = new ComputedStyle
+            {
+                Padding = new Spacing(3f, 0f, 0f, 6f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        row.Children.Add(CreateCell());
+
+        var table = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle
+            {
+                WidthPt = 120f
+            }
+        };
+        table.Children.Add(row);
+
+        var result = Layout(table, availableWidth: 200f);
+
+        var rowResult = result.Rows.ShouldHaveSingleItem();
+        var rowContent = rowResult.UsedGeometry.ContentBoxRect;
+        var cellGeometry = rowResult.Cells.ShouldHaveSingleItem().UsedGeometry;
+
+        cellGeometry.BorderBoxRect.Left.ShouldBeGreaterThanOrEqualTo(rowContent.Left);
+        cellGeometry.BorderBoxRect.Top.ShouldBeGreaterThanOrEqualTo(rowContent.Top);
+        cellGeometry.BorderBoxRect.Right.ShouldBeLessThanOrEqualTo(rowContent.Right);
+        cellGeometry.BorderBoxRect.Bottom.ShouldBeLessThanOrEqualTo(rowContent.Bottom);
+    }
+
+    [Fact]
+    public void Layout_CellPaddingAndBorder_ExposesContentBoxInsideCellPlacement()
+    {
+        var cell = CreateCell(new ComputedStyle
+        {
+            Padding = new Spacing(3f, 4f, 5f, 6f),
+            Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+        });
+        var table = CreateTable(widthPt: 120f, CreateRow(cell));
+
+        var result = Layout(table, availableWidth: 200f);
+
+        var placement = result.Rows.ShouldHaveSingleItem().Cells.ShouldHaveSingleItem();
+        var geometry = placement.UsedGeometry;
+
+        geometry.BorderBoxRect.ShouldBe(new RectangleF(0f, 0f, 120f, placement.Height));
+        geometry.ContentBoxRect.X.ShouldBe(8f);
+        geometry.ContentBoxRect.Y.ShouldBe(5f);
+        geometry.ContentBoxRect.Width.ShouldBe(106f);
+        geometry.ContentBoxRect.Height.ShouldBe(placement.Height - 12f);
+    }
+
+    [Fact]
+    public void TableLayoutCellPlacement_GeometryReadsCanonicalValues()
+    {
+        var cell = CreateCell();
+
+        var placement = new TableLayoutCellPlacement(
+            cell,
+            0,
+            false,
+            BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 0f, 10f, 10f),
+                new Spacing(),
+                new Spacing()));
+
+        placement.UsedGeometry.BorderBoxRect.ShouldBe(new RectangleF(0f, 0f, 10f, 10f));
+        placement.X.ShouldBe(0f);
+        placement.Y.ShouldBe(0f);
+        placement.Width.ShouldBe(10f);
+        placement.Height.ShouldBe(10f);
     }
 
     [Fact]
@@ -179,10 +328,14 @@ public class TableLayoutEngineTests
         result.Rows[0].Cells.Count.ShouldBe(2);
     }
 
-    [Fact]
-    public void Layout_CellWithColspan_ReturnsUnsupportedResultBeforeGeometryCalculation()
+    [Theory]
+    [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "Table cell colspan is not supported.")]
+    [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "Table cell rowspan is not supported.")]
+    public void Layout_WhenCellHasUnsupportedSpanAttribute_ShouldReturnUnsupportedResultBeforeGeometryCalculation(
+        string attributeName,
+        string expectedReason)
     {
-        var cell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Colspan, "2")));
+        var cell = CreateCell(element: CreateElement("TD", (attributeName, "2")));
         var table = CreateTable(
             widthPt: 120f,
             CreateRow(cell));
@@ -200,8 +353,8 @@ public class TableLayoutEngineTests
 
         result.IsSupported.ShouldBeFalse();
         result.RowCount.ShouldBe(1);
-        result.UnsupportedStructureKind.ShouldBe(HtmlCssConstants.HtmlAttributes.Colspan);
-        result.UnsupportedReason.ShouldBe("Table cell colspan is not supported.");
+        result.UnsupportedStructureKind.ShouldBe(attributeName);
+        result.UnsupportedReason.ShouldBe(expectedReason);
         result.Rows.ShouldBeEmpty();
         result.Height.ShouldBe(0f);
 
@@ -211,42 +364,7 @@ public class TableLayoutEngineTests
         var reason = unsupportedPayload.Reason!;
         unsupportedPayload.Outcome.ShouldBe("Unsupported");
         unsupportedPayload.RowCount.ShouldBe(1);
-        reason.ShouldContain("colspan");
-    }
-
-    [Fact]
-    public void Layout_CellWithRowspan_ReturnsUnsupportedResultBeforeGeometryCalculation()
-    {
-        var cell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Rowspan, "2")));
-        var table = CreateTable(
-            widthPt: 120f,
-            CreateRow(cell));
-
-        var result = Layout(table, availableWidth: 200f);
-        var diagnosticsSession = new DiagnosticsSession();
-        TableLayoutDiagnostics.EmitUnsupportedTable(
-            diagnosticsSession,
-            nodePath: "html/body/table",
-            structureKind: result.UnsupportedStructureKind ?? string.Empty,
-            reason: result.UnsupportedReason ?? string.Empty,
-            rowCount: result.RowCount,
-            requestedWidth: result.RequestedWidth,
-            resolvedWidth: result.ResolvedWidth);
-
-        result.IsSupported.ShouldBeFalse();
-        result.RowCount.ShouldBe(1);
-        result.UnsupportedStructureKind.ShouldBe(HtmlCssConstants.HtmlAttributes.Rowspan);
-        result.UnsupportedReason.ShouldBe("Table cell rowspan is not supported.");
-        result.Rows.ShouldBeEmpty();
-        result.Height.ShouldBe(0f);
-
-        var unsupportedPayload = diagnosticsSession.Events
-            .Single(e => e.Name == "layout/table")
-            .Payload.ShouldBeOfType<TableLayoutPayload>();
-        var reason = unsupportedPayload.Reason!;
-        unsupportedPayload.Outcome.ShouldBe("Unsupported");
-        unsupportedPayload.RowCount.ShouldBe(1);
-        reason.ShouldContain("rowspan");
+        reason.ShouldContain(attributeName);
     }
 
     [Fact]
@@ -317,6 +435,60 @@ public class TableLayoutEngineTests
         firstPlacement.Height.ShouldBe(row.Height, 0.01f);
         secondPlacement.Y.ShouldBe(0f);
         secondPlacement.Height.ShouldBe(row.Height, 0.01f);
+        result.Height.ShouldBe(row.Height, 0.01f);
+    }
+
+    [Fact]
+    public void Layout_CellWithStackedBlockChildren_UsesSharedCollapsedMarginHeight()
+    {
+        var cell = CreateCell();
+        cell.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle
+            {
+                HeightPt = 10f,
+                Margin = new Spacing(0f, 0f, 12f, 0f)
+            }
+        });
+        cell.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle
+            {
+                HeightPt = 8f,
+                Margin = new Spacing(4f, 0f, 0f, 0f)
+            }
+        });
+        var table = CreateTable(widthPt: 120f, CreateRow(cell));
+
+        var result = Layout(table, availableWidth: 200f);
+
+        var row = result.Rows.ShouldHaveSingleItem();
+        row.Height.ShouldBe(30f, 0.01f);
+        result.Height.ShouldBe(row.Height, 0.01f);
+    }
+
+    [Fact]
+    public void Layout_CellWithNestedPaddedTable_UsesNestedTableBorderBoxHeight()
+    {
+        var innerTable = new TableBox(DisplayRole.Table)
+        {
+            Style = new ComputedStyle
+            {
+                WidthPt = 80f,
+                Padding = new Spacing(5f, 0f, 7f, 0f),
+                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        innerTable.Children.Add(CreateRow(CreateCell()));
+
+        var outerCell = CreateCell();
+        outerCell.Children.Add(innerTable);
+        var outerTable = CreateTable(widthPt: 120f, CreateRow(outerCell));
+
+        var result = Layout(outerTable, availableWidth: 200f);
+
+        var row = result.Rows.ShouldHaveSingleItem();
+        row.Height.ShouldBe(36f, 0.01f);
         result.Height.ShouldBe(row.Height, 0.01f);
     }
 

@@ -6,6 +6,7 @@ using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
@@ -191,7 +192,7 @@ public class BlockFlowTests
     }
 
     [Fact]
-    public void NormalizeChildrenForBlock_MixedInlineAndInlineBlock_PreservesCanonicalChildSequence()
+    public void NormalizeChildrenForBlock_MixedInlineFlow_PreservesChildOrder()
     {
         var row = new BlockBox(DisplayRole.Block)
         {
@@ -255,6 +256,45 @@ public class BlockFlowTests
         ExtractInlineText(leadingAnonymous).ShouldBe(["Prefix text"]);
         ExtractInlineText(boundaryBlock).ShouldBe(["Alpha inline-block"]);
         ExtractInlineText(trailingAnonymous).ShouldBe(["suffix text"]);
+    }
+
+    [Fact]
+    public void NormalizeChildrenForBlock_ClonedInlineFlow_CopiesInlineMetadata()
+    {
+        var parent = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        var fragment = new object();
+        var inline = new InlineBox(DisplayRole.Inline)
+        {
+            Parent = parent,
+            TextContent = "metadata",
+            Style = new ComputedStyle(),
+            Width = 25f,
+            Height = 8f,
+            BaselineOffset = 6f,
+            Fragment = fragment
+        };
+        parent.Children.Add(inline);
+        parent.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Parent = parent,
+            Style = new ComputedStyle()
+        });
+
+        BlockFlowNormalization.NormalizeChildrenForBlock(parent);
+
+        var anonymous = parent.Children[0].ShouldBeOfType<BlockBox>();
+        var clonedInline = anonymous.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
+
+        clonedInline.ShouldNotBeSameAs(inline);
+        clonedInline.Parent.ShouldBeSameAs(anonymous);
+        clonedInline.TextContent.ShouldBe("metadata");
+        clonedInline.Width.ShouldBe(25f);
+        clonedInline.Height.ShouldBe(8f);
+        clonedInline.BaselineOffset.ShouldBe(6f);
+        clonedInline.Fragment.ShouldBeSameAs(fragment);
     }
 
     [Fact]
@@ -368,6 +408,100 @@ public class BlockFlowTests
         inlineBlockMetrics.TotalHeight.ShouldBe(topLevelMetrics.TotalHeight, 0.1f);
         inlineBlockMetrics.FirstBlockHeight.ShouldBe(topLevelMetrics.FirstBlockHeight, 0.1f);
         inlineBlockMetrics.SecondBlockHeight.ShouldBe(topLevelMetrics.SecondBlockHeight, 0.1f);
+    }
+
+    [Fact]
+    public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
+    {
+        var diagnosticsSession = new DiagnosticsSession
+        {
+            Options = new HtmlConverterOptions()
+        };
+        var formattingContext = new BlockFormattingContext();
+        var measurementService = new BlockMeasurementService(formattingContext);
+        var inlineEngine = new Mock<IInlineLayoutEngine>();
+        var tableLayoutEngine = new Mock<ITableLayoutEngine>();
+        inlineEngine
+            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
+            .Returns(new InlineLayoutResult([], 0f, 0f));
+
+        var container = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle
+            {
+                WidthPt = 300f
+            }
+        };
+
+        container.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Parent = container,
+            Style = new ComputedStyle
+            {
+                HeightPt = 10f,
+                Margin = new Spacing(0f, 0f, 12f, 0f)
+            }
+        });
+
+        container.Children.Add(new BlockBox(DisplayRole.Block)
+        {
+            Parent = container,
+            Style = new ComputedStyle
+            {
+                HeightPt = 8f,
+                Margin = new Spacing(6f, 0f, 0f, 0f)
+            }
+        });
+
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(container);
+
+        var engine = new BlockLayoutEngine(
+            inlineEngine.Object,
+            tableLayoutEngine.Object,
+            formattingContext,
+            new ImageLayoutResolver(),
+            BlockLayoutStrategyRegistry.CreateDefault(),
+            diagnosticsSession);
+
+        var boxTree = engine.Layout(root, new PageBox
+        {
+            Margin = new Spacing(),
+            Size = new SizePt(400f, 400f)
+        });
+
+        var laidOutContainer = boxTree.Blocks.ShouldHaveSingleItem();
+        var measuredHeight = measurementService.MeasureStackedChildBlocks(
+            laidOutContainer.Children,
+            300f,
+            static (block, _) => block.Height,
+            static (table, _) => table.Height,
+            diagnosticsSession);
+
+        measuredHeight.ShouldBe(laidOutContainer.Height, 0.1f);
+
+        diagnosticsSession.Events
+            .Where(static e => e.Payload is MarginCollapsePayload)
+            .Select(static e => (MarginCollapsePayload)e.Payload!)
+            .Any(payload =>
+                payload.Consumer == nameof(BlockLayoutEngine) &&
+                payload.Owner == nameof(BlockFormattingContext) &&
+                payload.FormattingContext == FormattingContextKind.Block &&
+                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+            .ShouldBeTrue();
+
+        diagnosticsSession.Events
+            .Where(static e => e.Payload is MarginCollapsePayload)
+            .Select(static e => (MarginCollapsePayload)e.Payload!)
+            .Any(payload =>
+                payload.Consumer == nameof(BlockMeasurementService) &&
+                payload.Owner == nameof(BlockFormattingContext) &&
+                payload.FormattingContext == FormattingContextKind.Block &&
+                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+            .ShouldBeTrue();
     }
 
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)

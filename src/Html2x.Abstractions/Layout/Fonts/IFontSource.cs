@@ -7,5 +7,5 @@ namespace Html2x.Abstractions.Layout.Fonts;
 /// </summary>
 public interface IFontSource
 {
-    ResolvedFont Resolve(FontKey requested);
+    ResolvedFont Resolve(FontKey requested, string consumer);
 }

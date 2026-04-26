@@ -1,89 +1,178 @@
-using System.Reflection;
 using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
+using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Assertions;
 
-public static class BoxTreeAssertions
+internal static class BoxTreeAssertions
 {
-    public static void ShouldMatch(this BoxTree actual, BoxTree expected)
-    {
-        actual.ShouldMatchProperties(expected, "BoxTree");
-    }
-
     public static void ShouldMatch(this BoxTree actual, Action<BoxTreeExpectationBuilder> configure)
     {
         var builder = new BoxTreeExpectationBuilder();
         configure(builder);
-        var expected = builder.Build();
-        actual.ShouldMatch(expected);
+
+        AssertTree(actual, builder.Build());
     }
 
-    public static void ShouldMatch(this BlockBox actual, BlockBox expected)
+    private static void AssertTree(BoxTree actual, BoxTreeExpectation expected)
     {
-        actual.ShouldMatchProperties(expected, "BlockBox");
+        if (expected.PageMargin.HasValue)
+        {
+            actual.Page.Margin.ShouldBe(expected.PageMargin.Value);
+        }
+
+        if (expected.Blocks.Count == 0)
+        {
+            return;
+        }
+
+        actual.Blocks.Count.ShouldBe(expected.Blocks.Count);
+
+        for (var i = 0; i < expected.Blocks.Count; i++)
+        {
+            AssertBlock(actual.Blocks[i], expected.Blocks[i], $"Blocks[{i}]");
+        }
     }
 
-    public static void ShouldMatch(this InlineBox actual, InlineBox expected)
+    private static void AssertNode(DisplayNode actual, NodeExpectation expected, string path)
     {
-        actual.ShouldMatchProperties(expected, "InlineBox");
+        switch (expected)
+        {
+            case BlockExpectation block:
+                AssertBlock(actual.ShouldBeOfType<BlockBox>($"{path} should be a block"), block, path);
+                break;
+            case InlineExpectation inline:
+                AssertInline(actual.ShouldBeOfType<InlineBox>($"{path} should be inline"), inline, path);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported expectation type at {path}.");
+        }
     }
 
-    public static void ShouldMatch(this PageBox actual, PageBox expected)
+    private static void AssertBlock(BlockBox actual, BlockExpectation expected, string path)
     {
-        actual.ShouldMatchProperties(expected, "PageBox");
+        if (expected.HasElement)
+        {
+            actual.Element.ShouldBeSameAs(expected.Element, $"{path}.Element mismatch");
+        }
+
+        if (expected.IsAnonymous.HasValue)
+        {
+            actual.IsAnonymous.ShouldBe(expected.IsAnonymous.Value, $"{path}.IsAnonymous mismatch");
+        }
+
+        if (expected.Position.HasValue)
+        {
+            actual.X.ShouldBe(expected.Position.Value.X, $"{path}.X mismatch");
+            actual.Y.ShouldBe(expected.Position.Value.Y, $"{path}.Y mismatch");
+        }
+
+        if (expected.Width.HasValue)
+        {
+            actual.Width.ShouldBe(expected.Width.Value, $"{path}.Width mismatch");
+        }
+
+        if (expected.Height.HasValue)
+        {
+            actual.Height.ShouldBe(expected.Height.Value, $"{path}.Height mismatch");
+        }
+
+        if (expected.Padding.HasValue)
+        {
+            actual.Padding.ShouldBe(expected.Padding.Value, $"{path}.Padding mismatch");
+        }
+
+        if (expected.Style is not null)
+        {
+            actual.Style.ShouldBe(expected.Style, $"{path}.Style mismatch");
+        }
+
+        AssertChildren(actual.Children, expected.Children, path);
+    }
+
+    private static void AssertInline(InlineBox actual, InlineExpectation expected, string path)
+    {
+        if (expected.HasElement)
+        {
+            actual.Element.ShouldBeSameAs(expected.Element, $"{path}.Element mismatch");
+        }
+
+        if (expected.Text is not null)
+        {
+            actual.TextContent.ShouldBe(expected.Text, $"{path}.TextContent mismatch");
+        }
+
+        AssertChildren(actual.Children, expected.Children, path);
+    }
+
+    private static void AssertChildren(
+        IReadOnlyList<DisplayNode> actualChildren,
+        IReadOnlyList<NodeExpectation> expectedChildren,
+        string path)
+    {
+        if (expectedChildren.Count == 0)
+        {
+            return;
+        }
+
+        actualChildren.Count.ShouldBe(expectedChildren.Count, $"{path}.Children count mismatch");
+
+        for (var i = 0; i < expectedChildren.Count; i++)
+        {
+            AssertNode(actualChildren[i], expectedChildren[i], $"{path}.Children[{i}]");
+        }
     }
 }
 
-public sealed class BoxTreeExpectationBuilder
+internal sealed class BoxTreeExpectationBuilder
 {
-    private readonly BoxTree _tree = new();
+    private readonly BoxTreeExpectation _tree = new();
 
-    internal BoxTree Build() => _tree;
+    internal BoxTreeExpectation Build() => _tree;
 
     public BoxTreeExpectationBuilder Page(Action<PageBoxExpectationBuilder> configure)
     {
-        configure(new PageBoxExpectationBuilder(_tree.Page));
+        configure(new PageBoxExpectationBuilder(_tree));
         return this;
     }
 
     public BoxTreeExpectationBuilder Block(Action<BlockExpectationBuilder> configure)
     {
-        var block = new BlockBox(DisplayRole.Block);
+        var block = new BlockExpectation();
         configure(new BlockExpectationBuilder(block));
         _tree.Blocks.Add(block);
         return this;
     }
 }
 
-public sealed class PageBoxExpectationBuilder(PageBox page)
+internal sealed class PageBoxExpectationBuilder(BoxTreeExpectation tree)
 {
     public PageBoxExpectationBuilder Margins(float top, float right, float bottom, float left)
     {
-        page.Margin = new Spacing(top, right, bottom, left);
+        tree.PageMargin = new Spacing(top, right, bottom, left);
         return this;
     }
 }
 
-public sealed class BlockExpectationBuilder(BlockBox block)
+internal sealed class BlockExpectationBuilder(BlockExpectation block)
 {
     public BlockExpectationBuilder IsAnonymous(bool value)
     {
-        InitPropertySetter.SetIsAnonymous(block, value);
+        block.IsAnonymous = value;
         return this;
     }
 
     public BlockExpectationBuilder Element(IElement element)
     {
-        InitPropertySetter.SetElement(block, element);
+        block.Element = element;
+        block.HasElement = true;
         return this;
     }
 
     public BlockExpectationBuilder Position(float x, float y)
     {
-        block.X = x;
-        block.Y = y;
+        block.Position = new ExpectedPoint(x, y);
         return this;
     }
 
@@ -101,21 +190,19 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Text(string text)
     {
-        var inline = new InlineBox(DisplayRole.Inline);
-        InitPropertySetter.SetText(inline, text);
-        block.Children.Add(inline);
+        block.Children.Add(new InlineExpectation { Text = text });
         return this;
     }
 
     public BlockExpectationBuilder Style(ComputedStyle style)
     {
-        InitPropertySetter.SetStyle(block, style);
+        block.Style = style;
         return this;
     }
 
     public BlockExpectationBuilder Inline(Action<InlineExpectationBuilder> configure)
     {
-        var inline = new InlineBox(DisplayRole.Inline);
+        var inline = new InlineExpectation();
         configure(new InlineExpectationBuilder(inline));
         block.Children.Add(inline);
         return this;
@@ -123,7 +210,7 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Block(Action<BlockExpectationBuilder> configure)
     {
-        var child = new BlockBox(DisplayRole.Block);
+        var child = new BlockExpectation();
         configure(new BlockExpectationBuilder(child));
         block.Children.Add(child);
         return this;
@@ -131,76 +218,79 @@ public sealed class BlockExpectationBuilder(BlockBox block)
 
     public BlockExpectationBuilder Padding(float top, float right, float bottom, float left)
     {
-        block.Padding = new()
-        {
-            Top = top,
-            Right = right,
-            Bottom = bottom,
-            Left = left
-        };
+        block.Padding = new Spacing(top, right, bottom, left);
         return this;
     }
 }
 
-public sealed class InlineExpectationBuilder(InlineBox inline)
+internal sealed class InlineExpectationBuilder(InlineExpectation inline)
 {
     public InlineExpectationBuilder Element(IElement element)
     {
-        InitPropertySetter.SetElement(inline, element);
+        inline.Element = element;
+        inline.HasElement = true;
         return this;
     }
 
     public InlineExpectationBuilder Text(string text)
     {
-        InitPropertySetter.SetText(inline, text);
+        if (inline.HasElement)
+        {
+            inline.Children.Add(new InlineExpectation { Text = text });
+            return this;
+        }
+
+        inline.Text = text;
         return this;
     }
 
     public InlineExpectationBuilder Inline(Action<InlineExpectationBuilder> configure)
     {
-        var child = new InlineBox(DisplayRole.Inline);
+        var child = new InlineExpectation();
         configure(new InlineExpectationBuilder(child));
         inline.Children.Add(child);
         return this;
     }
 }
 
-internal static class InitPropertySetter
+internal sealed class BoxTreeExpectation
 {
-    private static readonly PropertyInfo ElementProperty =
-        typeof(DisplayNode).GetProperty(nameof(DisplayNode.Element)) ??
-        throw new InvalidOperationException("DisplayNode.Element property not found.");
+    public Spacing? PageMargin { get; set; }
 
-    private static readonly PropertyInfo TextContentProperty =
-        typeof(InlineBox).GetProperty(nameof(InlineBox.TextContent)) ??
-        throw new InvalidOperationException("InlineBox.TextContent property not found.");
-
-    private static readonly PropertyInfo StyleProperty =
-        typeof(BlockBox).GetProperty(nameof(BlockBox.Style)) ??
-        throw new InvalidOperationException("BlockBox.Style property not found.");
-
-    private static readonly PropertyInfo IsAnonymousProperty =
-        typeof(BlockBox).GetProperty(nameof(BlockBox.IsAnonymous)) ??
-        throw new InvalidOperationException("BlockBox.IsAnonymous property not found.");
-
-    public static void SetElement(DisplayNode node, IElement element)
-    {
-        ElementProperty.SetValue(node, element);
-    }
-
-    public static void SetText(InlineBox inline, string text)
-    {
-        TextContentProperty.SetValue(inline, text);
-    }
-
-    public static void SetStyle(BlockBox block, ComputedStyle style)
-    {
-        StyleProperty.SetValue(block, style);
-    }
-
-    public static void SetIsAnonymous(BlockBox block, bool value)
-    {
-        IsAnonymousProperty.SetValue(block, value);
-    }
+    public List<BlockExpectation> Blocks { get; } = [];
 }
 
+internal abstract class NodeExpectation
+{
+    public List<NodeExpectation> Children { get; } = [];
+}
+
+internal sealed class BlockExpectation : NodeExpectation
+{
+    public bool HasElement { get; set; }
+
+    public IElement? Element { get; set; }
+
+    public bool? IsAnonymous { get; set; }
+
+    public ExpectedPoint? Position { get; set; }
+
+    public float? Width { get; set; }
+
+    public float? Height { get; set; }
+
+    public Spacing? Padding { get; set; }
+
+    public ComputedStyle? Style { get; set; }
+}
+
+internal sealed class InlineExpectation : NodeExpectation
+{
+    public bool HasElement { get; set; }
+
+    public IElement? Element { get; set; }
+
+    public string? Text { get; set; }
+}
+
+internal readonly record struct ExpectedPoint(float X, float Y);

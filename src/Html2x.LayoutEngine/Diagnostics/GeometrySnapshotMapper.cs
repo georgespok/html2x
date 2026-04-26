@@ -1,6 +1,9 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
 
@@ -17,64 +20,13 @@ internal static class GeometrySnapshotMapper
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(pagination);
 
-        var sequenceId = 0;
+        var boxMapper = new BoxGeometrySnapshotMapper();
 
         return new GeometrySnapshot
         {
             Fragments = LayoutSnapshotMapper.From(layout),
-            Boxes = MapBoxes(boxTree.Blocks, ref sequenceId),
+            Boxes = boxMapper.MapBoxes(boxTree.Blocks),
             Pagination = pagination.Pages.Select(MapPage).ToList()
-        };
-    }
-
-    private static IReadOnlyList<BoxGeometrySnapshot> MapBoxes(
-        IEnumerable<BlockBox> boxes,
-        ref int sequenceId)
-    {
-        var snapshots = new List<BoxGeometrySnapshot>();
-        foreach (var box in boxes)
-        {
-            snapshots.Add(MapBox(box, ref sequenceId));
-        }
-
-        return snapshots;
-    }
-
-    private static BoxGeometrySnapshot MapBox(BlockBox box, ref int sequenceId)
-    {
-        var geometry = box.UsedGeometry ?? throw new InvalidOperationException(
-            $"Geometry snapshot requires UsedGeometry for '{DisplayNodePathBuilder.Build(box)}'.");
-        var borderRect = geometry.BorderBoxRect;
-        var contentRect = geometry.ContentBoxRect;
-
-        return new BoxGeometrySnapshot
-        {
-            SequenceId = NextSequenceId(ref sequenceId),
-            Path = DisplayNodePathBuilder.Build(box),
-            Kind = box.Role.ToString().ToLowerInvariant(),
-            TagName = box.Element?.TagName?.ToLowerInvariant(),
-            X = borderRect.X,
-            Y = borderRect.Y,
-            Size = new SizePt(borderRect.Width, borderRect.Height),
-            ContentX = contentRect.X,
-            ContentY = contentRect.Y,
-            ContentSize = new SizePt(contentRect.Width, contentRect.Height),
-            Baseline = geometry.Baseline,
-            MarkerOffset = geometry.MarkerOffset,
-            AllowsOverflow = geometry.AllowsOverflow,
-            IsAnonymous = box.IsAnonymous,
-            IsInlineBlockContext = box.IsInlineBlockContext,
-            DerivedColumnCount = box is TableBox tableBox && tableBox.DerivedColumnCount >= 0
-                ? tableBox.DerivedColumnCount
-                : null,
-            RowIndex = box is TableRowBox rowBox && rowBox.RowIndex >= 0
-                ? rowBox.RowIndex
-                : null,
-            ColumnIndex = box is TableCellBox cellBox && cellBox.ColumnIndex >= 0
-                ? cellBox.ColumnIndex
-                : null,
-            IsHeader = box is TableCellBox headerCell ? headerCell.IsHeader : null,
-            Children = MapBoxes(DisplayNodeTraversal.EnumerateBlockChildren(box), ref sequenceId)
         };
     }
 
@@ -93,22 +45,89 @@ internal static class GeometrySnapshotMapper
 
     private static PaginationPlacementSnapshot MapPlacement(BlockFragmentPlacement placement)
     {
+        var fragment = placement.Fragment;
+
         return new PaginationPlacementSnapshot
         {
             FragmentId = placement.FragmentId,
-            Kind = placement.Fragment.DisplayRole?.ToString() ?? placement.Fragment.GetType().Name,
+            Kind = fragment.DisplayRole?.ToString() ?? fragment.GetType().Name,
             PageNumber = placement.PageNumber,
             OrderIndex = placement.OrderIndex,
             IsOversized = placement.IsOversized,
             X = placement.LocalX,
             Y = placement.LocalY,
-            Size = new SizePt(placement.Width, placement.Height)
+            Size = new SizePt(placement.Width, placement.Height),
+            DisplayRole = fragment.DisplayRole,
+            FormattingContext = fragment.FormattingContext,
+            MarkerOffset = fragment.MarkerOffset,
+            DerivedColumnCount = fragment is TableFragment table ? table.DerivedColumnCount : null,
+            RowIndex = fragment is TableRowFragment row ? row.RowIndex : null,
+            ColumnIndex = fragment is TableCellFragment cell ? cell.ColumnIndex : null,
+            IsHeader = fragment is TableCellFragment headerCell ? headerCell.IsHeader : null,
+            MetadataOwner = FragmentAdapterRegistry.MetadataOwnerName,
+            MetadataConsumer = nameof(FragmentCoordinateTranslator)
         };
     }
 
-    private static int NextSequenceId(ref int sequenceId)
+    private sealed class BoxGeometrySnapshotMapper
     {
-        sequenceId++;
-        return sequenceId;
+        private int _sequenceId;
+
+        public IReadOnlyList<BoxGeometrySnapshot> MapBoxes(IEnumerable<BlockBox> boxes)
+        {
+            var snapshots = new List<BoxGeometrySnapshot>();
+            foreach (var box in boxes)
+            {
+                snapshots.Add(MapBox(box));
+            }
+
+            return snapshots;
+        }
+
+        private BoxGeometrySnapshot MapBox(BlockBox box)
+        {
+            var geometry = box.UsedGeometry ?? throw new InvalidOperationException(
+                $"Geometry snapshot requires UsedGeometry for '{DisplayNodePathBuilder.Build(box)}'.");
+            var borderRect = geometry.BorderBoxRect;
+            var contentRect = geometry.ContentBoxRect;
+
+            return new BoxGeometrySnapshot
+            {
+                SequenceId = NextSequenceId(),
+                Path = DisplayNodePathBuilder.Build(box),
+                Kind = box.Role.ToString().ToLowerInvariant(),
+                TagName = box.Element?.TagName?.ToLowerInvariant(),
+                X = borderRect.X,
+                Y = borderRect.Y,
+                Size = new SizePt(borderRect.Width, borderRect.Height),
+                ContentX = contentRect.X,
+                ContentY = contentRect.Y,
+                ContentSize = new SizePt(contentRect.Width, contentRect.Height),
+                Baseline = geometry.Baseline,
+                MarkerOffset = geometry.MarkerOffset,
+                AllowsOverflow = geometry.AllowsOverflow,
+                IsAnonymous = box.IsAnonymous,
+                IsInlineBlockContext = box.IsInlineBlockContext,
+                DerivedColumnCount = box is TableBox tableBox && tableBox.DerivedColumnCount >= 0
+                    ? tableBox.DerivedColumnCount
+                    : null,
+                RowIndex = box is TableRowBox rowBox && rowBox.RowIndex >= 0
+                    ? rowBox.RowIndex
+                    : null,
+                ColumnIndex = box is TableCellBox cellBox && cellBox.ColumnIndex >= 0
+                    ? cellBox.ColumnIndex
+                    : null,
+                IsHeader = box is TableCellBox headerCell ? headerCell.IsHeader : null,
+                MetadataOwner = nameof(BlockLayoutEngine),
+                MetadataConsumer = nameof(GeometrySnapshotMapper),
+                Children = MapBoxes(DisplayNodeTraversal.EnumerateBlockChildren(box))
+            };
+        }
+
+        private int NextSequenceId()
+        {
+            _sequenceId++;
+            return _sequenceId;
+        }
     }
 }

@@ -32,7 +32,7 @@ public class BoxTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithDivAndText_BuildsBlockAtExpectedPosition()
+    public async Task Build_DivAndText_BuildsBlockAtExpectedPosition()
     {
         // Arrange: <div> with text; expect a block positioned by div margins
         const string html = "<html><body><div>Hello</div></body></html>";
@@ -55,7 +55,7 @@ public class BoxTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithDivAndBorder_BuildsBlockAtExpectedPosition()
+    public async Task Build_DivAndBorder_BuildsBlockAtExpectedPosition()
     {
         // Arrange
         const string html = "<html><body><div style='border-width: 1px; border-style: solid;'>Hello</div></body></html>";
@@ -82,7 +82,7 @@ public class BoxTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithListItems_BuildsBlockAtExpectedPosition()
+    public async Task Build_ListItems_BuildsBlockAtExpectedPosition()
     {
         // Arrange
         const string html = "<html><ul><li>item 1</li><li>item 2</li></ul></html>";
@@ -113,7 +113,6 @@ public class BoxTreeBuilderTests
         const string markerChar = "•";
 
         actual.ShouldMatch(tree => tree
-            .Page(p => p.Margins(0f, 0f, 0f, 0f))
             .Block(b =>
             {
                 b.Element(ul)

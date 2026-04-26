@@ -1,26 +1,38 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
 
+/// <summary>
+/// Measures and prepares inline-block content as an atomic inline object for current inline layout.
+/// </summary>
 internal sealed class InlineObjectLayoutBuilder(
     ITextMeasurer measurer,
     IFontMetricsProvider metrics,
     ILineHeightStrategy lineHeightStrategy,
     IBlockFormattingContext blockFormattingContext,
-    IImageLayoutResolver? imageResolver = null)
+    IImageLayoutResolver? imageResolver = null,
+    DiagnosticsSession? diagnosticsSession = null)
+    : IInlineBlockFormattingContextRunner
 {
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
     private readonly ILineHeightStrategy _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-    private readonly InlineRunFactory _runFactory = new(metrics, blockFormattingContext);
+    private readonly InlineRunFactory _runFactory = new(
+        metrics,
+        blockFormattingContext,
+        imageResolver ?? new ImageLayoutResolver(),
+        diagnosticsSession);
     private readonly TextLayoutEngine _layoutEngine = new(measurer);
     private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
     private readonly IImageLayoutResolver _imageResolver = imageResolver ?? new ImageLayoutResolver();
+    private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
 
     public bool TryBuildInlineBlockLayout(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
     {
@@ -39,7 +51,12 @@ internal sealed class InlineObjectLayoutBuilder(
 
         var padding = contentBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(contentBox.Style.Borders).Safe();
-        var contentAvailableWidth = ResolveContentWidth(availableWidth, padding, border);
+        var measurementBorderWidth = ResolveMeasurementBorderWidth(contentBox.Style, availableWidth);
+        var contentAvailableWidth = BoxDimensionResolver.ResolveContentBoxWidth(
+            measurementBorderWidth,
+            padding,
+            border,
+            contentBox.MarkerOffset);
 
         if (contentBox is ImageBox imageBox)
         {
@@ -68,10 +85,16 @@ internal sealed class InlineObjectLayoutBuilder(
         var layoutResult = _layoutEngine.Layout(new TextLayoutInput(runs, contentAvailableWidth, lineHeight));
         var formattingResult = FormatBlockContent(contentBox, contentAvailableWidth);
 
-        var contentWidth = ResolveContentWidth(layoutResult, formattingResult, contentAvailableWidth);
-        var contentHeight = ResolveContentHeight(contentBox, layoutResult, formattingResult);
-
-        var totalWidth = contentWidth + padding.Horizontal + border.Horizontal;
+        var measuredContentWidth = ResolveMeasuredContentWidth(layoutResult, formattingResult, contentAvailableWidth);
+        var measuredContentHeight = ResolveContentHeight(contentBox, layoutResult, formattingResult);
+        var measuredBorderBoxWidth = measuredContentWidth + padding.Horizontal + border.Horizontal + contentBox.MarkerOffset;
+        var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredBorderBoxWidth);
+        var contentWidth = BoxDimensionResolver.ResolveContentBoxWidth(
+            totalWidth,
+            padding,
+            border,
+            contentBox.MarkerOffset);
+        var contentHeight = ResolveUsedContentHeight(contentBox.Style, measuredContentHeight);
         var totalHeight = contentHeight + padding.Vertical + border.Vertical;
         var baseline = ResolveBaseline(layoutResult, padding, border, totalHeight);
 
@@ -86,25 +109,55 @@ internal sealed class InlineObjectLayoutBuilder(
         return true;
     }
 
+    public bool TryLayoutInlineBlock(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
+    {
+        return TryBuildInlineBlockLayout(inline, availableWidth, out layout);
+    }
+
+    private static float ResolveMeasurementBorderWidth(ComputedStyle style, float availableWidth)
+    {
+        return BoxDimensionResolver.ResolveAtomicBorderBoxWidth(style, availableWidth);
+    }
+
     private BlockFormattingResult FormatBlockContent(BlockBox contentBox, float availableWidth)
     {
         if (float.IsFinite(availableWidth))
         {
-            var request = BlockFormattingRequest.ForInlineBlock(contentBox, availableWidth);
+            var request = BlockFormattingRequest.ForInlineBlock(
+                contentBox,
+                availableWidth,
+                consumerName: nameof(InlineLayoutEngine),
+                diagnosticsSession: _diagnosticsSession,
+                emitDiagnostics: _diagnosticsSession is not null);
             return _blockFormattingContext.Format(request);
         }
 
-        var unboundedRequest = BlockFormattingRequest.ForUnboundedWidth(FormattingContextKind.InlineBlock, contentBox);
+        var unboundedRequest = BlockFormattingRequest.ForUnboundedWidth(
+            FormattingContextKind.InlineBlock,
+            contentBox,
+            consumerName: nameof(InlineLayoutEngine),
+            diagnosticsSession: _diagnosticsSession,
+            emitDiagnostics: _diagnosticsSession is not null);
         return _blockFormattingContext.Format(unboundedRequest);
     }
 
-    private static float ResolveContentWidth(
+    private static float ResolveMeasuredContentWidth(
         TextLayoutResult layoutResult,
         BlockFormattingResult formattingResult,
         float contentAvailableWidth)
     {
         var maxLineWidth = Math.Max(layoutResult.MaxLineWidth, formattingResult.TotalWidth);
         return ResolveFinalContentWidth(contentAvailableWidth, maxLineWidth);
+    }
+
+    private static float ResolveUsedBorderWidth(ComputedStyle style, float measuredBorderWidth)
+    {
+        return BoxDimensionResolver.ResolveIntrinsicBorderBoxWidth(style, measuredBorderWidth);
+    }
+
+    private static float ResolveUsedContentHeight(ComputedStyle style, float measuredContentHeight)
+    {
+        return BoxDimensionResolver.ResolveContentBoxHeight(style, measuredContentHeight);
     }
 
     private static float ResolveContentHeight(
@@ -135,39 +188,42 @@ internal sealed class InlineObjectLayoutBuilder(
         return _lineHeightStrategy.GetLineHeight(contentBox.Style, font, fontSize, metrics);
     }
 
-    private List<TextRunInput> CollectInlineRuns(BlockBox block, float availableWidth)
+    private IReadOnlyList<TextRunInput> CollectInlineRuns(BlockBox block, float availableWidth)
     {
-        var runs = new List<TextRunInput>();
-        var runId = 1;
-        CollectRunsFromNodes(block.Children, block.Style, availableWidth, runs, ref runId);
-        TrimBoundaryLineBreaks(runs);
+        var collector = new InlineRunCollector(
+            block.Style,
+            availableWidth,
+            _runFactory,
+            _measurer,
+            _lineHeightStrategy);
 
-        return runs;
+        CollectRunsFromNodes(block.Children, block.Style, collector);
+        collector.TrimBoundaryLineBreaks();
+
+        return collector.Runs;
     }
 
     private void CollectRunsFromNodes(
         IEnumerable<DisplayNode> nodes,
         ComputedStyle blockStyle,
-        float availableWidth,
-        List<TextRunInput> runs,
-        ref int runId)
+        InlineRunCollector collector)
     {
         foreach (var node in nodes)
         {
             switch (node)
             {
                 case InlineBox inline:
-                    CollectInlineRuns(inline, blockStyle, availableWidth, runs, ref runId);
+                    CollectInlineRuns(inline, blockStyle, collector);
                     break;
                 case BlockBox blockChild:
-                {                    
-                    CollectRunsFromBlockChild(blockChild, blockStyle, availableWidth, runs, ref runId);
+                {
+                    CollectRunsFromBlockChild(blockChild, blockStyle, collector);
                     break;
                 }
                 default:
                     if (node.Children.Count > 0)
                     {
-                        CollectRunsFromNodes(node.Children, blockStyle, availableWidth, runs, ref runId);
+                        CollectRunsFromNodes(node.Children, blockStyle, collector);
                     }
 
                     break;
@@ -178,122 +234,67 @@ internal sealed class InlineObjectLayoutBuilder(
     private void CollectRunsFromBlockChild(
         BlockBox blockChild,
         ComputedStyle parentStyle,
-        float availableWidth,
-        List<TextRunInput> runs,
-        ref int runId)
+        InlineRunCollector collector)
     {
-        var runCountBeforeBoundary = runs.Count;
-        AppendBlockBoundaryBreak(parentStyle, runs, ref runId);
-        var runCountAfterBoundary = runs.Count;
+        var runCountBeforeBoundary = collector.Count;
+        AppendBlockBoundaryBreak(parentStyle, collector);
+        var runCountAfterBoundary = collector.Count;
 
-        CollectRunsFromNodes(blockChild.Children, blockChild.Style, availableWidth, runs, ref runId);
+        CollectRunsFromNodes(blockChild.Children, blockChild.Style, collector);
 
-        if (runs.Count > runCountAfterBoundary)
+        if (collector.Count > runCountAfterBoundary)
         {
-            AppendBlockBoundaryBreak(parentStyle, runs, ref runId);
+            AppendBlockBoundaryBreak(parentStyle, collector);
             return;
         }
 
-        if (runs.Count > runCountBeforeBoundary && runs[^1].Kind == TextRunKind.LineBreak)
+        if (collector.Count > runCountBeforeBoundary && collector.LastKind == TextRunKind.LineBreak)
         {
-            runs.RemoveAt(runs.Count - 1);
+            collector.RemoveLast();
         }
     }
 
     private void CollectInlineRuns(
         InlineBox inline,
         ComputedStyle blockStyle,
-        float availableWidth,
-        List<TextRunInput> runs,
-        ref int runId)
+        InlineRunCollector collector)
     {
-        if (_runFactory.TryBuildInlineBlockLayout(inline, availableWidth, _measurer, _lineHeightStrategy, out var inlineLayout))
+        if (collector.TryAppendInlineBlockRun(inline))
         {
-            if (_runFactory.TryBuildInlineBlockRun(inline, runId, inlineLayout, out var inlineObjectRun))
-            {
-                runs.Add(inlineObjectRun);
-                runId++;
-                return;
-            }
-        }
-
-        if (_runFactory.TryBuildLineBreakRunFromBlockContext(inline, blockStyle, runId, out var lineBreakRun))
-        {
-            runs.Add(lineBreakRun);
-            runId++;
             return;
         }
 
-        if (_runFactory.TryBuildTextRun(inline, runId, out var textRun))
+        if (collector.TryAppendLineBreakRun(inline, blockStyle))
         {
-            runs.Add(textRun);
-            runId++;
+            return;
         }
+
+        _ = collector.TryAppendTextRun(inline);
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            CollectInlineRuns(childInline, blockStyle, availableWidth, runs, ref runId);
+            CollectInlineRuns(childInline, blockStyle, collector);
         }
     }
 
-    private void AppendBlockBoundaryBreak(ComputedStyle style, List<TextRunInput> runs, ref int runId)
+    private static void AppendBlockBoundaryBreak(ComputedStyle style, InlineRunCollector collector)
     {
-        if (runs.Count == 0 || runs[^1].Kind == TextRunKind.LineBreak)
+        if (collector.Count == 0 || collector.LastKind == TextRunKind.LineBreak)
         {
             return;
         }
 
-        var source = new InlineBox(DisplayRole.Inline)
-        {
-            Style = style
-        };
-
-        runs.Add(new TextRunInput(
-            runId,
-            source,
-            string.Empty,
-            _metrics.GetFontKey(style),
-            _metrics.GetFontSize(style),
-            style,
-            PaddingLeft: 0f,
-            PaddingRight: 0f,
-            MarginLeft: 0f,
-            MarginRight: 0f,
-            Kind: TextRunKind.LineBreak));
-        runId++;
-    }
-
-    private static void TrimBoundaryLineBreaks(List<TextRunInput> runs)
-    {
-        while (runs.Count > 0 && runs[0].Kind == TextRunKind.LineBreak)
-        {
-            runs.RemoveAt(0);
-        }
-
-        while (runs.Count > 0 && runs[^1].Kind == TextRunKind.LineBreak)
-        {
-            runs.RemoveAt(runs.Count - 1);
-        }
-    }
-
-    private static float ResolveContentWidth(float availableWidth, Spacing padding, Spacing border)
-    {
-        if (!float.IsFinite(availableWidth))
-        {
-            return float.PositiveInfinity;
-        }
-
-        return Math.Max(0f, availableWidth - padding.Horizontal - border.Horizontal);
+        collector.AppendSyntheticLineBreakRun(style);
     }
 
     private static float ResolveFinalContentWidth(float availableWidth, float measuredWidth)
     {
         if (!float.IsFinite(availableWidth))
         {
-            return measuredWidth;
+            return BoxGeometryFactory.NormalizeNonNegative(measuredWidth);
         }
 
-        return Math.Min(availableWidth, measuredWidth);
+        return BoxGeometryFactory.NormalizeNonNegative(Math.Min(availableWidth, measuredWidth));
     }
 
     private static float ResolveBaseline(

@@ -9,52 +9,35 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Text;
 
+/// <summary>
+/// Verifies text alignment affects run placement and line bounds.
+/// </summary>
 public class TextAlignmentLayoutTests
 {
     private static readonly LayoutBuilderFixture Fixture = new();
 
-    [Fact]
-    public async Task CenterAlignedParagraph_OffsetsLineRuns()
+    [Theory]
+    [InlineData("center", "Center", 60f)]
+    [InlineData("right", "Right", 125f)]
+    public async Task Build_WhenParagraphUsesSupportedTextAlign_ShouldOffsetLineRuns(
+        string textAlign,
+        string text,
+        float expectedOffset)
     {
-        const string html = @"
+        var html = $@"
             <html>
                 <body style='margin: 0;'>
                     <div style='width: 200px; padding: 0; border: 0;'>
-                        <p style='text-align: center;'>Center</p>
+                        <p style='text-align: {textAlign};'>{text}</p>
                     </div>
                 </body>
             </html>";
 
         var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(5f));
-        var line = FindLineByText(layout, "Center");
-
-        var expectedContentWidth = 150f; // 200px -> 150pt
-        var expectedLineWidth = 6 * 5f;
-        var expectedOffset = (expectedContentWidth - expectedLineWidth) / 2f;
+        var line = FindLineByText(layout, text);
 
         line.Runs[0].Origin.X.ShouldBe(expectedOffset, 0.1f);
-    }
-
-    [Fact]
-    public async Task RightAlignedParagraph_OffsetsLineRuns()
-    {
-        const string html = @"
-            <html>
-                <body style='margin: 0;'>
-                    <div style='width: 200px; padding: 0; border: 0;'>
-                        <p style='text-align: right;'>Right</p>
-                    </div>
-                </body>
-            </html>";
-
-        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(5f));
-        var line = FindLineByText(layout, "Right");
-
-        var expectedContentWidth = 150f; // 200px -> 150pt
-        var expectedLineWidth = 5 * 5f;
-        var expectedOffset = expectedContentWidth - expectedLineWidth;
-
-        line.Runs[0].Origin.X.ShouldBe(expectedOffset, 0.1f);
+        AssertLineContainsRuns(line);
     }
 
     [Fact]
@@ -77,6 +60,7 @@ public class TextAlignmentLayoutTests
         var lastRight = lastRun.Origin.X + lastRun.AdvanceWidth;
 
         lastRight.ShouldBe(expectedContentWidth, 0.5f);
+        AssertLineContainsRuns(line);
     }
 
     private static LineBoxFragment FindLineByText(HtmlLayout layout, string text)
@@ -138,5 +122,14 @@ public class TextAlignmentLayoutTests
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
             .Returns((8f, 2f));
         return textMeasurer.Object;
+    }
+
+    private static void AssertLineContainsRuns(LineBoxFragment line)
+    {
+        foreach (var run in line.Runs)
+        {
+            line.Rect.Left.ShouldBeLessThanOrEqualTo(run.Origin.X + 0.1f);
+            line.Rect.Right.ShouldBeGreaterThanOrEqualTo(run.Origin.X + run.AdvanceWidth - 0.1f);
+        }
     }
 }

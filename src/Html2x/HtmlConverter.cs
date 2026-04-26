@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Options;
 using Html2x.Files;
@@ -48,7 +49,12 @@ public class HtmlConverter
                 session);
         }
 
-        var fontSource = new FontPathSource(fontPath, fileDirectory);
+        IFontSource fontSource = new FontPathSource(fontPath, fileDirectory);
+        if (session is not null)
+        {
+            fontSource = new DiagnosticsFontSource(fontSource, session);
+        }
+
         var measurer = new SkiaTextMeasurer(fontSource);
         var imageProvider = new FileSystemImageProvider();
 
@@ -68,6 +74,7 @@ public class HtmlConverter
         {
             session?.Events.Add(DiagnosticsEventFactory.StageFailed("LayoutBuild", exception.Message));
             session?.Events.Add(DiagnosticsEventFactory.StageSkipped("PdfRender", "Skipped because LayoutBuild failed."));
+            AttachDiagnostics(exception, session);
             throw;
         }
 
@@ -87,11 +94,12 @@ public class HtmlConverter
         byte[] pdfBytes;
         try
         {
-            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session);
+            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session, fontSource);
         }
         catch (Exception exception)
         {
             session?.Events.Add(DiagnosticsEventFactory.StageFailed("PdfRender", exception.Message));
+            AttachDiagnostics(exception, session);
             throw;
         }
 
@@ -134,6 +142,16 @@ public class HtmlConverter
         }
 
         return exception;
+    }
+
+    private static void AttachDiagnostics(Exception exception, DiagnosticsSession? session)
+    {
+        if (session is null)
+        {
+            return;
+        }
+
+        exception.Data["Diagnostics"] = session;
     }
 }
 

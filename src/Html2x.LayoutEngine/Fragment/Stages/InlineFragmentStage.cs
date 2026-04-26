@@ -1,8 +1,12 @@
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Fragment.Stages;
 
+/// <summary>
+/// Projects inline layout results into fragment children while preserving block bindings for nested inline objects.
+/// </summary>
 public sealed class InlineFragmentStage : IFragmentBuildStage
 {
     private readonly FragmentAdapterRegistry _fragmentAdapters;
@@ -62,18 +66,17 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
         actualBindings.Add(new BlockFragmentBinding(blockBox, fragment));
 
-        var segmentIndex = 0;
-        var hasPendingInlineFlow = false;
+        var flowState = new InlineFragmentFlowState(SegmentIndex: 0, HasPendingInlineFlow: false);
 
         foreach (var child in DisplayNodeTraversal.EnumerateFlowChildren(blockBox))
         {
             if (TryQueueInlineFlowChild(child))
             {
-                hasPendingInlineFlow = true;
+                flowState = flowState.QueueInlineFlow();
                 continue;
             }
 
-            FlushPendingInlineFlow(state, blockBox, fragment, ref hasPendingInlineFlow, ref segmentIndex, observers);
+            flowState = FlushPendingInlineFlow(state, blockBox, fragment, flowState, observers);
 
             if (child is not BlockBox childBlock || !lookup.TryGetValue(childBlock, out var childFragment))
             {
@@ -84,31 +87,30 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
             ProcessBlock(state, childBlock, childFragment, lookup, visited, observers, actualBindings);
         }
 
-        FlushPendingInlineFlow(state, blockBox, fragment, ref hasPendingInlineFlow, ref segmentIndex, observers);
+        FlushPendingInlineFlow(state, blockBox, fragment, flowState, observers);
     }
 
-    private void FlushPendingInlineFlow(
+    private InlineFragmentFlowState FlushPendingInlineFlow(
         FragmentBuildState state,
         BlockBox blockContext,
         BlockFragment parentFragment,
-        ref bool hasPendingInlineFlow,
-        ref int segmentIndex,
+        InlineFragmentFlowState flowState,
         IReadOnlyList<IFragmentBuildObserver> observers)
     {
-        if (!hasPendingInlineFlow)
+        if (!flowState.HasPendingInlineFlow)
         {
-            return;
+            return flowState;
         }
 
-        hasPendingInlineFlow = false;
+        var nextState = flowState.ClearPendingInlineFlow();
 
-        if (blockContext.InlineLayout is null || segmentIndex >= blockContext.InlineLayout.Segments.Count)
+        if (blockContext.InlineLayout is null || flowState.SegmentIndex >= blockContext.InlineLayout.Segments.Count)
         {
-            return;
+            return nextState;
         }
 
-        EmitSegment(state, parentFragment, blockContext.InlineLayout.Segments[segmentIndex], observers);
-        segmentIndex++;
+        EmitSegment(state, parentFragment, blockContext.InlineLayout.Segments[flowState.SegmentIndex], observers);
+        return nextState.AdvanceSegment();
     }
 
     private void EmitSegment(
@@ -150,10 +152,11 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
         {
             FragmentId = state.ReserveFragmentId(),
             PageNumber = state.PageNumber,
-            Rect = textItem.Rect,
+            Rect = line.Rect,
+            OccupiedRect = textItem.Rect,
             BaselineY = line.BaselineY,
             LineHeight = line.LineHeight,
-            Runs = textItem.Runs.ToList(),
+            Runs = ResolveTextRuns(state, textItem.Runs),
             TextAlign = line.TextAlign
         };
 
@@ -166,6 +169,17 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
                 observer.OnInlineFragmentCreated(source, parentFragment, fragment);
             }
         }
+    }
+
+    private static List<TextRun> ResolveTextRuns(FragmentBuildState state, IReadOnlyList<TextRun> runs)
+    {
+        var resolved = new List<TextRun>(runs.Count);
+        foreach (var run in runs)
+        {
+            resolved.Add(run with { ResolvedFont = state.Context.FontSource.Resolve(run.Font, nameof(InlineFragmentStage)) });
+        }
+
+        return resolved;
     }
 
     private Abstractions.Layout.Fragments.Fragment BuildInlineObjectFragment(
@@ -203,19 +217,17 @@ public sealed class InlineFragmentStage : IFragmentBuildStage
 
     private static bool TryQueueInlineFlowChild(DisplayNode child)
     {
-        return child switch
-        {
-            InlineBox => true,
-            InlineBlockBoundaryBox => true,
-            BlockBox block when IsAnonymousInlineWrapper(block) => true,
-            _ => false
-        };
+        return InlineFlowClassifier.IsInlineFlowMember(child);
     }
 
-    private static bool IsAnonymousInlineWrapper(BlockBox block)
+    private readonly record struct InlineFragmentFlowState(
+        int SegmentIndex,
+        bool HasPendingInlineFlow)
     {
-        return block.IsAnonymous &&
-               block.Children.Count > 0 &&
-               block.Children.All(static child => child is InlineBox);
+        public InlineFragmentFlowState QueueInlineFlow() => this with { HasPendingInlineFlow = true };
+
+        public InlineFragmentFlowState ClearPendingInlineFlow() => this with { HasPendingInlineFlow = false };
+
+        public InlineFragmentFlowState AdvanceSegment() => this with { SegmentIndex = SegmentIndex + 1 };
     }
 }

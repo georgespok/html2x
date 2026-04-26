@@ -30,9 +30,7 @@ internal sealed class ImageRenderer
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(fragment);
 
-        var rect = fragment.ContentRect == default
-            ? fragment.Rect
-            : fragment.ContentRect;
+        var rect = fragment.ContentRect;
         var width = (float)rect.Width;
         var height = (float)rect.Height;
         var status = fragment.IsMissing

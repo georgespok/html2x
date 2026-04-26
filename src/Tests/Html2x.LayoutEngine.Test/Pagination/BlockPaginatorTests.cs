@@ -11,7 +11,7 @@ namespace Html2x.LayoutEngine.Test.Pagination;
 public sealed class BlockPaginatorTests
 {
     [Fact]
-    public void Paginate_WhenSecondBlockDoesNotFitCurrentPage_SplitsAtBlockBoundary()
+    public void Paginate_SecondBlockDoesNotFitCurrentPage_SplitsAtBlockBoundary()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -42,7 +42,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenBlockExactlyFitsRemainingSpace_DoesNotCreateExtraPage()
+    public void Paginate_BlockExactlyFitsRemainingSpace_DoesNotCreateExtraPage()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -67,7 +67,25 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenBlocksSpanMultiplePages_PreservesSourceOrderAcrossPages()
+    public void Paginate_BlockStaysOnFirstPage_ClonesThroughTranslator()
+    {
+        // Arrange
+        var paginator = new BlockPaginator();
+        var block = CreateBlock(7, y: 10f, width: 100f, height: 30f);
+
+        // Act
+        var result = paginator.Paginate([block], new SizePt(200f, 100f), new Spacing(10f, 10f, 10f, 10f));
+
+        // Assert
+        var placed = result.Pages.ShouldHaveSingleItem().Placements.ShouldHaveSingleItem().Fragment;
+        placed.ShouldNotBeSameAs(block);
+        placed.FragmentId.ShouldBe(block.FragmentId);
+        placed.PageNumber.ShouldBe(1);
+        placed.Rect.ShouldBe(block.Rect);
+    }
+
+    [Fact]
+    public void Paginate_BlocksSpanMultiplePages_PreservesSourceOrderAcrossPages()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -97,7 +115,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenSourceBlockPositionsOverlap_UsesMonotonicNonOverlappingYPerPage()
+    public void Paginate_OverlappingSourceBlocks_UsesMonotonicPageY()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -124,7 +142,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenBlockMovesToNextPage_EmitsOverflowDiagnosticsInOrder()
+    public void Paginate_BlockMovesToNextPage_EmitsOverflowDiagnosticsInOrder()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -177,7 +195,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenInvokedTwiceWithSameInput_ProducesStableAssignments()
+    public void Paginate_InvokedTwiceWithSameInput_ProducesStableAssignments()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -214,7 +232,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenInvokedTwiceWithSameInput_ProducesStableDiagnosticsContext()
+    public void Paginate_InvokedTwiceWithSameInput_ProducesStableDiagnosticsContext()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -237,7 +255,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenBlockIsOversized_PlacesWholeBlockOnNextPageAndMarksOversized()
+    public void Paginate_BlockIsOversized_PlacesWholeBlockOnNextPageAndMarksOversized()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -264,7 +282,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenInputHasNoBlocks_ReturnsOneEmptyPage()
+    public void Paginate_InputHasNoBlocks_ReturnsOneEmptyPage()
     {
         // Arrange
         // Empty (or whitespace-only) documents produce no block fragments from layout.
@@ -292,7 +310,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenMovingBlocksToNextPage_ResetsCoordinatesToPageTop()
+    public void Paginate_MovingBlocksToNextPage_ResetsCoordinatesToPageTop()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -321,7 +339,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_WhenBlockMovesToNextPage_AlsoMovesChildLineCoordinates()
+    public void Paginate_BlockMovesToNextPage_AlsoMovesChildLineCoordinates()
     {
         // Arrange
         var paginator = new BlockPaginator();

@@ -71,19 +71,21 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         string htmlContent,
         ConsoleOptions consoleOptions)
     {
+        var htmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
+                            Directory.GetCurrentDirectory();
+        var fontPath = Path.Combine(AppContext.BaseDirectory, "fonts");
+
         var options = new HtmlConverterOptions
         {
             Pdf = new PdfOptions
             {
-                FontPath = ".\\fonts",
+                FontPath = fontPath,
                 EnableDebugging = consoleOptions.EnableDebugging,
-                HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
-                                Directory.GetCurrentDirectory()
+                HtmlDirectory = htmlDirectory
             },
             Layout = new LayoutOptions
             {
-                HtmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
-                                Directory.GetCurrentDirectory(),
+                HtmlDirectory = htmlDirectory,
                 MaxImageSizeBytes = (long)(10 * 1024 * 1024)
             },
             Diagnostics = new DiagnosticsOptions

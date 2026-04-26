@@ -9,6 +9,12 @@ namespace Html2x.Abstractions.Layout.Fragments;
 /// </summary>
 public sealed class ImageFragment : Fragment
 {
+    private readonly RectangleF _contentRect;
+
+    public ImageFragment()
+    {
+    }
+
     /// <summary>Original src attribute value (data URI or file path relative to input HTML).</summary>
     public required string Src { get; init; }
 
@@ -16,7 +22,16 @@ public sealed class ImageFragment : Fragment
     /// Content box rect after applying padding and borders to the outer rect.
     /// Used for image drawing and placeholders.
     /// </summary>
-    public RectangleF ContentRect { get; init; }
+    public required RectangleF ContentRect
+    {
+        get => _contentRect;
+        init
+        {
+            FragmentGeometryGuard.GuardRect(nameof(ContentRect), value);
+            _contentRect = value;
+        }
+    }
+
     public SizePt ContentSize => new(ContentRect.Width, ContentRect.Height);
 
     /// <summary>Author-specified size in CSS pixels, if present.</summary>

@@ -98,4 +98,37 @@ public sealed class LayoutSnapshotMapperTests
         mapped.ContentY.ShouldBe(31);
         mapped.ContentSize.ShouldBe(new SizePt(90, 70));
     }
+
+    [Fact]
+    public void From_NestedFragmentsAcrossPages_AssignsDepthFirstSequenceIds()
+    {
+        var line = new LineBoxFragment
+        {
+            Rect = new RectangleF(10, 10, 80, 12)
+        };
+        var block = new BlockFragment([line])
+        {
+            Rect = new RectangleF(10, 10, 100, 20)
+        };
+        var image = new ImageFragment
+        {
+            Src = "sequence.png",
+            Rect = new RectangleF(10, 40, 20, 20),
+            ContentRect = new RectangleF(10, 40, 20, 20)
+        };
+        var rule = new RuleFragment
+        {
+            Rect = new RectangleF(10, 10, 100, 2)
+        };
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(new SizePt(612, 792), new Spacing(), [block, image]));
+        layout.Pages.Add(new LayoutPage(new SizePt(612, 792), new Spacing(), [rule]));
+
+        var snapshot = LayoutSnapshotMapper.From(layout);
+
+        snapshot.Pages[0].Fragments[0].SequenceId.ShouldBe(1);
+        snapshot.Pages[0].Fragments[0].Children.ShouldHaveSingleItem().SequenceId.ShouldBe(2);
+        snapshot.Pages[0].Fragments[1].SequenceId.ShouldBe(3);
+        snapshot.Pages[1].Fragments.ShouldHaveSingleItem().SequenceId.ShouldBe(4);
+    }
 }

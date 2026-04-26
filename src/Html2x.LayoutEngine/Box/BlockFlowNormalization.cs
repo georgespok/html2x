@@ -112,7 +112,7 @@ internal static class BlockFlowNormalization
 
         foreach (var inline in inlines)
         {
-            var cloned = (InlineBox)CloneNode(inline, anon);
+            var cloned = (InlineBox)inline.CloneForParent(anon);
             anon.Children.Add(cloned);
         }
 
@@ -138,169 +138,10 @@ internal static class BlockFlowNormalization
 
         foreach (var child in sourceContentBox.Children)
         {
-            boundary.Children.Add(CloneNode(child, boundary));
+            boundary.Children.Add(child.CloneForParent(boundary));
         }
 
         return boundary;
-    }
-
-    private static DisplayNode CloneNode(DisplayNode source, DisplayNode parent)
-    {
-        DisplayNode clone = source switch
-        {
-            InlineBlockBoundaryBox boundary => new InlineBlockBoundaryBox(boundary.SourceInline, boundary.SourceContentBox)
-            {
-                Element = boundary.Element,
-                Style = boundary.Style,
-                Parent = parent,
-                IsAnonymous = boundary.IsAnonymous,
-                TextAlign = boundary.TextAlign,
-                MarkerOffset = boundary.MarkerOffset,
-                UsedGeometry = boundary.UsedGeometry,
-                IsInlineBlockContext = boundary.IsInlineBlockContext
-            },
-            InlineBox inline => new InlineBox(inline.Role)
-            {
-                TextContent = inline.TextContent,
-                Element = inline.Element,
-                Style = inline.Style,
-                Parent = parent
-            },
-            TableBox table => new TableBox(table.Role)
-            {
-                Element = table.Element,
-                Style = table.Style,
-                Parent = parent,
-                X = table.X,
-                Y = table.Y,
-                Width = table.Width,
-                Height = table.Height,
-                Margin = table.Margin,
-                Padding = table.Padding,
-                TextAlign = table.TextAlign,
-                MarkerOffset = table.MarkerOffset,
-                UsedGeometry = table.UsedGeometry,
-                IsAnonymous = table.IsAnonymous,
-                IsInlineBlockContext = table.IsInlineBlockContext
-            },
-            TableSectionBox section => new TableSectionBox(section.Role)
-            {
-                Element = section.Element,
-                Style = section.Style,
-                Parent = parent
-            },
-            TableRowBox row => new TableRowBox(row.Role)
-            {
-                Element = row.Element,
-                Style = row.Style,
-                Parent = parent,
-                X = row.X,
-                Y = row.Y,
-                Width = row.Width,
-                Height = row.Height,
-                Margin = row.Margin,
-                Padding = row.Padding,
-                TextAlign = row.TextAlign,
-                MarkerOffset = row.MarkerOffset,
-                UsedGeometry = row.UsedGeometry,
-                IsAnonymous = row.IsAnonymous,
-                IsInlineBlockContext = row.IsInlineBlockContext
-            },
-            TableCellBox cell => new TableCellBox(cell.Role)
-            {
-                Element = cell.Element,
-                Style = cell.Style,
-                Parent = parent,
-                X = cell.X,
-                Y = cell.Y,
-                Width = cell.Width,
-                Height = cell.Height,
-                Margin = cell.Margin,
-                Padding = cell.Padding,
-                TextAlign = cell.TextAlign,
-                MarkerOffset = cell.MarkerOffset,
-                UsedGeometry = cell.UsedGeometry,
-                IsAnonymous = cell.IsAnonymous,
-                IsInlineBlockContext = cell.IsInlineBlockContext
-            },
-            ImageBox image => new ImageBox(image.Role)
-            {
-                Element = image.Element,
-                Style = image.Style,
-                Parent = parent,
-                X = image.X,
-                Y = image.Y,
-                Width = image.Width,
-                Height = image.Height,
-                Margin = image.Margin,
-                Padding = image.Padding,
-                TextAlign = image.TextAlign,
-                MarkerOffset = image.MarkerOffset,
-                UsedGeometry = image.UsedGeometry,
-                IsAnonymous = image.IsAnonymous,
-                IsInlineBlockContext = image.IsInlineBlockContext,
-                Src = image.Src,
-                AuthoredSizePx = image.AuthoredSizePx,
-                IntrinsicSizePx = image.IntrinsicSizePx,
-                IsMissing = image.IsMissing,
-                IsOversize = image.IsOversize
-            },
-            RuleBox rule => new RuleBox(rule.Role)
-            {
-                Element = rule.Element,
-                Style = rule.Style,
-                Parent = parent,
-                X = rule.X,
-                Y = rule.Y,
-                Width = rule.Width,
-                Height = rule.Height,
-                Margin = rule.Margin,
-                Padding = rule.Padding,
-                TextAlign = rule.TextAlign,
-                MarkerOffset = rule.MarkerOffset,
-                UsedGeometry = rule.UsedGeometry,
-                IsAnonymous = rule.IsAnonymous,
-                IsInlineBlockContext = rule.IsInlineBlockContext
-            },
-            BlockBox block => new BlockBox(block.Role)
-            {
-                Element = block.Element,
-                Style = block.Style,
-                Parent = parent,
-                X = block.X,
-                Y = block.Y,
-                Width = block.Width,
-                Height = block.Height,
-                Margin = block.Margin,
-                Padding = block.Padding,
-                IsAnonymous = block.IsAnonymous,
-                TextAlign = block.TextAlign,
-                MarkerOffset = block.MarkerOffset,
-                UsedGeometry = block.UsedGeometry,
-                IsInlineBlockContext = block.IsInlineBlockContext
-            },
-            FloatBox floatBox => new FloatBox(floatBox.Role)
-            {
-                Element = floatBox.Element,
-                Style = floatBox.Style,
-                Parent = parent,
-                FloatDirection = floatBox.FloatDirection
-            },
-            _ => new BlockBox(source.Role)
-            {
-                Element = source.Element,
-                Style = source.Style,
-                Parent = parent
-            }
-        };
-
-        foreach (var child in source.Children)
-        {
-            var childClone = CloneNode(child, clone);
-            clone.Children.Add(childClone);
-        }
-
-        return clone;
     }
 
     private static ComputedStyle CreateAnonymousStyle(ComputedStyle parentStyle)

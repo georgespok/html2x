@@ -23,7 +23,7 @@ namespace Html2x.Test.Scenarios
         };
 
         [Fact]
-        public async Task BoldItalicUnderlineText_ShouldRenderProperly()
+        public async Task BoldItalicUnderlineText_Render()
         {
             const string html = """
                 <!DOCTYPE html>
@@ -46,7 +46,42 @@ namespace Html2x.Test.Scenarios
         }
 
         [Fact]
-        public async Task InlineBlock_MixedAndNestedContent_ShouldPreserveScenarioTextOrder()
+        public async Task BaselineRenderingSmoke_RichContent_ProducesPdfAndSnapshot()
+        {
+            const string html = """
+                <!DOCTYPE html>
+                <html>
+                  <body style='margin:0'>
+                    <div style='background-color:#eef2ff; border:1px solid #111827; padding:4px;'>
+                      baseline text
+                    </div>
+                    <img src='missing-baseline-image.png' width='16' height='16' style='display:block; border:1px solid #222;' />
+                    <table style='width:120px; border:1px solid #333;'>
+                      <tr>
+                        <td style='border:1px solid #444; background-color:#fef3c7;'>cell</td>
+                      </tr>
+                    </table>
+                  </body>
+                </html>
+                """;
+
+            var converter = new HtmlConverter();
+            var result = await converter.ToPdfAsync(html, DefaultOptions);
+            var page = GetLayoutPageSnapshot(result);
+            var fragments = Flatten(page.Fragments).ToList();
+            var text = EnumerateText(page.Fragments).ToList();
+
+            result.PdfBytes.ShouldNotBeEmpty();
+            text.ShouldContain("baseline text");
+            text.ShouldContain("cell");
+            fragments.Any(static fragment => fragment.Kind == "image").ShouldBeTrue();
+            fragments.Any(static fragment => fragment.Kind == "table").ShouldBeTrue();
+            fragments.Any(static fragment => fragment.BackgroundColor != null).ShouldBeTrue();
+            fragments.Any(static fragment => fragment.Borders != null && fragment.Borders.HasAny).ShouldBeTrue();
+        }
+
+        [Fact]
+        public async Task InlineBlock_MixedAndNestedContent_PreserveScenarioTextOrder()
         {
             const string html = """
                 <!DOCTYPE html>
@@ -90,7 +125,7 @@ namespace Html2x.Test.Scenarios
         }
 
         [Fact]
-        public async Task SharedFormattingScenario_TopLevelAndInlineBlock_ShouldProduceParityMetrics()
+        public async Task SharedFormattingScenario_TopLevelAndInlineBlock_ProduceParityMetrics()
         {
             const string html = """
                 <!DOCTYPE html>
@@ -129,7 +164,7 @@ namespace Html2x.Test.Scenarios
         }
 
         [Fact]
-        public async Task SharedFormattingInlineBlockCases_ShouldPreserveTextOrderInLayoutSnapshot()
+        public async Task SharedFormattingInlineBlockCases_PreserveTextOrderInLayoutSnapshot()
         {
             const string html = """
                 <!DOCTYPE html>
@@ -222,6 +257,19 @@ namespace Html2x.Test.Scenarios
                 foreach (var childText in EnumerateText(fragment.Children))
                 {
                     yield return childText;
+                }
+            }
+        }
+
+        private static IEnumerable<FragmentSnapshot> Flatten(IReadOnlyList<FragmentSnapshot> fragments)
+        {
+            foreach (var fragment in fragments)
+            {
+                yield return fragment;
+
+                foreach (var child in Flatten(fragment.Children))
+                {
+                    yield return child;
                 }
             }
         }

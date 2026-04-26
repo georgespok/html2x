@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
 
@@ -29,16 +29,13 @@ public static class StyleSnapshotAssertions
 {
     public static void ShouldMatch(this StyleSnapshot actual, StyleSnapshot expected)
     {
-        // Always verify tag
         actual.Tag.ShouldBe(expected.Tag, $"Tag mismatch at <{expected.Tag}>");
 
-        // Verify styles only if defined
         if (expected.Style is not null)
         {
             AssertComputedStyle(actual.Style, expected.Style);
         }
 
-        // Verify children if defined
         if (!(expected.Children?.Count > 0))
         {
             return;
@@ -60,48 +57,82 @@ public static class StyleSnapshotAssertions
             throw new Xunit.Sdk.XunitException("Actual style is null");
         }
 
-        var type = typeof(ComputedStyle);
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        actual.FontFamily.ShouldBe(expected.FontFamily, "FontFamily mismatch");
+        actual.FontSizePt.ShouldBe(expected.FontSizePt, "FontSizePt mismatch");
+        actual.TextAlign.ShouldBe(expected.TextAlign, "TextAlign mismatch");
+        actual.FloatDirection.ShouldBe(expected.FloatDirection, "FloatDirection mismatch");
+        actual.Position.ShouldBe(expected.Position, "Position mismatch");
+        actual.Color.ShouldBe(expected.Color, "Color mismatch");
+        actual.Borders.ShouldBeEquivalentTo(expected.Borders, "Borders mismatch");
+
+        if (expected.Bold)
         {
-            var expectedValue = prop.GetValue(expected);
-            var actualValue = prop.GetValue(actual);
-
-            // Skip if expected value is null or default (float==0, bool==false, string==null/empty)
-            if (IsDefaultOrNull(expectedValue))
-            {
-                continue;
-            }
-
-            try
-            {
-                actualValue.ShouldBeEquivalentTo(expectedValue,
-                    $"Mismatch in style property '{prop.Name}'");
-            }
-            catch (ShouldAssertException)
-            {
-                // Provide richer error context
-                throw new Xunit.Sdk.XunitException(
-                    $"Style mismatch at property '{prop.Name}': expected {expectedValue}, actual {actualValue}");
-            }
-        }
-    }
-
-    private static bool IsDefaultOrNull(object? value)
-    {
-        if (value is null)
-            return true;
-
-        var type = value.GetType();
-
-        if (type == typeof(string))
-            return string.IsNullOrEmpty((string)value);
-
-        if (type.IsValueType)
-        {
-            var defaultValue = Activator.CreateInstance(type);
-            return value.Equals(defaultValue);
+            actual.Bold.ShouldBeTrue("Bold mismatch");
         }
 
-        return false;
+        if (expected.Italic)
+        {
+            actual.Italic.ShouldBeTrue("Italic mismatch");
+        }
+
+        if (expected.Decorations != TextDecorations.None)
+        {
+            actual.Decorations.ShouldBe(expected.Decorations, "Decorations mismatch");
+        }
+
+        if (expected.LineHeightMultiplier != 0f)
+        {
+            actual.LineHeightMultiplier.ShouldBe(expected.LineHeightMultiplier, "LineHeightMultiplier mismatch");
+        }
+
+        if (expected.BackgroundColor is not null)
+        {
+            actual.BackgroundColor.ShouldBe(expected.BackgroundColor, "BackgroundColor mismatch");
+        }
+
+        if (!string.IsNullOrEmpty(expected.Display))
+        {
+            actual.Display.ShouldBe(expected.Display, "Display mismatch");
+        }
+
+        if (expected.Margin != default)
+        {
+            actual.Margin.ShouldBe(expected.Margin, "Margin mismatch");
+        }
+
+        if (expected.Padding != default)
+        {
+            actual.Padding.ShouldBe(expected.Padding, "Padding mismatch");
+        }
+
+        if (expected.WidthPt.HasValue)
+        {
+            actual.WidthPt.ShouldBe(expected.WidthPt, "WidthPt mismatch");
+        }
+
+        if (expected.MinWidthPt.HasValue)
+        {
+            actual.MinWidthPt.ShouldBe(expected.MinWidthPt, "MinWidthPt mismatch");
+        }
+
+        if (expected.MaxWidthPt.HasValue)
+        {
+            actual.MaxWidthPt.ShouldBe(expected.MaxWidthPt, "MaxWidthPt mismatch");
+        }
+
+        if (expected.HeightPt.HasValue)
+        {
+            actual.HeightPt.ShouldBe(expected.HeightPt, "HeightPt mismatch");
+        }
+
+        if (expected.MinHeightPt.HasValue)
+        {
+            actual.MinHeightPt.ShouldBe(expected.MinHeightPt, "MinHeightPt mismatch");
+        }
+
+        if (expected.MaxHeightPt.HasValue)
+        {
+            actual.MaxHeightPt.ShouldBe(expected.MaxHeightPt, "MaxHeightPt mismatch");
+        }
     }
 }

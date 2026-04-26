@@ -26,6 +26,7 @@ internal static class TestConsoleDiagnosticsSerializer
         var envelope = new TestConsoleDiagnosticsEnvelope(
             TestConsoleRunDiagnostics.From(options),
             TestConsoleEnvironmentDiagnostics.Capture(),
+            PolicyOwnershipDiagnostics.CreateDefault(),
             DiagnosticsSessionSerializer.ToSerializableObject(session));
 
         return JsonSerializer.Serialize(envelope, JsonOptions);
@@ -35,6 +36,7 @@ internal static class TestConsoleDiagnosticsSerializer
 internal sealed record TestConsoleDiagnosticsEnvelope(
     TestConsoleRunDiagnostics TestConsole,
     TestConsoleEnvironmentDiagnostics Environment,
+    PolicyOwnershipDiagnostics PolicyOwnership,
     object DiagnosticsSession);
 
 internal sealed record TestConsoleRunDiagnostics(
@@ -42,6 +44,7 @@ internal sealed record TestConsoleRunDiagnostics(
     string OutputPath,
     bool DiagnosticsEnabled,
     bool DiagnosticsActive,
+    string? DiagnosticsJsonPath,
     bool EnableDebugging,
     bool Interactive,
     string? SelectedSamplePath,
@@ -54,10 +57,26 @@ internal sealed record TestConsoleRunDiagnostics(
             options.OutputPath,
             options.DiagnosticsEnabled,
             options.DiagnosticsEnabled || !string.IsNullOrWhiteSpace(options.DiagnosticsJson),
+            options.DiagnosticsJson,
             options.EnableDebugging,
             options.Interactive,
             options.SelectedSamplePath,
             options.RawArguments.ToArray());
+    }
+}
+
+internal sealed record PolicyOwnershipDiagnostics(
+    IReadOnlyList<string> RequiredEvidence,
+    IReadOnlyList<string> ApprovedExceptionPaths)
+{
+    public static PolicyOwnershipDiagnostics CreateDefault()
+    {
+        return new PolicyOwnershipDiagnostics(
+            ["owner", "consumer", "approved-exception"],
+            [
+                "block-formatting:inline-block-descendant-implicit-width",
+                "font-resolution:direct-renderer-local-fallback-without-shared-font-source"
+            ]);
     }
 }
 

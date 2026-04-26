@@ -42,5 +42,9 @@ public sealed class BoxGeometrySnapshot
 
     public bool? IsHeader { get; init; }
 
+    public string? MetadataOwner { get; init; }
+
+    public string? MetadataConsumer { get; init; }
+
     public IReadOnlyList<BoxGeometrySnapshot> Children { get; init; } = [];
 }

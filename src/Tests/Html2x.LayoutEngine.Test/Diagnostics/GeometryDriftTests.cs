@@ -1,10 +1,329 @@
+using System.Drawing;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
+/// <summary>
+/// Verifies geometry snapshots stay aligned with the ownership contract.
+/// </summary>
 public sealed class GeometryDriftTests
 {
+    [Fact]
+    public async Task Build_GeometrySnapshotPreservesFragmentMetadataOwnerAndConsumers()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <ul style='margin: 0; padding: 0;'>
+                  <li style='margin: 0;'>One</li>
+                </ul>
+                <table style='margin: 0; width: 160px;'>
+                  <tr>
+                    <th>A</th>
+                    <td>B</td>
+                  </tr>
+                </table>
+              </body>
+            </html>
+            """);
+
+        var fragmentSnapshots = result.Snapshot.Fragments.Pages
+            .SelectMany(static page => Flatten(page.Fragments))
+            .Where(static fragment => fragment.Kind is "block" or "table" or "table-row" or "table-cell")
+            .ToList();
+
+        fragmentSnapshots.ShouldNotBeEmpty();
+        fragmentSnapshots.ShouldAllBe(static fragment =>
+            fragment.MetadataOwner == "FragmentAdapterRegistry" &&
+            fragment.MetadataConsumer == "LayoutSnapshotMapper");
+
+        var table = fragmentSnapshots.First(static fragment => fragment.Kind == "table");
+        var row = fragmentSnapshots.First(static fragment => fragment.Kind == "table-row");
+        var header = fragmentSnapshots.First(static fragment => fragment.Kind == "table-cell" && fragment.IsHeader == true);
+
+        table.DerivedColumnCount.ShouldBe(2);
+        row.RowIndex.ShouldBe(0);
+        header.ColumnIndex.ShouldBe(0);
+
+        var boxSnapshots = result.Snapshot.Boxes
+            .SelectMany(FlattenBoxes)
+            .Where(static box => box.DerivedColumnCount.HasValue || box.RowIndex.HasValue || box.ColumnIndex.HasValue)
+            .ToList();
+
+        boxSnapshots.ShouldNotBeEmpty();
+        boxSnapshots.ShouldAllBe(static box =>
+            box.MetadataOwner == "BlockLayoutEngine" &&
+            box.MetadataConsumer == "GeometrySnapshotMapper");
+
+        var placement = result.Snapshot.Pagination
+            .SelectMany(static page => page.Placements)
+            .First(static item => item.Kind == "Table");
+
+        placement.MetadataOwner.ShouldBe("FragmentAdapterRegistry");
+        placement.MetadataConsumer.ShouldBe("FragmentCoordinateTranslator");
+        placement.DisplayRole.ShouldBe(FragmentDisplayRole.Table);
+        placement.FormattingContext.ShouldBe(FormattingContextKind.Block);
+        placement.DerivedColumnCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Paginate_MetadataRichSubtree_PreservesGeometryAndMetadata()
+    {
+        var style = new VisualStyle(
+            BackgroundColor: new ColorRgba(240, 240, 240, 255),
+            Borders: BorderEdges.Uniform(new BorderSide(1f, ColorRgba.Black, BorderLineStyle.Solid)),
+            Padding: new Spacing(1f, 2f, 3f, 4f));
+        var font = new FontKey("Arial", FontWeight.W400, Abstractions.Layout.Styles.FontStyle.Normal);
+        var line = new LineBoxFragment
+        {
+            FragmentId = 500,
+            PageNumber = 1,
+            Rect = new RectangleF(12f, 120f, 25f, 14f),
+            ZOrder = 5,
+            Style = style,
+            BaselineY = 130f,
+            LineHeight = 14f,
+            TextAlign = "center",
+            Runs =
+            [
+                new TextRun(
+                    "A",
+                    font,
+                    12f,
+                    new PointF(12f, 130f),
+                    10f,
+                    9f,
+                    3f,
+                    TextDecorations.Underline,
+                    ColorRgba.Black)
+            ]
+        };
+        var image = new ImageFragment
+        {
+            FragmentId = 501,
+            PageNumber = 1,
+            Rect = new RectangleF(40f, 121f, 30f, 20f),
+            ContentRect = new RectangleF(42f, 123f, 26f, 16f),
+            ZOrder = 6,
+            Style = style,
+            Src = "image.png",
+            AuthoredSizePx = new SizePx(30d, 20d),
+            IntrinsicSizePx = new SizePx(60d, 40d),
+            IsMissing = true,
+            IsOversize = false
+        };
+        var rule = new RuleFragment
+        {
+            FragmentId = 502,
+            PageNumber = 1,
+            Rect = new RectangleF(10f, 145f, 80f, 2f),
+            ZOrder = 7,
+            Style = style
+        };
+        var cell = new TableCellFragment([line, image, rule])
+        {
+            FragmentId = 400,
+            PageNumber = 1,
+            Rect = new RectangleF(10f, 118f, 90f, 32f),
+            ZOrder = 4,
+            Style = style,
+            DisplayRole = FragmentDisplayRole.TableCell,
+            FormattingContext = FormattingContextKind.Block,
+            MarkerOffset = 3f,
+            ColumnIndex = 2,
+            IsHeader = true
+        };
+        var row = new TableRowFragment([cell])
+        {
+            FragmentId = 300,
+            PageNumber = 1,
+            Rect = new RectangleF(8f, 116f, 100f, 36f),
+            ZOrder = 3,
+            Style = style,
+            DisplayRole = FragmentDisplayRole.TableRow,
+            FormattingContext = FormattingContextKind.Block,
+            MarkerOffset = 2f,
+            RowIndex = 4
+        };
+        var table = new TableFragment([row])
+        {
+            FragmentId = 200,
+            PageNumber = 1,
+            Rect = new RectangleF(6f, 114f, 110f, 40f),
+            ZOrder = 2,
+            Style = style,
+            DisplayRole = FragmentDisplayRole.Table,
+            FormattingContext = FormattingContextKind.Block,
+            MarkerOffset = 1f,
+            DerivedColumnCount = 3
+        };
+        var sourceBlock = new BlockFragment([table])
+        {
+            FragmentId = 100,
+            PageNumber = 1,
+            Rect = new RectangleF(0f, 95f, 120f, 60f),
+            ZOrder = 1,
+            Style = style,
+            DisplayRole = FragmentDisplayRole.Block,
+            FormattingContext = FormattingContextKind.Block,
+            MarkerOffset = 4f
+        };
+
+        var pagination = new BlockPaginator().Paginate(
+            [
+                new BlockFragment
+                {
+                    FragmentId = 1,
+                    Rect = new RectangleF(0f, 10f, 100f, 75f)
+                },
+                sourceBlock
+            ],
+            new SizePt(200f, 100f),
+            new Spacing(10f, 10f, 10f, 10f));
+
+        var movedBlock = pagination.Pages[1].Placements.ShouldHaveSingleItem().Fragment;
+        var deltaX = movedBlock.Rect.X - sourceBlock.Rect.X;
+        var deltaY = movedBlock.Rect.Y - sourceBlock.Rect.Y;
+        var movedTable = movedBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
+        var movedRow = movedTable.Rows.ShouldHaveSingleItem();
+        var movedCell = movedRow.Cells.ShouldHaveSingleItem();
+        var movedLine = movedCell.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
+        var movedImage = movedCell.Children.OfType<ImageFragment>().ShouldHaveSingleItem();
+        var movedRule = movedCell.Children.OfType<RuleFragment>().ShouldHaveSingleItem();
+
+        AssertCommonTranslation(sourceBlock, movedBlock, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(table, movedTable, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(row, movedRow, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(cell, movedCell, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(line, movedLine, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(image, movedImage, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(rule, movedRule, deltaX, deltaY, expectedPageNumber: 2);
+
+        movedBlock.DisplayRole.ShouldBe(sourceBlock.DisplayRole);
+        movedBlock.FormattingContext.ShouldBe(sourceBlock.FormattingContext);
+        movedBlock.MarkerOffset.ShouldBe(sourceBlock.MarkerOffset);
+        movedTable.DerivedColumnCount.ShouldBe(table.DerivedColumnCount);
+        movedRow.RowIndex.ShouldBe(row.RowIndex);
+        movedCell.ColumnIndex.ShouldBe(cell.ColumnIndex);
+        movedCell.IsHeader.ShouldBe(cell.IsHeader);
+        movedLine.BaselineY.ShouldBe(line.BaselineY + deltaY);
+        movedLine.LineHeight.ShouldBe(line.LineHeight);
+        movedLine.TextAlign.ShouldBe(line.TextAlign);
+        movedLine.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointF(line.Runs[0].Origin.X + deltaX, line.Runs[0].Origin.Y + deltaY));
+        movedImage.ContentRect.ShouldBe(new RectangleF(
+            image.ContentRect.X + deltaX,
+            image.ContentRect.Y + deltaY,
+            image.ContentRect.Width,
+            image.ContentRect.Height));
+        movedImage.Src.ShouldBe(image.Src);
+        movedImage.AuthoredSizePx.ShouldBe(image.AuthoredSizePx);
+        movedImage.IntrinsicSizePx.ShouldBe(image.IntrinsicSizePx);
+        movedImage.IsMissing.ShouldBe(image.IsMissing);
+        movedImage.IsOversize.ShouldBe(image.IsOversize);
+    }
+
+    [Fact]
+    public async Task Build_InlineBlockGeometry_PreservesBoxAndLineGeometry()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div style='margin: 0;'>
+                  before
+                  <span style='display: inline-block; padding: 4pt; border: 2pt solid black;'>X</span>
+                  after
+                </div>
+              </body>
+            </html>
+            """);
+
+        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
+            .First(static box => box.IsInlineBlockContext);
+        var inlineBlockGeometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
+        var inlineBlockFragment = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .OfType<BlockFragment>()
+            .First(static fragment =>
+                fragment.FormattingContext == FormattingContextKind.InlineBlock &&
+                ContainsText(fragment, "X"));
+        var nestedLine = inlineBlockFragment.Children
+            .OfType<LineBoxFragment>()
+            .First(static line => line.Runs.Any(run => run.Text.Contains("X", StringComparison.Ordinal)));
+        var nestedRun = nestedLine.Runs.ShouldHaveSingleItem();
+
+        inlineBlockGeometry.ContentBoxRect.X.ShouldBe(inlineBlockGeometry.BorderBoxRect.X + 6f, 0.01f);
+        inlineBlockGeometry.ContentBoxRect.Y.ShouldBe(inlineBlockGeometry.BorderBoxRect.Y + 6f, 0.01f);
+        inlineBlockGeometry.Baseline.ShouldNotBeNull();
+        inlineBlockFragment.Rect.ShouldBe(inlineBlockGeometry.BorderBoxRect);
+        nestedLine.Rect.X.ShouldBe(inlineBlockGeometry.ContentBoxRect.X, 0.01f);
+        nestedLine.Rect.Y.ShouldBe(inlineBlockGeometry.ContentBoxRect.Y, 0.01f);
+        nestedRun.Origin.X.ShouldBe(nestedLine.Rect.X, 0.01f);
+        nestedRun.Origin.Y.ShouldBe(nestedLine.BaselineY, 0.01f);
+    }
+
+    [Fact]
+    public async Task Build_InlineBlockExplicitSize_AppliesStyleDimensions()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div style='margin: 0;'>
+                  <span style='display: inline-block; width: 40px; height: 20px; padding: 4px; border: 2px solid black;'>X</span>
+                </div>
+              </body>
+            </html>
+            """);
+
+        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
+            .First(static box => box.IsInlineBlockContext);
+        var geometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
+        var inlineBlockFragment = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .OfType<BlockFragment>()
+            .First(static fragment => fragment.FormattingContext == FormattingContextKind.InlineBlock);
+
+        geometry.BorderBoxRect.Width.ShouldBe(30f, 0.01f);
+        geometry.BorderBoxRect.Height.ShouldBe(24f, 0.01f);
+        geometry.ContentBoxRect.Width.ShouldBe(21f, 0.01f);
+        geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
+        inlineBlockFragment.Rect.ShouldBe(geometry.BorderBoxRect);
+    }
+
+    [Fact]
+    public async Task Build_InlineBlockWithMinAndMaxDimensions_AppliesConstraints()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div style='margin: 0;'>
+                  <span style='display: inline-block; width: 80px; max-width: 40px; height: 10px; min-height: 20px; border: 1px solid black;'>X</span>
+                </div>
+              </body>
+            </html>
+            """);
+
+        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
+            .First(static box => box.IsInlineBlockContext);
+        var geometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
+
+        geometry.BorderBoxRect.Width.ShouldBe(30f, 0.01f);
+        geometry.ContentBoxRect.Width.ShouldBe(28.5f, 0.01f);
+        geometry.BorderBoxRect.Height.ShouldBe(16.5f, 0.01f);
+        geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
+    }
+
     [Theory]
     [MemberData(nameof(GetGoldenCases))]
     public async Task Build_GeometrySnapshotMatchesGoldenBaseline(
@@ -43,9 +362,9 @@ public sealed class GeometryDriftTests
             fragments
             page 1 size=612,792 margin=0,0,0,0
               1:block rect=0,0,595,28.8
-                2:line rect=0,0,10,14.4 text="Alpha"
+                2:line rect=0,0,595,14.4 text="Alpha" occupied=0,0,10,14.4
                 3:block rect=0,14.4,595,14.4
-                  4:line rect=0,14.4,10,14.4 text="Beta"
+                  4:line rect=0,14.4,595,14.4 text="Beta" occupied=0,14.4,10,14.4
             pagination
             page 1 content=0..792
               placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
@@ -74,9 +393,9 @@ public sealed class GeometryDriftTests
             page 1 size=612,792 margin=0,0,0,0
               1:block rect=0,0,595,28.8
                 2:block rect=0,0,595,14.4 marker=12
-                  3:line rect=0,0,20,14.4 text="• One"
+                  3:line rect=12,0,583,14.4 text="• One" occupied=12,0,20,14.4
                 4:block rect=0,14.4,595,14.4 marker=12
-                  5:line rect=0,14.4,20,14.4 text="• Two"
+                  5:line rect=12,14.4,583,14.4 text="• Two" occupied=12,14.4,20,14.4
             pagination
             page 1 content=0..792
               placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
@@ -116,14 +435,14 @@ public sealed class GeometryDriftTests
               1:table rect=0,0,120,40 columns=2
                 2:table-row rect=0,0,120,20 row=0
                   3:table-cell rect=0,0,60,20 column=0 header=true
-                    4:line rect=0,0,10,14.4 text="A"
+                    4:line rect=0,0,60,14.4 text="A" occupied=0,0,10,14.4
                   5:table-cell rect=60,0,60,20 column=1 header=true
-                    6:line rect=60,0,10,14.4 text="B"
+                    6:line rect=60,0,60,14.4 text="B" occupied=60,0,10,14.4
                 7:table-row rect=0,20,120,20 row=1
                   8:table-cell rect=0,20,60,20 column=0 header=false
-                    9:line rect=0,20,10,14.4 text="C"
+                    9:line rect=0,20,60,14.4 text="C" occupied=0,20,10,14.4
                   10:table-cell rect=60,20,60,20 column=1 header=false
-                    11:line rect=60,20,10,14.4 text="D"
+                    11:line rect=60,20,60,14.4 text="D" occupied=60,20,10,14.4
             pagination
             page 1 content=0..792
               placement order=0 fragment=1 kind=Table oversized=false rect=0,0,120,40
@@ -144,14 +463,14 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/div rect=0,0,595,29 content=0,0,595,29 marker=0 anonymous=false inlineBlock=false
+            1:block path=body/div rect=0,0,595,24 content=0,0,595,24 marker=0 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,29
-                2:image rect=0,0,49,29
+              1:block rect=0,0,595,24
+                2:image rect=0,0,39,24
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,29
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,24
             """
         ];
 
@@ -177,10 +496,10 @@ public sealed class GeometryDriftTests
             fragments
             page 1 size=612,792 margin=0,0,0,0
               1:block rect=0,0,595,28.8
-                2:line rect=0,0,10,15.9 text="before"
-                3:block rect=10,0,11.5,15.9
-                  4:line rect=10.75,0.75,10,14.4 text="X"
-                5:line rect=0,0,10,15.9 text=" after"
+                2:line rect=0,0,595,16.5 text="before" occupied=0,0,10,16.5
+                3:block rect=10,0,30,16.5
+                  4:line rect=10.75,0.75,28.5,14.4 text="X" occupied=10.75,0.75,10,14.4
+                5:line rect=0,0,595,16.5 text=" after" occupied=40,0,10,16.5
             pagination
             page 1 content=0..792
               placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
@@ -205,10 +524,10 @@ public sealed class GeometryDriftTests
             fragments
             page 1 size=612,792 margin=0,0,0,0
               1:block rect=0,0,595,645
-                2:line rect=0,0,10,14.4 text="Block 1"
+                2:line rect=0,0,595,14.4 text="Block 1" occupied=0,0,10,14.4
             page 2 size=612,792 margin=0,0,0,0
               3:block rect=0,0,595,225
-                4:line rect=0,0,10,14.4 text="Block 2"
+                4:line rect=0,0,595,14.4 text="Block 2" occupied=0,0,10,14.4
             pagination
             page 1 content=0..792
               placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,645
@@ -216,5 +535,103 @@ public sealed class GeometryDriftTests
               placement order=1 fragment=2 kind=Block oversized=false rect=0,0,595,225
             """
         ];
+    }
+
+    private static IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> Flatten(
+        IReadOnlyList<Abstractions.Diagnostics.FragmentSnapshot> fragments)
+    {
+        foreach (var fragment in fragments)
+        {
+            yield return fragment;
+
+            foreach (var child in Flatten(fragment.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private static IEnumerable<Abstractions.Diagnostics.BoxGeometrySnapshot> FlattenBoxes(
+        Abstractions.Diagnostics.BoxGeometrySnapshot box)
+    {
+        yield return box;
+
+        foreach (var child in box.Children.SelectMany(FlattenBoxes))
+        {
+            yield return child;
+        }
+    }
+
+    private static IEnumerable<BlockBox> FlattenBoxes(IEnumerable<BlockBox> boxes)
+    {
+        foreach (var box in boxes)
+        {
+            yield return box;
+
+            foreach (var child in box.Children)
+            {
+                foreach (var nested in FlattenNodes(child).OfType<BlockBox>())
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<DisplayNode> FlattenNodes(DisplayNode node)
+    {
+        yield return node;
+
+        foreach (var child in node.Children)
+        {
+            foreach (var nested in FlattenNodes(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    private static IEnumerable<Abstractions.Layout.Fragments.Fragment> EnumerateFragments(Abstractions.Layout.Fragments.Fragment fragment)
+    {
+        yield return fragment;
+
+        if (fragment is not BlockFragment block)
+        {
+            yield break;
+        }
+
+        foreach (var child in block.Children)
+        {
+            foreach (var nested in EnumerateFragments(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    private static bool ContainsText(BlockFragment fragment, string text)
+    {
+        return EnumerateFragments(fragment)
+            .OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Any(run => run.Text.Contains(text, StringComparison.Ordinal));
+    }
+
+    private static void AssertCommonTranslation(
+        Abstractions.Layout.Fragments.Fragment source,
+        Abstractions.Layout.Fragments.Fragment moved,
+        float deltaX,
+        float deltaY,
+        int expectedPageNumber)
+    {
+        moved.FragmentId.ShouldBe(source.FragmentId);
+        moved.PageNumber.ShouldBe(expectedPageNumber);
+        moved.ZOrder.ShouldBe(source.ZOrder);
+        moved.Style.ShouldBe(source.Style);
+        moved.Rect.ShouldBe(new RectangleF(
+            source.Rect.X + deltaX,
+            source.Rect.Y + deltaY,
+            source.Rect.Width,
+            source.Rect.Height));
     }
 }

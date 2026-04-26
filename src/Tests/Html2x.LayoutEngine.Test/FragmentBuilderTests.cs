@@ -16,13 +16,14 @@ using Html2x.LayoutEngine.Test.Builders;
 using Moq;
 using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test;
 
 public class FragmentBuilderTests
 {
     [Fact]
-    public void Build_WithSingleBlock_CreatesBlockFragment()
+    public void Build_SingleBlock_CreatesBlockFragment()
     {
         // Arrange
         var boxTree = BuildBoxTree()
@@ -42,12 +43,12 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithUsedGeometry_UsesGeometryRectForBlockFragments()
+    public void Build_UsedGeometry_UsesGeometryRectForBlockFragments()
     {
         var block = new BlockBox(DisplayRole.Block)
         {
             Style = new ComputedStyle(),
-            UsedGeometry = UsedGeometry.FromBorderBox(
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
                 new RectangleF(10f, 20f, 100f, 50f),
                 new Spacing(3f, 4f, 5f, 6f),
                 new Spacing(1f, 1f, 1f, 1f),
@@ -65,7 +66,22 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithBlockBorder_CreatesBlockFragment()
+    public void Build_WithoutUsedGeometry_Throws()
+    {
+        var tree = new BoxTree();
+        tree.Blocks.Add(new BlockBox(DisplayRole.Block)
+        {
+            Style = new ComputedStyle()
+        });
+
+        var exception = Should.Throw<InvalidOperationException>(() =>
+            CreateFragmentBuilder().Build(tree, CreateContext()));
+
+        exception.Message.ShouldContain("requires UsedGeometry");
+    }
+
+    [Fact]
+    public void Build_BlockBorder_CreatesBlockFragment()
     {
         // Arrange
         var boxTree = BuildBoxTree()
@@ -89,7 +105,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithDivContainingInlineSpanAndBlockParagraph_ConvertsAllToFragments()
+    public void Build_DivContainingInlineSpanAndBlockParagraph_ConvertsAllToFragments()
     {
         // Arrange: Div with inline span (text) and block paragraph (text)
         var boxTree = BuildBoxTree()
@@ -122,7 +138,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithDeeplyNestedBlocks_ConvertsAllInlineTextToFragments()
+    public void Build_DeeplyNestedBlocks_ConvertsAllInlineTextToFragments()
     {
         // Arrange: Div → span + P → text + nested Div → nested span
         var boxTree = BuildBoxTree()
@@ -162,7 +178,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithUnorderedList_AddsBulletMarkers()
+    public void Build_UnorderedList_AddsBulletMarkers()
     {
         var boxTree = new BoxTree();
         var ulBlock = new BlockBox(DisplayRole.Block) { Element = CreateElement("ul") };
@@ -201,7 +217,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithInlineBlockBetweenInlineRuns_PreservesTextOrderAcrossFragments()
+    public void Build_InlineBlockBetweenInlineRuns_PreservesTextOrderAcrossFragments()
     {
         var root = new BlockBox(DisplayRole.Block)
         {
@@ -263,7 +279,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithTableStructure_EmitsSpecializedTableFragmentsAndPreservesCellText()
+    public void Build_TableStructure_EmitsTableFragmentsAndCellText()
     {
         var table = new TableBox(DisplayRole.Table)
         {
@@ -350,7 +366,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithHeaderRowFollowedByBodyRow_PreservesTableHierarchyOrderAndHeaderMetadata()
+    public void Build_HeaderAndBodyRows_PreserveHierarchyAndHeaderMetadata()
     {
         var table = new TableBox(DisplayRole.Table)
         {
@@ -409,7 +425,99 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void LayoutSnapshotPayload_RepeatedRuns_PreservesTraversalOrderAndSequenceIds()
+    public void Build_MetadataRichBlockTableRowAndCell_UsesFragmentStageOwner()
+    {
+        var listItem = new BlockBox(DisplayRole.ListItem)
+        {
+            MarkerOffset = 12f,
+            Style = new ComputedStyle(),
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 0f, 140f, 24f),
+                new Spacing(),
+                new Spacing(),
+                markerOffset: 12f)
+        };
+
+        var table = new TableBox(DisplayRole.Table)
+        {
+            DerivedColumnCount = 2,
+            MarkerOffset = 4f,
+            Style = new ComputedStyle(),
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 24f, 200f, 32f),
+                new Spacing(),
+                new Spacing(),
+                markerOffset: 4f)
+        };
+
+        var row = new TableRowBox(DisplayRole.TableRow)
+        {
+            Parent = table,
+            RowIndex = 3,
+            Style = new ComputedStyle(),
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 24f, 200f, 32f),
+                new Spacing(),
+                new Spacing())
+        };
+
+        var cell = new TableCellBox(DisplayRole.TableCell)
+        {
+            Parent = row,
+            ColumnIndex = 1,
+            IsHeader = true,
+            Style = new ComputedStyle(),
+            UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(0f, 24f, 100f, 32f),
+                new Spacing(),
+                new Spacing())
+        };
+
+        row.Children.Add(cell);
+        table.Children.Add(row);
+
+        var tree = new BoxTree();
+        tree.Blocks.Add(listItem);
+        tree.Blocks.Add(table);
+
+        var fragments = BuildFragments(tree);
+        var blockFragment = fragments.Blocks[0];
+        var tableFragment = fragments.Blocks[1].ShouldBeOfType<TableFragment>();
+        var rowFragment = tableFragment.Rows.ShouldHaveSingleItem();
+        var cellFragment = rowFragment.Cells.ShouldHaveSingleItem();
+
+        blockFragment.DisplayRole.ShouldBe(FragmentDisplayRole.ListItem);
+        blockFragment.FormattingContext.ShouldBe(FormattingContextKind.Block);
+        blockFragment.MarkerOffset.ShouldBe(12f);
+
+        tableFragment.DisplayRole.ShouldBe(FragmentDisplayRole.Table);
+        tableFragment.FormattingContext.ShouldBe(FormattingContextKind.Block);
+        tableFragment.MarkerOffset.ShouldBe(4f);
+        tableFragment.DerivedColumnCount.ShouldBe(2);
+
+        rowFragment.DisplayRole.ShouldBe(FragmentDisplayRole.TableRow);
+        rowFragment.FormattingContext.ShouldBe(FormattingContextKind.Block);
+        rowFragment.RowIndex.ShouldBe(3);
+
+        cellFragment.DisplayRole.ShouldBe(FragmentDisplayRole.TableCell);
+        cellFragment.FormattingContext.ShouldBe(FormattingContextKind.Block);
+        cellFragment.ColumnIndex.ShouldBe(1);
+        cellFragment.IsHeader.ShouldBeTrue();
+
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), fragments.Blocks));
+        var snapshot = LayoutSnapshotMapper.From(layout);
+        var snapshots = Flatten(snapshot.Pages[0].Fragments).ToList();
+
+        snapshots
+            .Where(static fragment => fragment.Kind is "block" or "table" or "table-row" or "table-cell")
+            .ShouldAllBe(fragment =>
+                fragment.MetadataOwner == "FragmentAdapterRegistry" &&
+                fragment.MetadataConsumer == "LayoutSnapshotMapper");
+    }
+
+    [Fact]
+    public void LayoutSnapshotPayload_RepeatedRuns_PreservesOrderAndIds()
     {
         var runs = new List<IReadOnlyList<string>>();
         var sequenceRuns = new List<IReadOnlyList<int>>();
@@ -442,7 +550,7 @@ public class FragmentBuilderTests
     }
 
     [Fact]
-    public void LayoutSnapshotMapper_WithTableFragments_PreservesTableSpecificMetadata()
+    public void LayoutSnapshotMapper_TableFragments_PreservesTableSpecificMetadata()
     {
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
@@ -516,8 +624,36 @@ public class FragmentBuilderTests
     private static FragmentTree BuildFragments(BoxTree tree)
     {
         var context = CreateContext();
+        EnsureUsedGeometry(tree);
         PrepareInlineLayouts(tree, context);
         return CreateFragmentBuilder().Build(tree, context);
+    }
+
+    private static void EnsureUsedGeometry(BoxTree tree)
+    {
+        foreach (var block in tree.Blocks)
+        {
+            EnsureUsedGeometry(block);
+        }
+    }
+
+    private static void EnsureUsedGeometry(BlockBox block)
+    {
+        if (block.UsedGeometry is null)
+        {
+            var padding = block.Style.Padding.Safe();
+            var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
+            block.UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(block.X, block.Y, block.Width, block.Height),
+                padding,
+                border,
+                markerOffset: block.MarkerOffset);
+        }
+
+        foreach (var child in block.Children.OfType<BlockBox>())
+        {
+            EnsureUsedGeometry(child);
+        }
     }
 
     private static FragmentBuildContext CreateContext()
@@ -529,7 +665,7 @@ public class FragmentBuilderTests
             .Returns((0f, 0f));
 
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         return new FragmentBuildContext(

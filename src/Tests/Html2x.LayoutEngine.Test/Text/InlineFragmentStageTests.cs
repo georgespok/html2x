@@ -1,3 +1,4 @@
+using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
@@ -11,6 +12,7 @@ using Html2x.LayoutEngine.Test.Builders;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test.Text;
 
@@ -76,13 +78,15 @@ public class InlineFragmentStageTests
         var fragment = state.Fragments.Blocks.ShouldHaveSingleItem();
         var line = fragment.Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>();
 
-        line.Rect.Width.ShouldBe(40f);
+        line.Rect.Width.ShouldBe(200f);
+        line.OccupiedRect.Width.ShouldBe(40f);
         line.LineHeight.ShouldBe(14.4f, 0.001f);
         line.BaselineY.ShouldBe(line.Rect.Top + 9f, 0.001f);
+        line.Runs.ShouldHaveSingleItem().ResolvedFont?.SourceId.ShouldBe("test");
     }
 
     [Fact]
-    public void InlineRuns_WithDifferentAscent_UseMaxAscentForBaseline()
+    public void InlineRuns_DifferentAscent_UseMaxAscentForBaseline()
     {
         var boxTree = new BlockBoxBuilder()
             .Block(0, 0, 500, 40, style: new ComputedStyle { FontSizePt = 12 })
@@ -210,6 +214,75 @@ public class InlineFragmentStageTests
     }
 
     [Fact]
+    public void InlineFlowSeparatedByBlockChild_EmitsSegmentsAroundBlockFragment()
+    {
+        var root = new BlockBox(DisplayRole.Block)
+        {
+            X = 0,
+            Y = 0,
+            Width = 400,
+            Height = 120,
+            Style = new ComputedStyle { FontSizePt = 12 }
+        };
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = root,
+            TextContent = "before",
+            Style = root.Style
+        });
+
+        var childBlock = new BlockBox(DisplayRole.Block)
+        {
+            Parent = root,
+            X = 0,
+            Y = 30,
+            Width = 400,
+            Height = 30,
+            Style = new ComputedStyle { FontSizePt = 12 }
+        };
+        childBlock.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = childBlock,
+            TextContent = "inside",
+            Style = childBlock.Style
+        });
+        root.Children.Add(childBlock);
+
+        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        {
+            Parent = root,
+            TextContent = "after",
+            Style = root.Style
+        });
+
+        var boxTree = new BoxTree();
+        boxTree.Blocks.Add(root);
+
+        var context = CreateContext(new FakeTextMeasurer(4f, 9f, 3f));
+        PrepareInlineLayouts(boxTree, context);
+        var state = new FragmentBuildState(boxTree, context);
+
+        state = new BlockFragmentStage().Execute(state);
+        state = new InlineFragmentStage().Execute(state);
+
+        var fragment = state.Fragments.Blocks.ShouldHaveSingleItem();
+        fragment.Children.Count.ShouldBe(3);
+
+        var before = fragment.Children[0].ShouldBeOfType<LineBoxFragment>();
+        var childFragment = fragment.Children[1].ShouldBeOfType<BlockFragment>();
+        var after = fragment.Children[2].ShouldBeOfType<LineBoxFragment>();
+
+        before.Runs.Select(static run => run.Text).ShouldBe(["before"]);
+        childFragment.Children
+            .OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Select(static run => run.Text)
+            .ShouldBe(["inside"]);
+        after.Runs.Select(static run => run.Text).ShouldBe(["after"]);
+    }
+
+    [Fact]
     public void ListItemFallback_ForOrderedList_UsesSiblingOrdinalMarker()
     {
         var root = new BlockBox(DisplayRole.Block)
@@ -264,7 +337,7 @@ public class InlineFragmentStageTests
     private static FragmentBuildContext CreateContext(ITextMeasurer textMeasurer)
     {
         var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>()))
+        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
         return new FragmentBuildContext(
@@ -281,7 +354,27 @@ public class InlineFragmentStageTests
 
         foreach (var block in boxTree.Blocks)
         {
+            EnsureUsedGeometry(block);
             PrepareInlineLayout(block, inlineEngine);
+        }
+    }
+
+    private static void EnsureUsedGeometry(BlockBox block)
+    {
+        if (block.UsedGeometry is null)
+        {
+            var padding = block.Style.Padding.Safe();
+            var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
+            block.UsedGeometry = BoxGeometryFactory.FromBorderBox(
+                new RectangleF(block.X, block.Y, block.Width, block.Height),
+                padding,
+                border,
+                markerOffset: block.MarkerOffset);
+        }
+
+        foreach (var child in block.Children.OfType<BlockBox>())
+        {
+            EnsureUsedGeometry(child);
         }
     }
 

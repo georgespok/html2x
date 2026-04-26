@@ -11,17 +11,14 @@ public sealed class ZOrderStage : IFragmentBuildStage
             throw new ArgumentNullException(nameof(state));
         }
 
-        var all = state.Fragments.Blocks
+        var orderedFragments = state.Fragments.Blocks
             .SelectMany(Flatten)
             .OrderBy(f => f.ZOrder)
             .ToList();
 
-        state.Fragments.All.Clear();
-        state.Fragments.All.AddRange(all);
-
         foreach (var observer in state.Observers)
         {
-            observer.OnZOrderCompleted(all);
+            observer.OnZOrderCompleted(orderedFragments);
         }
 
         return state;

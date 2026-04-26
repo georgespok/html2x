@@ -1,14 +1,17 @@
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.File;
 using Html2x.Abstractions.Layout.Documents;
+using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Drawing;
+using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Pipeline;
 
 /// <summary>
 /// Renders an <see cref="HtmlLayout"/> to PDF using a SkiaSharp drawing pipeline.
+/// The renderer owns paint output only and treats layout pages and fragments as read-only inputs.
 /// </summary>
 public class PdfRenderer
 {
@@ -19,16 +22,24 @@ public class PdfRenderer
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
     }
 
-    public Task<byte[]> RenderAsync(HtmlLayout htmlLayout, PdfOptions? options = null, DiagnosticsSession? diagnosticsSession = null)
+    public Task<byte[]> RenderAsync(
+        HtmlLayout htmlLayout,
+        PdfOptions? options = null,
+        DiagnosticsSession? diagnosticsSession = null,
+        IFontSource? fontSource = null)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
         options ??= new PdfOptions();
 
-        var bytes = RenderWithSkia(htmlLayout, options, diagnosticsSession);
+        var bytes = RenderWithSkia(htmlLayout, options, diagnosticsSession, fontSource);
         return Task.FromResult(bytes);
     }
 
-    private byte[] RenderWithSkia(HtmlLayout layout, PdfOptions options, DiagnosticsSession? diagnosticsSession)
+    private byte[] RenderWithSkia(
+        HtmlLayout layout,
+        PdfOptions options,
+        DiagnosticsSession? diagnosticsSession,
+        IFontSource? fontSource)
     {
         using var stream = new MemoryStream();
         using var document = SKDocument.CreatePdf(stream);
@@ -37,8 +48,9 @@ public class PdfRenderer
             throw new InvalidOperationException("Failed to create Skia PDF document.");
         }
 
-        using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory);
-        var drawer = new SkiaFragmentDrawer(options, diagnosticsSession, fontCache);
+        using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory, fontSource);
+        var commandBuilder = new PaintCommandBuilder();
+        var drawer = new SkiaPaintCommandDrawer(options, diagnosticsSession, fontCache);
 
         foreach (var page in layout.Pages)
         {
@@ -49,7 +61,8 @@ public class PdfRenderer
                 continue;
             }
 
-            drawer.DrawPage(canvas, page);
+            var commands = commandBuilder.Build(page);
+            drawer.Draw(canvas, commands);
             document.EndPage();
         }
 

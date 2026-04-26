@@ -23,7 +23,6 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private readonly ConcurrentDictionary<string, SKShaper> _shapersBySourceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<TextMeasureKey, float> _widthBySourceAndText = new();
     private readonly ConcurrentDictionary<MetricKey, (float Ascent, float Descent)> _metricsBySourceAndSize = new();
-    private readonly ConcurrentDictionary<string, IReadOnlyList<FontFaceEntry>> _facesByDirectory = new(StringComparer.OrdinalIgnoreCase);
 
     public SkiaTextMeasurer(IFontSource fontSource)
         : this(fontSource, new FileDirectory(), new DefaultTypefaceFactory())
@@ -92,68 +91,37 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         {
             if (_fileDirectory.FileExists(path))
             {
-            return _typefaceFactory.FromFile(path) ?? throw CreateFontResolutionException(
-                $"Failed to load font file '{path}'.",
-                resolved,
-                fontKey,
-                path);
-        }
-
-        if (_fileDirectory.DirectoryExists(path))
-        {
-            return GetTypefaceFromDirectory(fontKey, path);
+                var typeface = resolved.FaceIndex > 0
+                    ? _typefaceFactory.FromFile(path, resolved.FaceIndex)
+                    : _typefaceFactory.FromFile(path);
+                return typeface ?? throw CreateFontResolutionException(
+                    resolved.FaceIndex > 0
+                        ? $"Failed to load font file '{path}' (face {resolved.FaceIndex})."
+                        : $"Failed to load font file '{path}'.",
+                    resolved,
+                    fontKey,
+                    path);
             }
         }
 
         if (_fileDirectory.FileExists(resolved.SourceId))
         {
-            return _typefaceFactory.FromFile(resolved.SourceId) ?? throw CreateFontResolutionException(
-                $"Failed to load font file '{resolved.SourceId}'.",
+            var typeface = resolved.FaceIndex > 0
+                ? _typefaceFactory.FromFile(resolved.SourceId, resolved.FaceIndex)
+                : _typefaceFactory.FromFile(resolved.SourceId);
+            return typeface ?? throw CreateFontResolutionException(
+                resolved.FaceIndex > 0
+                    ? $"Failed to load font file '{resolved.SourceId}' (face {resolved.FaceIndex})."
+                    : $"Failed to load font file '{resolved.SourceId}'.",
                 resolved,
                 fontKey,
                 resolved.SourceId);
-        }
-
-        if (_fileDirectory.DirectoryExists(resolved.SourceId))
-        {
-            return GetTypefaceFromDirectory(fontKey, resolved.SourceId);
         }
 
         throw CreateFontResolutionException(
             "Font resolution failed using the configured font path.",
             resolved,
             fontKey);
-    }
-
-    private SKTypeface GetTypefaceFromDirectory(FontKey fontKey, string directory)
-    {
-        var faces = _facesByDirectory.GetOrAdd(directory, dir => FontDirectoryIndex.Build(_fileDirectory, _typefaceFactory, dir));
-        var best = FontDirectoryIndex.FindBestMatch(faces, fontKey);
-        if (best is null)
-        {
-            throw CreateFontResolutionException(
-                $"Font '{fontKey.Family}' not found in directory '{directory}'.",
-                new ResolvedFont(fontKey.Family, fontKey.Weight, fontKey.Style, directory, directory),
-                fontKey,
-                directory);
-        }
-
-        if (best.FaceIndex > 0)
-        {
-            return _typefaceFactory.FromFile(best.Path, best.FaceIndex) ??
-                throw CreateFontResolutionException(
-                    $"Failed to load font file '{best.Path}' (face {best.FaceIndex}).",
-                    new ResolvedFont(fontKey.Family, fontKey.Weight, fontKey.Style, best.Path, directory),
-                    fontKey,
-                    best.Path);
-        }
-
-        return _typefaceFactory.FromFile(best.Path) ??
-            throw CreateFontResolutionException(
-                $"Failed to load font file '{best.Path}'.",
-                new ResolvedFont(fontKey.Family, fontKey.Weight, fontKey.Style, best.Path, directory),
-                fontKey,
-                best.Path);
     }
 
     private static string GetRequiredSourceId(ResolvedFont resolved)
@@ -169,7 +137,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         return resolved.SourceId;
     }
 
-    private ResolvedFont GetResolvedFont(FontKey fontKey) => _fontSource.Resolve(fontKey);
+    private ResolvedFont GetResolvedFont(FontKey fontKey) => _fontSource.Resolve(fontKey, nameof(SkiaTextMeasurer));
 
     private static SKFont CreateFont(SKTypeface typeface, float sizePt) => new(typeface, sizePt);
 
@@ -186,6 +154,8 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         exception.Data["FontStyle"] = resolved.Style;
         exception.Data["FontSourceId"] = resolved.SourceId;
         exception.Data["FontFilePath"] = resolved.FilePath;
+        exception.Data["FontConfiguredPath"] = resolved.ConfiguredPath;
+        exception.Data["FontFaceIndex"] = resolved.FaceIndex;
 
         if (fontKey is not null)
         {

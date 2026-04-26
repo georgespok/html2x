@@ -28,6 +28,7 @@ public sealed class DefaultStyleDomFilter : IStyleDomFilter
                 HtmlCssConstants.HtmlTags.Td,
                 HtmlCssConstants.HtmlTags.Th,
                 HtmlCssConstants.HtmlTags.Img,
+                HtmlCssConstants.HtmlTags.Hr,
                 HtmlCssConstants.HtmlTags.Br,
                 HtmlCssConstants.HtmlTags.Ul,
                 HtmlCssConstants.HtmlTags.Ol,

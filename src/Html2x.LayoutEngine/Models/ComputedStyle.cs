@@ -3,6 +3,9 @@ using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Models;
 
+/// <summary>
+/// Stores the computed style facts consumed by box construction, layout, diagnostics, and fragment projection.
+/// </summary>
 public sealed record ComputedStyle
 {
     public string FontFamily { get; init; } = HtmlCssConstants.Defaults.FontFamily;
@@ -15,6 +18,8 @@ public sealed record ComputedStyle
     public ColorRgba Color { get; init; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; init; }
     public string? Display { get; init; }
+    public string FloatDirection { get; init; } = HtmlCssConstants.Defaults.FloatDirection;
+    public string Position { get; init; } = HtmlCssConstants.Defaults.Position;
     public Spacing Margin { get; init; } = new(0, 0, 0, 0);
     public Spacing Padding { get; init; } = new(0, 0, 0, 0);
     public float? WidthPt { get; init; }

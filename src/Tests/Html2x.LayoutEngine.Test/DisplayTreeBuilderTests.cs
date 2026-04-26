@@ -9,7 +9,7 @@ namespace Html2x.LayoutEngine.Test;
 public class DisplayTreeBuilderTests
 {
     [Fact]
-    public async Task Build_WithSingleDiv_ShouldCreateBlockWithInlineText()
+    public async Task Build_SingleDiv_CreateBlockWithInlineText()
     {
         const string html = "<html><body><div>Test</div></body></html>";
         var document = await ParseHtml(html);
@@ -45,7 +45,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithListItem_ShouldCreateBlockWithInlineText()
+    public async Task Build_ListItem_CreateBlockWithInlineText()
     {
         const string html = "<html><body><ul><li>Test</li></ul></body></html>";
         var document = await ParseHtml(html);
@@ -97,7 +97,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithBrAndIndentedText_ShouldCollapseIndent()
+    public async Task Build_BrAndIndentedText_CollapseIndent()
     {
         const string html =
             "<html><body><p>first line<br />second\r\n            line with spacing</p></body></html>";
@@ -138,7 +138,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithSeparatedTextNodes_ShouldKeepSingleSpaceBetweenRuns()
+    public async Task Build_SeparatedTextNodes_KeepSingleSpaceBetweenRuns()
     {
         const string html = "<html><body><p>one <span> two</span></p></body></html>";
         var document = await ParseHtml(html);
@@ -185,7 +185,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithMultipleSpacesInsideRun_ShouldCollapseToSingleSpace()
+    public async Task Build_MultipleSpacesInsideRun_CollapseToSingleSpace()
     {
         const string html = "<html><body><p>foo    bar</p></body></html>";
         var document = await ParseHtml(html);
@@ -217,7 +217,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithOrderedList_ShouldAssignIncrementingMarkers()
+    public async Task Build_OrderedList_AssignIncrementingMarkers()
     {
         const string html = "<html><body><ol><li>First</li><li>Second</li><li>Third</li></ol></body></html>";
         var document = await ParseHtml(html);
@@ -266,7 +266,7 @@ public class DisplayTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_WithTableSection_ShouldPreserveSectionRole()
+    public async Task Build_TableSection_PreserveSectionRole()
     {
         const string html = "<html><body><table><tbody><tr><td>Cell</td></tr></tbody></table></body></html>";
         var document = await ParseHtml(html);
@@ -325,6 +325,63 @@ public class DisplayTreeBuilderTests
         sectionBox.Element.ShouldBe(tbody);
         sectionBox.Role.ShouldBe(DisplayRole.TableSection);
         sectionBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>().Element.ShouldBe(tr);
+    }
+
+    [Fact]
+    public async Task Build_CssFloatRight_CreateFloatBoxWithRightDirection()
+    {
+        const string html = "<html><body><img src='hero.png' /></body></html>";
+        var document = await ParseHtml(html);
+        var image = document.QuerySelector("img")!;
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = image,
+                        Style = new ComputedStyle { FloatDirection = HtmlCssConstants.CssValues.Right }
+                    }
+                }
+            }
+        };
+
+        var root = new DisplayTreeBuilder().Build(styleTree);
+
+        var floatBox = root.Children.ShouldHaveSingleItem().ShouldBeOfType<FloatBox>();
+        floatBox.FloatDirection.ShouldBe(HtmlCssConstants.CssValues.Right);
+    }
+
+    [Fact]
+    public async Task Build_HeroClassWithoutCssFloat_DoesNotCreateFloatBox()
+    {
+        const string html = "<html><body><img class='hero' src='hero.png' /></body></html>";
+        var document = await ParseHtml(html);
+        var image = document.QuerySelector("img")!;
+        var styleTree = new StyleTree
+        {
+            Root = new StyleNode
+            {
+                Element = document.Body!,
+                Style = new ComputedStyle(),
+                Children =
+                {
+                    new StyleNode
+                    {
+                        Element = image,
+                        Style = new ComputedStyle()
+                    }
+                }
+            }
+        };
+
+        var root = new DisplayTreeBuilder().Build(styleTree);
+
+        root.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
     }
 
     private static async Task<IDocument> ParseHtml(string html)

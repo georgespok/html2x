@@ -1,15 +1,40 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Models;
 
-public readonly record struct UsedGeometry(
-    RectangleF BorderBoxRect,
-    RectangleF ContentBoxRect,
-    float? Baseline,
-    float MarkerOffset,
-    bool AllowsOverflow)
+public readonly record struct UsedGeometry
 {
+    internal UsedGeometry(
+        RectangleF borderBoxRect,
+        RectangleF contentBoxRect,
+        float? baseline,
+        float markerOffset,
+        bool allowsOverflow)
+    {
+        GuardRect(nameof(BorderBoxRect), borderBoxRect);
+        GuardRect(nameof(ContentBoxRect), contentBoxRect);
+        GuardNullableFinite(nameof(Baseline), baseline);
+        GuardNonNegative(nameof(MarkerOffset), markerOffset);
+
+        BorderBoxRect = borderBoxRect;
+        ContentBoxRect = contentBoxRect;
+        Baseline = baseline;
+        MarkerOffset = markerOffset;
+        AllowsOverflow = allowsOverflow;
+    }
+
+    public RectangleF BorderBoxRect { get; }
+
+    public RectangleF ContentBoxRect { get; }
+
+    public float? Baseline { get; }
+
+    public float MarkerOffset { get; }
+
+    public bool AllowsOverflow { get; }
+
     public float X => BorderBoxRect.X;
 
     public float Y => BorderBoxRect.Y;
@@ -20,12 +45,7 @@ public readonly record struct UsedGeometry(
 
     public UsedGeometry Translate(float deltaX, float deltaY)
     {
-        return this with
-        {
-            BorderBoxRect = Offset(BorderBoxRect, deltaX, deltaY),
-            ContentBoxRect = Offset(ContentBoxRect, deltaX, deltaY),
-            Baseline = Baseline.HasValue ? Baseline.Value + deltaY : null
-        };
+        return GeometryTranslator.Translate(this, deltaX, deltaY);
     }
 
     public UsedGeometry WithBorderX(float value)
@@ -50,6 +70,23 @@ public readonly record struct UsedGeometry(
         return Resize(BorderBoxRect.Width, value);
     }
 
+    public UsedGeometry WithContentInsets(Spacing padding, Spacing border)
+    {
+        return BoxGeometryFactory.FromBorderBox(
+            BorderBoxRect,
+            padding,
+            border,
+            Baseline,
+            MarkerOffset,
+            AllowsOverflow);
+    }
+
+    public UsedGeometry WithMarkerOffset(float value)
+    {
+        return BoxGeometryFactory.WithMarkerOffset(this, value);
+    }
+
+    [Obsolete("Use BoxGeometryFactory.FromBorderBox so geometry creation and normalization stay centralized.")]
     public static UsedGeometry FromBorderBox(
         RectangleF borderBoxRect,
         Spacing padding,
@@ -58,37 +95,50 @@ public readonly record struct UsedGeometry(
         float markerOffset = 0f,
         bool allowsOverflow = false)
     {
-        var contentRect = Inset(border.Add(padding), borderBoxRect);
-        return new UsedGeometry(borderBoxRect, contentRect, baseline, markerOffset, allowsOverflow);
+        return BoxGeometryFactory.FromBorderBox(
+            borderBoxRect,
+            padding,
+            border,
+            baseline,
+            markerOffset,
+            allowsOverflow);
     }
 
     private UsedGeometry Resize(float borderWidth, float borderHeight)
     {
-        var leftInset = ContentBoxRect.X - BorderBoxRect.X;
-        var topInset = ContentBoxRect.Y - BorderBoxRect.Y;
-        var rightInset = BorderBoxRect.Right - ContentBoxRect.Right;
-        var bottomInset = BorderBoxRect.Bottom - ContentBoxRect.Bottom;
+        return BoxGeometryFactory.WithBorderSize(this, borderWidth, borderHeight);
+    }
 
-        return this with
+    private static void GuardRect(string name, RectangleF rect)
+    {
+        GuardFinite($"{name}.X", rect.X);
+        GuardFinite($"{name}.Y", rect.Y);
+        GuardNonNegative($"{name}.Width", rect.Width);
+        GuardNonNegative($"{name}.Height", rect.Height);
+    }
+
+    private static void GuardNullableFinite(string name, float? value)
+    {
+        if (value.HasValue)
         {
-            BorderBoxRect = new RectangleF(BorderBoxRect.X, BorderBoxRect.Y, borderWidth, borderHeight),
-            ContentBoxRect = new RectangleF(
-                BorderBoxRect.X + leftInset,
-                BorderBoxRect.Y + topInset,
-                Math.Max(0f, borderWidth - leftInset - rightInset),
-                Math.Max(0f, borderHeight - topInset - bottomInset))
-        };
+            GuardFinite(name, value.Value);
+        }
     }
 
-    private static RectangleF Offset(RectangleF rect, float deltaX, float deltaY)
+    private static void GuardNonNegative(string name, float value)
     {
-        return new RectangleF(rect.X + deltaX, rect.Y + deltaY, rect.Width, rect.Height);
+        GuardFinite(name, value);
+        if (value < 0f)
+        {
+            throw new ArgumentOutOfRangeException(name, "Value must be non-negative.");
+        }
     }
 
-    private static RectangleF Inset(Spacing inset, RectangleF rect)
+    private static void GuardFinite(string name, float value)
     {
-        var width = Math.Max(0f, rect.Width - inset.Left - inset.Right);
-        var height = Math.Max(0f, rect.Height - inset.Top - inset.Bottom);
-        return new RectangleF(rect.X + inset.Left, rect.Y + inset.Top, width, height);
+        if (!float.IsFinite(value))
+        {
+            throw new ArgumentOutOfRangeException(name, "Value must be finite.");
+        }
     }
 }

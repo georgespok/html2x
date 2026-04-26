@@ -3,6 +3,9 @@ using Html2x.Abstractions.Layout.Text;
 
 namespace Html2x.LayoutEngine.Text;
 
+/// <summary>
+/// Builds wrapped text layout lines from measured inline run inputs.
+/// </summary>
 internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutInput input, float availableWidth)
 {
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
@@ -102,14 +105,14 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
             {
                 var inlineObject = buffer.InlineObject;
                 var inlineAscent = inlineObject.Baseline;
-                var inlineDescent = inlineObject.Height - inlineObject.Baseline;
+                var inlineDescent = inlineObject.BorderBoxHeight - inlineObject.Baseline;
 
                 lineRuns.Add(new TextLayoutRun(
                     buffer.Source.Source,
                     string.Empty,
                     buffer.Source.Font,
                     buffer.Source.FontSizePt,
-                    inlineObject.Width,
+                    inlineObject.BorderBoxWidth,
                     buffer.LeftSpacing,
                     buffer.RightSpacing,
                     inlineAscent,
@@ -118,7 +121,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
                     buffer.Source.Style.Color,
                     inlineObject));
 
-                lineWidth += buffer.LeftSpacing + inlineObject.Width + buffer.RightSpacing;
+                lineWidth += buffer.LeftSpacing + inlineObject.BorderBoxWidth + buffer.RightSpacing;
                 continue;
             }
 
@@ -191,7 +194,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
             return;
         }
 
-        var tokenWidth = run.InlineObject.Width;
+        var tokenWidth = run.InlineObject.BorderBoxWidth;
         var additionalSpacing = GetAdditionalSpacing(run);
         if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
         {
@@ -333,6 +336,9 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         }
     }
 
+    /// <summary>
+    /// Processes one token against the current line buffer.
+    /// </summary>
     private readonly struct TokenProcessor(TextLayoutLineBuilder builder, TextRunInput run, string token)
     {
         private readonly TextLayoutLineBuilder _builder = builder;
@@ -372,6 +378,9 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         }
     }
 
+    /// <summary>
+    /// Buffers one source run while text is accumulated for a line.
+    /// </summary>
     private sealed class LineRunBuffer
     {
         public TextRunInput Source { get; }

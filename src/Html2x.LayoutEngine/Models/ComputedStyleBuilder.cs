@@ -3,6 +3,9 @@ using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Models;
 
+/// <summary>
+/// Accumulates parsed CSS values before creating an immutable computed style snapshot.
+/// </summary>
 public sealed class ComputedStyleBuilder
 {
     public string FontFamily { get; set; } = HtmlCssConstants.Defaults.FontFamily;
@@ -15,6 +18,8 @@ public sealed class ComputedStyleBuilder
     public ColorRgba Color { get; set; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; set; }
     public string? Display { get; set; }
+    public string FloatDirection { get; set; } = HtmlCssConstants.Defaults.FloatDirection;
+    public string Position { get; set; } = HtmlCssConstants.Defaults.Position;
     public Spacing Margin { get; set; }
     public Spacing Padding { get; set; }
     public float? WidthPt { get; set; }
@@ -40,6 +45,8 @@ public sealed class ComputedStyleBuilder
             Color = Color,
             BackgroundColor = BackgroundColor,
             Display = Display,
+            FloatDirection = FloatDirection,
+            Position = Position,
             Margin = Margin,
             Padding = NormalizePadding(Padding),
             WidthPt = WidthPt,
@@ -59,6 +66,9 @@ public sealed class ComputedStyleBuilder
             Math.Max(0, padding.Bottom),
             Math.Max(0, padding.Left));
 
+    /// <summary>
+    /// Accumulates per-side border declarations before normalizing them into border edge values.
+    /// </summary>
     public sealed class BorderBuilder
     {
         public float? TopWidth { get; set; }

@@ -15,7 +15,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class ImageRenderingTests
 {
     [Fact]
-    public async Task Render_Images_ShouldReportStatusesAndRenderedSizes()
+    public async Task Render_Images_ReportStatusesAndRenderedSizes()
     {
         // arrange: construct layout with success, missing, and oversize cases
         var layout = new HtmlLayout();
@@ -53,7 +53,7 @@ public class ImageRenderingTests
     }
 
     [Fact]
-    public async Task Render_ImageDiagnostics_ShouldUseCanonicalEventAndContext()
+    public async Task Render_ImageDiagnostics_UseCanonicalEventAndContext()
     {
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
@@ -86,11 +86,15 @@ public class ImageRenderingTests
         payload.RenderedSize.Height.ShouldBe(80, 1);
     }
 
-    [Fact]
-    public async Task Render_ImageWithBorder_ShouldReportBorderMetadata()
+    [Theory]
+    [MemberData(nameof(ImageBorderCases))]
+    public async Task Render_WhenImageHasBorder_ShouldReportBorderMetadata(
+        ImageStatus status,
+        float borderWidth,
+        ColorRgba borderColor,
+        BorderLineStyle lineStyle)
     {
-        var borderColor = new ColorRgba(0x12, 0x34, 0x56, 0xFF);
-        var borders = BorderEdges.Uniform(new BorderSide(2f, borderColor, BorderLineStyle.Solid));
+        var borders = BorderEdges.Uniform(new BorderSide(borderWidth, borderColor, lineStyle));
 
         var layout = new HtmlLayout();
         layout.Pages.Add(new LayoutPage(
@@ -98,7 +102,7 @@ public class ImageRenderingTests
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
             {
-                CreateImageFragment(24, 40, 64, 64, ImageStatus.Ok, borders)
+                CreateImageFragment(24, 40, 64, 64, status, borders)
             }));
 
         var (bytes, diagnostics) = await RenderLayoutAsync(layout);
@@ -108,74 +112,16 @@ public class ImageRenderingTests
         var payload = GetSingleImageRenderPayload(diagnostics);
 
         payload.ShouldNotBeNull();
+        payload!.Status.ShouldBe(status);
         payload!.Borders.ShouldNotBeNull();
         payload.Borders!.Top.ShouldNotBeNull();
-        payload.Borders.Top!.Width.ShouldBe(2f);
+        payload.Borders.Top!.Width.ShouldBe(borderWidth);
         payload.Borders.Top!.Color.ShouldBe(borderColor);
-        payload.Borders.Top!.LineStyle.ShouldBe(BorderLineStyle.Solid);
+        payload.Borders.Top!.LineStyle.ShouldBe(lineStyle);
     }
 
     [Fact]
-    public async Task Render_MissingImageWithBorder_ShouldReportBorderMetadata()
-    {
-        var borderColor = new ColorRgba(0x9A, 0x3D, 0xC0, 0xFF);
-        var borders = BorderEdges.Uniform(new BorderSide(3f, borderColor, BorderLineStyle.Solid));
-
-        var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(0, 0, 0, 0),
-            new List<Fragment>
-            {
-                CreateImageFragment(30, 50, 72, 72, ImageStatus.Missing, borders)
-            }));
-
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
-
-        bytes.ShouldNotBeNull();
-
-        var payload = GetSingleImageRenderPayload(diagnostics);
-
-        payload.ShouldNotBeNull();
-        payload!.Status.ShouldBe(ImageStatus.Missing);
-        payload.Borders.ShouldNotBeNull();
-        payload.Borders!.Top.ShouldNotBeNull();
-        payload.Borders.Top!.Width.ShouldBe(3f);
-        payload.Borders.Top!.Color.ShouldBe(borderColor);
-        payload.Borders.Top!.LineStyle.ShouldBe(BorderLineStyle.Solid);
-    }
-
-    [Fact]
-    public async Task Render_ImageWithDashedBorder_ShouldReportBorderStyle()
-    {
-        var borderColor = new ColorRgba(0x33, 0x66, 0x99, 0xFF);
-        var borders = BorderEdges.Uniform(new BorderSide(1.5f, borderColor, BorderLineStyle.Dashed));
-
-        var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(0, 0, 0, 0),
-            new List<Fragment>
-            {
-                CreateImageFragment(40, 60, 80, 80, ImageStatus.Ok, borders)
-            }));
-
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
-
-        bytes.ShouldNotBeNull();
-
-        var payload = GetSingleImageRenderPayload(diagnostics);
-
-        payload.ShouldNotBeNull();
-        payload!.Borders.ShouldNotBeNull();
-        payload.Borders!.Top.ShouldNotBeNull();
-        payload.Borders.Top!.Width.ShouldBe(1.5f);
-        payload.Borders.Top!.Color.ShouldBe(borderColor);
-        payload.Borders.Top!.LineStyle.ShouldBe(BorderLineStyle.Dashed);
-    }
-
-    [Fact]
-    public async Task Render_ImageWithNoBorder_ShouldReportNoBorders()
+    public async Task Render_ImageWithNoBorder_ReportNoBorders()
     {
         var borders = BorderEdges.Uniform(new BorderSide(0f, ColorRgba.Black, BorderLineStyle.None));
 
@@ -221,11 +167,37 @@ public class ImageRenderingTests
             AuthoredSizePx = new SizePx(width, height),
             IntrinsicSizePx = new SizePx(width, height),
             Rect = new RectangleF(x, y, width, height),
+            ContentRect = new RectangleF(x, y, width, height),
             Style = new VisualStyle(Borders: borders),
             ZOrder = 0,
             IsMissing = isMissing,
             IsOversize = isOversize
         };
+    }
+
+    public static IEnumerable<object[]> ImageBorderCases()
+    {
+        yield return
+        [
+            ImageStatus.Ok,
+            2f,
+            new ColorRgba(0x12, 0x34, 0x56, 0xFF),
+            BorderLineStyle.Solid
+        ];
+        yield return
+        [
+            ImageStatus.Missing,
+            3f,
+            new ColorRgba(0x9A, 0x3D, 0xC0, 0xFF),
+            BorderLineStyle.Solid
+        ];
+        yield return
+        [
+            ImageStatus.Ok,
+            1.5f,
+            new ColorRgba(0x33, 0x66, 0x99, 0xFF),
+            BorderLineStyle.Dashed
+        ];
     }
 
     private static List<ImageRenderPayload> GetImageRenderPayloads(DiagnosticsSession diagnostics)

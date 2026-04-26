@@ -64,7 +64,7 @@ internal static class GeometryTestHarness
         var layout = CreateLayout(pagination);
         var snapshot = GeometrySnapshotMapper.From(boxTree, layout, pagination);
 
-        return new GeometryPipelineResult(boxTree, fragments, layout, pagination, snapshot, observer);
+        return new GeometryPipelineResult(boxTree, fragments, layout, pagination, snapshot, observer, diagnosticsSession);
     }
 
     public static string RenderSnapshot(GeometrySnapshot snapshot)
@@ -188,6 +188,11 @@ internal static class GeometryTestHarness
             extras.Add($"text=\"{fragment.Text}\"");
         }
 
+        if (fragment.OccupiedX.HasValue && fragment.OccupiedY.HasValue && fragment.OccupiedSize.HasValue)
+        {
+            extras.Add($"occupied={FormatRect(fragment.OccupiedX.Value, fragment.OccupiedY.Value, fragment.OccupiedSize.Value)}");
+        }
+
         if (fragment.MarkerOffset.HasValue)
         {
             extras.Add($"marker={FormatFloat(fragment.MarkerOffset.Value)}");
@@ -249,7 +254,8 @@ internal sealed record GeometryPipelineResult(
     HtmlLayout Layout,
     PaginationResult Pagination,
     GeometrySnapshot Snapshot,
-    RecordingFragmentBuildObserver Observer);
+    RecordingFragmentBuildObserver Observer,
+    DiagnosticsSession Diagnostics);
 
 internal sealed record BlockBinding(BlockBox Source, BlockFragment Fragment);
 

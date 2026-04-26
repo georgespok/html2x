@@ -3,16 +3,22 @@ using AngleSharp.Dom;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
-using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine.Box;
 
+/// <summary>
+/// Resolves image layout dimensions from authored, intrinsic, and available sizes.
+/// </summary>
 internal interface IImageLayoutResolver
 {
     ImageLayoutResolution Resolve(ImageBox imageBox, float availableWidth);
 }
 
+/// <summary>
+/// Resolves image content and border-box dimensions for layout.
+/// </summary>
 internal sealed class ImageLayoutResolver : IImageLayoutResolver
 {
     private readonly string _htmlDirectory;
@@ -31,14 +37,16 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         ArgumentNullException.ThrowIfNull(imageBox);
 
         var src = imageBox.Element?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? imageBox.Src;
-        var authoredSize = new SizePx(
+        var htmlAuthoredSize = new SizePx(
             ParsePxAttr(imageBox.Element, HtmlCssConstants.HtmlAttributes.Width),
             ParsePxAttr(imageBox.Element, HtmlCssConstants.HtmlAttributes.Height));
+        var authoredSize = ResolveAuthoredMetadataSize(imageBox, htmlAuthoredSize);
+        var padding = imageBox.Style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
+        var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize, padding, border);
         var loadResult = _imageProvider.Load(src, _htmlDirectory, _maxImageSizeBytes);
-        var resolvedSizePx = StyleConverter.ResolveImageSize(authoredSize, loadResult.IntrinsicSizePx)
-            .ClampMin(0d, 0d);
-
-        var contentSize = new SizePt((float)resolvedSizePx.WidthOrZero, (float)resolvedSizePx.HeightOrZero)
+        var intrinsicLayoutSize = ToLayoutSize(loadResult.IntrinsicSizePx);
+        var contentSize = ResolveLayoutSize(authoredLayoutSize, intrinsicLayoutSize)
             .Safe()
             .ClampMin(0f, 0f);
 
@@ -48,8 +56,6 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             contentSize = contentSize.Scale(scale);
         }
 
-        var padding = imageBox.Style.Padding.Safe();
-        var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
         var totalSize = contentSize
             .Inflate(padding.Horizontal + border.Horizontal, padding.Vertical + border.Vertical)
             .ClampMin(0f, 0f);
@@ -57,7 +63,7 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         return new ImageLayoutResolution(
             src,
             authoredSize,
-            new SizePx(contentSize.Width, contentSize.Height),
+            loadResult.IntrinsicSizePx,
             loadResult.Status == ImageLoadStatus.Missing,
             loadResult.Status == ImageLoadStatus.Oversize,
             contentSize.Width,
@@ -66,10 +72,88 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             totalSize.Height);
     }
 
+    private static SizePx ResolveAuthoredMetadataSize(ImageBox imageBox, SizePx htmlAuthoredSize)
+    {
+        return new SizePx(
+            imageBox.Style.WidthPt.HasValue
+                ? CssUnitConversion.PtToCssPx(imageBox.Style.WidthPt.Value)
+                : htmlAuthoredSize.Width,
+            imageBox.Style.HeightPt.HasValue
+                ? CssUnitConversion.PtToCssPx(imageBox.Style.HeightPt.Value)
+                : htmlAuthoredSize.Height);
+    }
+
+    private static OptionalSizePt ResolveAuthoredLayoutSize(
+        ImageBox imageBox,
+        SizePx htmlAuthoredSize,
+        Spacing padding,
+        Spacing border)
+    {
+        return new OptionalSizePt(
+            imageBox.Style.WidthPt.HasValue
+                ? BoxDimensionResolver.ResolveContentBoxWidth(
+                    imageBox.Style.WidthPt.Value,
+                    padding,
+                    border,
+                    imageBox.MarkerOffset)
+                : CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Width),
+            imageBox.Style.HeightPt ?? CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Height));
+    }
+
+    private static OptionalSizePt ToLayoutSize(SizePx size)
+    {
+        return new OptionalSizePt(
+            CssUnitConversion.CssPxToPtOrNull(size.Width),
+            CssUnitConversion.CssPxToPtOrNull(size.Height));
+    }
+
+    private static SizePt ResolveLayoutSize(OptionalSizePt authored, OptionalSizePt intrinsic)
+    {
+        var intrinsicWidth = intrinsic.Width is > 0f ? intrinsic.Width : null;
+        var intrinsicHeight = intrinsic.Height is > 0f ? intrinsic.Height : null;
+
+        if (authored.HasWidth && authored.HasHeight)
+        {
+            return new SizePt(authored.Width!.Value, authored.Height!.Value);
+        }
+
+        if (authored.HasWidth && intrinsicWidth.HasValue && intrinsicHeight.HasValue)
+        {
+            var width = authored.Width!.Value;
+            return new SizePt(width, width * intrinsicHeight.Value / intrinsicWidth.Value);
+        }
+
+        if (authored.HasHeight && intrinsicWidth.HasValue && intrinsicHeight.HasValue)
+        {
+            var height = authored.Height!.Value;
+            return new SizePt(height * intrinsicWidth.Value / intrinsicHeight.Value, height);
+        }
+
+        if (intrinsicWidth.HasValue && intrinsicHeight.HasValue)
+        {
+            return new SizePt(intrinsicWidth.Value, intrinsicHeight.Value);
+        }
+
+        if (authored.HasWidth)
+        {
+            var width = authored.Width!.Value;
+            return new SizePt(width, width);
+        }
+
+        if (authored.HasHeight)
+        {
+            var height = authored.Height!.Value;
+            return new SizePt(height, height);
+        }
+
+        return new SizePt(0f, 0f);
+    }
+
     private static double? ParsePxAttr(IElement? element, string attributeName)
     {
         var value = element?.GetAttribute(attributeName);
-        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed))
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed) &&
+            double.IsFinite(parsed))
         {
             return parsed;
         }
@@ -77,6 +161,9 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         return null;
     }
 
+    /// <summary>
+    /// Provides zero intrinsic image dimensions when no provider is configured.
+    /// </summary>
     private sealed class NullImageProvider : IImageProvider
     {
         public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
@@ -89,8 +176,21 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             };
         }
     }
+
+    /// <summary>
+    /// Carries optional point dimensions during image size resolution.
+    /// </summary>
+    private readonly record struct OptionalSizePt(float? Width, float? Height)
+    {
+        public bool HasWidth => Width.HasValue;
+
+        public bool HasHeight => Height.HasValue;
+    }
 }
 
+/// <summary>
+/// Carries resolved image dimensions and load status for layout consumers.
+/// </summary>
 internal readonly record struct ImageLayoutResolution(
     string Src,
     SizePx AuthoredSizePx,

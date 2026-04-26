@@ -2,6 +2,9 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.Abstractions.Diagnostics;
@@ -13,7 +16,7 @@ namespace Html2x.LayoutEngine.Test.Display;
 public class InlineBlockTests
 {
     [Fact]
-    public async Task InlineBlock_ShouldEmitBlockFragmentWithBorders()
+    public async Task InlineBlock_EmitBlockFragmentWithBorders()
     {
         const string html = @"
             <html>
@@ -40,7 +43,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_TextShouldNotBeFlattenedIntoParentLine()
+    public async Task InlineBlock_TextIsNotFlattenedIntoParentLine()
     {
         const string html = @"
             <html>
@@ -66,7 +69,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_AfterBlockSibling_ShouldStartBelowPreviousBlock()
+    public async Task InlineBlock_AfterBlockSibling_StartBelowPreviousBlock()
     {
         const string html = @"
             <html>
@@ -95,7 +98,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_BlockDescendants_ShouldContributeTextLines()
+    public async Task InlineBlock_BlockDescendants_ContributeTextLines()
     {
         const string html = @"
             <html>
@@ -124,7 +127,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_NestedInlineBlock_ShouldKeepNestedText()
+    public async Task InlineBlock_NestedInlineBlock_KeepNestedText()
     {
         const string html = @"
             <html>
@@ -151,7 +154,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_NestedInlineBlock_ShouldPreserveTextOrderAcrossBoundaries()
+    public async Task InlineBlock_NestedInlineBlock_PreserveTextOrderAcrossBoundaries()
     {
         const string html = @"
             <html>
@@ -184,7 +187,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_MixedInlineAndBlockDescendants_ShouldPreserveAllText()
+    public async Task InlineBlock_MixedInlineAndBlockDescendants_PreserveAllText()
     {
         const string html = @"
             <html>
@@ -223,7 +226,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_MixedInlineAndBlockDescendants_ShouldNotUndercountHeight()
+    public async Task InlineBlock_MixedInlineAndBlockDescendants_DoesNotUndercountHeight()
     {
         const string html = @"
             <html>
@@ -266,12 +269,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase2_ShouldKeepPrefixInlineBlockAndSuffixInSiblingOrder()
+    public async Task InlineBlock_SharedFormattingCase2_PreservesSiblingOrder()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     Prefix text
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -299,12 +302,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase2_ShouldPlacePrefixAndSuffixBesideInlineBlock()
+    public async Task InlineBlock_SharedFormattingCase2_PlacesSiblingsBesideBlock()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     Prefix text
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -334,12 +337,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase2_ShouldPreserveFullDescendantTextOrder()
+    public async Task InlineBlock_SharedFormattingCase2_PreserveFullDescendantTextOrder()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     Prefix text
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -374,12 +377,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase2_ShouldPreserveInheritedFormattingAcrossSiblingsAndInlineBlockContent()
+    public async Task InlineBlock_SharedFormattingCase2_PreservesInheritedStyle()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35; color: #222;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     Prefix text
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -417,12 +420,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase3_ShouldKeepTextBeforeInlineBlockAndTextAfterInSiblingOrder()
+    public async Task InlineBlock_SharedFormattingCase3_PreservesSiblingTextOrder()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     text-before
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -456,12 +459,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase3_ShouldPreserveDeepNestedTextOrder()
+    public async Task InlineBlock_SharedFormattingCase3_PreserveDeepNestedTextOrder()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     text-before
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -498,12 +501,12 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_SharedFormattingCase3_ShouldPlaceLeadingAndTrailingTextBesideInlineBlock()
+    public async Task InlineBlock_SharedFormattingCase3_PlacesTextBesideBlock()
     {
         const string html = @"
             <html>
               <body style='margin: 0; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.35;'>
-                <div style='width: 320pt;'>
+                <div style='width: 360pt;'>
                   <div style='margin-bottom: 6pt;'>
                     text-before
                     <span style='display: inline-block; vertical-align: top; width: 190pt; border: 1pt solid #222; padding: 6pt; margin-right: 10pt;'>
@@ -539,7 +542,7 @@ public class InlineBlockTests
     }
 
     [Fact]
-    public async Task InlineBlock_UnsupportedInternalStructure_ShouldFailLayoutAndEmitDiagnostics()
+    public async Task InlineBlock_UnsupportedInternalStructure_FailLayoutAndEmitDiagnostics()
     {
         const string html = @"
             <html>
@@ -567,6 +570,91 @@ public class InlineBlockTests
         diagnosticsSession.Events
             .Any(e => e.Payload is UnsupportedStructurePayload payload &&
                       payload.FormattingContext == FormattingContextKind.InlineBlock)
+            .ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task InlineBlock_UsesSharedBlockFormattingMetricsAndDiagnosticsEvidence()
+    {
+        const string topLevelHtml = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 300pt;'>
+                  <div style='height: 10pt; margin-bottom: 12pt;'>First</div>
+                  <div style='width: 120pt; height: 8pt; margin-top: 6pt;'>Second</div>
+                </div>
+              </body>
+            </html>";
+
+        const string inlineBlockHtml = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 300pt;'>
+                  <span style='display: inline-block;'>
+                    <div style='height: 10pt; margin-bottom: 12pt;'>First</div>
+                    <div style='width: 120pt; height: 8pt; margin-top: 6pt;'>Second</div>
+                  </span>
+                </div>
+              </body>
+            </html>";
+
+        var topLevelDiagnostics = new DiagnosticsSession
+        {
+            Options = new HtmlConverterOptions()
+        };
+        var inlineBlockDiagnostics = new DiagnosticsSession
+        {
+            Options = new HtmlConverterOptions()
+        };
+
+        var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutOptions { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
+        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new LayoutOptions { PageSize = PaperSizes.A4 }, inlineBlockDiagnostics);
+
+        var topLevelContainer = FindContainerWithDirectChildren(
+            (BlockFragment)topLevelLayout.Pages[0].Children[0],
+            "First",
+            "Second");
+        var topLevelSecondBlock = EnumerateFragments((BlockFragment)topLevelLayout.Pages[0].Children[0])
+            .OfType<BlockFragment>()
+            .First(block =>
+                ContainsLineText(block, "Second") &&
+                !ContainsLineText(block, "First"));
+        var inlineBlockContainer = EnumerateFragments((BlockFragment)inlineBlockLayout.Pages[0].Children[0])
+            .OfType<BlockFragment>()
+            .First(block =>
+                block.FormattingContext == FormattingContextKind.InlineBlock &&
+                ContainsLineText(block, "First") &&
+                ContainsLineText(block, "Second"));
+
+        inlineBlockContainer.Rect.Width.ShouldBe(topLevelSecondBlock.Rect.Width, 0.1f);
+        inlineBlockContainer.Rect.Height.ShouldBe(topLevelContainer.Rect.Height, 0.1f);
+
+        topLevelDiagnostics.Events
+            .Where(static e => e.Payload is MarginCollapsePayload)
+            .Select(static e => (MarginCollapsePayload)e.Payload!)
+            .Any(payload =>
+                payload.Owner == nameof(BlockFormattingContext) &&
+                payload.Consumer == nameof(BlockLayoutEngine) &&
+                payload.FormattingContext == FormattingContextKind.Block &&
+                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+            .ShouldBeTrue();
+
+        inlineBlockDiagnostics.Events
+            .Where(static e => e.Payload is MarginCollapsePayload)
+            .Select(static e => (MarginCollapsePayload)e.Payload!)
+            .Any(payload =>
+                payload.Owner == nameof(BlockFormattingContext) &&
+                payload.Consumer == nameof(InlineLayoutEngine) &&
+                payload.FormattingContext == FormattingContextKind.InlineBlock &&
+                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+            .ShouldBeTrue();
+
+        var snapshot = LayoutSnapshotMapper.From(inlineBlockLayout);
+        Flatten(snapshot.Pages[0].Fragments)
+            .Any(fragment =>
+                fragment.FormattingContext == FormattingContextKind.InlineBlock &&
+                string.Equals(fragment.Display, "inline-block", StringComparison.OrdinalIgnoreCase))
             .ShouldBeTrue();
     }
 
@@ -700,6 +788,19 @@ public class InlineBlockTests
 
             nextIndex.ShouldBeGreaterThan(currentIndex);
             currentIndex = nextIndex;
+        }
+    }
+
+    private static IEnumerable<FragmentSnapshot> Flatten(IEnumerable<FragmentSnapshot> fragments)
+    {
+        foreach (var fragment in fragments)
+        {
+            yield return fragment;
+
+            foreach (var child in Flatten(fragment.Children))
+            {
+                yield return child;
+            }
         }
     }
 }

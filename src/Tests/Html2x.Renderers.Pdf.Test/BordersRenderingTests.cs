@@ -15,7 +15,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public sealed class BordersRenderingTests
 {
     [Fact]
-    public void DrawPage_BlockBorders_ShouldPaintExpectedColors()
+    public void DrawPage_BlockBorders_PaintExpectedColors()
     {
         var borders = new BorderEdges
         {

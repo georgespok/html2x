@@ -7,14 +7,12 @@ internal interface IInlineNodeMeasurer
 {
     bool TryMeasure(
         DisplayNode node,
-        InlineMeasurementContext context,
-        ICollection<TextRunInput> runs,
-        ref int nextRunId);
+        InlineMeasurementContext context);
 }
 
 internal sealed class InlineMeasurementContext
 {
-    private readonly InlineRunFactory _runFactory;
+    private readonly InlineRunCollector _collector;
 
     public InlineMeasurementContext(
         ComputedStyle blockStyle,
@@ -25,9 +23,14 @@ internal sealed class InlineMeasurementContext
     {
         BlockStyle = blockStyle ?? throw new ArgumentNullException(nameof(blockStyle));
         AvailableWidth = availableWidth;
-        _runFactory = runFactory ?? throw new ArgumentNullException(nameof(runFactory));
         TextMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
         LineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+        _collector = new InlineRunCollector(
+            BlockStyle,
+            AvailableWidth,
+            runFactory ?? throw new ArgumentNullException(nameof(runFactory)),
+            TextMeasurer,
+            LineHeightStrategy);
     }
 
     public ComputedStyle BlockStyle { get; }
@@ -38,65 +41,16 @@ internal sealed class InlineMeasurementContext
 
     public ILineHeightStrategy LineHeightStrategy { get; }
 
-    public bool TryAppendInlineBlockRun(InlineBox inline, ICollection<TextRunInput> runs, ref int nextRunId)
-    {
-        ArgumentNullException.ThrowIfNull(inline);
-        ArgumentNullException.ThrowIfNull(runs);
+    public IReadOnlyList<TextRunInput> Runs => _collector.Runs;
 
-        if (!_runFactory.TryBuildInlineBlockLayout(
-                inline,
-                AvailableWidth,
-                TextMeasurer,
-                LineHeightStrategy,
-                out var inlineLayout) ||
-            !_runFactory.TryBuildInlineBlockRun(inline, nextRunId, inlineLayout, out var inlineRun))
-        {
-            return false;
-        }
+    public bool TryAppendInlineBlockRun(InlineBox inline) => _collector.TryAppendInlineBlockRun(inline);
 
-        runs.Add(inlineRun);
-        nextRunId++;
-        return true;
-    }
+    public bool TryAppendInlineBlockBoundaryRun(InlineBlockBoundaryBox boundary) =>
+        _collector.TryAppendInlineBlockBoundaryRun(boundary);
 
-    public bool TryAppendInlineBlockBoundaryRun(
-        InlineBlockBoundaryBox boundary,
-        ICollection<TextRunInput> runs,
-        ref int nextRunId)
-    {
-        ArgumentNullException.ThrowIfNull(boundary);
-        return TryAppendInlineBlockRun(boundary.SourceInline, runs, ref nextRunId);
-    }
+    public bool TryAppendLineBreakRun(InlineBox inline) => _collector.TryAppendLineBreakRun(inline);
 
-    public bool TryAppendLineBreakRun(InlineBox inline, ICollection<TextRunInput> runs, ref int nextRunId)
-    {
-        ArgumentNullException.ThrowIfNull(inline);
-        ArgumentNullException.ThrowIfNull(runs);
-
-        if (!_runFactory.TryBuildLineBreakRunFromBlockContext(inline, BlockStyle, nextRunId, out var lineBreakRun))
-        {
-            return false;
-        }
-
-        runs.Add(lineBreakRun);
-        nextRunId++;
-        return true;
-    }
-
-    public bool TryAppendTextRun(InlineBox inline, ICollection<TextRunInput> runs, ref int nextRunId)
-    {
-        ArgumentNullException.ThrowIfNull(inline);
-        ArgumentNullException.ThrowIfNull(runs);
-
-        if (!_runFactory.TryBuildTextRun(inline, nextRunId, out var textRun))
-        {
-            return false;
-        }
-
-        runs.Add(textRun);
-        nextRunId++;
-        return true;
-    }
+    public bool TryAppendTextRun(InlineBox inline) => _collector.TryAppendTextRun(inline);
 }
 
 internal sealed class InlineNodeMeasurerRegistry
@@ -127,17 +81,14 @@ internal sealed class InlineNodeMeasurerRegistry
 
     public bool TryMeasure(
         DisplayNode node,
-        InlineMeasurementContext context,
-        ICollection<TextRunInput> runs,
-        ref int nextRunId)
+        InlineMeasurementContext context)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(runs);
 
         foreach (var measurer in _measurers)
         {
-            if (measurer.TryMeasure(node, context, runs, ref nextRunId))
+            if (measurer.TryMeasure(node, context))
             {
                 return true;
             }
@@ -150,12 +101,10 @@ internal sealed class InlineNodeMeasurerRegistry
     {
         public bool TryMeasure(
             DisplayNode node,
-            InlineMeasurementContext context,
-            ICollection<TextRunInput> runs,
-            ref int nextRunId)
+            InlineMeasurementContext context)
         {
             return node is InlineBlockBoundaryBox boundary &&
-                   context.TryAppendInlineBlockBoundaryRun(boundary, runs, ref nextRunId);
+                   context.TryAppendInlineBlockBoundaryRun(boundary);
         }
     }
 
@@ -163,12 +112,10 @@ internal sealed class InlineNodeMeasurerRegistry
     {
         public bool TryMeasure(
             DisplayNode node,
-            InlineMeasurementContext context,
-            ICollection<TextRunInput> runs,
-            ref int nextRunId)
+            InlineMeasurementContext context)
         {
             return node is InlineBox inline &&
-                   context.TryAppendInlineBlockRun(inline, runs, ref nextRunId);
+                   context.TryAppendInlineBlockRun(inline);
         }
     }
 
@@ -176,12 +123,10 @@ internal sealed class InlineNodeMeasurerRegistry
     {
         public bool TryMeasure(
             DisplayNode node,
-            InlineMeasurementContext context,
-            ICollection<TextRunInput> runs,
-            ref int nextRunId)
+            InlineMeasurementContext context)
         {
             return node is InlineBox inline &&
-                   context.TryAppendLineBreakRun(inline, runs, ref nextRunId);
+                   context.TryAppendLineBreakRun(inline);
         }
     }
 
@@ -189,12 +134,10 @@ internal sealed class InlineNodeMeasurerRegistry
     {
         public bool TryMeasure(
             DisplayNode node,
-            InlineMeasurementContext context,
-            ICollection<TextRunInput> runs,
-            ref int nextRunId)
+            InlineMeasurementContext context)
         {
             return node is InlineBox inline &&
-                   context.TryAppendTextRun(inline, runs, ref nextRunId);
+                   context.TryAppendTextRun(inline);
         }
     }
 }

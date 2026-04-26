@@ -1,16 +1,19 @@
-using System.Drawing;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 using AngleSharp.Dom;
 
 namespace Html2x.LayoutEngine.Box;
 
-public sealed class TableLayoutEngine : ITableLayoutEngine
+/// <summary>
+/// Computes the current supported table row and cell geometry model without adding advanced table features.
+/// </summary>
+public sealed class TableLayoutEngine : ITableLayoutEngine, ITableFormattingContextRunner
 {
     private const float DefaultRowHeight = 20f;
-    private readonly IInlineLayoutEngine _inlineEngine;
     private readonly BlockMeasurementService _measurement;
-    private readonly IImageLayoutResolver _imageResolver;
+    private readonly BlockContentMeasurementService _contentMeasurement;
 
     public TableLayoutEngine()
         : this(new InlineLayoutEngine(), new ImageLayoutResolver())
@@ -19,17 +22,22 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
 
     internal TableLayoutEngine(IInlineLayoutEngine inlineEngine, IImageLayoutResolver? imageResolver = null)
     {
-        _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
+        ArgumentNullException.ThrowIfNull(inlineEngine);
         _measurement = new BlockMeasurementService();
-        _imageResolver = imageResolver ?? new ImageLayoutResolver();
+        _contentMeasurement = new BlockContentMeasurementService(
+            inlineEngine,
+            _measurement,
+            imageResolver ?? new ImageLayoutResolver());
     }
 
     public TableLayoutResult Layout(TableBox table, float availableWidth)
     {
         ArgumentNullException.ThrowIfNull(table);
 
+        var measurement = _measurement.Prepare(table, availableWidth);
         var requestedWidth = table.Style.WidthPt;
-        var resolvedWidth = requestedWidth ?? Math.Max(0f, availableWidth);
+        var resolvedWidth = measurement.BorderBoxWidth;
+        var contentWidth = measurement.ContentBoxWidth;
         var validation = ValidateStructure(table);
         if (!validation.IsSupported)
         {
@@ -45,7 +53,7 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
         var derivedColumnCount = rows.Count == 0
             ? 0
             : rows.Max(static row => row.Children.OfType<TableCellBox>().Count());
-        var columnWidths = BuildEqualColumnWidths(resolvedWidth, derivedColumnCount);
+        var columnWidths = BuildEqualColumnWidths(contentWidth, derivedColumnCount);
         var rowResults = BuildRowPlacements(rows, columnWidths);
 
         return new TableLayoutResult
@@ -60,6 +68,11 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
                 ? DefaultRowHeight
                 : rowResults.Max(static row => row.Y + row.Height)
         };
+    }
+
+    public TableLayoutResult LayoutTable(TableBox table, float availableWidth)
+    {
+        return Layout(table, availableWidth);
     }
 
     private static int CountRowsForDiagnostics(TableBox table)
@@ -251,113 +264,89 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
         {
             var row = rows[rowIndex];
             var cells = row.Children.OfType<TableCellBox>().ToList();
-            var rowHeight = Math.Max(
+            var rowPadding = row.Style.Padding.Safe();
+            var rowBorder = Spacing.FromBorderEdges(row.Style.Borders).Safe();
+            var rowBorderWidth = columnWidths.Sum();
+            var rowContentWidth = BoxDimensionResolver.ResolveContentBoxWidth(
+                rowBorderWidth,
+                rowPadding,
+                rowBorder,
+                row.MarkerOffset);
+            var rowColumnWidths = ScaleColumnWidths(columnWidths, rowContentWidth);
+            var rowContentHeight = Math.Max(
                 DefaultRowHeight,
                 cells
                     .Select((cell, columnIndex) => MeasureTableCellHeight(
                         cell,
-                        columnIndex < columnWidths.Count ? columnWidths[columnIndex] : 0f))
+                        columnIndex < rowColumnWidths.Count ? rowColumnWidths[columnIndex] : 0f))
                     .DefaultIfEmpty(DefaultRowHeight)
                     .Max());
+            var rowHeight = rowContentHeight + rowPadding.Vertical + rowBorder.Vertical;
+            var rowGeometry = BoxGeometryFactory.FromBorderBox(
+                0f,
+                currentRowY,
+                rowBorderWidth,
+                rowHeight,
+                rowPadding,
+                rowBorder,
+                markerOffset: row.MarkerOffset);
+            var rowContent = BoxGeometryFactory.ResolveContentArea(rowGeometry);
             var placements = new List<TableLayoutCellPlacement>(cells.Count);
-            var currentX = 0f;
+            var currentX = rowContent.X;
 
             for (var columnIndex = 0; columnIndex < cells.Count; columnIndex++)
             {
                 var sourceCell = cells[columnIndex];
-                var width = columnIndex < columnWidths.Count ? columnWidths[columnIndex] : 0f;
-                placements.Add(new TableLayoutCellPlacement
-                {
-                    SourceCell = sourceCell,
-                    ColumnIndex = columnIndex,
-                    IsHeader = string.Equals(sourceCell.Element?.TagName, "th", StringComparison.OrdinalIgnoreCase),
-                    X = currentX,
-                    Y = currentRowY,
-                    Width = width,
-                    Height = rowHeight,
-                    UsedGeometry = CreateUsedGeometry(
+                var width = columnIndex < rowColumnWidths.Count ? rowColumnWidths[columnIndex] : 0f;
+                placements.Add(new TableLayoutCellPlacement(
+                    sourceCell,
+                    columnIndex,
+                    string.Equals(sourceCell.Element?.TagName, "th", StringComparison.OrdinalIgnoreCase),
+                    BoxGeometryFactory.FromBorderBox(
                         currentX,
-                        currentRowY,
+                        rowContent.Y,
                         width,
-                        rowHeight,
+                        rowContent.Height,
                         sourceCell.Style.Padding.Safe(),
                         Spacing.FromBorderEdges(sourceCell.Style.Borders).Safe(),
-                        markerOffset: sourceCell.MarkerOffset)
-                });
+                        markerOffset: sourceCell.MarkerOffset)));
                 currentX += width;
             }
 
-            results.Add(new TableLayoutRowResult
-            {
-                SourceRow = row,
-                RowIndex = rowIndex,
-                Y = currentRowY,
-                Cells = placements,
-                Height = rowHeight,
-                UsedGeometry = CreateUsedGeometry(
-                    0f,
-                    currentRowY,
-                    columnWidths.Sum(),
-                    rowHeight,
-                    row.Style.Padding.Safe(),
-                    Spacing.FromBorderEdges(row.Style.Borders).Safe(),
-                    markerOffset: row.MarkerOffset)
-            });
+            results.Add(new TableLayoutRowResult(row, rowIndex, rowGeometry, placements));
             currentRowY += rowHeight;
         }
 
         return results;
     }
 
+    private static IReadOnlyList<float> ScaleColumnWidths(IReadOnlyList<float> columnWidths, float targetWidth)
+    {
+        if (columnWidths.Count == 0)
+        {
+            return [];
+        }
+
+        var sourceWidth = columnWidths.Sum();
+        if (sourceWidth <= 0f)
+        {
+            return Enumerable.Repeat(0f, columnWidths.Count).ToList();
+        }
+
+        var scale = Math.Max(0f, targetWidth) / sourceWidth;
+        return columnWidths.Select(width => width * scale).ToList();
+    }
+
     private float MeasureTableCellHeight(TableCellBox cell, float assignedWidth)
     {
-        var measurement = _measurement.Prepare(cell, assignedWidth);
-        var inlineLayout = _inlineEngine.Layout(cell, InlineLayoutRequest.ForMeasurement(measurement.ContentWidth));
-        var nestedHeight = MeasureStackedChildBlockHeights(cell.Children, measurement.ContentWidth);
-        var contentHeight = _measurement.ResolveContentHeight(
-            cell,
-            Math.Max(inlineLayout.TotalHeight, nestedHeight));
-
-        return Math.Max(0f, contentHeight + measurement.Padding.Vertical + measurement.Border.Vertical);
-    }
-
-    private float MeasureStackedChildBlockHeights(IEnumerable<DisplayNode> children, float availableWidth)
-    {
-        return _measurement.MeasureStackedChildBlocks(
-            children,
-            availableWidth,
-            MeasureBlockLikeHeight,
-            MeasureNestedTableHeight);
-    }
-
-    private float MeasureBlockLikeHeight(BlockBox block, float availableWidth)
-    {
-        if (block is ImageBox imageBox)
-        {
-            var imageMeasurement = _measurement.Prepare(imageBox, availableWidth);
-            return _imageResolver.Resolve(imageBox, imageMeasurement.ContentWidth).TotalHeight;
-        }
-
-        if (block is RuleBox ruleBox)
-        {
-            var ruleMeasurement = _measurement.Prepare(ruleBox, availableWidth);
-            return Math.Max(0f, ruleMeasurement.Padding.Vertical + ruleMeasurement.Border.Vertical);
-        }
-
-        var measurement = _measurement.Prepare(block, availableWidth);
-        var inlineLayout = _inlineEngine.Layout(block, InlineLayoutRequest.ForMeasurement(measurement.ContentWidth));
-        var nestedHeight = MeasureStackedChildBlockHeights(block.Children, measurement.ContentWidth);
-        var contentHeight = _measurement.ResolveContentHeight(
-            block,
-            Math.Max(inlineLayout.TotalHeight, nestedHeight));
-
-        return Math.Max(0f, contentHeight + measurement.Padding.Vertical + measurement.Border.Vertical);
+        return _contentMeasurement.MeasureBorderBoxHeight(cell, assignedWidth, MeasureNestedTableHeight);
     }
 
     private float MeasureNestedTableHeight(TableBox table, float availableWidth)
     {
         var measurement = _measurement.Prepare(table, availableWidth);
-        return Layout(table, measurement.ResolvedWidth).Height;
+        var result = Layout(table, availableWidth);
+        return result.Height + measurement.Padding.Vertical + measurement.Border.Vertical;
     }
 
     private readonly record struct TableStructureValidationResult(bool IsSupported, string StructureKind, string Reason)
@@ -373,23 +362,4 @@ public sealed class TableLayoutEngine : ITableLayoutEngine
         }
     }
 
-    private static UsedGeometry CreateUsedGeometry(
-        float x,
-        float y,
-        float width,
-        float height,
-        Spacing padding,
-        Spacing border,
-        float? baseline = null,
-        float markerOffset = 0f,
-        bool allowsOverflow = false)
-    {
-        return UsedGeometry.FromBorderBox(
-            new RectangleF(x, y, width, height),
-            padding,
-            border,
-            baseline,
-            markerOffset,
-            allowsOverflow);
-    }
 }

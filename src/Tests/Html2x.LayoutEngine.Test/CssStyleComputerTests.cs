@@ -16,7 +16,7 @@ public class CssStyleComputerTests
     private readonly CssStyleComputer _sut = new(new StyleTraversal(), new CssValueConverter());
 
     [Fact]
-    public async Task Compute_ShouldProjectComputedStyles()
+    public async Task Compute_ProjectComputedStyles()
     {
         // Arrange
 
@@ -52,7 +52,7 @@ public class CssStyleComputerTests
     }
 
     [Fact]
-    public async Task Compute_WithLineHeightMultiplier_ParsesUnitlessValue()
+    public async Task Compute_LineHeightMultiplier_ParsesUnitlessValue()
     {
         var document = await CreateHtmlDocument(@"
             <html>
@@ -70,7 +70,7 @@ public class CssStyleComputerTests
     }
 
     [Fact]
-    public async Task Compute_WithLineHeightNormal_ShouldNotInheritParentMultiplier()
+    public async Task Compute_LineHeightNormal_DoesNotInheritParentMultiplier()
     {
         var document = await CreateHtmlDocument(@"
             <html>
@@ -87,8 +87,45 @@ public class CssStyleComputerTests
         ]));
     }
 
+    [Theory]
+    [InlineData("left", HtmlCssConstants.CssValues.Left)]
+    [InlineData("right", HtmlCssConstants.CssValues.Right)]
+    [InlineData("none", HtmlCssConstants.Defaults.FloatDirection)]
+    public async Task Compute_WithFloatDeclaration_StoresComputedFloatDirection(
+        string floatValue,
+        string expectedDirection)
+    {
+        var document = await CreateHtmlDocument($@"
+            <html>
+              <body>
+                <img style='float: {floatValue};' src='hero.png' />
+              </body>
+            </html>");
+
+        var tree = _sut.Compute(document);
+
+        var imageStyle = tree.Root!.Children.ShouldHaveSingleItem().Style;
+        imageStyle.FloatDirection.ShouldBe(expectedDirection);
+    }
+
     [Fact]
-    public async Task Compute_WithNegativePadding_ClampsToZero()
+    public async Task Compute_AbsolutePosition_StoresComputedPosition()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html>
+              <body>
+                <div style='position: absolute;'>Box</div>
+              </body>
+            </html>");
+
+        var tree = _sut.Compute(document);
+
+        var blockStyle = tree.Root!.Children.ShouldHaveSingleItem().Style;
+        blockStyle.Position.ShouldBe(HtmlCssConstants.CssValues.Absolute);
+    }
+
+    [Fact]
+    public async Task Compute_NegativePadding_ClampsToZero()
     {
         var document = await CreateHtmlDocument(
             @"<html><body>
@@ -104,7 +141,7 @@ public class CssStyleComputerTests
     }
 
     [Fact]
-    public async Task Compute_WithNestedBlocksAndInlines_ProducesExpectedTree()
+    public async Task Compute_NestedBlocksAndInlines_ProducesExpectedTree()
     {
         var document = await CreateHtmlDocument(
             @"<html><body>
@@ -177,7 +214,7 @@ public class CssStyleComputerTests
     }
 
     [Fact]
-    public async Task Compute_WithListItems_ProducesExpectedTree()
+    public async Task Compute_ListItems_ProducesExpectedTree()
     {
         var document = await CreateHtmlDocument(
             @"<html><body>
@@ -308,7 +345,7 @@ public class CssStyleComputerTests
     }
 
     [Fact]
-    public async Task ParsePaddingShorthand_WithIndividualProperty_IndividualTakesPrecedence()
+    public async Task ParsePaddingShorthand_IndividualProperty_IndividualTakesPrecedence()
     {
         // Arrange
         var document = await CreateHtmlDocument(

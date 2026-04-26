@@ -1,12 +1,17 @@
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 
 namespace Html2x.LayoutEngine.Box;
 
-public sealed class InlineLayoutEngine : IInlineLayoutEngine
+/// <summary>
+/// Lays out inline content into line boxes and records inline layout on the owning block when requested.
+/// </summary>
+public sealed class InlineLayoutEngine : IInlineLayoutEngine, IInlineFormattingContextRunner
 {
     private readonly ILineHeightStrategy _lineHeightStrategy;
     private readonly IFontMetricsProvider _metrics;
@@ -15,6 +20,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
     private readonly TextLayoutEngine _textLayout;
     private readonly InlineLayoutResultBuilder _layoutResultBuilder;
     private readonly InlineNodeMeasurerRegistry _nodeMeasurers;
+    private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly DiagnosticsSession? _diagnosticsSession;
 
     public InlineLayoutEngine()
         : this(
@@ -22,7 +29,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             null,
             new DefaultLineHeightStrategy(),
             new BlockFormattingContext(),
-            InlineNodeMeasurerRegistry.CreateDefault())
+            InlineNodeMeasurerRegistry.CreateDefault(),
+            diagnosticsSession: null)
     {
     }
 
@@ -32,7 +40,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             null,
             new DefaultLineHeightStrategy(),
             new BlockFormattingContext(),
-            InlineNodeMeasurerRegistry.CreateDefault())
+            InlineNodeMeasurerRegistry.CreateDefault(),
+            diagnosticsSession: null)
     {
     }
 
@@ -42,7 +51,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             textMeasurer,
             lineHeightStrategy,
             new BlockFormattingContext(),
-            InlineNodeMeasurerRegistry.CreateDefault())
+            InlineNodeMeasurerRegistry.CreateDefault(),
+            diagnosticsSession: null)
     {
     }
 
@@ -52,12 +62,15 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         ILineHeightStrategy lineHeightStrategy,
         IBlockFormattingContext blockFormattingContext,
         InlineNodeMeasurerRegistry nodeMeasurers,
-        IImageLayoutResolver? imageResolver = null)
+        IImageLayoutResolver? imageResolver = null,
+        DiagnosticsSession? diagnosticsSession = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _textMeasurer = textMeasurer ?? new FallbackTextMeasurer(_metrics);
         _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-        _runFactory = new InlineRunFactory(_metrics, blockFormattingContext, imageResolver);
+        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _diagnosticsSession = diagnosticsSession;
+        _runFactory = new InlineRunFactory(_metrics, _blockFormattingContext, imageResolver, _diagnosticsSession);
         _textLayout = new TextLayoutEngine(_textMeasurer);
         _layoutResultBuilder = new InlineLayoutResultBuilder(_textMeasurer);
         _nodeMeasurers = nodeMeasurers ?? throw new ArgumentNullException(nameof(nodeMeasurers));
@@ -65,14 +78,37 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
     public InlineLayoutResult Layout(BlockBox block, InlineLayoutRequest request)
     {
+        var result = BuildLayout(block, request, includeSegments: true);
+        block.InlineLayout = result;
+        return result;
+    }
+
+    public InlineLayoutResult Measure(BlockBox block, InlineLayoutRequest request)
+    {
+        return BuildLayout(block, request, includeSegments: false);
+    }
+
+    public InlineLayoutResult LayoutInlineContent(BlockBox block, InlineLayoutRequest request)
+    {
+        return Layout(block, request);
+    }
+
+    public InlineLayoutResult MeasureInlineContent(BlockBox block, InlineLayoutRequest request)
+    {
+        return Measure(block, request);
+    }
+
+    private InlineLayoutResult BuildLayout(BlockBox block, InlineLayoutRequest request, bool includeSegments)
+    {
         ArgumentNullException.ThrowIfNull(block);
 
         var segments = new List<InlineFlowSegmentLayout>();
         var pendingInlineFlow = new List<DisplayNode>();
-        var currentY = request.ContentTop;
-        var previousBottomMargin = 0f;
-        var maxLineWidth = 0f;
-        var includeSyntheticListMarker = request.IncludeSyntheticListMarker;
+        var state = new InlineFlowState(
+            request.ContentTop,
+            0f,
+            request.IncludeSyntheticListMarker,
+            0f);
 
         foreach (var child in block.Children)
         {
@@ -81,92 +117,108 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
                 continue;
             }
 
-            currentY = FlushPendingInlineFlow(
+            var flushResult = FlushPendingInlineFlow(
                 block,
                 request,
                 pendingInlineFlow,
-                currentY,
-                ref previousBottomMargin,
-                ref includeSyntheticListMarker,
-                segments,
-                ref maxLineWidth);
+                state,
+                includeSegments);
 
-            switch (child)
+            state = flushResult.State;
+            if (flushResult.Segment is not null)
             {
-                case TableBox table:
-                {
-                    var margin = table.Style.Margin.Safe();
-                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
-                    currentY += collapsedTop + table.Height;
-                    previousBottomMargin = margin.Bottom;
-                    break;
-                }
-                case BlockBox childBlock:
-                {
-                    var margin = childBlock.Style.Margin.Safe();
-                    var collapsedTop = Math.Max(previousBottomMargin, margin.Top);
-                    currentY += collapsedTop + childBlock.Height;
-                    previousBottomMargin = margin.Bottom;
-                    break;
-                }
+                segments.Add(flushResult.Segment);
+            }
+
+            if (child is BlockBox childBlock)
+            {
+                state = AdvancePastBlockChild(block, childBlock, state);
             }
         }
 
-        currentY = FlushPendingInlineFlow(
+        var finalFlushResult = FlushPendingInlineFlow(
             block,
             request,
             pendingInlineFlow,
-            currentY,
-            ref previousBottomMargin,
-            ref includeSyntheticListMarker,
-            segments,
-            ref maxLineWidth);
+            state,
+            includeSegments);
+
+        state = finalFlushResult.State;
+        if (finalFlushResult.Segment is not null)
+        {
+            segments.Add(finalFlushResult.Segment);
+        }
 
         var result = new InlineLayoutResult(
             segments,
-            Math.Max(0f, currentY + previousBottomMargin - request.ContentTop),
-            maxLineWidth);
-        block.InlineLayout = result;
+            Math.Max(0f, state.CurrentY + state.PreviousBottomMargin - request.ContentTop),
+            state.MaxLineWidth);
         return result;
     }
 
-    private float FlushPendingInlineFlow(
+    private InlineFlowFlushResult FlushPendingInlineFlow(
         BlockBox blockContext,
         InlineLayoutRequest request,
         List<DisplayNode> pendingInlineFlow,
-        float currentY,
-        ref float previousBottomMargin,
-        ref bool includeSyntheticListMarker,
-        ICollection<InlineFlowSegmentLayout> segments,
-        ref float maxLineWidth)
+        InlineFlowState state,
+        bool includeSegments)
     {
         if (pendingInlineFlow.Count == 0)
         {
-            return currentY;
+            return new InlineFlowFlushResult(state, Segment: null);
         }
 
-        currentY += previousBottomMargin;
-        previousBottomMargin = 0f;
+        var contentTop = state.CurrentY + state.PreviousBottomMargin;
 
         var segment = BuildSegment(
             blockContext,
             pendingInlineFlow,
             request.AvailableWidth,
             request.ContentLeft,
-            currentY,
-            includeSyntheticListMarker);
+            contentTop,
+            state.IncludeSyntheticListMarker,
+            includeSegments);
 
         pendingInlineFlow.Clear();
-        includeSyntheticListMarker = false;
+        var nextState = state with
+        {
+            CurrentY = contentTop,
+            PreviousBottomMargin = 0f,
+            IncludeSyntheticListMarker = false
+        };
 
         if (segment is null)
         {
-            return currentY;
+            return new InlineFlowFlushResult(nextState, Segment: null);
         }
 
-        segments.Add(segment.Value.Layout);
-        maxLineWidth = Math.Max(maxLineWidth, segment.Value.MaxLineWidth);
-        return currentY + segment.Value.Height;
+        nextState = nextState with
+        {
+            CurrentY = contentTop + segment.Value.Height,
+            MaxLineWidth = Math.Max(state.MaxLineWidth, segment.Value.MaxLineWidth)
+        };
+
+        return new InlineFlowFlushResult(nextState, segment.Value.Layout);
+    }
+
+    private InlineFlowState AdvancePastBlockChild(
+        BlockBox blockContext,
+        BlockBox childBlock,
+        InlineFlowState state)
+    {
+        var margin = childBlock.Style.Margin.Safe();
+        var collapsedTop = _blockFormattingContext.CollapseMargins(
+            state.PreviousBottomMargin,
+            margin.Top,
+            ResolveFormattingContext(blockContext),
+            nameof(InlineLayoutEngine),
+            _diagnosticsSession);
+
+        return state with
+        {
+            CurrentY = state.CurrentY + collapsedTop + childBlock.Height,
+            PreviousBottomMargin = margin.Bottom
+        };
     }
 
     private InlineSegmentBuildResult? BuildSegment(
@@ -175,7 +227,8 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         float availableWidth,
         float contentLeft,
         float contentTop,
-        bool includeSyntheticListMarker)
+        bool includeSyntheticListMarker,
+        bool includeSegments)
     {
         var runs = CollectInlineRuns(blockContext, inlineChildren, availableWidth, includeSyntheticListMarker);
         if (runs.Count == 0)
@@ -188,6 +241,11 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         var metrics = _textMeasurer.GetMetrics(font, fontSize);
         var lineHeight = _lineHeightStrategy.GetLineHeight(blockContext.Style, font, fontSize, metrics);
         var textLayout = _textLayout.Layout(new TextLayoutInput(runs, availableWidth, lineHeight));
+        if (!includeSegments)
+        {
+            return new InlineSegmentBuildResult(null, textLayout.TotalHeight, textLayout.MaxLineWidth);
+        }
+
         var layout = _layoutResultBuilder.BuildSegment(
             blockContext,
             textLayout,
@@ -199,14 +257,12 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
         return new InlineSegmentBuildResult(layout, textLayout.TotalHeight, textLayout.MaxLineWidth);
     }
 
-    private List<TextRunInput> CollectInlineRuns(
+    private IReadOnlyList<TextRunInput> CollectInlineRuns(
         BlockBox blockContext,
         IReadOnlyList<DisplayNode> inlineChildren,
         float availableWidth,
         bool includeSyntheticListMarker)
     {
-        var runs = new List<TextRunInput>();
-        var runId = 1;
         var context = new InlineMeasurementContext(
             blockContext.Style,
             availableWidth,
@@ -216,35 +272,33 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
         if (includeSyntheticListMarker)
         {
-            TryAppendSyntheticListMarkerRun(blockContext, context, runs, ref runId);
+            TryAppendSyntheticListMarkerRun(blockContext, context);
         }
 
         foreach (var inline in inlineChildren)
         {
-            CollectInlineRuns(inline, context, runs, ref runId);
+            CollectInlineRuns(inline, context);
         }
 
-        return runs;
+        return context.Runs;
     }
 
     private void CollectInlineRuns(
         DisplayNode node,
-        InlineMeasurementContext context,
-        ICollection<TextRunInput> runs,
-        ref int runId)
+        InlineMeasurementContext context)
     {
         switch (node)
         {
-            case BlockBox block when IsAnonymousInlineWrapper(block):
+            case BlockBox block when InlineFlowClassifier.IsAnonymousInlineWrapper(block):
                 foreach (var child in block.Children)
                 {
-                    CollectInlineRuns(child, context, runs, ref runId);
+                    CollectInlineRuns(child, context);
                 }
 
                 return;
         }
 
-        if (_nodeMeasurers.TryMeasure(node, context, runs, ref runId))
+        if (_nodeMeasurers.TryMeasure(node, context))
         {
             return;
         }
@@ -256,15 +310,13 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            CollectInlineRuns(childInline, context, runs, ref runId);
+            CollectInlineRuns(childInline, context);
         }
     }
 
     private void TryAppendSyntheticListMarkerRun(
         BlockBox blockContext,
-        InlineMeasurementContext context,
-        ICollection<TextRunInput> runs,
-        ref int runId)
+        InlineMeasurementContext context)
     {
         if (blockContext.Role != DisplayRole.ListItem || blockContext.MarkerOffset > 0f || HasExplicitListMarker(blockContext))
         {
@@ -284,7 +336,7 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
             Parent = blockContext
         };
 
-        context.TryAppendTextRun(marker, runs, ref runId);
+        context.TryAppendTextRun(marker);
     }
 
     private static bool HasExplicitListMarker(BlockBox blockContext)
@@ -338,29 +390,30 @@ public sealed class InlineLayoutEngine : IInlineLayoutEngine
 
     private static bool TryAppendInlineFlowNode(DisplayNode node, ICollection<DisplayNode> pendingInlineFlow)
     {
-        switch (node)
+        if (!InlineFlowClassifier.IsInlineFlowMember(node))
         {
-            case InlineBox:
-            case InlineBlockBoundaryBox:
-                pendingInlineFlow.Add(node);
-                return true;
-            case BlockBox block when IsAnonymousInlineWrapper(block):
-                pendingInlineFlow.Add(block);
-                return true;
-            default:
-                return false;
+            return false;
         }
+
+        pendingInlineFlow.Add(node);
+        return true;
     }
 
-    private static bool IsAnonymousInlineWrapper(BlockBox block)
-    {
-        return block.IsAnonymous &&
-               block.Children.Count > 0 &&
-               block.Children.All(static child => child is InlineBox);
-    }
+    private static FormattingContextKind ResolveFormattingContext(BlockBox block) =>
+        block.IsInlineBlockContext ? FormattingContextKind.InlineBlock : FormattingContextKind.Block;
+
+    private readonly record struct InlineFlowState(
+        float CurrentY,
+        float PreviousBottomMargin,
+        bool IncludeSyntheticListMarker,
+        float MaxLineWidth);
+
+    private readonly record struct InlineFlowFlushResult(
+        InlineFlowState State,
+        InlineFlowSegmentLayout? Segment);
 
     private readonly record struct InlineSegmentBuildResult(
-        InlineFlowSegmentLayout Layout,
+        InlineFlowSegmentLayout? Layout,
         float Height,
         float MaxLineWidth);
 

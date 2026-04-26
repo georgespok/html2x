@@ -1,4 +1,4 @@
-﻿using SkiaSharp;
+using SkiaSharp;
 using Xunit.Abstractions;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -6,7 +6,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class AbsolutePositioningTests(ITestOutputHelper output)
 {
     [Fact]
-    public void AbsoluteRendering_WithSkiaPdf_ShouldGeneratePdf()
+    public void AbsoluteRendering_SkiaPdf_GeneratePdf()
     {
         // Arrange: mock fragments
         var fragments = new ITestFragment[]

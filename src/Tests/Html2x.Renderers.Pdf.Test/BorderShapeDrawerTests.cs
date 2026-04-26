@@ -87,7 +87,7 @@ public class BorderShapeDrawerTests
     }
 
     [Fact]
-    public void CalculateRects_WithZeroWidthSides_HandlesCorrectly()
+    public void CalculateRects_ZeroWidthSides_Handles()
     {
         // Arrange
         var size = new SKSize(100, 100);
@@ -117,5 +117,57 @@ public class BorderShapeDrawerTests
         // Left: (0, 10, 0, 100) -> Width 0, Height 90
         left.Width.ShouldBe(0);
         left.Height.ShouldBe(90);
+    }
+
+    [Fact]
+    public void CalculateRects_OversizedHorizontalBorders_DoesNotInvertVerticalSides()
+    {
+        var size = new SKSize(30, 10);
+        var borders = new BorderEdges
+        {
+            Top = new BorderSide(8, ColorRgba.Black, BorderLineStyle.Solid),
+            Right = new BorderSide(4, ColorRgba.Black, BorderLineStyle.Solid),
+            Bottom = new BorderSide(8, ColorRgba.Black, BorderLineStyle.Solid),
+            Left = new BorderSide(4, ColorRgba.Black, BorderLineStyle.Solid)
+        };
+
+        var (top, right, bottom, left) = _sut.CalculateRects(size, borders);
+
+        top.ShouldBe(new SKRect(0, 0, 30, 8));
+        bottom.ShouldBe(new SKRect(0, 2, 30, 10));
+        right.Top.ShouldBe(right.Bottom);
+        left.Top.ShouldBe(left.Bottom);
+        right.Top.ShouldBe(8);
+        left.Top.ShouldBe(8);
+    }
+
+    [Fact]
+    public void CalculateRects_OversizedVerticalBorders_DoesNotInvertHorizontalSides()
+    {
+        var size = new SKSize(10, 30);
+        var borders = new BorderEdges
+        {
+            Top = new BorderSide(4, ColorRgba.Black, BorderLineStyle.Solid),
+            Right = new BorderSide(20, ColorRgba.Black, BorderLineStyle.Solid),
+            Bottom = new BorderSide(4, ColorRgba.Black, BorderLineStyle.Solid),
+            Left = new BorderSide(20, ColorRgba.Black, BorderLineStyle.Solid)
+        };
+
+        var (_, right, _, left) = _sut.CalculateRects(size, borders);
+
+        right.ShouldBe(new SKRect(0, 4, 10, 26));
+        left.ShouldBe(new SKRect(0, 4, 10, 26));
+    }
+
+    [Fact]
+    public void Draw_TinyBoxAndLargeBorders_DoesNotThrow()
+    {
+        var size = new SKSize(2, 2);
+        var borders = BorderEdges.Uniform(new BorderSide(8, ColorRgba.Black, BorderLineStyle.Solid));
+
+        using var bitmap = new SKBitmap(2, 2);
+        using var canvas = new SKCanvas(bitmap);
+
+        Should.NotThrow(() => _sut.Draw(canvas, size, borders));
     }
 }

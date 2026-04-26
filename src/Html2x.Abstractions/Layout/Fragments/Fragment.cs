@@ -4,10 +4,17 @@ using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Abstractions.Layout.Fragments;
 
+/// <summary>
+/// Base renderable fragment carrying page geometry, paint metadata, and validation at immutable boundaries.
+/// </summary>
 public abstract class Fragment
 {
     private readonly RectangleF _rect;
     private readonly VisualStyle _style = new();
+
+    protected Fragment()
+    {
+    }
 
     public int FragmentId { get; init; }
 
@@ -18,10 +25,7 @@ public abstract class Fragment
         get => _rect;
         init
         {
-            GuardFinite(nameof(Rect.X), value.X);
-            GuardFinite(nameof(Rect.Y), value.Y);
-            GuardNonNegative(nameof(Rect.Width), value.Width);
-            GuardNonNegative(nameof(Rect.Height), value.Height);
+            FragmentGeometryGuard.GuardRect(nameof(Rect), value);
             _rect = value;
         }
     } // absolute page coords (pt)
@@ -36,20 +40,4 @@ public abstract class Fragment
         init => _style = value ?? new VisualStyle();
     } // minimal style needed to paint this box
 
-    private static void GuardFinite(string name, float value)
-    {
-        if (float.IsNaN(value) || float.IsInfinity(value))
-        {
-            throw new ArgumentOutOfRangeException(name, "Value must be finite.");
-        }
-    }
-
-    private static void GuardNonNegative(string name, float value)
-    {
-        GuardFinite(name, value);
-        if (value < 0)
-        {
-            throw new ArgumentOutOfRangeException(name, "Value must be non-negative.");
-        }
-    }
 }

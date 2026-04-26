@@ -92,7 +92,7 @@ public class TextLayoutEngineTests
     }
 
     [Fact]
-    public async Task SnapshotFragmentOrdering_RepeatedRuns_PreservesTraversalOrderAndSequenceIds()
+    public async Task SnapshotFragmentOrdering_RepeatedRuns_PreservesOrderAndIds()
     {
         const string html = @"
             <html>

@@ -1,5 +1,6 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -21,6 +22,8 @@ internal interface ISpecialFragmentAdapter
 
 internal sealed class FragmentAdapterRegistry
 {
+    internal const string MetadataOwnerName = nameof(FragmentAdapterRegistry);
+
     private readonly IReadOnlyList<IBlockFragmentAdapter> _blockAdapters;
     private readonly IReadOnlyList<ISpecialFragmentAdapter> _specialAdapters;
 
@@ -101,16 +104,18 @@ internal sealed class FragmentAdapterRegistry
 
         public BlockFragment Create(BlockBox source, FragmentBuildState state)
         {
+            var metadata = CreateMetadata(source);
+
             return new TableFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
                 Rect = CreateRect(source),
                 Style = StyleConverter.FromComputed(source.Style),
-                DisplayRole = MapRole(source.Role),
-                FormattingContext = ResolveFormattingContext(source),
-                MarkerOffset = ResolveMarkerOffset(source),
-                DerivedColumnCount = ResolveDerivedColumnCount(source)
+                DisplayRole = metadata.DisplayRole,
+                FormattingContext = metadata.FormattingContext,
+                MarkerOffset = metadata.MarkerOffset,
+                DerivedColumnCount = metadata.DerivedColumnCount ?? 0
             };
         }
     }
@@ -121,16 +126,18 @@ internal sealed class FragmentAdapterRegistry
 
         public BlockFragment Create(BlockBox source, FragmentBuildState state)
         {
+            var metadata = CreateMetadata(source);
+
             return new TableRowFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
                 Rect = CreateRect(source),
                 Style = StyleConverter.FromComputed(source.Style),
-                DisplayRole = MapRole(source.Role),
-                FormattingContext = ResolveFormattingContext(source),
-                MarkerOffset = ResolveMarkerOffset(source),
-                RowIndex = ResolveRowIndex(source)
+                DisplayRole = metadata.DisplayRole,
+                FormattingContext = metadata.FormattingContext,
+                MarkerOffset = metadata.MarkerOffset,
+                RowIndex = metadata.RowIndex ?? 0
             };
         }
     }
@@ -141,17 +148,19 @@ internal sealed class FragmentAdapterRegistry
 
         public BlockFragment Create(BlockBox source, FragmentBuildState state)
         {
+            var metadata = CreateMetadata(source);
+
             return new TableCellFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
                 Rect = CreateRect(source),
                 Style = StyleConverter.FromComputed(source.Style),
-                DisplayRole = MapRole(source.Role),
-                FormattingContext = ResolveFormattingContext(source),
-                MarkerOffset = ResolveMarkerOffset(source),
-                ColumnIndex = ResolveColumnIndex(source),
-                IsHeader = ResolveIsHeader(source)
+                DisplayRole = metadata.DisplayRole,
+                FormattingContext = metadata.FormattingContext,
+                MarkerOffset = metadata.MarkerOffset,
+                ColumnIndex = metadata.ColumnIndex ?? 0,
+                IsHeader = metadata.IsHeader == true
             };
         }
     }
@@ -162,15 +171,17 @@ internal sealed class FragmentAdapterRegistry
 
         public BlockFragment Create(BlockBox source, FragmentBuildState state)
         {
+            var metadata = CreateMetadata(source);
+
             return new BlockFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
                 Rect = CreateRect(source),
                 Style = StyleConverter.FromComputed(source.Style),
-                DisplayRole = MapRole(source.Role),
-                FormattingContext = ResolveFormattingContext(source),
-                MarkerOffset = ResolveMarkerOffset(source)
+                DisplayRole = metadata.DisplayRole,
+                FormattingContext = metadata.FormattingContext,
+                MarkerOffset = metadata.MarkerOffset
             };
         }
     }
@@ -182,11 +193,12 @@ internal sealed class FragmentAdapterRegistry
         public LayoutFragment Create(DisplayNode source, FragmentBuildState state)
         {
             var box = (RuleBox)source;
+            var geometry = RequireGeometry(box);
             return new RuleFragment
             {
                 FragmentId = state.ReserveFragmentId(),
                 PageNumber = state.PageNumber,
-                Rect = box.UsedGeometry?.BorderBoxRect ?? new RectangleF(box.X, box.Y, box.Width, box.Height),
+                Rect = geometry.BorderBoxRect,
                 Style = StyleConverter.FromComputed(box.Style)
             };
         }
@@ -199,9 +211,7 @@ internal sealed class FragmentAdapterRegistry
         public LayoutFragment Create(DisplayNode source, FragmentBuildState state)
         {
             var imageBox = (ImageBox)source;
-            var geometry = imageBox.UsedGeometry;
-            var outerRect = geometry?.BorderBoxRect ?? new RectangleF(imageBox.X, imageBox.Y, imageBox.Width, imageBox.Height);
-            var contentRect = geometry?.ContentBoxRect ?? outerRect;
+            var geometry = RequireGeometry(imageBox);
 
             return new ImageFragment
             {
@@ -212,18 +222,35 @@ internal sealed class FragmentAdapterRegistry
                 IntrinsicSizePx = imageBox.IntrinsicSizePx,
                 IsMissing = imageBox.IsMissing,
                 IsOversize = imageBox.IsOversize,
-                Rect = outerRect,
-                ContentRect = contentRect,
+                Rect = geometry.BorderBoxRect,
+                ContentRect = geometry.ContentBoxRect,
                 Style = StyleConverter.FromComputed(imageBox.Style)
             };
         }
     }
 
-    private static int ResolveDerivedColumnCount(BlockBox box)
+    private static FragmentMetadata CreateMetadata(BlockBox box)
+    {
+        return new FragmentMetadata(
+            MapRole(box.Role),
+            ResolveFormattingContext(box),
+            ResolveMarkerOffset(box),
+            ResolveDerivedColumnCount(box),
+            ResolveRowIndex(box),
+            ResolveColumnIndex(box),
+            ResolveIsHeader(box));
+    }
+
+    private static int? ResolveDerivedColumnCount(BlockBox box)
     {
         if (box is TableBox tableBox && tableBox.DerivedColumnCount >= 0)
         {
             return tableBox.DerivedColumnCount;
+        }
+
+        if (box.Role != DisplayRole.Table)
+        {
+            return null;
         }
 
         return box.Children
@@ -233,22 +260,37 @@ internal sealed class FragmentAdapterRegistry
             .Max();
     }
 
-    private static int ResolveRowIndex(BlockBox box)
+    private static int? ResolveRowIndex(BlockBox box)
     {
+        if (box.Role != DisplayRole.TableRow)
+        {
+            return null;
+        }
+
         return box is TableRowBox rowBox && rowBox.RowIndex >= 0
             ? rowBox.RowIndex
             : ResolveSiblingIndex(box, DisplayRole.TableRow);
     }
 
-    private static int ResolveColumnIndex(BlockBox box)
+    private static int? ResolveColumnIndex(BlockBox box)
     {
+        if (box.Role != DisplayRole.TableCell)
+        {
+            return null;
+        }
+
         return box is TableCellBox cellBox && cellBox.ColumnIndex >= 0
             ? cellBox.ColumnIndex
             : ResolveSiblingIndex(box, DisplayRole.TableCell);
     }
 
-    private static bool ResolveIsHeader(BlockBox box)
+    private static bool? ResolveIsHeader(BlockBox box)
     {
+        if (box.Role != DisplayRole.TableCell)
+        {
+            return null;
+        }
+
         return (box as TableCellBox)?.IsHeader == true
             || string.Equals(box.Element?.TagName, "th", StringComparison.OrdinalIgnoreCase);
     }
@@ -267,7 +309,7 @@ internal sealed class FragmentAdapterRegistry
 
     private static RectangleF CreateRect(BlockBox box)
     {
-        return box.UsedGeometry?.BorderBoxRect ?? new RectangleF(box.X, box.Y, box.Width, box.Height);
+        return RequireGeometry(box).BorderBoxRect;
     }
 
     private static FormattingContextKind ResolveFormattingContext(BlockBox box)
@@ -279,8 +321,14 @@ internal sealed class FragmentAdapterRegistry
 
     private static float? ResolveMarkerOffset(BlockBox box)
     {
-        var markerOffset = box.UsedGeometry?.MarkerOffset ?? box.MarkerOffset;
+        var markerOffset = RequireGeometry(box).MarkerOffset;
         return markerOffset > 0f ? markerOffset : null;
+    }
+
+    private static UsedGeometry RequireGeometry(BlockBox box)
+    {
+        return box.UsedGeometry ?? throw new InvalidOperationException(
+            $"Fragment creation requires UsedGeometry for '{DisplayNodePathBuilder.Build(box)}'.");
     }
 
     private static FragmentDisplayRole MapRole(DisplayRole role)
@@ -297,4 +345,13 @@ internal sealed class FragmentAdapterRegistry
             _ => FragmentDisplayRole.Block
         };
     }
+
+    private sealed record FragmentMetadata(
+        FragmentDisplayRole DisplayRole,
+        FormattingContextKind FormattingContext,
+        float? MarkerOffset,
+        int? DerivedColumnCount,
+        int? RowIndex,
+        int? ColumnIndex,
+        bool? IsHeader);
 }

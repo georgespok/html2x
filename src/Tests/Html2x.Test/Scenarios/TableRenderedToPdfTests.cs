@@ -21,7 +21,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     };
 
     [Fact]
-    public async Task SimpleTableMarkup_ShouldEmitSupportedTableDiagnosticsAndPreserveRowMajorTextOrder()
+    public async Task SimpleTableMarkup_EmitsDiagnosticsAndRowMajorText()
     {
         const string html = """
             <!DOCTYPE html>
@@ -69,7 +69,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     }
 
     [Fact]
-    public async Task TableInsideBlockContainer_ShouldAppearInLayoutSnapshot()
+    public async Task TableInsideBlockContainer_AppearInLayoutSnapshot()
     {
         const string html = """
             <!DOCTYPE html>
@@ -106,7 +106,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     }
 
     [Fact]
-    public async Task HeaderStyledTable_ShouldPreserveHeaderIdentityAndColumnAlignment()
+    public async Task HeaderStyledTable_PreserveHeaderIdentityAndColumnAlignment()
     {
         const string html = """
             <!DOCTYPE html>
@@ -159,7 +159,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     }
 
     [Fact]
-    public async Task TableWithColspan_ShouldEmitUnsupportedStructureDiagnosticsAndSkipTableFragments()
+    public async Task TableWithColspan_RejectsUnsupportedStructure()
     {
         const string html = """
             <!DOCTYPE html>
@@ -200,7 +200,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     }
 
     [Fact]
-    public async Task UnsupportedTable_ShouldReportDiagnosticsAndPreserveSurroundingTextOrder()
+    public async Task UnsupportedTable_ReportDiagnosticsAndPreserveSurroundingTextOrder()
     {
         const string html = """
             <!DOCTYPE html>

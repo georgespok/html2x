@@ -1,6 +1,8 @@
 ﻿namespace Html2x.Abstractions.Layout.Fragments;
 
-// Container/block-level box (flow or table cells can reuse this)
+/// <summary>
+/// Represents a block-level fragment that can own child fragments in normal flow or table cell content.
+/// </summary>
 public class BlockFragment : Fragment
 {
     private readonly List<Fragment> _children;
@@ -27,5 +29,10 @@ public class BlockFragment : Fragment
     {
         ArgumentNullException.ThrowIfNull(child);
         _children.Add(child);
+        OnChildAdded(child);
+    }
+
+    protected virtual void OnChildAdded(Fragment child)
+    {
     }
 }

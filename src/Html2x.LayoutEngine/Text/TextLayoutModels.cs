@@ -4,6 +4,9 @@ using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
 
+/// <summary>
+/// Classifies the supported inline run kinds consumed by text layout.
+/// </summary>
 internal enum TextRunKind
 {
     Normal,
@@ -12,15 +15,21 @@ internal enum TextRunKind
     InlineObject
 }
 
+/// <summary>
+/// Describes a measured inline object placed as one atomic text run.
+/// </summary>
 internal sealed record InlineObjectLayout(
     BlockBox ContentBox,
     TextLayoutResult Layout,
     float ContentWidth,
     float ContentHeight,
-    float Width,
-    float Height,
+    float BorderBoxWidth,
+    float BorderBoxHeight,
     float Baseline);
 
+/// <summary>
+/// Carries source text, spacing, and font data for inline measurement.
+/// </summary>
 internal sealed record TextRunInput(
     int RunId,
     InlineBox Source,
@@ -35,11 +44,17 @@ internal sealed record TextRunInput(
     TextRunKind Kind = TextRunKind.Normal,
     InlineObjectLayout? InlineObject = null);
 
+/// <summary>
+/// Carries the inputs needed to wrap inline runs into text lines.
+/// </summary>
 internal sealed record TextLayoutInput(
     IReadOnlyList<TextRunInput> Runs,
     float AvailableWidth,
     float LineHeight);
 
+/// <summary>
+/// Represents one measured run after line wrapping.
+/// </summary>
 internal sealed record TextLayoutRun(
     InlineBox Source,
     string Text,
@@ -54,11 +69,17 @@ internal sealed record TextLayoutRun(
     ColorRgba? Color,
     InlineObjectLayout? InlineObject = null);
 
+/// <summary>
+/// Represents one wrapped text line and its measured dimensions.
+/// </summary>
 internal sealed record TextLayoutLine(
     IReadOnlyList<TextLayoutRun> Runs,
     float LineWidth,
     float LineHeight);
 
+/// <summary>
+/// Carries all wrapped lines and aggregate inline layout metrics.
+/// </summary>
 internal sealed record TextLayoutResult(
     IReadOnlyList<TextLayoutLine> Lines,
     float TotalHeight,

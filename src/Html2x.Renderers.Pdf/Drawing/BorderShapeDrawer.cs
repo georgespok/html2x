@@ -11,12 +11,14 @@ public class BorderShapeDrawer
     /// </summary>
     public (SKRect Top, SKRect Right, SKRect Bottom, SKRect Left) CalculateRects(SKSize size, BorderEdges borders)
     {
-        var w = size.Width;
-        var h = size.Height;
-        var t = borders.Top?.Width ?? 0;
-        var r = borders.Right?.Width ?? 0;
-        var b = borders.Bottom?.Width ?? 0;
-        var l = borders.Left?.Width ?? 0;
+        var w = Math.Max(0f, size.Width);
+        var h = Math.Max(0f, size.Height);
+        var t = ClampToDimension(borders.Top?.Width ?? 0f, h);
+        var r = ClampToDimension(borders.Right?.Width ?? 0f, w);
+        var b = ClampToDimension(borders.Bottom?.Width ?? 0f, h);
+        var l = ClampToDimension(borders.Left?.Width ?? 0f, w);
+        var verticalTop = t;
+        var verticalBottom = Math.Max(verticalTop, h - b);
 
         // Top: Full width (0, 0, W, T)
         var topRect = new SKRect(0, 0, w, t);
@@ -25,12 +27,22 @@ public class BorderShapeDrawer
         var bottomRect = new SKRect(0, h - b, w, h);
         
         // Right: Height minus Top/Bottom (W-R, T, W, H-B)
-        var rightRect = new SKRect(w - r, t, w, h - b);
+        var rightRect = new SKRect(w - r, verticalTop, w, verticalBottom);
         
         // Left: Height minus Top/Bottom (0, T, L, H-B)
-        var leftRect = new SKRect(0, t, l, h - b);
+        var leftRect = new SKRect(0, verticalTop, l, verticalBottom);
 
         return (topRect, rightRect, bottomRect, leftRect);
+    }
+
+    private static float ClampToDimension(float value, float dimension)
+    {
+        if (!float.IsFinite(value))
+        {
+            return 0f;
+        }
+
+        return Math.Clamp(value, 0f, dimension);
     }
 
     public void Draw(SKCanvas canvas, SKSize size, BorderEdges borders)

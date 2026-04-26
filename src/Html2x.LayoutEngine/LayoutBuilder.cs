@@ -10,13 +10,14 @@ using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Pipeline;
 using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine;
 
 /// <summary>
-///     High-level orchestrator that enforces the layered pipeline:
-///     DOM/CSSOM -> Style Tree -> Box Tree -> Fragment Tree -> HtmlLayout
+/// Coordinates the deterministic HTML layout pipeline from DOM and style resolution
+/// through display tree, geometry, fragment projection, pagination, and layout assembly.
 /// </summary>
 public class LayoutBuilder
 {
@@ -77,33 +78,39 @@ public class LayoutBuilder
 
         var dom = await RunStageAsync("stage/dom", () => _domProvider.LoadAsync(html, options), diagnosticsSession);
         
-        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession);
+        var styleStage = new StyleStageResult(
+            RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession));
 
-        var boxTree = RunStage("stage/layout", () => _boxBuilder.Build(
-            styleTree,
+        var displayTreeStage = new DisplayTreeStageResult(RunStage(
+            "stage/display-tree",
+            () => _boxBuilder.BuildDisplayTree(styleStage.Tree, diagnosticsSession),
+            diagnosticsSession));
+
+        var layoutGeometryStage = new LayoutGeometryStageResult(RunStage("stage/layout-geometry", () => _boxBuilder.BuildLayoutGeometry(
+            displayTreeStage.Root,
+            styleStage.Tree,
             diagnosticsSession,
             new BoxTreeBuildContext(
                 _imageProvider,
                 options.HtmlDirectory,
-                options.MaxImageSizeBytes)), diagnosticsSession);
-        RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession), diagnosticsSession);
-        
-        var fragments = RunStage("stage/inline-measurement", () => _fragmentBuilder.Build(
-            boxTree,
+                options.MaxImageSizeBytes)), diagnosticsSession));
+        RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(layoutGeometryStage.Tree, diagnosticsSession), diagnosticsSession);
+
+        var fragmentStage = new FragmentStageResult(RunStage("stage/fragment-projection", () => _fragmentBuilder.Build(
+            layoutGeometryStage.Tree,
             new FragmentBuildContext(
                 _imageProvider,
                 options.HtmlDirectory,
                 options.MaxImageSizeBytes,
                 _textMeasurer,
                 _fontSource,
-                _blockFormattingContext)), diagnosticsSession);
-
-        RunStage("stage/fragmentation", () =>
-        {
-            // Fragmentation stage currently aligns with fragment building; placeholder for future expansion.
-        }, diagnosticsSession);
+                _blockFormattingContext)), diagnosticsSession));
         
-        return RunStage("stage/pagination", () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession), diagnosticsSession);
+        var layoutAssemblyStage = new LayoutAssemblyStageResult(RunStage(
+            "stage/pagination",
+            () => CreateHtmlLayout(options, layoutGeometryStage.Tree, fragmentStage.Tree, diagnosticsSession),
+            diagnosticsSession));
+        return layoutAssemblyStage.Layout;
     }
 
     private static HtmlLayout CreateHtmlLayout(
@@ -113,9 +120,10 @@ public class LayoutBuilder
         DiagnosticsSession? diagnosticsSession)
     {
         var paginator = new BlockPaginator();
-        var pagination = paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession);
-        var layout = CreateHtmlLayout(pagination);
-        PublishGeometrySnapshot(boxTree, layout, pagination, diagnosticsSession);
+        var paginationStage = new PaginationStageResult(
+            paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession));
+        var layout = CreateHtmlLayout(paginationStage.Result);
+        PublishGeometrySnapshot(boxTree, layout, paginationStage.Result, diagnosticsSession);
         return layout;
     }
 

@@ -4,6 +4,9 @@ using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.Abstractions.Diagnostics;
 
+/// <summary>
+/// Captures renderer-facing fragment geometry and paint metadata for deterministic diagnostics snapshots.
+/// </summary>
 public sealed class FragmentSnapshot
 {
     public int SequenceId { get; init; }
@@ -38,6 +41,12 @@ public sealed class FragmentSnapshot
 
     public SizePt? ContentSize { get; init; }
 
+    public float? OccupiedX { get; init; }
+
+    public float? OccupiedY { get; init; }
+
+    public SizePt? OccupiedSize { get; init; }
+
     public BorderEdges? Borders { get; init; }
 
     public FragmentDisplayRole? DisplayRole { get; init; }
@@ -53,6 +62,10 @@ public sealed class FragmentSnapshot
     public int? ColumnIndex { get; init; }
 
     public bool? IsHeader { get; init; }
+
+    public string? MetadataOwner { get; init; }
+
+    public string? MetadataConsumer { get; init; }
 
     public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
 }

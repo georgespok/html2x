@@ -47,78 +47,30 @@ public sealed class TableLayoutResult
     }
 }
 
-public sealed class TableLayoutRowResult
+public sealed record TableLayoutRowResult(
+    TableRowBox SourceRow,
+    int RowIndex,
+    UsedGeometry UsedGeometry,
+    IReadOnlyList<TableLayoutCellPlacement> Cells)
 {
-    private UsedGeometry? _usedGeometry;
-    private float _y;
-    private float _height;
+    // Compatibility projection over UsedGeometry. New placement code should consume UsedGeometry directly.
+    public float Y => UsedGeometry.Y;
 
-    public required TableRowBox SourceRow { get; init; }
-
-    public int RowIndex { get; init; }
-
-    public float Y
-    {
-        get => _usedGeometry?.Y ?? _y;
-        init => _y = value;
-    }
-
-    public UsedGeometry? UsedGeometry
-    {
-        get => _usedGeometry;
-        init => _usedGeometry = value;
-    }
-
-    public IReadOnlyList<TableLayoutCellPlacement> Cells { get; init; } = [];
-
-    public float Height
-    {
-        get => _usedGeometry?.Height ?? _height;
-        init => _height = value;
-    }
+    public float Height => UsedGeometry.Height;
 }
 
-public sealed class TableLayoutCellPlacement
+public sealed record TableLayoutCellPlacement(
+    TableCellBox SourceCell,
+    int ColumnIndex,
+    bool IsHeader,
+    UsedGeometry UsedGeometry)
 {
-    private UsedGeometry? _usedGeometry;
-    private float _x;
-    private float _y;
-    private float _width;
-    private float _height;
+    // Compatibility projection over UsedGeometry. New placement code should consume UsedGeometry directly.
+    public float X => UsedGeometry.X;
 
-    public required TableCellBox SourceCell { get; init; }
+    public float Y => UsedGeometry.Y;
 
-    public int ColumnIndex { get; init; }
+    public float Width => UsedGeometry.Width;
 
-    public bool IsHeader { get; init; }
-
-    public float X
-    {
-        get => _usedGeometry?.X ?? _x;
-        init => _x = value;
-    }
-
-    public float Y
-    {
-        get => _usedGeometry?.Y ?? _y;
-        init => _y = value;
-    }
-
-    public float Width
-    {
-        get => _usedGeometry?.Width ?? _width;
-        init => _width = value;
-    }
-
-    public float Height
-    {
-        get => _usedGeometry?.Height ?? _height;
-        init => _height = value;
-    }
-
-    public UsedGeometry? UsedGeometry
-    {
-        get => _usedGeometry;
-        init => _usedGeometry = value;
-    }
+    public float Height => UsedGeometry.Height;
 }

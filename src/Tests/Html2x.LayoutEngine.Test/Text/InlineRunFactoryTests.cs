@@ -8,7 +8,7 @@ namespace Html2x.LayoutEngine.Test.Text;
 public class InlineRunFactoryTests
 {
     [Fact]
-    public void TryBuildInlineBlockRun_ShouldNotFlattenInlineBlockToText()
+    public void TryBuildInlineBlockRun_DoesNotFlattenInlineBlockToText()
     {
         var style = new ComputedStyle { FontSizePt = 12 };
         var inlineBlock = new InlineBox(DisplayRole.InlineBlock)

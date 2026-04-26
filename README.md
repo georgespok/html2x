@@ -1,130 +1,91 @@
 # Html2x
 
-A modern, cross-platform .NET library for converting **HTML + CSS** into multiple output formats.
-The **primary** target is **PDF**, with an architecture designed to extend to **SVG, Canvas**, and more.
-
----
+Html2x is a modern, cross-platform .NET 8 library for converting static HTML and CSS into PDF. The architecture separates parsing, style computation, layout, fragments, pagination, diagnostics, and rendering so each stage can be tested and extended independently.
 
 ## Goals
 
-* **Reusable & modular**: clean separation of parsing and rendering.
-* **Cross-platform**: pure .NET (Windows/Linux; no GDI+, no headless Chromium).
-* **Testable & maintainable**: clear boundaries, predictable outputs captured via diagnostics, unit/integration test friendly.
-* **Business-report ready**: supports a practical subset of HTML/CSS commonly used in reporting.
-
----
-
-## Packages & Modules
-
-* **`Html2x.Abstractions`** - Contracts, diagnostics payloads, and shared utilities consumed by every engine and renderer.
-* **`Html2x.LayoutEngine`** - Parses HTML/CSS (via AngleSharp), builds the style/box trees, and emits predictable fragments with diagnostics hooks.
-* **`Html2x.Renderers.Pdf`** - Consumes fragments and renders PDFs using SkiaSharp; owns renderer-side diagnostics.
-* **`Html2x`** - Composition facade for embedding scenarios; wires abstractions, layout, and renderers together.
-
-Additional renderers (for example `Html2x.Renderers.Svg`) can plug into the same abstractions without touching the layout engine.
-
----
-
-## High-Level Pipeline
-
-```
-HTML/CSS
-  ↓
-DOM + CSSOM (AngleSharp)
-  ↓
-Style Tree (computed styles)
-  ↓
-Box Tree (layout model)
-  ↓
-Fragment Tree (lines/pages)
-  ↓
-Renderer (PDF via SkiaSharp; future: SVG/Canvas)
-```
-
-* **Display List** = a stable, device-independent set of drawing operations (text runs, paths, fills, borders, images, page breaks, etc.).
-* This abstraction lets us add new output formats with minimal duplication.
-
----
-
-## Scope & Non-Goals
-
-**Supported (initially)**
-
-* Static HTML and CSS (no scripting).
-* Common layout for business reports: block/inline flow, lists, tables, page size/margins, page breaks.
-* Basic text, fonts, colors, borders, backgrounds, images.
-
-**Not in scope (by design)**
-
-* JavaScript / dynamic DOM.
-* Color profiles, accessibility tags, form fields, media queries beyond basics.
-* Complex CSS features at first (e.g., transforms, filters, grid/flex — phased in later).
-
----
-
-## Installation
-
-> NuGet packages will be published under the `Html2x.*` namespace.
-
-```powershell
-dotnet add package Html2x.LayoutEngine
-dotnet add package Html2x.Renderers.Pdf
-```
-
----
-
-## Quick Start
-
-TBD
-
----
-
-## Design Principles
-
-* **Separation of concerns**: `Html2x.LayoutEngine` owns HTML/CSS parsing and layout; `Html2x.Renderers.Pdf` only draws.
-* **Extensibility**: new renderers (SVG, Canvas, etc.) bind to `Html2x.Abstractions` without parser changes.
-* **Predictable outputs**: inputs plus options produce a stable fragment tree; diagnostics highlight any platform-specific differences without parsing PDFs.
-* **Pure .NET**: no native GUI stacks or browsers required.
-
----
-
-## Versioning & Targets
-
-* **.NET**: `net8.0`
-* **OS**: Windows & Linux
-* **Build**: distributed as **NuGet packages**
-
----
+- Convert business-report HTML and CSS into deterministic PDF output.
+- Keep the implementation pure .NET, using AngleSharp for HTML/CSS parsing and SkiaSharp for PDF rendering.
+- Preserve clear module boundaries between public API, layout, diagnostics, and rendering.
+- Make unsupported input observable through diagnostics instead of silent behavior drift.
 
 ## Repository Layout
 
-```
+```text
 src/
-  Html2x/                     (composition + public surface)
-  Html2x.Abstractions/        (contracts, diagnostics, shared utilities)
-  Html2x.LayoutEngine/        (style traversal, box + fragment builders)
-  Html2x.Renderers.Pdf/       (SkiaSharp PDF pipeline, drawing, font resolution)
+  Html2x/                     Public composition facade
+  Html2x.Abstractions/        Shared contracts, options, diagnostics, measurements
+  Html2x.Diagnostics/         Diagnostics JSON serialization
+  Html2x.LayoutEngine/        HTML/CSS to fragments
+  Html2x.Renderers.Pdf/       Fragment to PDF rendering
   Tests/
     Html2x.LayoutEngine.Test/
     Html2x.Renderers.Pdf.Test/
-    Html2x.Test/              (integration glue + harness helpers)
-    Html2x.TestConsole/       (manual harness, sample html/fonts)
-build/
-  width-height/               (generated artifacts, logs)
-docs/                         (architecture, standards, testing)
+    Html2x.Test/
+    Html2x.TestConsole/
+docs/                         Developer documentation
+build/                        Local generated artifacts
 ```
 
----
+## Build And Test
+
+Run commands from the repository root.
+
+```powershell
+dotnet restore src/Html2x.sln
+dotnet build src/Html2x.sln -c Release
+dotnet test src/Html2x.sln -c Release
+```
+
+Manual PDF smoke test:
+
+```powershell
+dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/example.html build/example.pdf
+```
+
+## Minimal Usage
+
+```csharp
+using Html2x;
+using Html2x.Abstractions.Options;
+
+var converter = new HtmlConverter();
+
+var result = await converter.ToPdfAsync(
+    "<h1>Invoice</h1><p>Total: $42.00</p>",
+    new HtmlConverterOptions
+    {
+        Pdf =
+        {
+            FontPath = @"C:\Projects\html2x\src\Tests\Html2x.TestConsole\fonts"
+        }
+    });
+
+await File.WriteAllBytesAsync("invoice.pdf", result.PdfBytes);
+```
+
+`PdfOptions.FontPath` must point to a font file or directory before layout begins.
 
 ## Documentation
 
-* [Architecture](docs/architecture.md) - Project structure and design
-* [Coding Standards](docs/coding-standards.md) - Code quality guidelines
-* [Testing Guidelines](docs/testing-guidelines.md) - Testing approach and standards
+Start with the [developer documentation index](docs/README.md). It links the architecture, internals, development, extension, and reference docs.
 
----
+Key entry points:
+
+- [Getting Started](docs/getting-started.md)
+- [Architecture Overview](docs/architecture/overview.md)
+- [Processing Pipeline](docs/architecture/pipeline.md)
+- [Coding Standards](docs/development/coding-standards.md)
+- [Testing](docs/development/testing.md)
+- [Supported HTML And CSS](docs/reference/supported-html-css.md)
+- [Public API](docs/reference/public-api.md)
+
+## Scope
+
+Supported scope includes static HTML/CSS, block and inline flow, basic tables, lists, images, pagination, borders, backgrounds, colors, fonts, diagnostics, and PDF rendering.
+
+Out of scope includes JavaScript execution, dynamic DOM mutation, browser-compatible layout fidelity, full CSS grid/flex support, accessibility tagging, PDF forms, and browser engine embedding.
 
 ## License
 
-MIT License 
-
+MIT License

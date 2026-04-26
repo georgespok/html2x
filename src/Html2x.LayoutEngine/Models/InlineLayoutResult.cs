@@ -3,6 +3,9 @@ using Html2x.Abstractions.Layout.Fragments;
 
 namespace Html2x.LayoutEngine.Models;
 
+/// <summary>
+/// Captures measured inline layout segments and aggregate dimensions for a block content area.
+/// </summary>
 public sealed record InlineLayoutResult(
     IReadOnlyList<InlineFlowSegmentLayout> Segments,
     float TotalHeight,
@@ -11,14 +14,21 @@ public sealed record InlineLayoutResult(
     public static InlineLayoutResult Empty { get; } = new([], 0f, 0f);
 }
 
+/// <summary>
+/// Groups contiguous inline lines that share a coordinate space within a block.
+/// </summary>
 public sealed record InlineFlowSegmentLayout(
     IReadOnlyList<InlineLineLayout> Lines,
     float Top,
     float Height);
 
+/// <summary>
+/// Describes one inline line where Rect is the line slot and OccupiedRect is the tight item bounds.
+/// </summary>
 public sealed record InlineLineLayout(
     int LineIndex,
     RectangleF Rect,
+    RectangleF OccupiedRect,
     float BaselineY,
     float LineHeight,
     string? TextAlign,

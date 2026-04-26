@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Centralize Layout and Font Policy</title>
+    <style>
+      body {
+        margin: 18pt;
+        font-family: Inter, Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.35;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      section {
+        margin-bottom: 16pt;
+        padding: 8pt;
+        border: 1pt solid #666666;
+      }
+
+      .case-grid {
+        margin-top: 6pt;
+      }
+
+      .card {
+        width: 210pt;
+        padding: 6pt;
+        border: 1pt solid #222222;
+        margin-bottom: 8pt;
+      }
+
+      .inline-block-card {
+        display: inline-block;
+        vertical-align: top;
+      }
+
+      .flow-block {
+        display: block;
+        margin-bottom: 12pt;
+        padding: 3pt 4pt;
+        border-bottom: 2pt solid #777777;
+      }
+
+      .flow-block.compact {
+        height: 10pt;
+      }
+
+      .flow-block.tall {
+        height: 16pt;
+        padding-top: 4pt;
+      }
+
+      .font-regular {
+        font-family: Inter, Arial, sans-serif;
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      .font-bold {
+        font-family: Inter, Arial, sans-serif;
+        font-weight: 700;
+        font-style: normal;
+      }
+
+      .font-italic {
+        font-family: Inter, Arial, sans-serif;
+        font-weight: 400;
+        font-style: italic;
+      }
+
+      .font-table {
+        width: 300pt;
+        border-collapse: collapse;
+        margin-top: 8pt;
+      }
+
+      .font-table th,
+      .font-table td {
+        border: 1pt solid #333333;
+        padding: 5pt;
+      }
+
+      .metadata-table {
+        width: 320pt;
+        border-collapse: collapse;
+      }
+
+      .metadata-table th,
+      .metadata-table td {
+        border: 1pt solid #444444;
+        padding: 4pt 5pt;
+      }
+
+      .metadata-list {
+        margin: 6pt 0 0 0;
+        padding-left: 14pt;
+      }
+
+      .note {
+        color: #444444;
+        font-size: 10pt;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Centralize Layout and Font Policy</h1>
+    <p class="note">
+      Foundational sample for block formatting, font resolution, fragment metadata, and diagnostics verification.
+    </p>
+
+    <section id="block-formatting-reference">
+      <h2>Block formatting reference</h2>
+      <p class="note">
+        Reference top-level block flow with sibling margin collapse, padding, border, and stacked descendants.
+      </p>
+      <div class="card">
+        <div class="flow-block tall">Reference first block</div>
+        <div class="flow-block compact" style="margin-top: 4pt;">Reference second block</div>
+      </div>
+    </section>
+
+    <section id="block-formatting-inline-block-parity">
+      <h2>Inline-block parity</h2>
+      <p class="note">
+        The inline-block case should preserve the same internal block metrics and ordering as the top-level reference.
+      </p>
+      <div class="case-grid">
+        Prefix text
+        <span class="card inline-block-card">
+          <div class="flow-block tall">Inline-block first block</div>
+          <div class="flow-block compact" style="margin-top: 4pt;">Inline-block second block</div>
+        </span>
+        suffix text
+      </div>
+    </section>
+
+    <section id="block-formatting-guards">
+      <h2>Block formatting guards</h2>
+      <p class="note">
+        Mixed inline and block descendants plus an inline-block boundary keep normalization and guard paths visible.
+      </p>
+      <div class="card">
+        before
+        <span class="inline-block-card" style="width: 80pt; padding: 2pt; border: 1pt solid #777777;">
+          <div class="flow-block compact" style="margin-bottom: 6pt;">boundary block</div>
+        </span>
+        after
+      </div>
+    </section>
+
+    <section id="font-resolution-baseline">
+      <h2>Font resolution baseline</h2>
+      <p class="font-regular">Inter regular body text should resolve through the configured font directory.</p>
+      <p class="font-bold">Inter bold text should keep the same requested family while changing weight.</p>
+      <p class="font-italic">Inter italic text should keep the same requested family while changing style.</p>
+
+      <table class="font-table">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Requested family</th>
+            <th>Requested shape</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Reference paragraph</td>
+            <td>Inter</td>
+            <td>Regular</td>
+          </tr>
+          <tr>
+            <td>Emphasis paragraph</td>
+            <td>Inter</td>
+            <td>Italic</td>
+          </tr>
+          <tr>
+            <td>Weight probe</td>
+            <td>Inter</td>
+            <td>Bold</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="fragment-metadata-baseline">
+      <h2>Fragment metadata baseline</h2>
+      <p class="note">
+        Lists, inline-block boundaries, and tables keep marker offsets, row and column indices, and display-role semantics observable.
+      </p>
+
+      <ul class="metadata-list">
+        <li>List marker baseline</li>
+        <li>List marker follow-up</li>
+      </ul>
+
+      <table class="metadata-table">
+        <thead>
+          <tr>
+            <th>Owner</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Primary row</td>
+            <td>Ready</td>
+          </tr>
+          <tr>
+            <td>Secondary row</td>
+            <td>Review</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="fragment-metadata-guards">
+      <h2>Fragment metadata guards</h2>
+      <p>
+        Inline text
+        <span class="inline-block-card" style="width: 60pt; height: 20pt; border: 1pt solid #000000;">
+          X
+        </span>
+        trailing text
+      </p>
+    </section>
+
+    <section id="diagnostics-verification">
+      <h2>Diagnostics verification</h2>
+      <ol>
+        <li>Confirm a layout/margin-collapse trace appears for the sibling block cases.</li>
+        <li>Confirm LayoutBuild and PdfRender lifecycle events appear in the diagnostics session.</li>
+        <li>Confirm layout snapshot fragments preserve marker offsets, table row indices, and table cell column indices.</li>
+        <li>Confirm the test-console envelope records the input path, output path, and raw arguments.</li>
+        <li>Confirm the diagnostics JSON envelope records owner, consumer, artifact path, and approved exception evidence.</li>
+      </ol>
+    </section>
+  </body>
+</html>
