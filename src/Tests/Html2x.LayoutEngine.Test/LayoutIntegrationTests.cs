@@ -1,4 +1,4 @@
-using AngleSharp;
+﻿using AngleSharp;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Fragments;
@@ -91,10 +91,9 @@ public class LayoutIntegrationTests
 
         var config = Configuration.Default.WithCss();
         var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
+        var styleComputer = new CssStyleComputer();
         var boxBuilder = new BoxTreeBuilder();
         var fragmentBuilder = new FragmentBuilder();
-        var imageProvider = new NoopImageProvider();
         var builder = CreateLayoutBuilder();
         var layoutOptions = new LayoutOptions
         {
@@ -104,7 +103,7 @@ public class LayoutIntegrationTests
         var document = await domProvider.LoadAsync(html, layoutOptions);
         var styleTree = styleComputer.Compute(document);
         var boxTree = boxBuilder.Build(styleTree, null);
-        var fragmentTree = fragmentBuilder.Build(boxTree, CreateContext(imageProvider));
+        var fragmentTree = fragmentBuilder.Build(boxTree, CreateFontSource());
         var layout = await builder.BuildAsync(html, layoutOptions);
 
         var boxTexts = CollectInlineTexts(boxTree.Blocks).ToList();
@@ -317,6 +316,40 @@ public class LayoutIntegrationTests
         image.ShouldNotBeNull();
         image!.ContentRect.Width.ShouldBe(0f);
         image.ContentRect.Height.ShouldBe(0f);
+    }
+
+    [Fact]
+    public async Task Build_ImageSizing_CoversCssDimensionsIntrinsicRatioAndAvailableWidthCap()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div style='width: 120pt; margin: 0;'>
+                  <img src='css.png' style='display: block; width: 40px; height: 20px;' />
+                  <img src='intrinsic.png' style='display: block;' />
+                </div>
+              </body>
+            </html>";
+
+        var layout = await CreateLayoutBuilder(new FixedImageProvider(src =>
+            string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
+                ? new SizePx(400d, 200d)
+                : new SizePx(80d, 40d)))
+            .BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter });
+
+        var container = layout.Pages[0].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
+        var images = EnumerateLayoutFragments(container)
+            .OfType<ImageFragment>()
+            .ToList();
+
+        images.Count.ShouldBe(2);
+        var cssImage = images[0];
+        var intrinsicImage = images[1];
+
+        cssImage.ContentRect.Width.ShouldBe(30f, 0.01f);
+        cssImage.ContentRect.Height.ShouldBe(15f, 0.01f);
+        intrinsicImage.ContentRect.Width.ShouldBe(120f, 0.01f);
+        intrinsicImage.ContentRect.Height.ShouldBe(60f, 0.01f);
     }
 
     [Theory]
@@ -693,7 +726,25 @@ public class LayoutIntegrationTests
         return null;
     }
 
-    private static IEnumerable<string> CollectInlineTexts(IEnumerable<DisplayNode> nodes)
+    private static IEnumerable<CoreFragment> EnumerateLayoutFragments(CoreFragment fragment)
+    {
+        yield return fragment;
+
+        if (fragment is not BlockFragment block)
+        {
+            yield break;
+        }
+
+        foreach (var child in block.Children)
+        {
+            foreach (var nested in EnumerateLayoutFragments(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
+    private static IEnumerable<string> CollectInlineTexts(IEnumerable<BoxNode> nodes)
     {
         foreach (var node in nodes)
         {
@@ -704,7 +755,7 @@ public class LayoutIntegrationTests
         }
     }
 
-    private static IEnumerable<string> CollectInlineTexts(DisplayNode node)
+    private static IEnumerable<string> CollectInlineTexts(BoxNode node)
     {
         if (node is InlineBox inline && !string.IsNullOrWhiteSpace(inline.TextContent))
         {
@@ -720,29 +771,22 @@ public class LayoutIntegrationTests
         }
     }
 
-    private static FragmentBuildContext CreateContext(IImageProvider imageProvider)
+    private static IFontSource CreateFontSource()
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(10f);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((9f, 3f));
-
         var fontSource = new Mock<IFontSource>();
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        return new FragmentBuildContext(
-            imageProvider,
-            Directory.GetCurrentDirectory(),
-            (long)(10 * 1024 * 1024),
-            textMeasurer.Object,
-            fontSource.Object);
+        return fontSource.Object;
     }
 
     private static LayoutBuilder CreateLayoutBuilder()
     {
-        var imageProvider = new NoopImageProvider();
+        return CreateLayoutBuilder(new NoopImageProvider());
+    }
+
+    private static LayoutBuilder CreateLayoutBuilder(IImageProvider imageProvider)
+    {
         var textMeasurer = new Mock<ITextMeasurer>();
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns(10f);
@@ -753,7 +797,21 @@ public class LayoutIntegrationTests
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        var services = new LayoutServices(textMeasurer.Object, fontSource.Object, imageProvider);
-        return new LayoutBuilderFactory().Create(services);
+        return new LayoutBuilder(textMeasurer.Object, fontSource.Object, imageProvider);
+    }
+
+    private sealed class FixedImageProvider(Func<string, SizePx> resolveSize) : IImageProvider
+    {
+        private readonly Func<string, SizePx> _resolveSize = resolveSize;
+
+        public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
+        {
+            return new ImageLoadResult
+            {
+                Src = src,
+                Status = ImageLoadStatus.Ok,
+                IntrinsicSizePx = _resolveSize(src)
+            };
+        }
     }
 }

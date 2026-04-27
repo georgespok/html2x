@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.LayoutEngine.Box;
@@ -34,7 +34,7 @@ internal sealed class InlineRunFactory
     public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
     {
         run = default!;
-        if (inline.Role != DisplayRole.InlineBlock || inlineLayout is null)
+        if (inline.Role != BoxRole.InlineBlock || inlineLayout is null)
         {
             return false;
         }
@@ -83,7 +83,7 @@ internal sealed class InlineRunFactory
 
     internal TextRunInput CreateSyntheticLineBreakRun(ComputedStyle style, int runId)
     {
-        var source = new InlineBox(DisplayRole.Inline)
+        var source = new InlineBox(BoxRole.Inline)
         {
             Style = style
         };

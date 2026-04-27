@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Diagnostics;
@@ -11,69 +11,63 @@ namespace Html2x.LayoutEngine.Box;
 /// <summary>
 /// Orchestrates current block layout by routing nodes to block, table, inline, and diagnostic formatting context owners.
 /// </summary>
-public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
+public sealed class BlockLayoutEngine
 {
-    private readonly IInlineFormattingContextRunner _inlineContext;
+    private readonly InlineLayoutEngine _inlineEngine;
     private readonly BlockMeasurementService _measurement;
-    private readonly ITableFormattingContextRunner _tableContext;
+    private readonly TableLayoutEngine _tableEngine;
     private readonly DiagnosticsSession? _diagnosticsSession;
     private readonly IBlockFormattingContext _blockFormattingContext;
     private readonly IImageLayoutResolver _imageResolver;
-    private readonly FormattingContextLayoutDispatcher _formattingContexts;
     private readonly TablePlacementApplier _tablePlacementApplier;
 
     public BlockLayoutEngine(
-        IInlineLayoutEngine inlineEngine,
-        ITableLayoutEngine tableEngine,
+        InlineLayoutEngine inlineEngine,
+        TableLayoutEngine tableEngine,
         DiagnosticsSession? diagnosticsSession = null)
         : this(
             inlineEngine,
             tableEngine,
             new BlockFormattingContext(),
             new ImageLayoutResolver(),
-            BlockLayoutStrategyRegistry.CreateDefault(),
             diagnosticsSession)
     {
     }
 
     internal BlockLayoutEngine(
-        IInlineLayoutEngine inlineEngine,
-        ITableLayoutEngine tableEngine,
+        InlineLayoutEngine inlineEngine,
+        TableLayoutEngine tableEngine,
         IBlockFormattingContext blockFormattingContext,
         IImageLayoutResolver imageResolver,
-        BlockLayoutStrategyRegistry layoutStrategies,
         DiagnosticsSession? diagnosticsSession = null)
     {
         ArgumentNullException.ThrowIfNull(inlineEngine);
         ArgumentNullException.ThrowIfNull(tableEngine);
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
         _measurement = new BlockMeasurementService(_blockFormattingContext);
-        _inlineContext = inlineEngine as IInlineFormattingContextRunner
-            ?? new InlineFormattingContextRunnerAdapter(inlineEngine);
-        _tableContext = tableEngine as ITableFormattingContextRunner
-            ?? new TableFormattingContextRunnerAdapter(tableEngine);
+        _inlineEngine = inlineEngine;
+        _tableEngine = tableEngine;
         _imageResolver = imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
-        _formattingContexts = new FormattingContextLayoutDispatcher(layoutStrategies);
-        _tablePlacementApplier = new TablePlacementApplier(_inlineContext);
+        _tablePlacementApplier = new TablePlacementApplier();
         _diagnosticsSession = diagnosticsSession;
     }
 
-    public BoxTree Layout(DisplayNode displayRoot, PageBox page)
+    public BoxTree Layout(BoxNode boxRoot, PageBox page)
     {
-        if (displayRoot is null)
+        if (boxRoot is null)
         {
-            throw new ArgumentNullException(nameof(displayRoot));
+            throw new ArgumentNullException(nameof(boxRoot));
         }
 
         var tree = new BoxTree();
         CopyPageTo(tree.Page, page);
 
-        var contentX = page.Margin.Left;
-        var contentY = page.Margin.Top;
-        var pageSize = page.Size;
-        var contentWidth = pageSize.Width - page.Margin.Left - page.Margin.Right;
+        var contentArea = PageContentArea.From(page.Size, page.Margin);
+        var contentX = contentArea.X;
+        var contentY = contentArea.Y;
+        var contentWidth = contentArea.Width;
 
-        var candidates = SelectTopLevelCandidates(displayRoot);
+        var candidates = SelectTopLevelCandidates(boxRoot);
 
         var currentY = contentY;
         var previousBottomMargin = 0f;
@@ -86,7 +80,8 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
             }
 
             var marginTop = block.Style.Margin.Safe().Top;
-            var collapsedTop = _blockFormattingContext.CollapseMargins(
+            var collapsedTop = VerticalFlowPolicy.CollapseTopMargin(
+                _blockFormattingContext,
                 previousBottomMargin,
                 marginTop,
                 FormattingContextKind.Block,
@@ -102,28 +97,28 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
                     previousBottomMargin,
                     collapsedTop));
             tree.Blocks.Add(laidOutBlock);
-            currentY = laidOutBlock.Y + laidOutBlock.Height;
+            currentY = VerticalFlowPolicy.AdvanceCursorPast(laidOutBlock.Y, laidOutBlock.Height);
             previousBottomMargin = laidOutBlock.Margin.Bottom;
         }
 
         return tree;
     }
 
-    private static IReadOnlyList<DisplayNode> SelectTopLevelCandidates(DisplayNode displayRoot)
+    private static IReadOnlyList<BoxNode> SelectTopLevelCandidates(BoxNode boxRoot)
     {
-        if (displayRoot is TableBox tableRoot)
+        if (boxRoot is TableBox tableRoot)
         {
             return [tableRoot];
         }
 
-        if (displayRoot is BlockBox rootBlock)
+        if (boxRoot is BlockBox rootBlock)
         {
             return IsInlineOnlyBlock(rootBlock) 
                 ? [rootBlock] 
                 : rootBlock.Children;
         }
 
-        return [displayRoot];
+        return [boxRoot];
     }
 
     private static bool IsInlineOnlyBlock(BlockBox block)
@@ -135,7 +130,13 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
 
     private BlockBox LayoutBlock(BlockBox node, BlockLayoutRequest request)
     {
-        return _formattingContexts.Layout(this, node, request);
+        return node switch
+        {
+            TableBox table => LayoutTableBlock(table, request),
+            ImageBox image => LayoutImageBlock(image, request),
+            RuleBox rule => LayoutRuleBlock(rule, request),
+            _ => LayoutStandardBlock(node, request)
+        };
     }
 
     internal BlockBox LayoutStandardBlock(BlockBox node, BlockLayoutRequest request)
@@ -149,67 +150,43 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         var x = origin.X;
         var y = origin.Y;
 
-        var contentArea = BoxGeometryFactory.ResolveContentArea(
-            x,
-            y,
-            measurement.BorderBoxWidth,
-            0f,
-            padding,
-            border,
-            node.MarkerOffset);
+        var contentArea = ResolveInitialContentFlowArea(x, y, measurement, node.MarkerOffset);
         var contentWidthForChildren = contentArea.Width;
         var contentXForChildren = contentArea.X;
         var contentYForChildren = contentArea.Y;
 
-        var inlineContentX = contentXForChildren;
-
         node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
 
-        var childBlockFlowHeight = LayoutChildBlocks(
+        var flowLayout = LayoutFlowContent(
             node,
             contentXForChildren,
             contentYForChildren,
             contentWidthForChildren,
             contentYForChildren);
-        var inlineLayout = _inlineContext.LayoutInlineContent(
-            node,
-            new InlineLayoutRequest(
-                inlineContentX,
-                contentYForChildren,
-                contentWidthForChildren));
-        var inlineFlowHeight = inlineLayout.TotalHeight;
-        var resolvedContentHeight = ResolveFlowContentHeight(childBlockFlowHeight, inlineFlowHeight);
         var contentHeight = _measurement.ResolveContentHeight(
             node,
-            resolvedContentHeight);
-        var borderBoxWidth = BoxGeometryFactory.NormalizeNonNegative(measurement.BorderBoxWidth);
-        var contentBoxHeight = BoxGeometryFactory.NormalizeNonNegative(contentHeight);
-        var usedGeometry = BoxGeometryFactory.FromBorderBox(
-            x,
-            y,
-            borderBoxWidth,
-            contentBoxHeight + padding.Vertical + border.Vertical,
-            padding,
-            border,
-            markerOffset: node.MarkerOffset);
-
-        node.Margin = margin;
-        node.Padding = padding;
-        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        node.ApplyLayoutGeometry(usedGeometry);
+            flowLayout.ContentHeight);
+        var borderBoxWidth = BoxGeometryFactory.RequireNonNegativeFinite(measurement.BorderBoxWidth);
+        var contentBoxHeight = BoxGeometryFactory.RequireNonNegativeFinite(contentHeight);
+        ApplyBlockLayoutState(
+            node,
+            measurement,
+            CreateGeometryFromContentHeight(
+                x,
+                y,
+                borderBoxWidth,
+                contentBoxHeight,
+                padding,
+                border,
+                node.MarkerOffset));
 
         return node;
-    }
-
-    BlockBox IBlockFormattingContextRunner.LayoutBlock(BlockBox block, BlockLayoutRequest request)
-    {
-        return LayoutStandardBlock(block, request);
     }
 
     internal BlockBox LayoutImageBlock(ImageBox node, BlockLayoutRequest request)
     {
         var measurement = _measurement.Prepare(node, request.ContentWidth);
-        var image = _imageResolver.Resolve(node, measurement.ContentBoxWidth);
+        var image = _imageResolver.Resolve(node, measurement.ContentFlowWidth);
         var padding = measurement.Padding;
         var border = measurement.Border;
         var origin = BlockPlacementService.ResolveOrigin(request, measurement.Margin);
@@ -221,17 +198,17 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         node.IntrinsicSizePx = image.IntrinsicSizePx;
         node.IsMissing = image.IsMissing;
         node.IsOversize = image.IsOversize;
-        node.Margin = measurement.Margin;
-        node.Padding = padding;
-        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        node.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
-            x,
-            y,
-            image.TotalWidth,
-            image.TotalHeight,
-            padding,
-            border,
-            markerOffset: node.MarkerOffset));
+        ApplyBlockLayoutState(
+            node,
+            measurement,
+            BoxGeometryFactory.FromBorderBox(
+                x,
+                y,
+                image.TotalWidth,
+                image.TotalHeight,
+                padding,
+                border,
+                markerOffset: node.MarkerOffset));
 
         return node;
     }
@@ -243,17 +220,17 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         var x = origin.X;
         var y = origin.Y;
 
-        node.Margin = measurement.Margin;
-        node.Padding = measurement.Padding;
-        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        node.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
-            x,
-            y,
-            measurement.BorderBoxWidth,
-            measurement.Padding.Vertical + measurement.Border.Vertical,
-            measurement.Padding,
-            measurement.Border,
-            markerOffset: node.MarkerOffset));
+        ApplyBlockLayoutState(
+            node,
+            measurement,
+            CreateGeometryFromContentHeight(
+                x,
+                y,
+                measurement.BorderBoxWidth,
+                0f,
+                measurement.Padding,
+                measurement.Border,
+                node.MarkerOffset));
 
         return node;
     }
@@ -265,18 +242,49 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         float contentWidth,
         float parentContentTop)
     {
+        return LayoutFlowContent(parent, contentX, cursorY, contentWidth, parentContentTop).ContentHeight;
+    }
+
+    private BlockFlowLayoutResult LayoutFlowContent(
+        BlockBox parent,
+        float contentX,
+        float cursorY,
+        float contentWidth,
+        float parentContentTop)
+    {
         var currentY = cursorY;
         var previousBottomMargin = 0f;
+        var pendingInlineFlow = new InlineFlowBuffer();
+        var inlineSegments = new List<InlineFlowSegmentLayout>();
+        var maxLineWidth = 0f;
+        var includeSyntheticListMarker = true;
 
         for (var i = 0; i < parent.Children.Count; i++)
         {
+            if (pendingInlineFlow.TryQueue(parent.Children[i]))
+            {
+                continue;
+            }
+
+            FlushInlineFlow(
+                parent,
+                pendingInlineFlow,
+                inlineSegments,
+                contentX,
+                contentWidth,
+                ref currentY,
+                ref previousBottomMargin,
+                ref maxLineWidth,
+                ref includeSyntheticListMarker);
+
             if (parent.Children[i] is not BlockBox childBlock)
             {
                 continue;
             }
 
             var marginTop = childBlock.Style.Margin.Safe().Top;
-            var collapsedTop = _blockFormattingContext.CollapseMargins(
+            var collapsedTop = VerticalFlowPolicy.CollapseTopMargin(
+                _blockFormattingContext,
                 previousBottomMargin,
                 marginTop,
                 ResolveFormattingContext(parent),
@@ -292,12 +300,132 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
                     previousBottomMargin,
                     collapsedTop));
             parent.Children[i] = laidOutChild;
-            currentY = laidOutChild.Y + laidOutChild.Height;
+            currentY = VerticalFlowPolicy.AdvanceCursorPast(laidOutChild.Y, laidOutChild.Height);
             previousBottomMargin = laidOutChild.Margin.Bottom;
         }
 
-        return Math.Max(0, (currentY + previousBottomMargin) - cursorY);
+        FlushInlineFlow(
+            parent,
+            pendingInlineFlow,
+            inlineSegments,
+            contentX,
+            contentWidth,
+            ref currentY,
+            ref previousBottomMargin,
+            ref maxLineWidth,
+            ref includeSyntheticListMarker);
+
+        var contentHeight = VerticalFlowPolicy.ResolveStackHeight(currentY, previousBottomMargin, cursorY);
+        parent.InlineLayout = new InlineLayoutResult(inlineSegments, contentHeight, maxLineWidth);
+        return new BlockFlowLayoutResult(contentHeight);
     }
+
+    private void FlushInlineFlow(
+        BlockBox blockContext,
+        InlineFlowBuffer pendingInlineFlow,
+        List<InlineFlowSegmentLayout> inlineSegments,
+        float contentX,
+        float contentWidth,
+        ref float currentY,
+        ref float previousBottomMargin,
+        ref float maxLineWidth,
+        ref bool includeSyntheticListMarker)
+    {
+        if (pendingInlineFlow.Count == 0)
+        {
+            return;
+        }
+
+        var contentTop = currentY + previousBottomMargin;
+        var segmentBlock = CreateInlineSegmentBlock(blockContext, pendingInlineFlow.Nodes);
+        var inlineLayout = _inlineEngine.Layout(
+            segmentBlock,
+            new InlineLayoutRequest(
+                contentX,
+                contentTop,
+                contentWidth,
+                includeSyntheticListMarker));
+
+        pendingInlineFlow.Clear();
+        includeSyntheticListMarker = false;
+        previousBottomMargin = 0f;
+
+        if (inlineLayout.Segments.Count > 0)
+        {
+            inlineSegments.AddRange(inlineLayout.Segments);
+        }
+
+        currentY = contentTop + inlineLayout.TotalHeight;
+        maxLineWidth = Math.Max(maxLineWidth, inlineLayout.MaxLineWidth);
+    }
+
+    private static BlockBox CreateInlineSegmentBlock(BlockBox blockContext, IReadOnlyList<BoxNode> inlineFlow)
+    {
+        var segmentBlock = new BlockBox(blockContext.Role)
+        {
+            Element = blockContext.Element,
+            Style = blockContext.Style,
+            Parent = blockContext,
+            TextAlign = blockContext.TextAlign,
+            IsInlineBlockContext = blockContext.IsInlineBlockContext
+        };
+
+        segmentBlock.MarkerOffset = blockContext.MarkerOffset;
+
+        foreach (var child in inlineFlow)
+        {
+            segmentBlock.Children.Add(child);
+        }
+
+        return segmentBlock;
+    }
+
+    private static ContentFlowArea ResolveInitialContentFlowArea(
+        float x,
+        float y,
+        BlockMeasurementBasis measurement,
+        float markerOffset)
+    {
+        return BoxGeometryFactory.ResolveContentFlowArea(
+            x,
+            y,
+            measurement.BorderBoxWidth,
+            0f,
+            measurement.Padding,
+            measurement.Border,
+            markerOffset);
+    }
+
+    private static UsedGeometry CreateGeometryFromContentHeight(
+        float x,
+        float y,
+        float borderBoxWidth,
+        float contentHeight,
+        Spacing padding,
+        Spacing border,
+        float markerOffset)
+    {
+        return BoxGeometryFactory.FromBorderBoxWithContentHeight(
+            x,
+            y,
+            borderBoxWidth,
+            contentHeight,
+            padding,
+            border,
+            markerOffset: markerOffset);
+    }
+
+    private static void ApplyBlockLayoutState(
+        BlockBox node,
+        BlockMeasurementBasis measurement,
+        UsedGeometry geometry)
+    {
+        node.Margin = measurement.Margin;
+        node.Padding = measurement.Padding;
+        node.TextAlign = node.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        node.ApplyLayoutGeometry(geometry);
+    }
+
     internal TableBox LayoutTableBlock(TableBox node, BlockLayoutRequest request)
     {
         var s = node.Style;
@@ -306,12 +434,12 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         var origin = BlockPlacementService.ResolveOrigin(request, margin);
         var x = origin.X;
         var y = origin.Y;
-        var result = _tableContext.LayoutTable(node, request.ContentWidth);
+        var result = _tableEngine.Layout(node, request.ContentWidth);
         if (!result.IsSupported)
         {
             TableLayoutDiagnostics.EmitUnsupportedTable(
                 _diagnosticsSession,
-                DisplayNodePathBuilder.Build(node),
+                BoxNodePathBuilder.Build(node),
                 result.UnsupportedStructureKind ?? "unsupported-table-structure",
                 result.UnsupportedReason ?? "Unsupported table structure.",
                 result.RowCount,
@@ -324,7 +452,7 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
 
         TableLayoutDiagnostics.EmitSupportedTable(
             _diagnosticsSession,
-            DisplayNodePathBuilder.Build(node),
+            BoxNodePathBuilder.Build(node),
             result.Rows.Count,
             result.DerivedColumnCount,
             result.RequestedWidth,
@@ -394,12 +522,9 @@ public sealed class BlockLayoutEngine : IBlockFormattingContextRunner
         target.Margin = source.Margin;
     }
 
-    private static float ResolveFlowContentHeight(float childBlockFlowHeight, float inlineFlowHeight)
-    {
-        return Math.Max(Math.Max(0f, childBlockFlowHeight), Math.Max(0f, inlineFlowHeight));
-    }
-
     private static FormattingContextKind ResolveFormattingContext(BlockBox block) =>
         block.IsInlineBlockContext ? FormattingContextKind.InlineBlock : FormattingContextKind.Block;
+
+    private readonly record struct BlockFlowLayoutResult(float ContentHeight);
 
 }

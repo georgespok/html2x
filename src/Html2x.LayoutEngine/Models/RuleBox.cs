@@ -1,25 +1,15 @@
-namespace Html2x.LayoutEngine.Models;
+﻿namespace Html2x.LayoutEngine.Models;
 
-public sealed class RuleBox(DisplayRole role) : BlockBox(role)
+public sealed class RuleBox(BoxRole role) : BlockBox(role)
 {
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
-        return new RuleBox(Role)
+        return CopyBlockStateTo(new RuleBox(Role)
         {
             Element = Element,
             Style = Style,
             Parent = parent,
-            X = X,
-            Y = Y,
-            Width = Width,
-            Height = Height,
-            Margin = Margin,
-            Padding = Padding,
-            TextAlign = TextAlign,
-            MarkerOffset = MarkerOffset,
-            UsedGeometry = UsedGeometry,
             IsAnonymous = IsAnonymous,
-            IsInlineBlockContext = IsInlineBlockContext
-        };
+        });
     }
 }

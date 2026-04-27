@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Diagnostics;
@@ -19,7 +19,6 @@ internal sealed class InlineObjectLayoutBuilder(
     IBlockFormattingContext blockFormattingContext,
     IImageLayoutResolver? imageResolver = null,
     DiagnosticsSession? diagnosticsSession = null)
-    : IInlineBlockFormattingContextRunner
 {
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -31,12 +30,13 @@ internal sealed class InlineObjectLayoutBuilder(
         diagnosticsSession);
     private readonly TextLayoutEngine _layoutEngine = new(measurer);
     private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+    private readonly IBlockGeometryMeasurer _geometryMeasurer = new BlockMeasurementService(blockFormattingContext);
     private readonly IImageLayoutResolver _imageResolver = imageResolver ?? new ImageLayoutResolver();
     private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
 
     public bool TryBuildInlineBlockLayout(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
     {
-        if (inline.Role != DisplayRole.InlineBlock)
+        if (inline.Role != BoxRole.InlineBlock)
         {
             layout = default!;
             return false;
@@ -49,23 +49,14 @@ internal sealed class InlineObjectLayoutBuilder(
             return false;
         }
 
-        var padding = contentBox.Style.Padding.Safe();
-        var border = Spacing.FromBorderEdges(contentBox.Style.Borders).Safe();
-        var measurementBorderWidth = ResolveMeasurementBorderWidth(contentBox.Style, availableWidth);
-        var contentAvailableWidth = BoxDimensionResolver.ResolveContentBoxWidth(
-            measurementBorderWidth,
-            padding,
-            border,
-            contentBox.MarkerOffset);
+        var measurement = _geometryMeasurer.PrepareAtomic(contentBox, availableWidth);
+        var padding = measurement.Padding;
+        var border = measurement.Border;
+        var contentAvailableWidth = measurement.ContentFlowWidth;
 
         if (contentBox is ImageBox imageBox)
         {
             var image = _imageResolver.Resolve(imageBox, contentAvailableWidth);
-            imageBox.Src = image.Src;
-            imageBox.AuthoredSizePx = image.AuthoredSizePx;
-            imageBox.IntrinsicSizePx = image.IntrinsicSizePx;
-            imageBox.IsMissing = image.IsMissing;
-            imageBox.IsOversize = image.IsOversize;
             var resolvedLineHeight = ResolveLineHeight(contentBox);
             var resolvedBaseline = Math.Max(resolvedLineHeight, image.TotalHeight);
 
@@ -76,7 +67,8 @@ internal sealed class InlineObjectLayoutBuilder(
                 image.ContentHeight,
                 image.TotalWidth,
                 image.TotalHeight,
-                resolvedBaseline);
+                resolvedBaseline,
+                image);
             return true;
         }
 
@@ -85,17 +77,17 @@ internal sealed class InlineObjectLayoutBuilder(
         var layoutResult = _layoutEngine.Layout(new TextLayoutInput(runs, contentAvailableWidth, lineHeight));
         var formattingResult = FormatBlockContent(contentBox, contentAvailableWidth);
 
-        var measuredContentWidth = ResolveMeasuredContentWidth(layoutResult, formattingResult, contentAvailableWidth);
+        var measuredContentFlowWidth = ResolveMeasuredContentWidth(layoutResult, formattingResult, contentAvailableWidth);
+        var measuredContentBoxWidth = measuredContentFlowWidth + contentBox.MarkerOffset;
         var measuredContentHeight = ResolveContentHeight(contentBox, layoutResult, formattingResult);
-        var measuredBorderBoxWidth = measuredContentWidth + padding.Horizontal + border.Horizontal + contentBox.MarkerOffset;
-        var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredBorderBoxWidth);
-        var contentWidth = BoxDimensionResolver.ResolveContentBoxWidth(
+        var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredContentBoxWidth, padding, border);
+        var contentWidth = BoxDimensionResolver.ResolveContentFlowWidth(
             totalWidth,
             padding,
             border,
             contentBox.MarkerOffset);
-        var contentHeight = ResolveUsedContentHeight(contentBox.Style, measuredContentHeight);
-        var totalHeight = contentHeight + padding.Vertical + border.Vertical;
+        var contentHeight = _geometryMeasurer.ResolveContentHeight(contentBox, measuredContentHeight);
+        var totalHeight = BoxGeometryFactory.ResolveBorderBoxHeight(contentHeight, padding, border);
         var baseline = ResolveBaseline(layoutResult, padding, border, totalHeight);
 
         layout = new InlineObjectLayout(
@@ -112,11 +104,6 @@ internal sealed class InlineObjectLayoutBuilder(
     public bool TryLayoutInlineBlock(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
     {
         return TryBuildInlineBlockLayout(inline, availableWidth, out layout);
-    }
-
-    private static float ResolveMeasurementBorderWidth(ComputedStyle style, float availableWidth)
-    {
-        return BoxDimensionResolver.ResolveAtomicBorderBoxWidth(style, availableWidth);
     }
 
     private BlockFormattingResult FormatBlockContent(BlockBox contentBox, float availableWidth)
@@ -150,14 +137,13 @@ internal sealed class InlineObjectLayoutBuilder(
         return ResolveFinalContentWidth(contentAvailableWidth, maxLineWidth);
     }
 
-    private static float ResolveUsedBorderWidth(ComputedStyle style, float measuredBorderWidth)
+    private static float ResolveUsedBorderWidth(
+        ComputedStyle style,
+        float measuredContentBoxWidth,
+        Spacing padding,
+        Spacing border)
     {
-        return BoxDimensionResolver.ResolveIntrinsicBorderBoxWidth(style, measuredBorderWidth);
-    }
-
-    private static float ResolveUsedContentHeight(ComputedStyle style, float measuredContentHeight)
-    {
-        return BoxDimensionResolver.ResolveContentBoxHeight(style, measuredContentHeight);
+        return BoxDimensionResolver.ResolveIntrinsicBorderBoxWidth(style, measuredContentBoxWidth, padding, border);
     }
 
     private static float ResolveContentHeight(
@@ -204,7 +190,7 @@ internal sealed class InlineObjectLayoutBuilder(
     }
 
     private void CollectRunsFromNodes(
-        IEnumerable<DisplayNode> nodes,
+        IEnumerable<BoxNode> nodes,
         ComputedStyle blockStyle,
         InlineRunCollector collector)
     {
@@ -291,10 +277,10 @@ internal sealed class InlineObjectLayoutBuilder(
     {
         if (!float.IsFinite(availableWidth))
         {
-            return BoxGeometryFactory.NormalizeNonNegative(measuredWidth);
+            return BoxGeometryFactory.RequireNonNegativeFinite(measuredWidth);
         }
 
-        return BoxGeometryFactory.NormalizeNonNegative(Math.Min(availableWidth, measuredWidth));
+        return BoxGeometryFactory.RequireNonNegativeFinite(Math.Min(availableWidth, measuredWidth));
     }
 
     private static float ResolveBaseline(

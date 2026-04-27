@@ -1,4 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 
@@ -11,32 +12,22 @@ internal sealed class UnsupportedLayoutModePolicy
 {
     private const string UnsupportedModeEvent = "layout/unsupported-mode";
 
-    public IReadOnlyList<FormattingContextBoundary> Report(
-        DisplayNode root,
+    public void Report(
+        BoxNode root,
         DiagnosticsSession? diagnosticsSession)
     {
         ArgumentNullException.ThrowIfNull(root);
 
-        var boundaries = new List<FormattingContextBoundary>();
         foreach (var node in Enumerate(root))
         {
             foreach (var unsupported in ResolveUnsupportedModes(node))
             {
-                var boundary = FormattingContextBoundaryResolver.UnsupportedDiagnostic(
-                    node,
-                    unsupported.FallbackRole,
-                    nameof(UnsupportedLayoutModePolicy),
-                    unsupported.FallbackBehavior,
-                    unsupported.Reason);
-                boundaries.Add(boundary);
-                EmitDiagnostic(diagnosticsSession, node, unsupported, boundary);
+                EmitDiagnostic(diagnosticsSession, node, unsupported);
             }
         }
-
-        return boundaries;
     }
 
-    private static IEnumerable<UnsupportedLayoutMode> ResolveUnsupportedModes(DisplayNode node)
+    private static IEnumerable<UnsupportedLayoutMode> ResolveUnsupportedModes(BoxNode node)
     {
         if (node is FloatBox ||
             string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Left, StringComparison.OrdinalIgnoreCase) ||
@@ -44,8 +35,6 @@ internal sealed class UnsupportedLayoutModePolicy
         {
             yield return new UnsupportedLayoutMode(
                 StructureKind: "float",
-                FallbackRole: FormattingContextRole.Block,
-                FallbackBehavior: "omit-floated-subtree",
                 Reason: "CSS floats are not implemented. The current fallback omits floated content from normal layout.");
         }
 
@@ -53,8 +42,6 @@ internal sealed class UnsupportedLayoutModePolicy
         {
             yield return new UnsupportedLayoutMode(
                 StructureKind: "display:flex",
-                FallbackRole: FormattingContextRole.Block,
-                FallbackBehavior: "block-flow-fallback",
                 Reason: "CSS flex layout is not implemented. The current fallback lays the container out as block flow.");
         }
 
@@ -62,17 +49,14 @@ internal sealed class UnsupportedLayoutModePolicy
         {
             yield return new UnsupportedLayoutMode(
                 StructureKind: "position:absolute",
-                FallbackRole: FormattingContextRole.Block,
-                FallbackBehavior: "normal-flow-fallback",
                 Reason: "Absolute positioning is not implemented. The current fallback keeps the element in normal flow.");
         }
     }
 
     private static void EmitDiagnostic(
         DiagnosticsSession? diagnosticsSession,
-        DisplayNode node,
-        UnsupportedLayoutMode unsupported,
-        FormattingContextBoundary boundary)
+        BoxNode node,
+        UnsupportedLayoutMode unsupported)
     {
         if (diagnosticsSession is null)
         {
@@ -87,15 +71,22 @@ internal sealed class UnsupportedLayoutModePolicy
             Severity = DiagnosticSeverity.Warning,
             Payload = new UnsupportedStructurePayload
             {
-                NodePath = DisplayNodePathBuilder.Build(node),
+                NodePath = BoxNodePathBuilder.Build(node),
                 StructureKind = unsupported.StructureKind,
                 Reason = unsupported.Reason,
-                FormattingContext = boundary.ContextKind
+                FormattingContext = ResolveFormattingContext(node)
             }
         });
     }
 
-    private static IEnumerable<DisplayNode> Enumerate(DisplayNode root)
+    private static FormattingContextKind ResolveFormattingContext(BoxNode node)
+    {
+        return node is BlockBox { IsInlineBlockContext: true }
+            ? FormattingContextKind.InlineBlock
+            : FormattingContextKind.Block;
+    }
+
+    private static IEnumerable<BoxNode> Enumerate(BoxNode root)
     {
         yield return root;
 
@@ -108,12 +99,7 @@ internal sealed class UnsupportedLayoutModePolicy
         }
     }
 
-    /// <summary>
-    /// Describes one unsupported layout mode and the fallback that preserves current behavior.
-    /// </summary>
     private readonly record struct UnsupportedLayoutMode(
         string StructureKind,
-        FormattingContextRole FallbackRole,
-        string FallbackBehavior,
         string Reason);
 }

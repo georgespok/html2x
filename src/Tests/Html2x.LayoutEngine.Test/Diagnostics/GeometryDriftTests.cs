@@ -41,7 +41,7 @@ public sealed class GeometryDriftTests
 
         fragmentSnapshots.ShouldNotBeEmpty();
         fragmentSnapshots.ShouldAllBe(static fragment =>
-            fragment.MetadataOwner == "FragmentAdapterRegistry" &&
+            fragment.MetadataOwner == "FragmentBuilder" &&
             fragment.MetadataConsumer == "LayoutSnapshotMapper");
 
         var table = fragmentSnapshots.First(static fragment => fragment.Kind == "table");
@@ -66,8 +66,8 @@ public sealed class GeometryDriftTests
             .SelectMany(static page => page.Placements)
             .First(static item => item.Kind == "Table");
 
-        placement.MetadataOwner.ShouldBe("FragmentAdapterRegistry");
-        placement.MetadataConsumer.ShouldBe("FragmentCoordinateTranslator");
+        placement.MetadataOwner.ShouldBe("FragmentBuilder");
+        placement.MetadataConsumer.ShouldBe("FragmentPlacementCloner");
         placement.DisplayRole.ShouldBe(FragmentDisplayRole.Table);
         placement.FormattingContext.ShouldBe(FormattingContextKind.Block);
         placement.DerivedColumnCount.ShouldBe(2);
@@ -293,9 +293,9 @@ public sealed class GeometryDriftTests
             .OfType<BlockFragment>()
             .First(static fragment => fragment.FormattingContext == FormattingContextKind.InlineBlock);
 
-        geometry.BorderBoxRect.Width.ShouldBe(30f, 0.01f);
+        geometry.BorderBoxRect.Width.ShouldBe(39f, 0.01f);
         geometry.BorderBoxRect.Height.ShouldBe(24f, 0.01f);
-        geometry.ContentBoxRect.Width.ShouldBe(21f, 0.01f);
+        geometry.ContentBoxRect.Width.ShouldBe(30f, 0.01f);
         geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
         inlineBlockFragment.Rect.ShouldBe(geometry.BorderBoxRect);
     }
@@ -318,8 +318,8 @@ public sealed class GeometryDriftTests
             .First(static box => box.IsInlineBlockContext);
         var geometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
 
-        geometry.BorderBoxRect.Width.ShouldBe(30f, 0.01f);
-        geometry.ContentBoxRect.Width.ShouldBe(28.5f, 0.01f);
+        geometry.BorderBoxRect.Width.ShouldBe(31.5f, 0.01f);
+        geometry.ContentBoxRect.Width.ShouldBe(30f, 0.01f);
         geometry.BorderBoxRect.Height.ShouldBe(16.5f, 0.01f);
         geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
     }
@@ -356,18 +356,17 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/div rect=0,0,595,28.8 content=0,0,595,28.8 marker=0 anonymous=false inlineBlock=false
-              2:block path=body/div/div rect=0,0,595,14.4 content=0,0,595,14.4 marker=0 anonymous=true inlineBlock=false
-              3:block path=body/div/p rect=0,14.4,595,14.4 content=0,14.4,595,14.4 marker=0 anonymous=false inlineBlock=false
+            1:block path=body/div rect=0,0,612,28.8 content=0,0,612,28.8 marker=0 anonymous=false inlineBlock=false
+              2:block path=body/div/p rect=0,14.4,612,14.4 content=0,14.4,612,14.4 marker=0 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,28.8
-                2:line rect=0,0,595,14.4 text="Alpha" occupied=0,0,10,14.4
-                3:block rect=0,14.4,595,14.4
-                  4:line rect=0,14.4,595,14.4 text="Beta" occupied=0,14.4,10,14.4
+              1:block rect=0,0,612,28.8
+                2:line rect=0,0,612,14.4 text="Alpha" occupied=0,0,10,14.4
+                3:block rect=0,14.4,612,14.4
+                  4:line rect=0,14.4,612,14.4 text="Beta" occupied=0,14.4,10,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,28.8
             """
         ];
 
@@ -386,19 +385,19 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/ul rect=0,0,595,28.8 content=0,0,595,28.8 marker=0 anonymous=false inlineBlock=false
-              2:listitem path=body/ul/li rect=0,0,595,14.4 content=0,0,595,14.4 marker=12 anonymous=false inlineBlock=false
-              3:listitem path=body/ul/li rect=0,14.4,595,14.4 content=0,14.4,595,14.4 marker=12 anonymous=false inlineBlock=false
+            1:block path=body/ul rect=0,0,612,28.8 content=0,0,612,28.8 marker=0 anonymous=false inlineBlock=false
+              2:listitem path=body/ul/li rect=0,0,612,14.4 content=0,0,612,14.4 marker=12 anonymous=false inlineBlock=false
+              3:listitem path=body/ul/li rect=0,14.4,612,14.4 content=0,14.4,612,14.4 marker=12 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,28.8
-                2:block rect=0,0,595,14.4 marker=12
-                  3:line rect=12,0,583,14.4 text="• One" occupied=12,0,20,14.4
-                4:block rect=0,14.4,595,14.4 marker=12
-                  5:line rect=12,14.4,583,14.4 text="• Two" occupied=12,14.4,20,14.4
+              1:block rect=0,0,612,28.8
+                2:block rect=0,0,612,14.4 marker=12
+                  3:line rect=12,0,600,14.4 text="• One" occupied=12,0,20,14.4
+                4:block rect=0,14.4,612,14.4 marker=12
+                  5:line rect=12,14.4,600,14.4 text="• Two" occupied=12,14.4,20,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,28.8
             """
         ];
 
@@ -463,14 +462,14 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/div rect=0,0,595,24 content=0,0,595,24 marker=0 anonymous=false inlineBlock=false
+            1:block path=body/div rect=0,0,612,24 content=0,0,612,24 marker=0 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,24
+              1:block rect=0,0,612,24
                 2:image rect=0,0,39,24
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,24
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,24
             """
         ];
 
@@ -490,19 +489,17 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/div rect=0,0,595,28.8 content=0,0,595,28.8 marker=0 anonymous=false inlineBlock=false
-              2:block path=body/div/div rect=0,0,595,14.4 content=0,0,595,14.4 marker=0 anonymous=true inlineBlock=false
-              3:block path=body/div/div rect=0,14.4,595,14.4 content=0,14.4,595,14.4 marker=0 anonymous=true inlineBlock=false
+            1:block path=body/div rect=0,0,612,16.5 content=0,0,612,16.5 marker=0 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,28.8
-                2:line rect=0,0,595,16.5 text="before" occupied=0,0,10,16.5
-                3:block rect=10,0,30,16.5
-                  4:line rect=10.75,0.75,28.5,14.4 text="X" occupied=10.75,0.75,10,14.4
-                5:line rect=0,0,595,16.5 text=" after" occupied=40,0,10,16.5
+              1:block rect=0,0,612,16.5
+                2:line rect=0,0,612,16.5 text="before" occupied=0,0,10,16.5
+                3:block rect=10,0,31.5,16.5
+                  4:line rect=10.75,0.75,30,14.4 text="X" occupied=10.75,0.75,10,14.4
+                5:line rect=0,0,612,16.5 text=" after" occupied=41.5,0,10,16.5
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,28.8
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,16.5
             """
         ];
 
@@ -519,20 +516,20 @@ public sealed class GeometryDriftTests
             """,
             """
             boxes
-            1:block path=body/div rect=0,0,595,645 content=0,0,595,645 marker=0 anonymous=false inlineBlock=false
-            2:block path=body/div rect=0,645,595,225 content=0,645,595,225 marker=0 anonymous=false inlineBlock=false
+            1:block path=body/div rect=0,0,612,645 content=0,0,612,645 marker=0 anonymous=false inlineBlock=false
+            2:block path=body/div rect=0,645,612,225 content=0,645,612,225 marker=0 anonymous=false inlineBlock=false
             fragments
             page 1 size=612,792 margin=0,0,0,0
-              1:block rect=0,0,595,645
-                2:line rect=0,0,595,14.4 text="Block 1" occupied=0,0,10,14.4
+              1:block rect=0,0,612,645
+                2:line rect=0,0,612,14.4 text="Block 1" occupied=0,0,10,14.4
             page 2 size=612,792 margin=0,0,0,0
-              3:block rect=0,0,595,225
-                4:line rect=0,0,595,14.4 text="Block 2" occupied=0,0,10,14.4
+              3:block rect=0,0,612,225
+                4:line rect=0,0,612,14.4 text="Block 2" occupied=0,0,10,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,595,645
+              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,645
             page 2 content=0..792
-              placement order=1 fragment=2 kind=Block oversized=false rect=0,0,595,225
+              placement order=1 fragment=2 kind=Block oversized=false rect=0,0,612,225
             """
         ];
     }
@@ -572,13 +569,16 @@ public sealed class GeometryDriftTests
             {
                 foreach (var nested in FlattenNodes(child).OfType<BlockBox>())
                 {
-                    yield return nested;
+                    if (nested.UsedGeometry is not null)
+                    {
+                        yield return nested;
+                    }
                 }
             }
         }
     }
 
-    private static IEnumerable<DisplayNode> FlattenNodes(DisplayNode node)
+    private static IEnumerable<BoxNode> FlattenNodes(BoxNode node)
     {
         yield return node;
 

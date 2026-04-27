@@ -1,8 +1,8 @@
-using Html2x.Abstractions.Measurements.Units;
+﻿using Html2x.Abstractions.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Models;
 
-public sealed class InlineBox(DisplayRole role) : DisplayNode(role)
+public sealed class InlineBox(BoxRole role) : BoxNode(role)
 {
     public string? TextContent { get; init; } // For inline text nodes
 
@@ -21,7 +21,7 @@ public sealed class InlineBox(DisplayRole role) : DisplayNode(role)
 
     public object? Fragment { get; set; } // reference to layout fragment (e.g., ImageFragment)
 
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
         return new InlineBox(Role)
         {

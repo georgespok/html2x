@@ -14,17 +14,25 @@ Geometry must be computed once during layout, then projected forward without rei
 
 `BoxGeometryFactory` owns geometry construction and normalization at layout boundaries. It handles finite-value normalization, non-negative sizes, content rectangle calculation, marker offsets, padding, and borders.
 
+Naming:
+
+- `BorderBoxRect` is the painted border box.
+- `ContentBoxRect` is the raw content box after padding and border are removed.
+- `ContentFlowArea` is the marker-adjusted content area used for child block and inline flow placement.
+- Pagination placement `PageX` and `PageY` are translated page coordinates derived from the placed fragment.
+
 ## Flow
 
 ```text
-Display tree
+Style tree
+  -> initial box tree
   -> layout computes UsedGeometry
   -> fragments copy geometry
   -> pagination translates fragment coordinates
   -> renderer draws fragment rectangles
 ```
 
-Fragments, pagination, diagnostics, and renderers must not recompute padding, border, content rectangles, marker offsets, or block sizes.
+Fragments, pagination, diagnostics, and renderers must not recompute padding, border, content rectangles, marker offsets, or block sizes. They may translate already-published rectangles when pagination moves a fragment subtree to another page.
 
 ## Compatibility Fields
 

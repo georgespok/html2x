@@ -11,28 +11,28 @@ Output: parsed document and CSS rules ready for cascade evaluation.
 
 ## Stage 2: Style Tree
 
-`CssStyleComputer` applies cascade, inheritance, user agent defaults, and value conversion. Unsupported or invalid declarations should be represented through diagnostics when diagnostics are enabled.
+`CssStyleComputer` applies cascade, inheritance, user agent defaults, and value conversion. `StyleTraversal` walks supported elements and materializes project-owned `StyleNode` values. Unsupported or invalid declarations should be represented through diagnostics when diagnostics are enabled.
 
 Input: DOM and CSS rules.
-Output: computed style snapshots for layout.
+Output: `StyleTree` with computed style snapshots for layout.
 
-## Stage 3: Display And Box Trees
+## Stage 3: Box Tree And Layout Geometry
 
-Display tree construction converts styled nodes into layout roles such as block, inline, table, row, cell, image, list item, and rule. Box layout resolves dimensions, margins, padding, borders, inline layout, and table placements.
+`BoxTreeBuilder` owns the style-to-box transition and geometry pass. `InitialBoxTreeBuilder` converts styled nodes into `BoxRole` values such as block, inline, inline-block, table, row, cell, image, list item, and rule. The geometry pass then resolves dimensions, margins, padding, borders, inline layout, image layout, and table placements through the block, inline, and table layout engines.
 
 Input: computed styles.
-Output: laid-out boxes with canonical geometry.
+Output: `BoxTree` with canonical `UsedGeometry`.
 
 ## Stage 4: Fragment Projection
 
-Fragment building projects box geometry and render facts into renderer-facing fragments. Fragment builders must not remeasure text or reconstruct geometry already owned by layout.
+`FragmentBuilder` and `BoxToFragmentProjector` project box geometry and render facts into renderer-facing fragments. Fragment projection may resolve fragment font metadata from the converter-owned font source, but it must not remeasure text or reconstruct geometry already owned by layout.
 
 Input: laid-out boxes.
 Output: fragments such as blocks, lines, text runs, images, tables, cells, and rules.
 
 ## Stage 5: Pagination
 
-`BlockPaginator` places block fragments onto pages. It may clone and translate fragments for page-local coordinates, but it must preserve fragment size and metadata.
+`BlockPaginator` places block fragments onto pages. It uses cloned translated fragments for page-local coordinates and must preserve fragment size and metadata.
 
 Input: unpaginated fragment tree.
 Output: page models and final `HtmlLayout.Pages`.

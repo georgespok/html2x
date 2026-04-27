@@ -11,9 +11,9 @@ namespace Html2x.LayoutEngine.Style;
 /// <summary>
 /// Maps raw CSS width/height declarations into the shared dimension contracts.
 /// </summary>
-public sealed class DimensionStyleMapper(ICssValueConverter converter)
+internal sealed class DimensionStyleMapper(CssValueConverter converter)
 {
-    private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+    private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
 
     public RequestedDimension CreateRequestedDimension(IElement element, ICssStyleDeclaration styles)
     {

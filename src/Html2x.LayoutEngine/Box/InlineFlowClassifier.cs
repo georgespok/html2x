@@ -1,10 +1,10 @@
-using Html2x.LayoutEngine.Models;
+﻿using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
 
 internal static class InlineFlowClassifier
 {
-    public static bool IsInlineFlowMember(DisplayNode node)
+    public static bool IsInlineFlowMember(BoxNode node)
     {
         return node switch
         {

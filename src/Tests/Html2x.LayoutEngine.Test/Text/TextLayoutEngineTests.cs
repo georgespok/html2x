@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
@@ -92,6 +92,28 @@ public class TextLayoutEngineTests
     }
 
     [Fact]
+    public void Layout_ZeroWidth_DoesNotTreatTextAsUnbounded()
+    {
+        var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
+        var input = BuildInput(0f, 12f, Run(1, "ABC"));
+
+        var result = engine.Layout(input);
+
+        result.Lines.Count.ShouldBe(3);
+        result.Lines.SelectMany(static line => line.Runs).Select(static run => run.Text)
+            .ShouldBe(["A", "B", "C"]);
+    }
+
+    [Fact]
+    public void Layout_NegativeWidth_Throws()
+    {
+        var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
+        var input = BuildInput(-1f, 12f, Run(1, "ABC"));
+
+        Should.Throw<ArgumentOutOfRangeException>(() => engine.Layout(input));
+    }
+
+    [Fact]
     public async Task SnapshotFragmentOrdering_RepeatedRuns_PreservesOrderAndIds()
     {
         const string html = @"
@@ -133,7 +155,7 @@ public class TextLayoutEngineTests
         var style = new ComputedStyle { FontSizePt = 12 };
         return new TextRunInput(
             runId,
-            new InlineBox(DisplayRole.Inline) { TextContent = text, Style = style },
+            new InlineBox(BoxRole.Inline) { TextContent = text, Style = style },
             text,
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
@@ -149,7 +171,7 @@ public class TextLayoutEngineTests
         var style = new ComputedStyle { FontSizePt = 12 };
         return new TextRunInput(
             runId,
-            new InlineBox(DisplayRole.Inline) { TextContent = string.Empty, Style = style },
+            new InlineBox(BoxRole.Inline) { TextContent = string.Empty, Style = style },
             string.Empty,
             new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,

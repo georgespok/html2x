@@ -12,7 +12,7 @@
 
 ## Boundary
 
-The PDF renderer consumes fragments and page models as read-only facts. It must not reach back into DOM, style tree, display tree, or box tree objects.
+The PDF renderer consumes fragments and page models as read-only facts. It must not reach back into DOM, style tree, or box tree objects.
 
 If renderer code needs a value that fragments do not carry, add that value to the layout or fragment contract and update tests across the affected stages.
 

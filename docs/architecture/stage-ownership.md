@@ -7,10 +7,10 @@ This document defines internal ownership rules for the HTML to PDF pipeline. It 
 | Stage | Input | Owned Output | May Write | Must Not Write |
 | --- | --- | --- | --- | --- |
 | DOM | HTML and layout options | AngleSharp document state | Parser-owned DOM state | Style, boxes, fragments, pages, PDF output |
-| Style | DOM and CSSOM | Style tree and computed styles | Style nodes and computed CSS values | Box geometry, fragments, renderer state |
-| Display Tree | Style tree | Display tree shape | Display node hierarchy | Used geometry, fragments, pages |
-| Layout Geometry | Display tree | Box tree and used geometry | Box geometry, margins, padding, inline layout results | Style values, fragments, pagination placements |
-| Fragment | Laid-out box tree | Fragment tree | New fragments copied from layout facts | Boxes, CSS, pagination pages |
+| Style | DOM and CSSOM | Style tree and computed styles | Style nodes and computed CSS values | Box hierarchy, geometry, fragments, renderer state |
+| Initial Box | Style tree | Box node hierarchy and display roles | Box nodes, text runs, list markers, unsupported mode diagnostics | Used geometry, fragments, pages |
+| Layout Geometry | Initial box tree and layout options | Box tree and used geometry | Box geometry, margins, padding, inline layout results, image layout facts, table placements | Style values, fragments, pagination placements |
+| Fragment | Laid-out box tree and font source | Fragment tree | New fragments copied from layout facts | Boxes, CSS, pagination pages |
 | Pagination | Fragment tree | `HtmlLayout.Pages` | Page models and translated fragment clones | Source fragments, boxes, styles |
 | Paint | `HtmlLayout` | Paint commands and PDF bytes | Renderer-local commands and Skia objects | Layout pages, fragments, boxes |
 
@@ -18,7 +18,7 @@ This document defines internal ownership rules for the HTML to PDF pipeline. It 
 
 Earlier stage outputs become read-only inputs after handoff. Later stages may read them, but must not repair or reinterpret them.
 
-Layout geometry is the last stage allowed to write normal-flow box geometry. Fragment projection copies geometry forward. Pagination owns page placement and uses cloned translated fragments when content moves between pages. Paint owns drawing only.
+Initial box construction is the last stage allowed to change the box hierarchy. Layout geometry is the last stage allowed to write normal-flow box geometry. Fragment projection copies geometry forward. Pagination owns page placement and uses cloned translated fragments when content moves between pages. Paint owns drawing only.
 
 ## Current Compatibility Surfaces
 
@@ -29,6 +29,8 @@ Some older mutable surfaces still exist and should be treated as compatibility m
 - `BlockBox.InlineLayout` is layout-stage output. Measurement paths must preserve prior state.
 
 New code should consume the owned stage output rather than treating these mirrors as independent state.
+
+Display roles are not a separate tree. They are carried as `BoxRole` during box construction and copied into fragment metadata when renderers need them.
 
 ## Extension Rule
 

@@ -3,7 +3,7 @@ using AngleSharp.Css.Dom;
 
 namespace Html2x.LayoutEngine.Style;
 
-public sealed class CssValueConverter : ICssValueConverter
+internal sealed class CssValueConverter
 {
     public string GetString(ICssStyleDeclaration styles, string property, string? fallback = null)
     {

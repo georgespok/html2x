@@ -11,7 +11,7 @@ namespace Html2x.Renderers.Pdf.Drawing;
 /// </summary>
 internal sealed class SkiaFragmentDrawer
 {
-    private readonly PaintCommandBuilder _commandBuilder = new();
+    private readonly PaintOrderResolver _paintOrder = new();
     private readonly SkiaPaintCommandDrawer _commandDrawer;
 
     public SkiaFragmentDrawer(PdfOptions options, DiagnosticsSession? diagnosticsSession, SkiaFontCache fontCache)
@@ -27,6 +27,6 @@ internal sealed class SkiaFragmentDrawer
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(page);
 
-        _commandDrawer.Draw(canvas, _commandBuilder.Build(page));
+        _commandDrawer.Draw(canvas, _paintOrder.Resolve(page));
     }
 }

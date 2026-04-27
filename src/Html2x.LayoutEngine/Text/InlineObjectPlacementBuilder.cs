@@ -30,6 +30,7 @@ internal sealed class InlineObjectPlacementBuilder
         contentBox.Padding = padding;
         contentBox.Margin = margin;
         contentBox.TextAlign = contentBox.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
+        ApplyResolvedImageMetadata(inlineObject);
         var geometry = BoxGeometryFactory.FromBorderBox(
             left,
             top,
@@ -40,7 +41,7 @@ internal sealed class InlineObjectPlacementBuilder
             baselineY,
             contentBox.MarkerOffset);
         contentBox.ApplyLayoutGeometry(geometry);
-        var contentArea = BoxGeometryFactory.ResolveContentArea(geometry);
+        var contentArea = BoxGeometryFactory.ResolveContentFlowArea(geometry);
         contentBox.InlineLayout = new InlineLayoutResult(
             [
                 _buildSegment(
@@ -55,5 +56,20 @@ internal sealed class InlineObjectPlacementBuilder
             inlineObject.Layout.MaxLineWidth);
 
         return geometry.BorderBoxRect;
+    }
+
+    private static void ApplyResolvedImageMetadata(InlineObjectLayout inlineObject)
+    {
+        if (inlineObject.ContentBox is not ImageBox imageBox ||
+            inlineObject.ImageResolution is not { } image)
+        {
+            return;
+        }
+
+        imageBox.Src = image.Src;
+        imageBox.AuthoredSizePx = image.AuthoredSizePx;
+        imageBox.IntrinsicSizePx = image.IntrinsicSizePx;
+        imageBox.IsMissing = image.IsMissing;
+        imageBox.IsOversize = image.IsOversize;
     }
 }

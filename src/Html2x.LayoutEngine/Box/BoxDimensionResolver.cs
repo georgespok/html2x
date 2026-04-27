@@ -12,37 +12,74 @@ internal static class BoxDimensionResolver
     public static float ResolveBlockBorderBoxWidth(
         ComputedStyle style,
         float availableWidth,
-        Spacing margin)
+        Spacing margin,
+        Spacing padding,
+        Spacing border)
     {
         ArgumentNullException.ThrowIfNull(style);
 
-        var width = style.WidthPt ?? Math.Max(0f, availableWidth - margin.Left - margin.Right);
-        return ApplyWidthConstraints(width, style);
+        if (style.WidthPt.HasValue)
+        {
+            return ResolveBorderBoxWidthFromContent(
+                ApplyContentWidthConstraints(style.WidthPt.Value, style),
+                padding,
+                border);
+        }
+
+        var availableBorderBoxWidth = Math.Max(0f, availableWidth - margin.Left - margin.Right);
+        var contentBoxWidth = ResolveContentBoxWidthFromBorder(availableBorderBoxWidth, padding, border);
+        return ResolveBorderBoxWidthFromContent(
+            ApplyContentWidthConstraints(contentBoxWidth, style),
+            padding,
+            border);
     }
 
-    public static float ResolveAtomicBorderBoxWidth(ComputedStyle style, float availableWidth)
+    public static float ResolveAtomicBorderBoxWidth(
+        ComputedStyle style,
+        float availableWidth,
+        Spacing padding,
+        Spacing border)
     {
         ArgumentNullException.ThrowIfNull(style);
 
-        var width = style.WidthPt ?? availableWidth;
-        return ApplyWidthConstraints(width, style);
+        if (style.WidthPt.HasValue)
+        {
+            return ResolveBorderBoxWidthFromContent(
+                ApplyContentWidthConstraints(style.WidthPt.Value, style),
+                padding,
+                border);
+        }
+
+        var availableBorderBoxWidth = Math.Max(0f, availableWidth);
+        var contentBoxWidth = ResolveContentBoxWidthFromBorder(availableBorderBoxWidth, padding, border);
+        return ResolveBorderBoxWidthFromContent(
+            ApplyContentWidthConstraints(contentBoxWidth, style),
+            padding,
+            border);
     }
 
-    public static float ResolveIntrinsicBorderBoxWidth(ComputedStyle style, float measuredBorderBoxWidth)
+    public static float ResolveIntrinsicBorderBoxWidth(
+        ComputedStyle style,
+        float measuredContentBoxWidth,
+        Spacing padding,
+        Spacing border)
     {
         ArgumentNullException.ThrowIfNull(style);
 
-        var width = style.WidthPt ?? measuredBorderBoxWidth;
-        return BoxGeometryFactory.NormalizeNonNegative(ApplyWidthConstraints(width, style));
+        var contentBoxWidth = style.WidthPt ?? measuredContentBoxWidth;
+        return ResolveBorderBoxWidthFromContent(
+            ApplyContentWidthConstraints(contentBoxWidth, style),
+            padding,
+            border);
     }
 
-    public static float ResolveContentBoxWidth(
+    public static float ResolveContentFlowWidth(
         float borderBoxWidth,
         Spacing padding,
         Spacing border,
         float markerOffset = 0f)
     {
-        return BoxGeometryFactory.ResolveContentWidth(borderBoxWidth, padding, border, markerOffset);
+        return BoxGeometryFactory.ResolveContentFlowWidth(borderBoxWidth, padding, border, markerOffset);
     }
 
     public static float ResolveContentBoxHeight(
@@ -69,14 +106,16 @@ internal static class BoxDimensionResolver
             contentHeight = Math.Min(contentHeight, style.MaxHeightPt.Value);
         }
 
-        return BoxGeometryFactory.NormalizeNonNegative(contentHeight);
+        return BoxGeometryFactory.RequireNonNegativeFinite(contentHeight);
     }
 
-    public static float ApplyWidthConstraints(float width, ComputedStyle style)
+    public static float ApplyContentWidthConstraints(float contentBoxWidth, ComputedStyle style)
     {
         ArgumentNullException.ThrowIfNull(style);
 
-        var constrained = width;
+        var constrained = float.IsPositiveInfinity(contentBoxWidth)
+            ? float.PositiveInfinity
+            : BoxGeometryFactory.RequireNonNegativeFinite(contentBoxWidth);
         if (style.MinWidthPt.HasValue)
         {
             constrained = Math.Max(constrained, style.MinWidthPt.Value);
@@ -88,5 +127,33 @@ internal static class BoxDimensionResolver
         }
 
         return constrained;
+    }
+
+    public static float ResolveBorderBoxWidthFromContent(
+        float contentBoxWidth,
+        Spacing padding,
+        Spacing border)
+    {
+        if (float.IsPositiveInfinity(contentBoxWidth))
+        {
+            return float.PositiveInfinity;
+        }
+
+        return BoxGeometryFactory.RequireNonNegativeFinite(contentBoxWidth) +
+               padding.Safe().Horizontal +
+               border.Safe().Horizontal;
+    }
+
+    public static float ResolveContentBoxWidthFromBorder(
+        float borderBoxWidth,
+        Spacing padding,
+        Spacing border)
+    {
+        if (float.IsPositiveInfinity(borderBoxWidth))
+        {
+            return float.PositiveInfinity;
+        }
+
+        return Math.Max(0f, borderBoxWidth - padding.Safe().Horizontal - border.Safe().Horizontal);
     }
 }

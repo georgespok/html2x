@@ -1,7 +1,7 @@
 using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
-using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Options;
+using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf;
@@ -25,43 +25,43 @@ internal sealed class ImageRenderer
         _diagnostics = diagnosticsSession;
     }
 
-    public void Render(SKCanvas canvas, ImageFragment fragment)
+    public void Render(SKCanvas canvas, ImagePaintCommand command)
     {
         ArgumentNullException.ThrowIfNull(canvas);
-        ArgumentNullException.ThrowIfNull(fragment);
+        ArgumentNullException.ThrowIfNull(command);
 
-        var rect = fragment.ContentRect;
-        var width = (float)rect.Width;
-        var height = (float)rect.Height;
-        var status = fragment.IsMissing
+        var rect = command.ContentRect;
+        var width = rect.Width;
+        var height = rect.Height;
+        var status = command.IsMissing
             ? ImageStatus.Missing
-            : fragment.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok;
+            : command.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok;
 
         if (width <= 0 || height <= 0)
         {
             RenderPlaceholder(canvas, rect);
-            Record(fragment, status, width, height);
+            Record(command, status, width, height);
             return;
         }
 
         if (status != ImageStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
-            Record(fragment, status, width, height);
+            Record(command, status, width, height);
             return;
         }
 
-        var imgBytes = ImageLoader.Load(fragment.Src, _htmlDirectory);
+        var imgBytes = ImageLoader.Load(command.Src, _htmlDirectory);
         if (imgBytes is null)
         {
             RenderPlaceholder(canvas, rect);
-            Record(fragment, status, width, height);
+            Record(command, status, width, height);
             return;
         }
 
         DrawImage(canvas, rect, imgBytes);
 
-        Record(fragment, status, width, height);
+        Record(command, status, width, height);
     }
 
     private static void DrawImage(SKCanvas canvas, RectangleF rect, byte[] bytes)
@@ -96,7 +96,7 @@ internal sealed class ImageRenderer
         canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom), paint);
     }
 
-    private void Record(ImageFragment fragment, ImageStatus status, float width, float height)
+    private void Record(ImagePaintCommand command, ImageStatus status, float width, float height)
     {
         if (_diagnostics is null)
         {
@@ -110,8 +110,8 @@ internal sealed class ImageRenderer
             Selector: null,
             ElementIdentity: "img",
             StyleDeclaration: null,
-            StructuralPath: $"image:{fragment.Src}",
-            RawUserInput: fragment.Src);
+            StructuralPath: $"image:{command.Src}",
+            RawUserInput: command.Src);
 
         _diagnostics.Events.Add(new DiagnosticsEvent
         {
@@ -120,15 +120,15 @@ internal sealed class ImageRenderer
             Timestamp = DateTimeOffset.UtcNow,
             Severity = severity,
             Context = context,
-            RawUserInput = fragment.Src,
+            RawUserInput = command.Src,
             Payload = new ImageRenderPayload
             {
-                Src = fragment.Src,
+                Src = command.Src,
                 Severity = severity,
                 Context = context,
                 RenderedSize = new Abstractions.Measurements.Units.SizePt(width, height),
                 Status = status,
-                Borders = fragment.Style?.Borders
+                Borders = command.Style.Borders
             }
         });
     }

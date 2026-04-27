@@ -9,7 +9,7 @@ Html2x converts static HTML and CSS into PDF through explicit pipeline stages. T
 | `Html2x` | Public converter facade, option wiring, shared service construction. | Contain layout or rendering algorithms. |
 | `Html2x.Abstractions` | Contracts for options, layout documents, fragments, measurements, fonts, and diagnostics payloads. | Reference AngleSharp, SkiaSharp, file IO, or concrete renderers. |
 | `Html2x.Diagnostics` | Diagnostics JSON serialization. | Own layout or renderer decisions. |
-| `Html2x.LayoutEngine` | DOM/CSS parsing, style computation, display tree, layout geometry, fragments, pagination. | Reference SkiaSharp or mutate renderer state. |
+| `Html2x.LayoutEngine` | DOM/CSS parsing, style tree construction, box tree layout, fragment projection, pagination. | Reference SkiaSharp or mutate renderer state. |
 | `Html2x.Renderers.Pdf` | PDF rendering with SkiaSharp from `HtmlLayout`. | Reach back to DOM, CSS, style tree, or box tree types. |
 
 ## Primary Data Flow
@@ -18,12 +18,15 @@ Html2x converts static HTML and CSS into PDF through explicit pipeline stages. T
 HTML/CSS
   -> DOM + CSSOM
   -> Style tree
-  -> Display and box trees
+  -> Initial box tree
+  -> Laid-out box tree
   -> Fragment tree
   -> Pagination
   -> HtmlLayout
   -> PDF renderer
 ```
+
+There is no separate display tree layer. Display roles are materialized as `BoxRole` values while `InitialBoxTreeBuilder` converts the style tree into the initial box tree.
 
 The fragment and page model is the renderer-facing contract. If the renderer lacks required data, fix the layout or fragment stage instead of adding renderer lookups into earlier stages.
 

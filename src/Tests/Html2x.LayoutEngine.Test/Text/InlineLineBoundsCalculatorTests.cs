@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
@@ -28,7 +28,7 @@ public sealed class InlineLineBoundsCalculatorTests
         var items = new InlineLineItemLayout[]
         {
             new InlineTextItemLayout(0, new RectangleF(15f, 20f, 20f, 12f), [], []),
-            new InlineObjectItemLayout(1, new RectangleF(50f, 20f, 10f, 12f), new BlockBox(DisplayRole.Block))
+            new InlineObjectItemLayout(1, new RectangleF(50f, 20f, 10f, 12f), new BlockBox(BoxRole.Block))
         };
 
         var rect = _calculator.CreateLineOccupiedRect(items, contentLeft: 10f, topY: 20f, lineHeight: 12f);

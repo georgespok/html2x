@@ -12,8 +12,6 @@ namespace Html2x;
 
 public class HtmlConverter
 {
-    private readonly ILayoutBuilderFactory _layoutBuilderFactory = new LayoutBuilderFactory();
-
     public async Task<Html2PdfResult> ToPdfAsync(string html, HtmlConverterOptions options)
     {
         if (html is null)
@@ -62,8 +60,7 @@ public class HtmlConverter
             "LayoutBuild",
             new HtmlPayload { Html = html.Trim() }));
 
-        var layoutBuilder = _layoutBuilderFactory.Create(new LayoutServices(measurer, fontSource, imageProvider))
-                            ?? throw new InvalidOperationException("Layout factory returned null.");
+        var layoutBuilder = new LayoutBuilder(measurer, fontSource, imageProvider);
 
         HtmlLayout layout;
         try

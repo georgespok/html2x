@@ -1,18 +1,20 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
 
 /// <summary>
-/// Converts computed styles into display nodes, then applies block layout geometry using the active layout context.
+/// Converts computed styles into laid-out boxes for the box tree stage.
 /// </summary>
-public class BoxTreeBuilder : IBoxTreeBuilder
+public class BoxTreeBuilder
 {
-    private readonly DisplayTreeBuilder _displayTreeBuilder;
+    private readonly InitialBoxTreeBuilder _initialBoxTreeBuilder;
     private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy;
-    private readonly BoxLayoutEngineFactory _layoutEngineFactory;
+    private readonly ITextMeasurer? _textMeasurer;
+    private readonly IBlockFormattingContext _blockFormattingContext;
 
     public BoxTreeBuilder()
         : this(textMeasurer: null, new BlockFormattingContext())
@@ -26,54 +28,74 @@ public class BoxTreeBuilder : IBoxTreeBuilder
 
     internal BoxTreeBuilder(ITextMeasurer? textMeasurer, IBlockFormattingContext blockFormattingContext)
         : this(
-            new DisplayTreeBuilder(),
+            new InitialBoxTreeBuilder(),
             new UnsupportedLayoutModePolicy(),
-            new BoxLayoutEngineFactory(textMeasurer, blockFormattingContext))
+            textMeasurer,
+            blockFormattingContext)
     {
     }
 
     private BoxTreeBuilder(
-        DisplayTreeBuilder displayTreeBuilder,
+        InitialBoxTreeBuilder initialBoxTreeBuilder,
         UnsupportedLayoutModePolicy unsupportedLayoutModePolicy,
-        BoxLayoutEngineFactory layoutEngineFactory)
+        ITextMeasurer? textMeasurer,
+        IBlockFormattingContext blockFormattingContext)
     {
-        _displayTreeBuilder = displayTreeBuilder ?? throw new ArgumentNullException(nameof(displayTreeBuilder));
+        _initialBoxTreeBuilder = initialBoxTreeBuilder ?? throw new ArgumentNullException(nameof(initialBoxTreeBuilder));
         _unsupportedLayoutModePolicy = unsupportedLayoutModePolicy
                                        ?? throw new ArgumentNullException(nameof(unsupportedLayoutModePolicy));
-        _layoutEngineFactory = layoutEngineFactory ?? throw new ArgumentNullException(nameof(layoutEngineFactory));
+        _textMeasurer = textMeasurer;
+        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
     }
 
-    public DisplayNode BuildDisplayTree(StyleTree styles, DiagnosticsSession? diagnosticsSession = null)
+    public BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, LayoutGeometryRequest? request = null)
+    {
+        var initialBoxRoot = BuildInitialBoxes(styles, diagnosticsSession);
+        var boxTree = ApplyLayoutGeometry(initialBoxRoot, styles, diagnosticsSession, request);
+        LayoutSnapshotMapper.ValidateInlineBlockStructures(boxTree, diagnosticsSession);
+        return boxTree;
+    }
+
+    private BoxNode BuildInitialBoxes(StyleTree styles, DiagnosticsSession? diagnosticsSession)
     {
         ArgumentNullException.ThrowIfNull(styles);
 
-        var displayRoot = _displayTreeBuilder.Build(styles);
-        _unsupportedLayoutModePolicy.Report(displayRoot, diagnosticsSession);
-        return displayRoot;
+        var initialBoxRoot = _initialBoxTreeBuilder.Build(styles);
+        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSession);
+        return initialBoxRoot;
     }
 
-    public BoxTree BuildLayoutGeometry(
-        DisplayNode displayRoot,
+    private BoxTree ApplyLayoutGeometry(
+        BoxNode initialBoxRoot,
         StyleTree styles,
-        DiagnosticsSession? diagnosticsSession = null,
-        BoxTreeBuildContext? context = null)
+        DiagnosticsSession? diagnosticsSession,
+        LayoutGeometryRequest? request)
     {
-        ArgumentNullException.ThrowIfNull(displayRoot);
+        ArgumentNullException.ThrowIfNull(initialBoxRoot);
         ArgumentNullException.ThrowIfNull(styles);
 
-        var blockEngine = _layoutEngineFactory.Create(diagnosticsSession, context);
+        var geometryRequest = request ?? LayoutGeometryRequest.Default;
+        var imageResolver = new ImageLayoutResolver(geometryRequest);
+        var inlineEngine = new InlineLayoutEngine(
+            new FontMetricsProvider(),
+            _textMeasurer,
+            new DefaultLineHeightStrategy(),
+            _blockFormattingContext,
+            imageResolver,
+            diagnosticsSession);
+        var blockEngine = new BlockLayoutEngine(
+            inlineEngine,
+            new TableLayoutEngine(inlineEngine, imageResolver),
+            _blockFormattingContext,
+            imageResolver,
+            diagnosticsSession);
 
         var page = new PageBox
         {
-            Margin = styles.Page.Margin
+            Margin = styles.Page.Margin,
+            Size = geometryRequest.PageSize
         };
 
-        return blockEngine.Layout(displayRoot, page);
-    }
-
-    public BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, BoxTreeBuildContext? context = null)
-    {
-        var displayRoot = BuildDisplayTree(styles, diagnosticsSession);
-        return BuildLayoutGeometry(displayRoot, styles, diagnosticsSession, context);
+        return blockEngine.Layout(initialBoxRoot, page);
     }
 }

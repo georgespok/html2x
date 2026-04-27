@@ -23,7 +23,7 @@ internal sealed class PaintOrderResolver
             AddFragmentCommands(page.PageNumber, fragment, commands);
         }
 
-        return commands.ToList();
+        return commands.ToPaintOrder();
     }
 
     private static void AddFragmentCommands(
@@ -249,9 +249,12 @@ internal sealed class PaintOrderResolver
                 NextIndex()));
         }
 
-        public IReadOnlyList<PaintCommand> ToList()
+        public IReadOnlyList<PaintCommand> ToPaintOrder()
         {
-            return _commands.ToArray();
+            return _commands
+                .OrderBy(static command => command.ZOrder)
+                .ThenBy(static command => command.CommandIndex)
+                .ToArray();
         }
     }
 }

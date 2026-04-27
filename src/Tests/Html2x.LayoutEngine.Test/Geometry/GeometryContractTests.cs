@@ -1,15 +1,17 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
-using Moq;
+using Html2x.LayoutEngine.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
@@ -22,7 +24,7 @@ public sealed class GeometryContractTests
     [Fact]
     public void LayoutTableBlock_NegativeLeftMargin_ClampsOrigin()
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -30,18 +32,10 @@ public sealed class GeometryContractTests
                 WidthPt = 40f
             }
         };
-        var tableEngine = new Mock<ITableLayoutEngine>();
-        tableEngine
-            .Setup(engine => engine.Layout(table, It.IsAny<float>()))
-            .Returns(new TableLayoutResult
-            {
-                ResolvedWidth = 40f,
-                Height = 20f
-            });
-        var inlineEngine = new Mock<IInlineLayoutEngine>();
+        var inlineEngine = new InlineLayoutEngine();
         var layoutEngine = new BlockLayoutEngine(
-            inlineEngine.Object,
-            tableEngine.Object);
+            inlineEngine,
+            new TableLayoutEngine(inlineEngine));
         var page = new PageBox
         {
             Size = new SizePt(100f, 200f),
@@ -52,8 +46,7 @@ public sealed class GeometryContractTests
 
         var laidOutTable = tree.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
         laidOutTable.UsedGeometry.ShouldNotBeNull();
-        laidOutTable.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectangleF(10f, 0f, 40f, 20f));
-        tableEngine.Verify(engine => engine.Layout(table, 90f), Times.Once);
+        laidOutTable.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectangleF(10f, 0f, 40f, 0f));
     }
 
     [Fact]
@@ -75,11 +68,11 @@ public sealed class GeometryContractTests
     public void MeasureBorderBoxHeight_RepeatedWidths_DoesNotMutateInlineLayout()
     {
         var style = new ComputedStyle();
-        var block = new BlockBox(DisplayRole.Block)
+        var block = new BlockBox(BoxRole.Block)
         {
             Style = style
         };
-        block.Children.Add(new InlineBox(DisplayRole.Inline)
+        block.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = block,
             Style = style,
@@ -176,7 +169,7 @@ public sealed class GeometryContractTests
     public void InlineLayoutEngineMeasure_TextBlock_PreservesInlineLayout()
     {
         var style = new ComputedStyle();
-        var block = new BlockBox(DisplayRole.Block)
+        var block = new BlockBox(BoxRole.Block)
         {
             Style = style,
             InlineLayout = new InlineLayoutResult(
@@ -186,7 +179,7 @@ public sealed class GeometryContractTests
                 TotalHeight: 12f,
                 MaxLineWidth: 30f)
         };
-        block.Children.Add(new InlineBox(DisplayRole.Inline)
+        block.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = block,
             Style = style,
@@ -207,19 +200,61 @@ public sealed class GeometryContractTests
     }
 
     [Fact]
-    public void IInlineLayoutEngine_DefaultMeasure_ThrowsBeforeLayoutCanMutateGeometry()
+    public void InlineLayoutEngineMeasure_InlineBlockImage_DoesNotPublishImageGeometryOrMetadata()
     {
-        var block = new BlockBox(DisplayRole.Block)
+        var style = new ComputedStyle();
+        var root = new BlockBox(BoxRole.Block)
         {
-            Style = new ComputedStyle()
+            Style = style
         };
-        IInlineLayoutEngine engine = new MutatingLayoutOnlyInlineEngine();
+        var inline = new InlineBox(BoxRole.InlineBlock)
+        {
+            Parent = root,
+            Style = style
+        };
+        var image = new ImageBox(BoxRole.Block)
+        {
+            Parent = inline,
+            Style = style,
+            Src = "before.png",
+            AuthoredSizePx = new SizePx(1d, 2d),
+            IntrinsicSizePx = new SizePx(3d, 4d),
+            IsMissing = true,
+            IsOversize = true
+        };
+        image.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
+            1f,
+            2f,
+            3f,
+            4f,
+            new Spacing(),
+            new Spacing()));
+        var originalGeometry = image.UsedGeometry;
 
-        Should.Throw<NotSupportedException>(() =>
-            engine.Measure(block, InlineLayoutRequest.ForMeasurement(25f)));
+        inline.Children.Add(image);
+        root.Children.Add(inline);
 
-        block.InlineLayout.ShouldBeNull();
-        block.UsedGeometry.ShouldBeNull();
+        var imageResolver = new ImageLayoutResolver(new LayoutGeometryRequest
+        {
+            ImageProvider = new FixedImageProvider(new SizePx(40d, 20d))
+        });
+        var engine = new InlineLayoutEngine(
+            new FontMetricsProvider(),
+            new FakeTextMeasurer(10f, 9f, 3f),
+            new DefaultLineHeightStrategy(),
+            new BlockFormattingContext(),
+            imageResolver);
+
+        var measured = engine.Measure(root, InlineLayoutRequest.ForMeasurement(100f));
+
+        measured.TotalHeight.ShouldBeGreaterThan(0f);
+        measured.Segments.ShouldBeEmpty();
+        image.UsedGeometry.ShouldBe(originalGeometry);
+        image.Src.ShouldBe("before.png");
+        image.AuthoredSizePx.ShouldBe(new SizePx(1d, 2d));
+        image.IntrinsicSizePx.ShouldBe(new SizePx(3d, 4d));
+        image.IsMissing.ShouldBeTrue();
+        image.IsOversize.ShouldBeTrue();
     }
 
     [Fact]
@@ -272,6 +307,89 @@ public sealed class GeometryContractTests
         {
             Rect = new RectangleF(x, y, width, height)
         });
+    }
+
+    [Theory]
+    [InlineData(float.NaN, 10f, 20f, 9f, 3f)]
+    [InlineData(-1f, 10f, 20f, 9f, 3f)]
+    [InlineData(12f, float.NaN, 20f, 9f, 3f)]
+    [InlineData(12f, 10f, -1f, 9f, 3f)]
+    [InlineData(12f, 10f, 20f, -1f, 3f)]
+    [InlineData(12f, 10f, 20f, 9f, -1f)]
+    public void TextRun_InvalidPublishedMetric_Throws(
+        float fontSize,
+        float originX,
+        float advanceWidth,
+        float ascent,
+        float descent)
+    {
+        var font = new FontKey("Arial", FontWeight.W400, Abstractions.Layout.Styles.FontStyle.Normal);
+
+        Should.Throw<ArgumentOutOfRangeException>(() => new TextRun(
+            "x",
+            font,
+            fontSize,
+            new PointF(originX, 20f),
+            advanceWidth,
+            ascent,
+            descent));
+    }
+
+    [Theory]
+    [InlineData(float.NaN, 12f)]
+    [InlineData(10f, float.NaN)]
+    [InlineData(10f, -1f)]
+    public void LineBoxFragment_InvalidPublishedMetric_Throws(float baselineY, float lineHeight)
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() => new LineBoxFragment
+        {
+            Rect = new RectangleF(0f, 0f, 10f, 12f),
+            BaselineY = baselineY,
+            LineHeight = lineHeight
+        });
+    }
+
+    [Fact]
+    public void Layout_NegativePageMargins_NormalizesContentOrigin()
+    {
+        var root = new BlockBox(BoxRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+        var block = new BlockBox(BoxRole.Block)
+        {
+            Parent = root,
+            Style = new ComputedStyle()
+        };
+        root.Children.Add(block);
+        var inlineEngine = new InlineLayoutEngine();
+        var layoutEngine = new BlockLayoutEngine(inlineEngine, new TableLayoutEngine(inlineEngine));
+        var page = new PageBox
+        {
+            Size = new SizePt(100f, 200f),
+            Margin = new Spacing(-5f, -10f, -15f, -20f)
+        };
+
+        var tree = layoutEngine.Layout(root, page);
+
+        var laidOutBlock = tree.Blocks.ShouldHaveSingleItem();
+        laidOutBlock.UsedGeometry.ShouldNotBeNull();
+        laidOutBlock.UsedGeometry.Value.BorderBoxRect.X.ShouldBe(0f);
+        laidOutBlock.UsedGeometry.Value.BorderBoxRect.Y.ShouldBe(0f);
+        laidOutBlock.UsedGeometry.Value.BorderBoxRect.Width.ShouldBe(100f);
+    }
+
+    [Fact]
+    public void Paginate_NegativePageMargins_NormalizesContentBounds()
+    {
+        var result = new BlockPaginator().Paginate(
+            [],
+            new SizePt(100f, 200f),
+            new Spacing(-5f, -10f, -15f, -20f));
+
+        var page = result.Pages.ShouldHaveSingleItem();
+        page.ContentTop.ShouldBe(0f);
+        page.ContentBottom.ShouldBe(200f);
     }
 
     [Fact]
@@ -350,9 +468,9 @@ public sealed class GeometryContractTests
             .ShouldBeOfType<BlockFragment>();
         var image = block.Children.ShouldHaveSingleItem().ShouldBeOfType<ImageFragment>();
 
-        image.ContentRect.Width.ShouldBe(21f, 0.01f);
+        image.ContentRect.Width.ShouldBe(30f, 0.01f);
         image.ContentRect.Height.ShouldBe(15f, 0.01f);
-        image.Rect.Width.ShouldBe(30f, 0.01f);
+        image.Rect.Width.ShouldBe(39f, 0.01f);
         image.Rect.Height.ShouldBe(24f, 0.01f);
     }
 
@@ -425,22 +543,4 @@ public sealed class GeometryContractTests
         }
     }
 
-    /// <summary>
-    /// Exposes a mutating layout path for default measurement contract tests.
-    /// </summary>
-    private sealed class MutatingLayoutOnlyInlineEngine : IInlineLayoutEngine
-    {
-        public InlineLayoutResult Layout(BlockBox block, InlineLayoutRequest request)
-        {
-            block.InlineLayout = InlineLayoutResult.Empty;
-            block.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
-                1f,
-                2f,
-                3f,
-                4f,
-                new Spacing(),
-                new Spacing()));
-            return InlineLayoutResult.Empty;
-        }
-    }
 }

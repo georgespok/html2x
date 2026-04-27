@@ -38,7 +38,7 @@ public sealed class BlockPaginatorTests
         result.Pages[1].Placements.Count.ShouldBe(1);
         result.Pages[1].Placements[0].FragmentId.ShouldBe(2);
         result.Pages[1].Placements[0].Height.ShouldBe(40f);
-        result.Pages[1].Placements[0].LocalY.ShouldBe(10f);
+        result.Pages[1].Placements[0].PageY.ShouldBe(10f);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class BlockPaginatorTests
     }
 
     [Fact]
-    public void Paginate_BlockStaysOnFirstPage_ClonesThroughTranslator()
+    public void Paginate_BlockStaysOnFirstPage_ClonesPlacedFragment()
     {
         // Arrange
         var paginator = new BlockPaginator();
@@ -137,8 +137,8 @@ public sealed class BlockPaginatorTests
         result.Pages[0].Placements.Count.ShouldBe(3);
 
         var placements = result.Pages[0].Placements;
-        placements[1].LocalY.ShouldBeGreaterThanOrEqualTo(placements[0].LocalY + placements[0].Height);
-        placements[2].LocalY.ShouldBeGreaterThanOrEqualTo(placements[1].LocalY + placements[1].Height);
+        placements[1].PageY.ShouldBeGreaterThanOrEqualTo(placements[0].PageY + placements[0].Height);
+        placements[2].PageY.ShouldBeGreaterThanOrEqualTo(placements[1].PageY + placements[1].Height);
     }
 
     [Fact]
@@ -219,13 +219,13 @@ public sealed class BlockPaginatorTests
         var firstPlacements = first.Pages
             .OrderBy(static p => p.PageNumber)
             .SelectMany(static p => p.Placements)
-            .Select(static p => (p.FragmentId, p.PageNumber, p.LocalY, p.OrderIndex))
+            .Select(static p => (p.FragmentId, p.PageNumber, p.PageY, p.OrderIndex))
             .ToList();
 
         var secondPlacements = second.Pages
             .OrderBy(static p => p.PageNumber)
             .SelectMany(static p => p.Placements)
-            .Select(static p => (p.FragmentId, p.PageNumber, p.LocalY, p.OrderIndex))
+            .Select(static p => (p.FragmentId, p.PageNumber, p.PageY, p.OrderIndex))
             .ToList();
 
         firstPlacements.ShouldBe(secondPlacements);
@@ -276,7 +276,7 @@ public sealed class BlockPaginatorTests
 
         var oversized = result.Pages[1].Placements.ShouldHaveSingleItem();
         oversized.FragmentId.ShouldBe(52);
-        oversized.LocalY.ShouldBe(margins.Top);
+        oversized.PageY.ShouldBe(margins.Top);
         oversized.Height.ShouldBe(120f);
         oversized.IsOversized.ShouldBeTrue();
     }
@@ -333,9 +333,9 @@ public sealed class BlockPaginatorTests
         var secondPageFirst = result.Pages[1].Placements[0];
         var secondPageSecond = result.Pages[1].Placements[1];
 
-        secondPageFirst.LocalY.ShouldBe(margins.Top);
-        secondPageFirst.LocalY.ShouldNotBe(blocks[1].Rect.Y);
-        secondPageSecond.LocalY.ShouldBe(secondPageFirst.LocalY + secondPageFirst.Height);
+        secondPageFirst.PageY.ShouldBe(margins.Top);
+        secondPageFirst.PageY.ShouldNotBe(blocks[1].Rect.Y);
+        secondPageSecond.PageY.ShouldBe(secondPageFirst.PageY + secondPageFirst.Height);
     }
 
     [Fact]
@@ -364,7 +364,7 @@ public sealed class BlockPaginatorTests
         var movedBlock = movedPlacement.Fragment;
         var line = movedBlock.Children.OfType<LineBoxFragment>().ShouldHaveSingleItem();
 
-        movedPlacement.LocalY.ShouldBe(margins.Top);
+        movedPlacement.PageY.ShouldBe(margins.Top);
         line.Rect.Y.ShouldBe(margins.Top + 10f);
         line.BaselineY.ShouldBe(margins.Top + 20f);
         line.Runs.ShouldHaveSingleItem().Origin.Y.ShouldBe(margins.Top + 20f);

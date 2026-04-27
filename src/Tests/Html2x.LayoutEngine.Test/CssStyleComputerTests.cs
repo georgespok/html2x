@@ -13,7 +13,7 @@ namespace Html2x.LayoutEngine.Test;
 
 public class CssStyleComputerTests
 {
-    private readonly CssStyleComputer _sut = new(new StyleTraversal(), new CssValueConverter());
+    private readonly CssStyleComputer _sut = new();
 
     [Fact]
     public async Task Compute_ProjectComputedStyles()
@@ -560,7 +560,7 @@ public class CssStyleComputerTests
     {
         var config = Configuration.Default.WithCss();
         var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer(new StyleTraversal(), new CssValueConverter());
+        var styleComputer = new CssStyleComputer();
         var document = await domProvider.LoadAsync(html, options);
         var tree = styleComputer.Compute(document);
         return StyleTreeSnapshot.FromTree(tree);

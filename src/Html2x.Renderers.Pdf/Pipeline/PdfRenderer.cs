@@ -49,7 +49,7 @@ public class PdfRenderer
         }
 
         using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory, fontSource);
-        var commandBuilder = new PaintCommandBuilder();
+        var paintOrder = new PaintOrderResolver();
         var drawer = new SkiaPaintCommandDrawer(options, diagnosticsSession, fontCache);
 
         foreach (var page in layout.Pages)
@@ -61,7 +61,7 @@ public class PdfRenderer
                 continue;
             }
 
-            var commands = commandBuilder.Build(page);
+            var commands = paintOrder.Resolve(page);
             drawer.Draw(canvas, commands);
             document.EndPage();
         }

@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using AngleSharp;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
@@ -17,7 +17,7 @@ public sealed class GeometrySnapshotMapperTests
     [Fact]
     public void From_MapsBoxGeometryFragmentsAndPaginationPlacementsIntoSingleSnapshot()
     {
-        var block = new BlockBox(DisplayRole.Block)
+        var block = new BlockBox(BoxRole.Block)
         {
             Element = CreateElement("div"),
             Style = new ComputedStyle(),
@@ -51,7 +51,7 @@ public sealed class GeometrySnapshotMapperTests
                 {
                     PageNumber = 1,
                     PageSize = PaperSizes.A4,
-                    Margins = new Spacing(),
+                    Margin = new Spacing(),
                     ContentTop = 0f,
                     ContentBottom = PaperSizes.A4.Height,
                     Placements =
@@ -112,9 +112,9 @@ public sealed class GeometrySnapshotMapperTests
         snapshot.Boxes[1].SequenceId.ShouldBe(3);
     }
 
-    private static BlockBox CreateLaidOutBlock(string tagName, RectangleF borderBox, DisplayNode? parent = null)
+    private static BlockBox CreateLaidOutBlock(string tagName, RectangleF borderBox, BoxNode? parent = null)
     {
-        return new BlockBox(DisplayRole.Block)
+        return new BlockBox(BoxRole.Block)
         {
             Element = CreateElement(tagName),
             Parent = parent,

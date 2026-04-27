@@ -25,11 +25,11 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
     private readonly IImageProvider _imageProvider;
     private readonly long _maxImageSizeBytes;
 
-    public ImageLayoutResolver(BoxTreeBuildContext? context = null)
+    public ImageLayoutResolver(LayoutGeometryRequest? request = null)
     {
-        _imageProvider = context?.ImageProvider ?? new NullImageProvider();
-        _htmlDirectory = context?.HtmlDirectory ?? Directory.GetCurrentDirectory();
-        _maxImageSizeBytes = context?.MaxImageSizeBytes ?? (long)(10 * 1024 * 1024);
+        _imageProvider = request?.ImageProvider ?? new NullImageProvider();
+        _htmlDirectory = request?.HtmlDirectory ?? Directory.GetCurrentDirectory();
+        _maxImageSizeBytes = request?.MaxImageSizeBytes ?? (long)(10 * 1024 * 1024);
     }
 
     public ImageLayoutResolution Resolve(ImageBox imageBox, float availableWidth)
@@ -43,7 +43,7 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         var authoredSize = ResolveAuthoredMetadataSize(imageBox, htmlAuthoredSize);
         var padding = imageBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
-        var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize, padding, border);
+        var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize);
         var loadResult = _imageProvider.Load(src, _htmlDirectory, _maxImageSizeBytes);
         var intrinsicLayoutSize = ToLayoutSize(loadResult.IntrinsicSizePx);
         var contentSize = ResolveLayoutSize(authoredLayoutSize, intrinsicLayoutSize)
@@ -85,19 +85,20 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
 
     private static OptionalSizePt ResolveAuthoredLayoutSize(
         ImageBox imageBox,
-        SizePx htmlAuthoredSize,
-        Spacing padding,
-        Spacing border)
+        SizePx htmlAuthoredSize)
     {
+        var authoredWidth = imageBox.Style.WidthPt
+            ?? CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Width);
+        var authoredHeight = imageBox.Style.HeightPt
+            ?? CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Height);
+
         return new OptionalSizePt(
-            imageBox.Style.WidthPt.HasValue
-                ? BoxDimensionResolver.ResolveContentBoxWidth(
-                    imageBox.Style.WidthPt.Value,
-                    padding,
-                    border,
-                    imageBox.MarkerOffset)
-                : CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Width),
-            imageBox.Style.HeightPt ?? CssUnitConversion.CssPxToPtOrNull(htmlAuthoredSize.Height));
+            authoredWidth.HasValue
+                ? BoxDimensionResolver.ApplyContentWidthConstraints(authoredWidth.Value, imageBox.Style)
+                : null,
+            authoredHeight.HasValue
+                ? BoxDimensionResolver.ResolveContentBoxHeight(imageBox.Style, authoredHeight.Value)
+                : null);
     }
 
     private static OptionalSizePt ToLayoutSize(SizePx size)

@@ -10,7 +10,7 @@ public sealed class PageModel
 
     public required SizePt PageSize { get; init; }
 
-    public required Spacing Margins { get; init; }
+    public required Spacing Margin { get; init; }
 
     public required float ContentTop { get; init; }
 
@@ -32,9 +32,9 @@ public sealed class BlockFragmentPlacement
     public required BlockFragment Fragment { get; init; }
 
     // Geometry is derived from the translated fragment to keep one source of truth.
-    public float LocalX => Fragment.Rect.X;
+    public float PageX => Fragment.Rect.X;
 
-    public float LocalY => Fragment.Rect.Y;
+    public float PageY => Fragment.Rect.Y;
 
     public float Width => Fragment.Rect.Width;
 

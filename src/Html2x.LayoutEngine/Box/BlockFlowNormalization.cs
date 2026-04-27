@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
@@ -26,7 +26,7 @@ internal static class BlockFlowNormalization
         // For mixed inline text around an inline-block boundary, the expected sequence is:
         // anonymous inline-text block, explicit inline-block boundary placeholder, anonymous trailing inline-text block.
         // Inline and block children cannot coexist directly; wrap inline sequences in anonymous blocks.
-        var normalized = new List<DisplayNode>(parent.Children.Count);
+        var normalized = new List<BoxNode>(parent.Children.Count);
         var inlineBuffer = new List<InlineBox>();
 
         foreach (var child in parent.Children)
@@ -67,13 +67,13 @@ internal static class BlockFlowNormalization
         parent.Children.AddRange(normalized);
     }
 
-    private static bool TryCreateInlineBlockBoundaryNode(BlockBox parent, DisplayNode child, out DisplayNode boundaryNode)
+    private static bool TryCreateInlineBlockBoundaryNode(BlockBox parent, BoxNode child, out BoxNode boundaryNode)
     {
         boundaryNode = null!;
 
         if (!parent.IsInlineBlockContext ||
             child is not InlineBox inlineBlock ||
-            inlineBlock.Role != DisplayRole.InlineBlock)
+            inlineBlock.Role != BoxRole.InlineBlock)
         {
             return false;
         }
@@ -88,9 +88,9 @@ internal static class BlockFlowNormalization
         return true;
     }
 
-    private static bool IsInlineFlowNode(DisplayNode node)
+    private static bool IsInlineFlowNode(BoxNode node)
     {
-        if (node is not InlineBox inline || inline.Role != DisplayRole.Inline)
+        if (node is not InlineBox inline || inline.Role != BoxRole.Inline)
         {
             return false;
         }
@@ -99,9 +99,9 @@ internal static class BlockFlowNormalization
         return !inline.Children.Any(static child => child is BlockBox);
     }
 
-    private static BlockBox CreateAnonymousBlock(DisplayNode parent, List<InlineBox> inlines)
+    private static BlockBox CreateAnonymousBlock(BoxNode parent, List<InlineBox> inlines)
     {
-        var anon = new BlockBox(DisplayRole.Block)
+        var anon = new BlockBox(BoxRole.Block)
         {
             IsAnonymous = true,
             Parent = parent,
@@ -120,7 +120,7 @@ internal static class BlockFlowNormalization
     }
 
     private static InlineBlockBoundaryBox CreateInlineBlockBoundaryNode(
-        DisplayNode parent,
+        BoxNode parent,
         InlineBox sourceInline,
         BlockBox sourceContentBox)
     {

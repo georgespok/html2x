@@ -4,17 +4,47 @@ using Html2x.LayoutEngine.Models;
 namespace Html2x.LayoutEngine.Style;
 
 /// <summary>
-/// Default implementation that walks the DOM for supported elements and
-/// materializes a StyleNode tree using the provided style factory.
+/// Walks supported DOM elements and materializes a StyleNode tree using the provided style factory.
 /// </summary>
-public sealed class StyleTraversal(IStyleDomFilter filter) : IStyleTraversal
+internal sealed class StyleTraversal
 {
-    private readonly IStyleDomFilter _filter = filter ?? throw new ArgumentNullException(nameof(filter));
-
-    public StyleTraversal()
-        : this(new DefaultStyleDomFilter())
-    {
-    }
+    private static readonly HashSet<string> SupportedTags =
+        new(
+            [
+                HtmlCssConstants.HtmlTags.Body,
+                HtmlCssConstants.HtmlTags.H1,
+                HtmlCssConstants.HtmlTags.H2,
+                HtmlCssConstants.HtmlTags.H3,
+                HtmlCssConstants.HtmlTags.H4,
+                HtmlCssConstants.HtmlTags.H5,
+                HtmlCssConstants.HtmlTags.H6,
+                HtmlCssConstants.HtmlTags.P,
+                HtmlCssConstants.HtmlTags.Span,
+                HtmlCssConstants.HtmlTags.Div,
+                HtmlCssConstants.HtmlTags.Table,
+                HtmlCssConstants.HtmlTags.Tbody,
+                HtmlCssConstants.HtmlTags.Thead,
+                HtmlCssConstants.HtmlTags.Tfoot,
+                HtmlCssConstants.HtmlTags.Tr,
+                HtmlCssConstants.HtmlTags.Td,
+                HtmlCssConstants.HtmlTags.Th,
+                HtmlCssConstants.HtmlTags.Img,
+                HtmlCssConstants.HtmlTags.Hr,
+                HtmlCssConstants.HtmlTags.Br,
+                HtmlCssConstants.HtmlTags.Ul,
+                HtmlCssConstants.HtmlTags.Ol,
+                HtmlCssConstants.HtmlTags.Li,
+                HtmlCssConstants.HtmlTags.Section,
+                HtmlCssConstants.HtmlTags.Main,
+                HtmlCssConstants.HtmlTags.Header,
+                HtmlCssConstants.HtmlTags.Footer,
+                HtmlCssConstants.HtmlTags.B,
+                HtmlCssConstants.HtmlTags.I,
+                HtmlCssConstants.HtmlTags.Strong,
+                HtmlCssConstants.HtmlTags.U,
+                HtmlCssConstants.HtmlTags.S
+            ],
+            StringComparer.OrdinalIgnoreCase);
 
     public StyleNode Build(IElement root, Func<IElement, ComputedStyle?, ComputedStyle> styleFactory)
     {
@@ -42,7 +72,7 @@ public sealed class StyleTraversal(IStyleDomFilter filter) : IStyleTraversal
 
         foreach (var child in element.Children)
         {
-            if (!_filter.ShouldInclude(child))
+            if (!ShouldInclude(child))
             {
                 continue;
             }
@@ -52,5 +82,10 @@ public sealed class StyleTraversal(IStyleDomFilter filter) : IStyleTraversal
         }
 
         return node;
+    }
+
+    private static bool ShouldInclude(IElement element)
+    {
+        return element is not null && SupportedTags.Contains(element.TagName);
     }
 }

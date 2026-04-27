@@ -1,4 +1,5 @@
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Box;
@@ -8,12 +9,12 @@ namespace Html2x.LayoutEngine.Box;
 /// </summary>
 internal sealed class BlockContentMeasurementService
 {
-    private readonly IInlineLayoutEngine _inlineEngine;
+    private readonly InlineLayoutEngine _inlineEngine;
     private readonly BlockMeasurementService _measurement;
     private readonly IImageLayoutResolver _imageResolver;
 
     public BlockContentMeasurementService(
-        IInlineLayoutEngine inlineEngine,
+        InlineLayoutEngine inlineEngine,
         BlockMeasurementService measurement,
         IImageLayoutResolver imageResolver)
     {
@@ -30,6 +31,22 @@ internal sealed class BlockContentMeasurementService
         ArgumentNullException.ThrowIfNull(block);
         ArgumentNullException.ThrowIfNull(measureTableHeight);
 
+        var snapshot = BlockSubtreeLayoutSnapshot.Capture(block);
+        try
+        {
+            return MeasureBorderBoxHeightCore(block, availableWidth, measureTableHeight);
+        }
+        finally
+        {
+            snapshot.Restore();
+        }
+    }
+
+    private float MeasureBorderBoxHeightCore(
+        BlockBox block,
+        float availableWidth,
+        Func<TableBox, float, float> measureTableHeight)
+    {
         if (block is TableBox table)
         {
             return Math.Max(0f, measureTableHeight(table, availableWidth));
@@ -38,7 +55,7 @@ internal sealed class BlockContentMeasurementService
         if (block is ImageBox imageBox)
         {
             var imageMeasurement = _measurement.Prepare(imageBox, availableWidth);
-            return _imageResolver.Resolve(imageBox, imageMeasurement.ContentBoxWidth).TotalHeight;
+            return _imageResolver.Resolve(imageBox, imageMeasurement.ContentFlowWidth).TotalHeight;
         }
 
         if (block is RuleBox ruleBox)
@@ -48,17 +65,17 @@ internal sealed class BlockContentMeasurementService
         }
 
         var measurement = _measurement.Prepare(block, availableWidth);
-        var inlineLayout = MeasureInlineLayout(block, InlineLayoutRequest.ForMeasurement(measurement.ContentBoxWidth));
+        var inlineLayout = MeasureInlineLayout(block, InlineLayoutRequest.ForMeasurement(measurement.ContentFlowWidth));
         var nestedHeight = _measurement.MeasureStackedChildBlocks(
             block.Children,
-            measurement.ContentBoxWidth,
-            (child, childAvailableWidth) => MeasureBorderBoxHeight(child, childAvailableWidth, measureTableHeight),
+            measurement.ContentFlowWidth,
+            (child, childAvailableWidth) => MeasureBorderBoxHeightCore(child, childAvailableWidth, measureTableHeight),
             measureTableHeight);
         var contentHeight = _measurement.ResolveContentHeight(
             block,
             Math.Max(inlineLayout.TotalHeight, nestedHeight));
 
-        return Math.Max(0f, contentHeight + measurement.Padding.Vertical + measurement.Border.Vertical);
+        return BoxGeometryFactory.ResolveBorderBoxHeight(contentHeight, measurement.Padding, measurement.Border);
     }
 
     private InlineLayoutResult MeasureInlineLayout(BlockBox block, InlineLayoutRequest request)
@@ -67,7 +84,7 @@ internal sealed class BlockContentMeasurementService
         try
         {
             return _inlineEngine.Measure(block, request) ?? throw new InvalidOperationException(
-                $"{nameof(IInlineLayoutEngine.Measure)} returned null for '{block.GetType().Name}'.");
+                $"{nameof(InlineLayoutEngine.Measure)} returned null for '{block.GetType().Name}'.");
         }
         finally
         {

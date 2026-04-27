@@ -1,8 +1,8 @@
-namespace Html2x.LayoutEngine.Models;
+﻿namespace Html2x.LayoutEngine.Models;
 
-public sealed class TableSectionBox(DisplayRole role) : DisplayNode(role)
+public sealed class TableSectionBox(BoxRole role) : BoxNode(role)
 {
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
         return new TableSectionBox(Role)
         {

@@ -1,3 +1,4 @@
+﻿using AngleSharp;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
@@ -10,66 +11,43 @@ using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Pagination;
-using Html2x.LayoutEngine.Pipeline;
 using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine;
 
 /// <summary>
 /// Coordinates the deterministic HTML layout pipeline from DOM and style resolution
-/// through display tree, geometry, fragment projection, pagination, and layout assembly.
+/// through box tree layout, fragment projection, pagination, and layout assembly.
 /// </summary>
 public class LayoutBuilder
 {
-    private readonly IBoxTreeBuilder _boxBuilder;
-    private readonly IDomProvider _domProvider;
-    private readonly IFragmentBuilder _fragmentBuilder;
-    private readonly IStyleComputer _styleComputer;
+    private readonly BoxTreeBuilder _boxBuilder;
+    private readonly AngleSharpDomProvider _domProvider;
+    private readonly FragmentBuilder _fragmentBuilder;
+    private readonly CssStyleComputer _styleComputer;
     private readonly IImageProvider _imageProvider;
-    private readonly ITextMeasurer _textMeasurer;
     private readonly IFontSource _fontSource;
-    private readonly IBlockFormattingContext _blockFormattingContext;
 
     public LayoutBuilder(
-        IDomProvider domProvider,
-        IStyleComputer styleComputer,
-        IBoxTreeBuilder boxBuilder,
-        IFragmentBuilder fragmentBuilder,
-        IImageProvider imageProvider,
-        ITextMeasurer textMeasurer,
-        IFontSource fontSource)
-        : this(
-            domProvider,
-            styleComputer,
-            boxBuilder,
-            fragmentBuilder,
-            imageProvider,
-            textMeasurer,
-            fontSource,
-            new BlockFormattingContext())
-    {
-    }
-
-    internal LayoutBuilder(
-        IDomProvider domProvider,
-        IStyleComputer styleComputer,
-        IBoxTreeBuilder boxBuilder,
-        IFragmentBuilder fragmentBuilder,
-        IImageProvider imageProvider,
         ITextMeasurer textMeasurer,
         IFontSource fontSource,
-        IBlockFormattingContext blockFormattingContext)
+        IImageProvider imageProvider)
     {
-        _domProvider = domProvider ?? throw new ArgumentNullException(nameof(domProvider));
-        _styleComputer = styleComputer ?? throw new ArgumentNullException(nameof(styleComputer));
-        _boxBuilder = boxBuilder ?? throw new ArgumentNullException(nameof(boxBuilder));
-        _fragmentBuilder = fragmentBuilder ?? throw new ArgumentNullException(nameof(fragmentBuilder));
-        _imageProvider = imageProvider ?? throw new ArgumentNullException(nameof(imageProvider));
-        _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
-        _fontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
-        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        ArgumentNullException.ThrowIfNull(textMeasurer);
+        ArgumentNullException.ThrowIfNull(fontSource);
+        ArgumentNullException.ThrowIfNull(imageProvider);
+
+        var blockFormattingContext = new BlockFormattingContext();
+        var angleSharpConfig = Configuration.Default.WithCss();
+
+        _domProvider = new AngleSharpDomProvider(angleSharpConfig);
+        _styleComputer = new CssStyleComputer();
+        _boxBuilder = new BoxTreeBuilder(textMeasurer, blockFormattingContext);
+        _fragmentBuilder = new FragmentBuilder();
+        _imageProvider = imageProvider;
+        _fontSource = fontSource;
     }
-    
+
     public async Task<HtmlLayout> BuildAsync(string html, 
         LayoutOptions options, DiagnosticsSession? diagnosticsSession = null)
     {
@@ -78,39 +56,26 @@ public class LayoutBuilder
 
         var dom = await RunStageAsync("stage/dom", () => _domProvider.LoadAsync(html, options), diagnosticsSession);
         
-        var styleStage = new StyleStageResult(
-            RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession));
+        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession);
 
-        var displayTreeStage = new DisplayTreeStageResult(RunStage(
-            "stage/display-tree",
-            () => _boxBuilder.BuildDisplayTree(styleStage.Tree, diagnosticsSession),
-            diagnosticsSession));
-
-        var layoutGeometryStage = new LayoutGeometryStageResult(RunStage("stage/layout-geometry", () => _boxBuilder.BuildLayoutGeometry(
-            displayTreeStage.Root,
-            styleStage.Tree,
+        var boxTree = RunStage("stage/box-tree", () => _boxBuilder.Build(
+            styleTree,
             diagnosticsSession,
-            new BoxTreeBuildContext(
-                _imageProvider,
-                options.HtmlDirectory,
-                options.MaxImageSizeBytes)), diagnosticsSession));
-        RunStage("stage/layout-validation", () => LayoutSnapshotMapper.ValidateInlineBlockStructures(layoutGeometryStage.Tree, diagnosticsSession), diagnosticsSession);
-
-        var fragmentStage = new FragmentStageResult(RunStage("stage/fragment-projection", () => _fragmentBuilder.Build(
-            layoutGeometryStage.Tree,
-            new FragmentBuildContext(
-                _imageProvider,
-                options.HtmlDirectory,
-                options.MaxImageSizeBytes,
-                _textMeasurer,
-                _fontSource,
-                _blockFormattingContext)), diagnosticsSession));
+            new LayoutGeometryRequest
+            {
+                PageSize = options.PageSize,
+                ImageProvider = _imageProvider,
+                HtmlDirectory = options.HtmlDirectory,
+                MaxImageSizeBytes = options.MaxImageSizeBytes
+            }), diagnosticsSession);
+        var fragments = RunStage("stage/fragment-tree", () => _fragmentBuilder.Build(
+            boxTree,
+            _fontSource), diagnosticsSession);
         
-        var layoutAssemblyStage = new LayoutAssemblyStageResult(RunStage(
+        return RunStage(
             "stage/pagination",
-            () => CreateHtmlLayout(options, layoutGeometryStage.Tree, fragmentStage.Tree, diagnosticsSession),
-            diagnosticsSession));
-        return layoutAssemblyStage.Layout;
+            () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession),
+            diagnosticsSession);
     }
 
     private static HtmlLayout CreateHtmlLayout(
@@ -120,10 +85,9 @@ public class LayoutBuilder
         DiagnosticsSession? diagnosticsSession)
     {
         var paginator = new BlockPaginator();
-        var paginationStage = new PaginationStageResult(
-            paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession));
-        var layout = CreateHtmlLayout(paginationStage.Result);
-        PublishGeometrySnapshot(boxTree, layout, paginationStage.Result, diagnosticsSession);
+        var pagination = paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession);
+        var layout = CreateHtmlLayout(pagination);
+        PublishGeometrySnapshot(boxTree, layout, pagination, diagnosticsSession);
         return layout;
     }
 
@@ -134,7 +98,7 @@ public class LayoutBuilder
         {
             layout.Pages.Add(new LayoutPage(
                 page.PageSize,
-                page.Margins,
+                page.Margin,
                 CreateLayoutPageChildren(page),
                 page.PageNumber));
         }

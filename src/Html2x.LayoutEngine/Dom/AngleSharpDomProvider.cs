@@ -6,7 +6,7 @@ using Html2x.Abstractions.Options;
 
 namespace Html2x.LayoutEngine.Dom;
 
-public sealed class AngleSharpDomProvider(IConfiguration config) : IDomProvider
+public sealed class AngleSharpDomProvider(IConfiguration config)
 {
     public async Task<IDocument> LoadAsync(string html, LayoutOptions options)
     {

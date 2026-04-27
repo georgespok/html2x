@@ -1,5 +1,6 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
@@ -65,7 +66,9 @@ internal static class GeometryInvariantValidator
                 continue;
             }
 
-            foreach (var child in DisplayNodeTraversal.EnumerateBlockChildren(parent))
+            foreach (var child in BoxNodeTraversal
+                         .EnumerateBlockChildren(parent)
+                         .Where(static child => !InlineFlowClassifier.IsInlineFlowMember(child)))
             {
                 if (child.UsedGeometry is null || child.UsedGeometry.Value.AllowsOverflow)
                 {
@@ -87,7 +90,7 @@ internal static class GeometryInvariantValidator
                 continue;
             }
 
-            snapshot.MetadataOwner.ShouldBe("FragmentAdapterRegistry", snapshotText);
+            snapshot.MetadataOwner.ShouldBe("FragmentBuilder", snapshotText);
             snapshot.MetadataConsumer.ShouldBe("LayoutSnapshotMapper", snapshotText);
         }
 
@@ -99,8 +102,8 @@ internal static class GeometryInvariantValidator
                 placement.Fragment.PageNumber.ShouldBe(page.PageNumber, snapshotText);
                 Math.Abs(placement.Width - placement.Fragment.Rect.Width).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
                 Math.Abs(placement.Height - placement.Fragment.Rect.Height).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
-                Math.Abs(placement.LocalX - placement.Fragment.Rect.X).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
-                Math.Abs(placement.LocalY - placement.Fragment.Rect.Y).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                Math.Abs(placement.PageX - placement.Fragment.Rect.X).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                Math.Abs(placement.PageY - placement.Fragment.Rect.Y).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
 
                 sourceFragments.TryGetValue(placement.FragmentId, out var sourceFragment).ShouldBeTrue(snapshotText);
                 AssertTranslatedFragment(sourceFragment!, placement.Fragment, page.PageNumber, null, null, snapshotText);
@@ -114,7 +117,9 @@ internal static class GeometryInvariantValidator
         {
             yield return block;
 
-            foreach (var child in FlattenBoxes(DisplayNodeTraversal.EnumerateBlockChildren(block)))
+            foreach (var child in FlattenBoxes(BoxNodeTraversal
+                         .EnumerateBlockChildren(block)
+                         .Where(static child => !InlineFlowClassifier.IsInlineFlowMember(child))))
             {
                 yield return child;
             }

@@ -136,7 +136,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
                                     DisplayRole = FragmentDisplayRole.Table,
                                     FormattingContext = FormattingContextKind.Block,
                                     DerivedColumnCount = 2,
-                                    MetadataOwner = "FragmentAdapterRegistry",
+                                    MetadataOwner = "FragmentBuilder",
                                     MetadataConsumer = "LayoutSnapshotMapper"
                                 }
                             ]
@@ -196,7 +196,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             .GetProperty("snapshot")
             .GetProperty("pages")[0]
             .GetProperty("fragments")[0];
-        fragment.GetProperty("metadataOwner").GetString().ShouldBe("FragmentAdapterRegistry");
+        fragment.GetProperty("metadataOwner").GetString().ShouldBe("FragmentBuilder");
         fragment.GetProperty("metadataConsumer").GetString().ShouldBe("LayoutSnapshotMapper");
     }
 }

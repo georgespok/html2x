@@ -26,12 +26,10 @@ public sealed class LayoutBuilderFixture
 
         ArgumentNullException.ThrowIfNull(textMeasurer);
 
-        var services = new LayoutServices(
+        var layoutBuilder = new LayoutBuilder(
             textMeasurer,
             fontSource ?? CreateFontSource(),
             imageProvider ?? new NoopImageProvider());
-
-        var layoutBuilder = new LayoutBuilderFactory().Create(services);
         var layoutOptions = options ?? new LayoutOptions { PageSize = PaperSizes.A4 };
 
         return layoutBuilder.BuildAsync(html, layoutOptions);

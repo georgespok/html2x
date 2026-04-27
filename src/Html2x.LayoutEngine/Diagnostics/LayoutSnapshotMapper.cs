@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
@@ -14,11 +14,11 @@ namespace Html2x.LayoutEngine.Diagnostics;
 /// </summary>
 public static class LayoutSnapshotMapper
 {
-    private static readonly HashSet<DisplayRole> UnsupportedInlineBlockRoles =
+    private static readonly HashSet<BoxRole> UnsupportedInlineBlockRoles =
     [
-        DisplayRole.Table,
-        DisplayRole.TableRow,
-        DisplayRole.TableCell
+        BoxRole.Table,
+        BoxRole.TableRow,
+        BoxRole.TableCell
     ];
 
     public static void ValidateInlineBlockStructures(BoxTree boxTree, DiagnosticsSession? diagnosticsSession)
@@ -31,7 +31,7 @@ public static class LayoutSnapshotMapper
             {
                 var payload = new UnsupportedStructurePayload
                 {
-                    NodePath = DisplayNodePathBuilder.Build(unsupportedNode),
+                    NodePath = BoxNodePathBuilder.Build(unsupportedNode),
                     StructureKind = unsupportedNode.Role.ToString(),
                     Reason = "Unsupported structure encountered inside inline-block formatting context.",
                     FormattingContext = FormattingContextKind.InlineBlock
@@ -203,17 +203,17 @@ public static class LayoutSnapshotMapper
             rowIndex: rowIndex,
             columnIndex: columnIndex,
             isHeader: isHeader,
-            metadataOwner: FragmentAdapterRegistry.MetadataOwnerName,
+            metadataOwner: BoxToFragmentProjector.MetadataOwnerName,
             metadataConsumer: nameof(LayoutSnapshotMapper));
     }
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)
         => line.Style?.Color ?? line.Runs.FirstOrDefault(static run => run.Color is not null)?.Color;
 
-    private static bool TryFindUnsupportedInlineBlockStructure(DisplayNode root, out DisplayNode unsupportedNode)
+    private static bool TryFindUnsupportedInlineBlockStructure(BoxNode root, out BoxNode unsupportedNode)
     {
         var rootIsInlineBlockContext = root is BlockBox rootBlock && rootBlock.IsInlineBlockContext;
-        var stack = new Stack<(DisplayNode Node, bool InInlineBlockContext)>();
+        var stack = new Stack<(BoxNode Node, bool InInlineBlockContext)>();
         stack.Push((root, rootIsInlineBlockContext));
 
         while (stack.Count > 0)

@@ -16,13 +16,14 @@ src/
   Html2x/                     Public composition facade
   Html2x.Abstractions/        Shared contracts, options, diagnostics, measurements
   Html2x.Diagnostics/         Diagnostics JSON serialization
-  Html2x.LayoutEngine/        HTML/CSS to fragments
+  Html2x.LayoutEngine/        HTML/CSS to box, fragment, and page layout
   Html2x.Renderers.Pdf/       Fragment to PDF rendering
   Tests/
     Html2x.LayoutEngine.Test/
     Html2x.Renderers.Pdf.Test/
     Html2x.Test/
     Html2x.TestConsole/
+    Html2x.TestConsole.Test/
 docs/                         Developer documentation
 build/                        Local generated artifacts
 ```

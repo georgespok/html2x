@@ -1,4 +1,4 @@
-using AngleSharp.Dom;
+﻿using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -35,7 +35,7 @@ internal static class BoxTreeAssertions
         }
     }
 
-    private static void AssertNode(DisplayNode actual, NodeExpectation expected, string path)
+    private static void AssertNode(BoxNode actual, NodeExpectation expected, string path)
     {
         switch (expected)
         {
@@ -107,7 +107,7 @@ internal static class BoxTreeAssertions
     }
 
     private static void AssertChildren(
-        IReadOnlyList<DisplayNode> actualChildren,
+        IReadOnlyList<BoxNode> actualChildren,
         IReadOnlyList<NodeExpectation> expectedChildren,
         string path)
     {

@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
@@ -36,7 +36,7 @@ internal static class GeometrySnapshotMapper
         {
             PageNumber = page.PageNumber,
             PageSize = page.PageSize,
-            Margin = page.Margins,
+            Margin = page.Margin,
             ContentTop = page.ContentTop,
             ContentBottom = page.ContentBottom,
             Placements = page.Placements.Select(MapPlacement).ToList()
@@ -54,8 +54,8 @@ internal static class GeometrySnapshotMapper
             PageNumber = placement.PageNumber,
             OrderIndex = placement.OrderIndex,
             IsOversized = placement.IsOversized,
-            X = placement.LocalX,
-            Y = placement.LocalY,
+            X = placement.PageX,
+            Y = placement.PageY,
             Size = new SizePt(placement.Width, placement.Height),
             DisplayRole = fragment.DisplayRole,
             FormattingContext = fragment.FormattingContext,
@@ -64,8 +64,8 @@ internal static class GeometrySnapshotMapper
             RowIndex = fragment is TableRowFragment row ? row.RowIndex : null,
             ColumnIndex = fragment is TableCellFragment cell ? cell.ColumnIndex : null,
             IsHeader = fragment is TableCellFragment headerCell ? headerCell.IsHeader : null,
-            MetadataOwner = FragmentAdapterRegistry.MetadataOwnerName,
-            MetadataConsumer = nameof(FragmentCoordinateTranslator)
+            MetadataOwner = BoxToFragmentProjector.MetadataOwnerName,
+            MetadataConsumer = nameof(FragmentPlacementCloner)
         };
     }
 
@@ -87,14 +87,14 @@ internal static class GeometrySnapshotMapper
         private BoxGeometrySnapshot MapBox(BlockBox box)
         {
             var geometry = box.UsedGeometry ?? throw new InvalidOperationException(
-                $"Geometry snapshot requires UsedGeometry for '{DisplayNodePathBuilder.Build(box)}'.");
+                $"Geometry snapshot requires UsedGeometry for '{BoxNodePathBuilder.Build(box)}'.");
             var borderRect = geometry.BorderBoxRect;
             var contentRect = geometry.ContentBoxRect;
 
             return new BoxGeometrySnapshot
             {
                 SequenceId = NextSequenceId(),
-                Path = DisplayNodePathBuilder.Build(box),
+                Path = BoxNodePathBuilder.Build(box),
                 Kind = box.Role.ToString().ToLowerInvariant(),
                 TagName = box.Element?.TagName?.ToLowerInvariant(),
                 X = borderRect.X,
@@ -120,7 +120,9 @@ internal static class GeometrySnapshotMapper
                 IsHeader = box is TableCellBox headerCell ? headerCell.IsHeader : null,
                 MetadataOwner = nameof(BlockLayoutEngine),
                 MetadataConsumer = nameof(GeometrySnapshotMapper),
-                Children = MapBoxes(DisplayNodeTraversal.EnumerateBlockChildren(box))
+                Children = MapBoxes(BoxNodeTraversal
+                    .EnumerateBlockChildren(box)
+                    .Where(static child => !InlineFlowClassifier.IsInlineFlowMember(child)))
             };
         }
 

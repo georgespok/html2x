@@ -675,12 +675,10 @@ public class InlineBlockTests
 
     private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer)
     {
-        var services = new LayoutServices(
+        return new LayoutBuilder(
             textMeasurer,
             LayoutBuilderFixture.CreateFontSource(),
             new NoopImageProvider());
-
-        return new LayoutBuilderFactory().Create(services);
     }
 
     private static bool ContainsLineText(BlockFragment fragment, string text)

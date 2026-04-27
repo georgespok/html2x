@@ -10,6 +10,7 @@ Typical event flow:
 
 ```text
 LayoutBuild started
+  -> stage/dom, stage/style, stage/box-tree, stage/fragment-tree, stage/pagination lifecycle events
   -> style, geometry, table, pagination, image, or font traces
 LayoutBuild succeeded with layout snapshot
 PdfRender started
@@ -42,7 +43,7 @@ Emitters should include useful context when available:
 - Selector or selector-like source.
 - Element identity such as tag, id, class, or role.
 - Raw style declaration or value.
-- Structural path through DOM, display tree, fragments, table, or pagination.
+- Structural path through DOM, style tree, box tree, fragments, table, or pagination.
 - Raw input when diagnostics are explicitly enabled and the value is needed for reproduction.
 
 Missing context should not make the event unreadable.

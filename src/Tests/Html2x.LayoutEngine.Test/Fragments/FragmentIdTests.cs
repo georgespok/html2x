@@ -1,10 +1,8 @@
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Test.Builders;
-using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
@@ -25,10 +23,10 @@ public class FragmentIdTests
             .BuildTree();
 
         var builder = new FragmentBuilder();
-        var context = CreateContext();
+        var fontSource = CreateFontSource();
 
         // Act
-        var fragments = builder.Build(boxTree, context);
+        var fragments = builder.Build(boxTree, fontSource);
 
         // Collect all fragments (top-level + children)
         var all = new List<CoreFragment>();
@@ -61,18 +59,12 @@ public class FragmentIdTests
         }
     }
 
-    private static FragmentBuildContext CreateContext()
+    private static IFontSource CreateFontSource()
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(0f);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((0f, 0f));
-
         var fontSource = new Mock<IFontSource>();
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        return new FragmentBuildContext(new NoopImageProvider(), ".", 1024 * 1024, textMeasurer.Object, fontSource.Object);
+        return fontSource.Object;
     }
 }

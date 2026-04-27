@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Formatting;
@@ -9,7 +9,22 @@ namespace Html2x.LayoutEngine.Box;
 /// <summary>
 /// Prepares block spacing and dimension inputs for layout consumers.
 /// </summary>
-internal sealed class BlockMeasurementService
+internal interface IBlockGeometryMeasurer
+{
+    BlockMeasurementBasis Prepare(BlockBox box, float availableWidth);
+
+    BlockMeasurementBasis PrepareAtomic(BlockBox box, float availableWidth);
+
+    float ResolveContentHeight(
+        BlockBox box,
+        float resolvedContentHeight,
+        float minimumContentHeight = 0f);
+}
+
+/// <summary>
+/// Prepares block spacing and dimension inputs for layout consumers.
+/// </summary>
+internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
 {
     private readonly IBlockFormattingContext _blockFormattingContext;
 
@@ -28,6 +43,33 @@ internal sealed class BlockMeasurementService
         return _blockFormattingContext.Measure(box, availableWidth);
     }
 
+    public BlockMeasurementBasis PrepareAtomic(BlockBox box, float availableWidth)
+    {
+        ArgumentNullException.ThrowIfNull(box);
+
+        var style = box.Style;
+        var margin = style.Margin.Safe();
+        var padding = style.Padding.Safe();
+        var border = Spacing.FromBorderEdges(style.Borders).Safe();
+        var borderBoxWidth = BoxDimensionResolver.ResolveAtomicBorderBoxWidth(
+            style,
+            availableWidth,
+            padding,
+            border);
+        var contentFlowWidth = BoxDimensionResolver.ResolveContentFlowWidth(
+            borderBoxWidth,
+            padding,
+            border,
+            box.MarkerOffset);
+
+        return new BlockMeasurementBasis(
+            margin,
+            padding,
+            border,
+            borderBoxWidth,
+            contentFlowWidth);
+    }
+
     public float ResolveContentHeight(
         BlockBox box,
         float resolvedContentHeight,
@@ -41,7 +83,7 @@ internal sealed class BlockMeasurementService
     }
 
     public float MeasureStackedChildBlocks(
-        IEnumerable<DisplayNode> children,
+        IEnumerable<BoxNode> children,
         float availableWidth,
         Func<BlockBox, float, float> measureBlockHeight,
         Func<TableBox, float, float> measureTableHeight,
@@ -52,7 +94,7 @@ internal sealed class BlockMeasurementService
         ArgumentNullException.ThrowIfNull(measureBlockHeight);
         ArgumentNullException.ThrowIfNull(measureTableHeight);
 
-        var syntheticRoot = new BlockBox(DisplayRole.Block)
+        var syntheticRoot = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle()
         };
@@ -87,4 +129,4 @@ internal readonly record struct BlockMeasurementBasis(
     Spacing Padding,
     Spacing Border,
     float BorderBoxWidth,
-    float ContentBoxWidth);
+    float ContentFlowWidth);

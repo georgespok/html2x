@@ -6,7 +6,7 @@ Html2x tests should describe observable behavior: computed styles, geometry, fra
 
 | Project | Scope |
 | --- | --- |
-| `Html2x.LayoutEngine.Test` | Style computation, display tree behavior, box layout, geometry, fragments, pagination, diagnostics snapshots. |
+| `Html2x.LayoutEngine.Test` | Style computation, box role behavior, box layout, geometry, fragments, pagination, diagnostics snapshots. |
 | `Html2x.Renderers.Pdf.Test` | PDF renderer behavior, drawing helpers, fonts, images, borders, table rendering, PDF validation helpers. |
 | `Html2x.Test` | End-to-end `HtmlConverter` scenarios and diagnostics behavior. |
 | `Html2x.TestConsole.Test` | Manual harness parsing and diagnostics envelope behavior. |

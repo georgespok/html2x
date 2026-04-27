@@ -45,7 +45,7 @@ public class FragmentBuilderTests
     [Fact]
     public void Build_UsedGeometry_UsesGeometryRectForBlockFragments()
     {
-        var block = new BlockBox(DisplayRole.Block)
+        var block = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle(),
             UsedGeometry = BoxGeometryFactory.FromBorderBox(
@@ -69,13 +69,13 @@ public class FragmentBuilderTests
     public void Build_WithoutUsedGeometry_Throws()
     {
         var tree = new BoxTree();
-        tree.Blocks.Add(new BlockBox(DisplayRole.Block)
+        tree.Blocks.Add(new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle()
         });
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            CreateFragmentBuilder().Build(tree, CreateContext()));
+            CreateFragmentBuilder().Build(tree, CreateContext().FontSource));
 
         exception.Message.ShouldContain("requires UsedGeometry");
     }
@@ -181,25 +181,25 @@ public class FragmentBuilderTests
     public void Build_UnorderedList_AddsBulletMarkers()
     {
         var boxTree = new BoxTree();
-        var ulBlock = new BlockBox(DisplayRole.Block) { Element = CreateElement("ul") };
+        var ulBlock = new BlockBox(BoxRole.Block) { Element = CreateElement("ul") };
 
-        ulBlock.Children.Add(new BlockBox(DisplayRole.Block)
+        ulBlock.Children.Add(new BlockBox(BoxRole.Block)
         {
             Element = CreateElement("li"),
             Children =
             {
-                new InlineBox(DisplayRole.Inline) { TextContent = "• " },
-                new InlineBox(DisplayRole.Inline) { TextContent = "item1" }
+                new InlineBox(BoxRole.Inline) { TextContent = "• " },
+                new InlineBox(BoxRole.Inline) { TextContent = "item1" }
             }
         });
 
-        ulBlock.Children.Add(new BlockBox(DisplayRole.Block)
+        ulBlock.Children.Add(new BlockBox(BoxRole.Block)
         {
             Element = CreateElement("li"),
             Children =
             {
-                new InlineBox(DisplayRole.Inline) { TextContent = "• " },
-                new InlineBox(DisplayRole.Inline) { TextContent = "item2" }
+                new InlineBox(BoxRole.Inline) { TextContent = "• " },
+                new InlineBox(BoxRole.Inline) { TextContent = "item2" }
             }
         });
 
@@ -219,7 +219,7 @@ public class FragmentBuilderTests
     [Fact]
     public void Build_InlineBlockBetweenInlineRuns_PreservesTextOrderAcrossFragments()
     {
-        var root = new BlockBox(DisplayRole.Block)
+        var root = new BlockBox(BoxRole.Block)
         {
             X = 0,
             Y = 0,
@@ -228,20 +228,20 @@ public class FragmentBuilderTests
             Style = new ComputedStyle()
         };
 
-        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        root.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "before",
             Parent = root,
             Style = new ComputedStyle()
         });
 
-        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
         {
             Parent = root,
             Style = new ComputedStyle()
         };
 
-        var inlineBlockContent = new BlockBox(DisplayRole.Block)
+        var inlineBlockContent = new BlockBox(BoxRole.Block)
         {
             Parent = inlineBlock,
             IsAnonymous = true,
@@ -251,7 +251,7 @@ public class FragmentBuilderTests
             Height = 20
         };
 
-        inlineBlockContent.Children.Add(new InlineBox(DisplayRole.Inline)
+        inlineBlockContent.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "inner",
             Parent = inlineBlockContent,
@@ -261,7 +261,7 @@ public class FragmentBuilderTests
         inlineBlock.Children.Add(inlineBlockContent);
         root.Children.Add(inlineBlock);
 
-        root.Children.Add(new InlineBox(DisplayRole.Inline)
+        root.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "after",
             Parent = root,
@@ -281,7 +281,7 @@ public class FragmentBuilderTests
     [Fact]
     public void Build_TableStructure_EmitsTableFragmentsAndCellText()
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             X = 10,
             Y = 20,
@@ -290,7 +290,7 @@ public class FragmentBuilderTests
             Style = new ComputedStyle()
         };
 
-        var row = new TableRowBox(DisplayRole.TableRow)
+        var row = new TableRowBox(BoxRole.TableRow)
         {
             Parent = table,
             X = 10,
@@ -300,7 +300,7 @@ public class FragmentBuilderTests
             Style = new ComputedStyle()
         };
 
-        var headerCell = new TableCellBox(DisplayRole.TableCell)
+        var headerCell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = row,
             Element = CreateElement("th"),
@@ -310,14 +310,14 @@ public class FragmentBuilderTests
             Height = 30,
             Style = new ComputedStyle()
         };
-        headerCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        headerCell.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = headerCell,
             TextContent = "A",
             Style = new ComputedStyle()
         });
 
-        var dataCell = new TableCellBox(DisplayRole.TableCell)
+        var dataCell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = row,
             Element = CreateElement("td"),
@@ -327,7 +327,7 @@ public class FragmentBuilderTests
             Height = 30,
             Style = new ComputedStyle()
         };
-        dataCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        dataCell.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = dataCell,
             TextContent = "B",
@@ -368,7 +368,7 @@ public class FragmentBuilderTests
     [Fact]
     public void Build_HeaderAndBodyRows_PreserveHierarchyAndHeaderMetadata()
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             X = 10,
             Y = 20,
@@ -378,7 +378,7 @@ public class FragmentBuilderTests
             Style = new ComputedStyle()
         };
 
-        var headerRow = new TableRowBox(DisplayRole.TableRow)
+        var headerRow = new TableRowBox(BoxRole.TableRow)
         {
             Parent = table,
             X = 10,
@@ -391,7 +391,7 @@ public class FragmentBuilderTests
         headerRow.Children.Add(CreateTableCell(headerRow, "th", "Name", columnIndex: 0, isHeader: true, x: 10, y: 20));
         headerRow.Children.Add(CreateTableCell(headerRow, "th", "Status", columnIndex: 1, isHeader: true, x: 110, y: 20));
 
-        var bodyRow = new TableRowBox(DisplayRole.TableRow)
+        var bodyRow = new TableRowBox(BoxRole.TableRow)
         {
             Parent = table,
             X = 10,
@@ -427,7 +427,7 @@ public class FragmentBuilderTests
     [Fact]
     public void Build_MetadataRichBlockTableRowAndCell_UsesFragmentStageOwner()
     {
-        var listItem = new BlockBox(DisplayRole.ListItem)
+        var listItem = new BlockBox(BoxRole.ListItem)
         {
             MarkerOffset = 12f,
             Style = new ComputedStyle(),
@@ -438,7 +438,7 @@ public class FragmentBuilderTests
                 markerOffset: 12f)
         };
 
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             DerivedColumnCount = 2,
             MarkerOffset = 4f,
@@ -450,7 +450,7 @@ public class FragmentBuilderTests
                 markerOffset: 4f)
         };
 
-        var row = new TableRowBox(DisplayRole.TableRow)
+        var row = new TableRowBox(BoxRole.TableRow)
         {
             Parent = table,
             RowIndex = 3,
@@ -461,7 +461,7 @@ public class FragmentBuilderTests
                 new Spacing())
         };
 
-        var cell = new TableCellBox(DisplayRole.TableCell)
+        var cell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = row,
             ColumnIndex = 1,
@@ -512,7 +512,7 @@ public class FragmentBuilderTests
         snapshots
             .Where(static fragment => fragment.Kind is "block" or "table" or "table-row" or "table-cell")
             .ShouldAllBe(fragment =>
-                fragment.MetadataOwner == "FragmentAdapterRegistry" &&
+                fragment.MetadataOwner == "FragmentBuilder" &&
                 fragment.MetadataConsumer == "LayoutSnapshotMapper");
     }
 
@@ -626,7 +626,7 @@ public class FragmentBuilderTests
         var context = CreateContext();
         EnsureUsedGeometry(tree);
         PrepareInlineLayouts(tree, context);
-        return CreateFragmentBuilder().Build(tree, context);
+        return CreateFragmentBuilder().Build(tree, context.FontSource);
     }
 
     private static void EnsureUsedGeometry(BoxTree tree)
@@ -656,7 +656,7 @@ public class FragmentBuilderTests
         }
     }
 
-    private static FragmentBuildContext CreateContext()
+    private static FragmentTestContext CreateContext()
     {
         var textMeasurer = new Mock<ITextMeasurer>();
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
@@ -668,15 +668,10 @@ public class FragmentBuilderTests
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        return new FragmentBuildContext(
-            new NoopImageProvider(),
-            Directory.GetCurrentDirectory(),
-            (long)(10 * 1024 * 1024),
-            textMeasurer.Object,
-            fontSource.Object);
+        return new FragmentTestContext(textMeasurer.Object, fontSource.Object);
     }
 
-    private static void PrepareInlineLayouts(BoxTree boxTree, FragmentBuildContext context)
+    private static void PrepareInlineLayouts(BoxTree boxTree, FragmentTestContext context)
     {
         var inlineEngine = new InlineLayoutEngine(new FontMetricsProvider(), context.TextMeasurer, new DefaultLineHeightStrategy());
 
@@ -686,13 +681,15 @@ public class FragmentBuilderTests
         }
     }
 
-    private static void PrepareInlineLayout(BlockBox block, IInlineLayoutEngine inlineEngine)
+    private static void PrepareInlineLayout(BlockBox block, InlineLayoutEngine inlineEngine)
     {
         var padding = block.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
         var contentLeft = block.X + padding.Left + border.Left;
         var contentTop = block.Y + padding.Top + border.Top;
-        var contentWidth = Math.Max(0f, block.Width - padding.Horizontal - border.Horizontal);
+        var contentWidth = block.Width > 0f
+            ? Math.Max(0f, block.Width - padding.Horizontal - border.Horizontal)
+            : float.PositiveInfinity;
 
         inlineEngine.Layout(
             block,
@@ -757,7 +754,7 @@ public class FragmentBuilderTests
         float x,
         float y)
     {
-        var cell = new TableCellBox(DisplayRole.TableCell)
+        var cell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = parent,
             Element = CreateElement(tagName),
@@ -769,7 +766,7 @@ public class FragmentBuilderTests
             IsHeader = isHeader,
             Style = new ComputedStyle()
         };
-        cell.Children.Add(new InlineBox(DisplayRole.Inline)
+        cell.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = cell,
             TextContent = text,
@@ -809,7 +806,7 @@ public class FragmentBuilderTests
 
     private static BoxTree BuildAmbiguousTopLevelOrderTree()
     {
-        var beta = new BlockBox(DisplayRole.Block)
+        var beta = new BlockBox(BoxRole.Block)
         {
             X = 0,
             Y = 0,
@@ -817,14 +814,14 @@ public class FragmentBuilderTests
             Height = 20,
             Style = new ComputedStyle()
         };
-        beta.Children.Add(new InlineBox(DisplayRole.Inline)
+        beta.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "beta",
             Parent = beta,
             Style = new ComputedStyle()
         });
 
-        var alpha = new BlockBox(DisplayRole.Block)
+        var alpha = new BlockBox(BoxRole.Block)
         {
             X = 0,
             Y = 0,
@@ -832,7 +829,7 @@ public class FragmentBuilderTests
             Height = 20,
             Style = new ComputedStyle()
         };
-        alpha.Children.Add(new InlineBox(DisplayRole.Inline)
+        alpha.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "alpha",
             Parent = alpha,
@@ -876,4 +873,6 @@ public class FragmentBuilderTests
             }
         }
     }
+
+    private sealed record FragmentTestContext(ITextMeasurer TextMeasurer, IFontSource FontSource);
 }

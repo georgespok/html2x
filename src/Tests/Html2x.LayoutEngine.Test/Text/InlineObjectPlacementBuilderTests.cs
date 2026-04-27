@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
@@ -15,7 +15,7 @@ public sealed class InlineObjectPlacementBuilderTests
     public void Place_InlineObject_AppliesGeometryAndNestedInlineLayoutToContentBox()
     {
         var nestedLayout = new TextLayoutResult([], TotalHeight: 4f, MaxLineWidth: 6f);
-        var contentBox = new BlockBox(DisplayRole.Block)
+        var contentBox = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle
             {

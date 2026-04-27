@@ -24,7 +24,7 @@ Record these decisions in the change summary and update [Supported HTML And CSS]
 
 ## 3. Propagate To Layout
 
-If the property changes layout, update display, box, or formatting context code. Geometry-producing behavior belongs in layout and should use existing geometry helpers.
+If the property changes layout, update box-role mapping, box layout, or formatting context code. Geometry-producing behavior belongs in layout and should use existing geometry helpers.
 
 If the property is render-only, carry the fact to fragments without inventing layout geometry.
 

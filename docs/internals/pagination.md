@@ -24,7 +24,7 @@ DOM/CSSOM
 ## Extension Points
 
 - `BlockPaginator`: fit policy, new-page decisions, placement strategy.
-- `FragmentCoordinateTranslator`: cloned translated fragment creation.
+- `FragmentPlacementCloner`: cloned translated fragment creation.
 - `PaginationDiagnostics`: pagination trace events.
 - `PaginationTracePayload`: diagnostics contract.
 

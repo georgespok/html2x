@@ -3,11 +3,11 @@
 /// <summary>
 /// Represents parsed floated content while float layout remains unsupported and diagnostic-only.
 /// </summary>
-public sealed class FloatBox(DisplayRole role) : DisplayNode(role)
+public sealed class FloatBox(BoxRole role) : BoxNode(role)
 {
     public string FloatDirection { get; init; } = HtmlCssConstants.Defaults.FloatDirection;
 
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
         return new FloatBox(Role)
         {

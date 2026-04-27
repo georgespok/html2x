@@ -51,7 +51,7 @@ internal sealed class SkiaPaintCommandDrawer
                 DrawTextRun(canvas, text.Run);
                 break;
             case ImagePaintCommand image:
-                _imageRenderer.Render(canvas, ToImageFragment(image));
+                _imageRenderer.Render(canvas, image);
                 break;
             case RulePaintCommand rule:
                 DrawRule(canvas, rule);
@@ -193,24 +193,6 @@ internal sealed class SkiaPaintCommandDrawer
 
         var y = command.Rect.Top + (command.Rect.Height / 2f);
         canvas.DrawLine(command.Rect.Left, y, command.Rect.Right, y, paint);
-    }
-
-    private static ImageFragment ToImageFragment(ImagePaintCommand command)
-    {
-        return new ImageFragment
-        {
-            FragmentId = command.SourceFragmentId ?? 0,
-            PageNumber = command.PageNumber,
-            Rect = command.Rect,
-            ZOrder = command.ZOrder,
-            Style = command.Style,
-            Src = command.Src,
-            ContentRect = command.ContentRect,
-            AuthoredSizePx = command.AuthoredSizePx,
-            IntrinsicSizePx = command.IntrinsicSizePx,
-            IsMissing = command.IsMissing,
-            IsOversize = command.IsOversize
-        };
     }
 
     private static SKColor ToSkColor(ColorRgba color)

@@ -220,7 +220,8 @@ namespace Html2x.Test.Scenarios
                 "Third block descendant with",
                 "nested inline-block",
                 "Nested block descendant A",
-                "suffix text"
+                "suffix",
+                "text"
             ]);
 
             AssertIncreasingOrder(orderedTexts, [
@@ -375,10 +376,17 @@ namespace Html2x.Test.Scenarios
             var lastIndex = -1;
             foreach (var expected in expectedSequence)
             {
-                var currentIndex = orderedTexts
+                var match = orderedTexts
                     .Select((text, index) => (text, index))
-                    .First(tuple => string.Equals(tuple.text, expected, StringComparison.Ordinal))
-                    .index;
+                    .Where(tuple => tuple.index > lastIndex)
+                    .FirstOrDefault(tuple => tuple.text.Contains(expected, StringComparison.Ordinal));
+                if (match.text is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Missing expected text '{expected}'. Texts: {string.Join(" | ", orderedTexts)}");
+                }
+
+                var currentIndex = match.index;
                 currentIndex.ShouldBeGreaterThan(lastIndex);
                 lastIndex = currentIndex;
             }

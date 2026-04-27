@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
+﻿using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
@@ -70,7 +70,7 @@ public sealed class InlineJustificationPlannerTests
         float rightSpacing = 0f)
     {
         return new TextLayoutRun(
-            new InlineBox(DisplayRole.Inline),
+            new InlineBox(BoxRole.Inline),
             text,
             new FontKey("Arial", FontWeight.W400, FontStyle.Normal),
             12f,

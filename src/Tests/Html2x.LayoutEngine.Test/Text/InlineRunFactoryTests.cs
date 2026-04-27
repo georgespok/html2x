@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
@@ -11,18 +11,18 @@ public class InlineRunFactoryTests
     public void TryBuildInlineBlockRun_DoesNotFlattenInlineBlockToText()
     {
         var style = new ComputedStyle { FontSizePt = 12 };
-        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
         {
             Style = style
         };
 
-        var contentBlock = new BlockBox(DisplayRole.Block)
+        var contentBlock = new BlockBox(BoxRole.Block)
         {
             Style = style,
             Parent = inlineBlock,
             IsAnonymous = true
         };
-        contentBlock.Children.Add(new InlineBox(DisplayRole.Inline)
+        contentBlock.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Style = style,
             TextContent = "Inline-block A",

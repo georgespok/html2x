@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
 using Xunit.Abstractions;
@@ -182,7 +182,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             .ToList();
 
         var measurement = Assert.Single(fontEvents, static x => x.Consumer == "SkiaTextMeasurer");
-        var fragmentStage = Assert.Single(fontEvents, static x => x.Consumer == "InlineFragmentStage");
+        var fragmentStage = Assert.Single(fontEvents, static x => x.Consumer == "FragmentBuilder");
 
         Assert.Equal("FontPathSource", measurement.Owner);
         Assert.Equal(measurement.SourceId, fragmentStage.SourceId);

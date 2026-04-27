@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Documents;
+﻿using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
@@ -194,26 +194,26 @@ public class BlockFlowTests
     [Fact]
     public void NormalizeChildrenForBlock_MixedInlineFlow_PreservesChildOrder()
     {
-        var row = new BlockBox(DisplayRole.Block)
+        var row = new BlockBox(BoxRole.Block)
         {
             IsInlineBlockContext = true,
             Style = new ComputedStyle()
         };
 
-        row.Children.Add(new InlineBox(DisplayRole.Inline)
+        row.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = row,
             TextContent = "Prefix text",
             Style = new ComputedStyle()
         });
 
-        var inlineBlock = new InlineBox(DisplayRole.InlineBlock)
+        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
         {
             Parent = row,
             Style = new ComputedStyle()
         };
 
-        var inlineBlockContent = new BlockBox(DisplayRole.Block)
+        var inlineBlockContent = new BlockBox(BoxRole.Block)
         {
             Parent = inlineBlock,
             IsAnonymous = true,
@@ -221,7 +221,7 @@ public class BlockFlowTests
             Style = new ComputedStyle()
         };
 
-        inlineBlockContent.Children.Add(new InlineBox(DisplayRole.Inline)
+        inlineBlockContent.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = inlineBlockContent,
             TextContent = "Alpha inline-block",
@@ -231,7 +231,7 @@ public class BlockFlowTests
         inlineBlock.Children.Add(inlineBlockContent);
         row.Children.Add(inlineBlock);
 
-        row.Children.Add(new InlineBox(DisplayRole.Inline)
+        row.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = row,
             TextContent = "suffix text",
@@ -261,12 +261,12 @@ public class BlockFlowTests
     [Fact]
     public void NormalizeChildrenForBlock_ClonedInlineFlow_CopiesInlineMetadata()
     {
-        var parent = new BlockBox(DisplayRole.Block)
+        var parent = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle()
         };
         var fragment = new object();
-        var inline = new InlineBox(DisplayRole.Inline)
+        var inline = new InlineBox(BoxRole.Inline)
         {
             Parent = parent,
             TextContent = "metadata",
@@ -277,7 +277,7 @@ public class BlockFlowTests
             Fragment = fragment
         };
         parent.Children.Add(inline);
-        parent.Children.Add(new BlockBox(DisplayRole.Block)
+        parent.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
             Style = new ComputedStyle()
@@ -419,13 +419,16 @@ public class BlockFlowTests
         };
         var formattingContext = new BlockFormattingContext();
         var measurementService = new BlockMeasurementService(formattingContext);
-        var inlineEngine = new Mock<IInlineLayoutEngine>();
-        var tableLayoutEngine = new Mock<ITableLayoutEngine>();
-        inlineEngine
-            .Setup(x => x.Layout(It.IsAny<BlockBox>(), It.IsAny<InlineLayoutRequest>()))
-            .Returns(new InlineLayoutResult([], 0f, 0f));
+        var imageResolver = new ImageLayoutResolver();
+        var inlineEngine = new InlineLayoutEngine(
+            new FontMetricsProvider(),
+            CreateLinearMeasurer(10f),
+            new DefaultLineHeightStrategy(),
+            formattingContext,
+            imageResolver);
+        var tableLayoutEngine = new TableLayoutEngine(inlineEngine, imageResolver);
 
-        var container = new BlockBox(DisplayRole.Block)
+        var container = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle
             {
@@ -433,7 +436,7 @@ public class BlockFlowTests
             }
         };
 
-        container.Children.Add(new BlockBox(DisplayRole.Block)
+        container.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = container,
             Style = new ComputedStyle
@@ -443,7 +446,7 @@ public class BlockFlowTests
             }
         });
 
-        container.Children.Add(new BlockBox(DisplayRole.Block)
+        container.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = container,
             Style = new ComputedStyle
@@ -453,18 +456,17 @@ public class BlockFlowTests
             }
         });
 
-        var root = new BlockBox(DisplayRole.Block)
+        var root = new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle()
         };
         root.Children.Add(container);
 
         var engine = new BlockLayoutEngine(
-            inlineEngine.Object,
-            tableLayoutEngine.Object,
+            inlineEngine,
+            tableLayoutEngine,
             formattingContext,
-            new ImageLayoutResolver(),
-            BlockLayoutStrategyRegistry.CreateDefault(),
+            imageResolver,
             diagnosticsSession);
 
         var boxTree = engine.Layout(root, new PageBox
@@ -514,12 +516,10 @@ public class BlockFlowTests
 
     private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer)
     {
-        var services = new LayoutServices(
+        return new LayoutBuilder(
             textMeasurer,
             LayoutBuilderFixture.CreateFontSource(),
             new NoopImageProvider());
-
-        return new LayoutBuilderFactory().Create(services);
     }
 
     private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
@@ -584,7 +584,7 @@ public class BlockFlowTests
             secondLine.Rect.Height);
     }
 
-    private static IReadOnlyList<string> ExtractInlineText(DisplayNode node)
+    private static IReadOnlyList<string> ExtractInlineText(BoxNode node)
     {
         return node.Children
             .OfType<InlineBox>()

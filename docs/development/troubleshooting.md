@@ -38,7 +38,7 @@ Cause candidates:
 Recovery:
 
 1. Re-run the focused pagination tests.
-2. Compare placement tuples containing fragment id, page number, local Y, and order index.
+2. Compare placement tuples containing fragment id, page number, page Y, and order index.
 3. Verify font source and font path are identical between runs.
 
 ## Diagnostics JSON Missing Payload Fields

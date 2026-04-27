@@ -1,4 +1,5 @@
 using System.Drawing;
+using Html2x.Abstractions.Layout.Geometry;
 
 namespace Html2x.Abstractions.Layout.Fragments;
 
@@ -9,6 +10,8 @@ public sealed class LineBoxFragment : Fragment
 {
     private bool _hasOccupiedRect;
     private readonly RectangleF _occupiedRect;
+    private readonly float _baselineY;
+    private readonly float _lineHeight;
 
     public LineBoxFragment()
     {
@@ -25,9 +28,17 @@ public sealed class LineBoxFragment : Fragment
         }
     }
 
-    public float BaselineY { get; init; } // absolute baseline within the line slot
+    public float BaselineY
+    {
+        get => _baselineY;
+        init => _baselineY = GeometryGuard.RequireFinite(nameof(BaselineY), value);
+    } // absolute baseline within the line slot
 
-    public float LineHeight { get; init; } // computed line height
+    public float LineHeight
+    {
+        get => _lineHeight;
+        init => _lineHeight = GeometryGuard.RequireNonNegativeFinite(nameof(LineHeight), value);
+    } // computed line height
 
     public IReadOnlyList<TextRun> Runs { get; init; } = [];
 

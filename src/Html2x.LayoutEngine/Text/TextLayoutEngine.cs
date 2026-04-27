@@ -30,9 +30,19 @@ internal sealed class TextLayoutEngine(ITextMeasurer measurer)
 
     private static float NormalizeWidth(float width)
     {
-        if (!float.IsFinite(width) || width <= 0f)
+        if (float.IsPositiveInfinity(width))
         {
             return float.PositiveInfinity;
+        }
+
+        if (!float.IsFinite(width))
+        {
+            throw new ArgumentOutOfRangeException(nameof(width), "Available width must be finite or positive infinity.");
+        }
+
+        if (width < 0f)
+        {
+            throw new ArgumentOutOfRangeException(nameof(width), "Available width cannot be negative.");
         }
 
         return width;

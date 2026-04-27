@@ -1,5 +1,4 @@
 using Html2x.Abstractions.Layout.Styles;
-using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 
@@ -10,13 +9,6 @@ namespace Html2x.LayoutEngine.Box;
 /// </summary>
 internal sealed class TablePlacementApplier
 {
-    private readonly IInlineFormattingContextRunner _inlineContext;
-
-    public TablePlacementApplier(IInlineFormattingContextRunner inlineContext)
-    {
-        _inlineContext = inlineContext ?? throw new ArgumentNullException(nameof(inlineContext));
-    }
-
     public TableBox ApplySupported(
         TableBox table,
         TableLayoutResult result,
@@ -35,17 +27,17 @@ internal sealed class TablePlacementApplier
         table.Padding = padding;
         table.TextAlign = table.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
         table.DerivedColumnCount = result.DerivedColumnCount;
-        var tableGeometry = BoxGeometryFactory.FromBorderBox(
+        var tableGeometry = BoxGeometryFactory.FromBorderBoxWithContentHeight(
             x,
             y,
             result.ResolvedWidth,
-            result.Height + padding.Vertical + border.Vertical,
+            result.ContentHeight,
             padding,
             border,
             markerOffset: table.MarkerOffset);
         table.ApplyLayoutGeometry(tableGeometry);
 
-        var tableContent = BoxGeometryFactory.ResolveContentArea(tableGeometry);
+        var tableContent = BoxGeometryFactory.ResolveContentFlowArea(tableGeometry);
         foreach (var rowResult in result.Rows)
         {
             ApplyTableRowLayout(rowResult, tableContent.X, tableContent.Y, layoutChildBlocks);
@@ -121,7 +113,7 @@ internal sealed class TablePlacementApplier
     {
         var geometry = cell.UsedGeometry ?? throw new InvalidOperationException(
             "Table cell content layout requires UsedGeometry to be applied before child placement.");
-        var contentArea = BoxGeometryFactory.ResolveContentArea(geometry);
+        var contentArea = BoxGeometryFactory.ResolveContentFlowArea(geometry);
         var contentX = contentArea.X;
         var contentY = contentArea.Y;
         var contentWidth = contentArea.Width;
@@ -132,11 +124,5 @@ internal sealed class TablePlacementApplier
             contentY,
             contentWidth,
             contentY);
-        cell.InlineLayout = _inlineContext.LayoutInlineContent(
-            cell,
-            new InlineLayoutRequest(
-                contentX,
-                contentY,
-                contentWidth));
     }
 }

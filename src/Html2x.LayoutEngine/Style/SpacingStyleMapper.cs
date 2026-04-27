@@ -10,9 +10,9 @@ namespace Html2x.LayoutEngine.Style;
 /// <summary>
 /// Maps CSS margin and padding declarations into layout spacing values and diagnostics.
 /// </summary>
-internal sealed class SpacingStyleMapper(ICssValueConverter converter)
+internal sealed class SpacingStyleMapper(CssValueConverter converter)
 {
-    private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+    private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
 
     public void ApplySpacing(
         ICssStyleDeclaration css,

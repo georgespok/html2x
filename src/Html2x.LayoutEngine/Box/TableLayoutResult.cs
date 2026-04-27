@@ -22,7 +22,9 @@ public sealed class TableLayoutResult
 
     public IReadOnlyList<TableLayoutRowResult> Rows { get; init; } = [];
 
-    public float Height { get; init; }
+    public float ContentHeight { get; init; }
+
+    public float BorderBoxHeight { get; init; }
 
     public static TableLayoutResult Unsupported(
         float? requestedWidth,
@@ -42,7 +44,8 @@ public sealed class TableLayoutResult
             DerivedColumnCount = 0,
             ColumnWidths = [],
             Rows = [],
-            Height = 0f
+            ContentHeight = 0f,
+            BorderBoxHeight = 0f
         };
     }
 }

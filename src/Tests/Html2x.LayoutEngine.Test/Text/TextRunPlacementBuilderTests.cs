@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
+﻿using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
@@ -11,7 +11,7 @@ public sealed class TextRunPlacementBuilderTests
     [Fact]
     public void Build_TextRuns_GroupsSequentialRunsIntoOneTextItem()
     {
-        var source = new InlineBox(DisplayRole.Inline);
+        var source = new InlineBox(BoxRole.Inline);
         var line = new TextLayoutLine(
             [
                 CreateRun(source, "A", width: 5f, leftSpacing: 1f, rightSpacing: 2f),

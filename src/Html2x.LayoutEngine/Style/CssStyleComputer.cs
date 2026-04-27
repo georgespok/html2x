@@ -11,20 +11,26 @@ namespace Html2x.LayoutEngine.Style;
 /// <summary>
 /// Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
 /// </summary>
-public sealed class CssStyleComputer(
-    IStyleTraversal traversal,
-    ICssValueConverter converter)
-    : IStyleComputer
+public sealed class CssStyleComputer
 {
-    private readonly IStyleTraversal _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
-    private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-    private readonly DimensionStyleMapper _dimensionMapper = new(converter);
-    private readonly SpacingStyleMapper _spacingMapper = new(converter);
-    private readonly BorderStyleMapper _borderMapper = new(converter);
+    private readonly StyleTraversal _traversal;
+    private readonly CssValueConverter _converter;
+    private readonly DimensionStyleMapper _dimensionMapper;
+    private readonly SpacingStyleMapper _spacingMapper;
+    private readonly BorderStyleMapper _borderMapper;
     
     public CssStyleComputer()
         : this(new StyleTraversal(), new CssValueConverter())
     {
+    }
+
+    internal CssStyleComputer(StyleTraversal traversal, CssValueConverter converter)
+    {
+        _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
+        _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+        _dimensionMapper = new DimensionStyleMapper(converter);
+        _spacingMapper = new SpacingStyleMapper(converter);
+        _borderMapper = new BorderStyleMapper(converter);
     }
 
     public StyleTree Compute(IDocument doc, DiagnosticsSession? diagnosticsSession = null)

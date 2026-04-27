@@ -3,6 +3,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Pagination;
 
@@ -15,16 +16,16 @@ public sealed class BlockPaginator
     private const string InitialPageReason = "InitialPage";
     private const string OverflowPageReason = "Overflow";
     private const float FitEpsilon = 0.001f;
-    private readonly FragmentCoordinateTranslator _coordinateTranslator;
+    private readonly FragmentPlacementCloner _fragmentCloner;
 
     public BlockPaginator()
-        : this(FragmentCoordinateTranslator.CreateDefault())
+        : this(new FragmentPlacementCloner())
     {
     }
 
-    internal BlockPaginator(FragmentCoordinateTranslator coordinateTranslator)
+    internal BlockPaginator(FragmentPlacementCloner fragmentCloner)
     {
-        _coordinateTranslator = coordinateTranslator ?? throw new ArgumentNullException(nameof(coordinateTranslator));
+        _fragmentCloner = fragmentCloner ?? throw new ArgumentNullException(nameof(fragmentCloner));
     }
 
     public PaginationResult Paginate(
@@ -36,8 +37,9 @@ public sealed class BlockPaginator
         ArgumentNullException.ThrowIfNull(blocks);
         var orderedBlocks = ToDeterministicOrder(blocks);
 
-        var contentTop = margins.Top;
-        var contentBottom = pageSize.Height - margins.Bottom;
+        var contentArea = PageContentArea.From(pageSize, margins);
+        var contentTop = contentArea.Y;
+        var contentBottom = contentArea.Bottom;
         var paginationState = new PaginationBuildState(
             pageSize,
             margins,
@@ -113,7 +115,7 @@ public sealed class BlockPaginator
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
-            Margins = margins,
+            Margin = margins,
             ContentTop = contentTop,
             ContentBottom = contentBottom,
             Placements = placements
@@ -146,7 +148,7 @@ public sealed class BlockPaginator
         int pageNumber,
         float placementY)
     {
-        return _coordinateTranslator.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
+        return _fragmentCloner.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
     }
 
     private static float ResolvePlacementY(BlockFragment block, int pageNumber, float cursorY)

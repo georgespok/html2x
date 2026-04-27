@@ -1,31 +1,21 @@
-namespace Html2x.LayoutEngine.Models;
+﻿namespace Html2x.LayoutEngine.Models;
 
-public sealed class TableCellBox(DisplayRole role) : BlockBox(role)
+public sealed class TableCellBox(BoxRole role) : BlockBox(role)
 {
     public int ColumnIndex { get; set; } = -1;
 
     public bool IsHeader { get; set; }
 
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
-        return new TableCellBox(Role)
+        return CopyBlockStateTo(new TableCellBox(Role)
         {
             Element = Element,
             Style = Style,
             Parent = parent,
-            X = X,
-            Y = Y,
-            Width = Width,
-            Height = Height,
-            Margin = Margin,
-            Padding = Padding,
-            TextAlign = TextAlign,
-            MarkerOffset = MarkerOffset,
-            UsedGeometry = UsedGeometry,
             IsAnonymous = IsAnonymous,
-            IsInlineBlockContext = IsInlineBlockContext,
             ColumnIndex = ColumnIndex,
             IsHeader = IsHeader
-        };
+        });
     }
 }

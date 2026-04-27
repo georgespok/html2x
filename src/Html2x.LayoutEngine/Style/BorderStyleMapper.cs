@@ -7,9 +7,9 @@ namespace Html2x.LayoutEngine.Style;
 /// <summary>
 /// Maps CSS border declarations into the computed visual border model.
 /// </summary>
-internal sealed class BorderStyleMapper(ICssValueConverter converter)
+internal sealed class BorderStyleMapper(CssValueConverter converter)
 {
-    private readonly ICssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+    private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
 
     public void ApplyBorders(ICssStyleDeclaration css, ComputedStyleBuilder style)
     {

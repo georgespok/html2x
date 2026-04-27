@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
@@ -64,7 +64,7 @@ public class TableLayoutEngineTests
     [Fact]
     public void Layout_TablePaddingAndBorder_SplitsContentWidthAcrossDerivedColumns()
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -80,16 +80,16 @@ public class TableLayoutEngineTests
         var result = Layout(table, availableWidth: 200f);
 
         result.IsSupported.ShouldBeTrue();
-        result.ResolvedWidth.ShouldBe(120f);
-        result.ColumnWidths.ShouldBe([48f, 48f]);
-        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(96f);
-        result.Rows[0].Cells[1].X.ShouldBe(48f);
+        result.ResolvedWidth.ShouldBe(144f);
+        result.ColumnWidths.ShouldBe([60f, 60f]);
+        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(120f);
+        result.Rows[0].Cells[1].X.ShouldBe(60f);
     }
 
     [Fact]
     public void Layout_TableSizing_UsesBlockMeasurementPolicy()
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             MarkerOffset = 7f,
             Style = new ComputedStyle
@@ -107,9 +107,9 @@ public class TableLayoutEngineTests
 
         var result = Layout(table, availableWidth: 100f);
 
-        result.ResolvedWidth.ShouldBe(120f);
-        result.ColumnWidths.ShouldBe([49.5f, 49.5f]);
-        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(99f);
+        result.ResolvedWidth.ShouldBe(134f);
+        result.ColumnWidths.ShouldBe([56.5f, 56.5f]);
+        result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(113f);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class TableLayoutEngineTests
     [Fact]
     public void Layout_RowPaddingAndBorder_PlacesCellsInsideRowContentBox()
     {
-        var row = new TableRowBox(DisplayRole.TableRow)
+        var row = new TableRowBox(BoxRole.TableRow)
         {
             Style = new ComputedStyle
             {
@@ -144,7 +144,7 @@ public class TableLayoutEngineTests
         };
         row.Children.Add(CreateCell());
 
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -248,12 +248,12 @@ public class TableLayoutEngineTests
     [Fact]
     public void Layout_GenericContainerInsideTable_ReturnsUnsupportedResult()
     {
-        var section = new InlineBox(DisplayRole.Inline);
+        var section = new InlineBox(BoxRole.Inline);
         section.Children.Add(CreateRow(
             CreateCell(),
             CreateCell()));
 
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -280,11 +280,11 @@ public class TableLayoutEngineTests
         var secondRow = CreateRow(
             CreateCell(),
             CreateCell());
-        var section = new TableSectionBox(DisplayRole.TableSection);
+        var section = new TableSectionBox(BoxRole.TableSection);
         section.Children.Add(firstRow);
         section.Children.Add(secondRow);
 
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -356,7 +356,8 @@ public class TableLayoutEngineTests
         result.UnsupportedStructureKind.ShouldBe(attributeName);
         result.UnsupportedReason.ShouldBe(expectedReason);
         result.Rows.ShouldBeEmpty();
-        result.Height.ShouldBe(0f);
+        result.ContentHeight.ShouldBe(0f);
+        result.BorderBoxHeight.ShouldBe(0f);
 
         var unsupportedPayload = diagnosticsSession.Events
             .Single(e => e.Name == "layout/table")
@@ -370,13 +371,13 @@ public class TableLayoutEngineTests
     [Fact]
     public void Layout_SectionContainingNestedSection_ReturnsUnsupportedResult()
     {
-        var innerSection = new TableSectionBox(DisplayRole.TableSection);
+        var innerSection = new TableSectionBox(BoxRole.TableSection);
         innerSection.Children.Add(CreateRow(CreateCell()));
 
-        var outerSection = new TableSectionBox(DisplayRole.TableSection);
+        var outerSection = new TableSectionBox(BoxRole.TableSection);
         outerSection.Children.Add(innerSection);
 
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -401,7 +402,7 @@ public class TableLayoutEngineTests
             Padding = new Spacing(7.5f, 7.5f, 7.5f, 7.5f),
             Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         });
-        paddedCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        paddedCell.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "A",
             Style = paddedCell.Style,
@@ -409,7 +410,7 @@ public class TableLayoutEngineTests
         });
 
         var defaultCell = CreateCell();
-        defaultCell.Children.Add(new InlineBox(DisplayRole.Inline)
+        defaultCell.Children.Add(new InlineBox(BoxRole.Inline)
         {
             TextContent = "B",
             Style = defaultCell.Style,
@@ -435,14 +436,15 @@ public class TableLayoutEngineTests
         firstPlacement.Height.ShouldBe(row.Height, 0.01f);
         secondPlacement.Y.ShouldBe(0f);
         secondPlacement.Height.ShouldBe(row.Height, 0.01f);
-        result.Height.ShouldBe(row.Height, 0.01f);
+        result.ContentHeight.ShouldBe(row.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
     }
 
     [Fact]
     public void Layout_CellWithStackedBlockChildren_UsesSharedCollapsedMarginHeight()
     {
         var cell = CreateCell();
-        cell.Children.Add(new BlockBox(DisplayRole.Block)
+        cell.Children.Add(new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle
             {
@@ -450,7 +452,7 @@ public class TableLayoutEngineTests
                 Margin = new Spacing(0f, 0f, 12f, 0f)
             }
         });
-        cell.Children.Add(new BlockBox(DisplayRole.Block)
+        cell.Children.Add(new BlockBox(BoxRole.Block)
         {
             Style = new ComputedStyle
             {
@@ -464,13 +466,14 @@ public class TableLayoutEngineTests
 
         var row = result.Rows.ShouldHaveSingleItem();
         row.Height.ShouldBe(30f, 0.01f);
-        result.Height.ShouldBe(row.Height, 0.01f);
+        result.ContentHeight.ShouldBe(row.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
     }
 
     [Fact]
     public void Layout_CellWithNestedPaddedTable_UsesNestedTableBorderBoxHeight()
     {
-        var innerTable = new TableBox(DisplayRole.Table)
+        var innerTable = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -489,7 +492,8 @@ public class TableLayoutEngineTests
 
         var row = result.Rows.ShouldHaveSingleItem();
         row.Height.ShouldBe(36f, 0.01f);
-        result.Height.ShouldBe(row.Height, 0.01f);
+        result.ContentHeight.ShouldBe(row.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
     }
 
     private static TableLayoutResult Layout(TableBox table, float availableWidth)
@@ -499,7 +503,7 @@ public class TableLayoutEngineTests
 
     private static TableBox CreateTable(float? widthPt = null, params TableRowBox[] rows)
     {
-        var table = new TableBox(DisplayRole.Table)
+        var table = new TableBox(BoxRole.Table)
         {
             Style = new ComputedStyle
             {
@@ -517,7 +521,7 @@ public class TableLayoutEngineTests
 
     private static TableRowBox CreateRow(params TableCellBox[] cells)
     {
-        var row = new TableRowBox(DisplayRole.TableRow);
+        var row = new TableRowBox(BoxRole.TableRow);
 
         foreach (var cell in cells)
         {
@@ -529,7 +533,7 @@ public class TableLayoutEngineTests
 
     private static TableCellBox CreateCell(ComputedStyle? style = null, AngleSharp.Dom.IElement? element = null)
     {
-        return new TableCellBox(DisplayRole.TableCell)
+        return new TableCellBox(BoxRole.TableCell)
         {
             Style = style ?? new ComputedStyle(),
             Element = element

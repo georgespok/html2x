@@ -1,5 +1,6 @@
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
@@ -25,7 +26,8 @@ internal sealed record InlineObjectLayout(
     float ContentHeight,
     float BorderBoxWidth,
     float BorderBoxHeight,
-    float Baseline);
+    float Baseline,
+    ImageLayoutResolution? ImageResolution = null);
 
 /// <summary>
 /// Carries source text, spacing, and font data for inline measurement.

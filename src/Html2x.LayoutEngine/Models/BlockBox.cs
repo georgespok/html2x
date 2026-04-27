@@ -1,59 +1,59 @@
-using Html2x.Abstractions.Layout.Styles;
+﻿using Html2x.Abstractions.Layout.Styles;
 
 namespace Html2x.LayoutEngine.Models;
 
-public class BlockBox(DisplayRole role) : DisplayNode(role)
+public class BlockBox(BoxRole role) : BoxNode(role)
 {
-    // Compatibility mirrors for pre-UsedGeometry callers. Layout geometry is authoritative after assignment.
-    private float _x;
-    private float _y;
-    private float _width;
-    private float _height;
-    private float _markerOffset;
+    // Compatibility seed values for callers that still populate geometry before layout resolves UsedGeometry.
+    private float _pendingX;
+    private float _pendingY;
+    private float _pendingWidth;
+    private float _pendingHeight;
+    private float _pendingMarkerOffset;
     private Spacing _padding = new();
     private UsedGeometry? _usedGeometry;
 
     public float X
     {
-        get => _usedGeometry?.X ?? _x;
+        get => _usedGeometry?.X ?? _pendingX;
         set
         {
             ThrowIfLayoutGeometryApplied(nameof(X));
-            _x = value;
+            _pendingX = value;
         }
     }
 
     public float Y
     {
-        get => _usedGeometry?.Y ?? _y;
+        get => _usedGeometry?.Y ?? _pendingY;
         set
         {
             ThrowIfLayoutGeometryApplied(nameof(Y));
-            _y = value;
+            _pendingY = value;
         }
     }
 
     public float Width
     {
-        get => _usedGeometry?.Width ?? _width;
+        get => _usedGeometry?.Width ?? _pendingWidth;
         set
         {
             ThrowIfLayoutGeometryApplied(nameof(Width));
-            _width = value;
+            _pendingWidth = value;
         }
     }
 
     public float Height
     {
-        get => _usedGeometry?.Height ?? _height;
+        get => _usedGeometry?.Height ?? _pendingHeight;
         set
         {
             ThrowIfLayoutGeometryApplied(nameof(Height));
-            _height = value;
+            _pendingHeight = value;
         }
     }
 
-    // Temporary layout-stage compatibility surfaces. New geometry code should prefer UsedGeometry.
+    // Temporary layout-stage compatibility surface. New geometry code should prefer UsedGeometry.
     public Spacing Margin { get; set; } = new();
 
     public Spacing Padding
@@ -68,11 +68,11 @@ public class BlockBox(DisplayRole role) : DisplayNode(role)
 
     public float MarkerOffset
     {
-        get => _usedGeometry?.MarkerOffset ?? _markerOffset;
+        get => _usedGeometry?.MarkerOffset ?? _pendingMarkerOffset;
         set
         {
             ThrowIfLayoutGeometryApplied(nameof(MarkerOffset));
-            _markerOffset = value;
+            _pendingMarkerOffset = value;
         }
     }
 
@@ -87,18 +87,40 @@ public class BlockBox(DisplayRole role) : DisplayNode(role)
         SetUsedGeometry(geometry);
     }
 
+    internal BlockBoxLayoutState CaptureLayoutState()
+    {
+        return new BlockBoxLayoutState(
+            _pendingX,
+            _pendingY,
+            _pendingWidth,
+            _pendingHeight,
+            _pendingMarkerOffset,
+            _padding,
+            Margin,
+            TextAlign,
+            _usedGeometry,
+            InlineLayout,
+            IsInlineBlockContext);
+    }
+
+    internal void RestoreLayoutState(BlockBoxLayoutState state)
+    {
+        _pendingX = state.PendingX;
+        _pendingY = state.PendingY;
+        _pendingWidth = state.PendingWidth;
+        _pendingHeight = state.PendingHeight;
+        _pendingMarkerOffset = state.PendingMarkerOffset;
+        _padding = state.Padding;
+        Margin = state.Margin;
+        TextAlign = state.TextAlign;
+        _usedGeometry = state.UsedGeometry;
+        InlineLayout = state.InlineLayout;
+        IsInlineBlockContext = state.IsInlineBlockContext;
+    }
+
     private void SetUsedGeometry(UsedGeometry? value)
     {
         _usedGeometry = value;
-        if (value.HasValue)
-        {
-            var geometry = value.Value;
-            _x = geometry.X;
-            _y = geometry.Y;
-            _width = geometry.Width;
-            _height = geometry.Height;
-            _markerOffset = geometry.MarkerOffset;
-        }
     }
 
     private void ThrowIfLayoutGeometryApplied(string propertyName)
@@ -116,24 +138,46 @@ public class BlockBox(DisplayRole role) : DisplayNode(role)
 
     public bool IsInlineBlockContext { get; set; }
 
-    protected override DisplayNode CloneShallowForParent(DisplayNode parent)
+    protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
-        return new BlockBox(Role)
+        return CopyBlockStateTo(new BlockBox(Role)
         {
             Element = Element,
             Style = Style,
             Parent = parent,
-            X = X,
-            Y = Y,
-            Width = Width,
-            Height = Height,
-            Margin = Margin,
-            Padding = Padding,
             IsAnonymous = IsAnonymous,
-            TextAlign = TextAlign,
-            MarkerOffset = MarkerOffset,
-            UsedGeometry = UsedGeometry,
-            IsInlineBlockContext = IsInlineBlockContext
-        };
+        });
+    }
+
+    protected TBlock CopyBlockStateTo<TBlock>(TBlock clone)
+        where TBlock : BlockBox
+    {
+        ArgumentNullException.ThrowIfNull(clone);
+
+        clone._pendingX = _pendingX;
+        clone._pendingY = _pendingY;
+        clone._pendingWidth = _pendingWidth;
+        clone._pendingHeight = _pendingHeight;
+        clone._pendingMarkerOffset = _pendingMarkerOffset;
+        clone._usedGeometry = _usedGeometry;
+        clone.Margin = Margin;
+        clone.Padding = Padding;
+        clone.TextAlign = TextAlign;
+        clone.IsInlineBlockContext = IsInlineBlockContext;
+
+        return clone;
     }
 }
+
+internal readonly record struct BlockBoxLayoutState(
+    float PendingX,
+    float PendingY,
+    float PendingWidth,
+    float PendingHeight,
+    float PendingMarkerOffset,
+    Spacing Padding,
+    Spacing Margin,
+    string TextAlign,
+    UsedGeometry? UsedGeometry,
+    InlineLayoutResult? InlineLayout,
+    bool IsInlineBlockContext);
