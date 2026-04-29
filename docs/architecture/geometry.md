@@ -2,6 +2,11 @@
 
 Geometry must be computed once during layout, then projected forward without reinterpretation.
 
+`Html2x.LayoutEngine.Geometry` consumes parser-free `StyleTree` input from
+`Html2x.LayoutEngine.Style`. It may read `ComputedStyle`, `StyledElementFacts`,
+and ordered `StyleContentNode` values. It must not parse HTML or CSS, reference
+AngleSharp, or traverse DOM nodes.
+
 ## Authority
 
 `UsedGeometry` is the canonical geometry payload for block-level layout nodes. It carries:
@@ -25,14 +30,18 @@ Naming:
 
 ```text
 Style tree
-  -> initial box tree
+  -> initial box tree from StyledElementFacts and StyleContentNode
   -> layout computes UsedGeometry
-  -> fragments copy geometry
+  -> published layout tree
+  -> fragments copy published geometry
   -> pagination translates fragment coordinates
   -> renderer draws fragment rectangles
 ```
 
-Fragments, pagination, diagnostics, and renderers must not recompute padding, border, content rectangles, marker offsets, or block sizes. They may translate already-published rectangles when pagination moves a fragment subtree to another page.
+Fragments, pagination, diagnostics, and renderers must not recompute padding,
+border, content rectangles, marker offsets, or block sizes. They may translate
+already-published rectangles when pagination moves a fragment subtree to another
+page.
 
 ## Compatibility Fields
 

@@ -4,6 +4,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -21,18 +22,37 @@ public static class LayoutSnapshotMapper
         BoxRole.TableCell
     ];
 
-    public static void ValidateInlineBlockStructures(BoxTree boxTree, DiagnosticsSession? diagnosticsSession)
+    internal static void ValidateInlineBlockStructures(BoxTree boxTree, DiagnosticsSession? diagnosticsSession)
     {
         ArgumentNullException.ThrowIfNull(boxTree);
 
         foreach (var root in boxTree.Blocks)
         {
-            if (TryFindUnsupportedInlineBlockStructure(root, out var unsupportedNode))
+            ValidateInlineBlockStructure(root, diagnosticsSession);
+        }
+    }
+
+    internal static void ValidateInlineBlockStructures(BoxNode root, DiagnosticsSession? diagnosticsSession)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+
+        ValidateInlineBlockStructure(root, diagnosticsSession);
+    }
+
+    internal static void ValidateInlineBlockStructures(
+        PublishedLayoutTree layout,
+        DiagnosticsSession? diagnosticsSession)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+
+        foreach (var root in layout.Blocks)
+        {
+            if (TryFindUnsupportedInlineBlockStructure(root, out var unsupportedBlock))
             {
                 var payload = new UnsupportedStructurePayload
                 {
-                    NodePath = BoxNodePathBuilder.Build(unsupportedNode),
-                    StructureKind = unsupportedNode.Role.ToString(),
+                    NodePath = unsupportedBlock.Identity.NodePath,
+                    StructureKind = unsupportedBlock.Display.Role.ToString(),
                     Reason = "Unsupported structure encountered inside inline-block formatting context.",
                     FormattingContext = FormattingContextKind.InlineBlock
                 };
@@ -203,12 +223,38 @@ public static class LayoutSnapshotMapper
             rowIndex: rowIndex,
             columnIndex: columnIndex,
             isHeader: isHeader,
-            metadataOwner: BoxToFragmentProjector.MetadataOwnerName,
+            metadataOwner: PublishedLayoutToFragmentProjector.MetadataOwnerName,
             metadataConsumer: nameof(LayoutSnapshotMapper));
     }
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)
         => line.Style?.Color ?? line.Runs.FirstOrDefault(static run => run.Color is not null)?.Color;
+
+    private static void ValidateInlineBlockStructure(BoxNode root, DiagnosticsSession? diagnosticsSession)
+    {
+        if (!TryFindUnsupportedInlineBlockStructure(root, out var unsupportedNode))
+        {
+            return;
+        }
+
+        var payload = new UnsupportedStructurePayload
+        {
+            NodePath = BoxNodePathBuilder.Build(unsupportedNode),
+            StructureKind = unsupportedNode.Role.ToString(),
+            Reason = "Unsupported structure encountered inside inline-block formatting context.",
+            FormattingContext = FormattingContextKind.InlineBlock
+        };
+
+        diagnosticsSession?.Events.Add(new DiagnosticsEvent
+        {
+            Type = DiagnosticsEventType.Error,
+            Name = "layout/inline-block/unsupported-structure",
+            Payload = payload
+        });
+
+        throw new InvalidOperationException(
+            $"Unsupported inline-block internal structure: {payload.StructureKind} at {payload.NodePath}.");
+    }
 
     private static bool TryFindUnsupportedInlineBlockStructure(BoxNode root, out BoxNode unsupportedNode)
     {
@@ -236,6 +282,67 @@ public static class LayoutSnapshotMapper
 
         unsupportedNode = null!;
         return false;
+    }
+
+    private static bool TryFindUnsupportedInlineBlockStructure(
+        PublishedBlock root,
+        out PublishedBlock unsupportedBlock)
+    {
+        var stack = new Stack<(PublishedBlock Block, bool InInlineBlockContext)>();
+        stack.Push((root, root.Display.FormattingContext == FormattingContextKind.InlineBlock));
+
+        while (stack.Count > 0)
+        {
+            var (current, inInlineBlockContext) = stack.Pop();
+            if (inInlineBlockContext && UnsupportedInlineBlockRoles.Contains(MapRole(current.Display.Role)))
+            {
+                unsupportedBlock = current;
+                return true;
+            }
+
+            var childInlineBlockContext = inInlineBlockContext ||
+                                          current.Display.FormattingContext == FormattingContextKind.InlineBlock;
+
+            foreach (var child in EnumeratePublishedChildBlocks(current).Reverse())
+            {
+                stack.Push((child, childInlineBlockContext));
+            }
+        }
+
+        unsupportedBlock = null!;
+        return false;
+    }
+
+    private static IEnumerable<PublishedBlock> EnumeratePublishedChildBlocks(PublishedBlock block)
+    {
+        foreach (var child in block.Children)
+        {
+            yield return child;
+        }
+
+        if (block.InlineLayout is null)
+        {
+            yield break;
+        }
+
+        foreach (var inlineObject in block.InlineLayout.Segments
+                     .SelectMany(static segment => segment.Lines)
+                     .SelectMany(static line => line.Items)
+                     .OfType<PublishedInlineObjectItem>())
+        {
+            yield return inlineObject.Content;
+        }
+    }
+
+    private static BoxRole MapRole(FragmentDisplayRole role)
+    {
+        return role switch
+        {
+            FragmentDisplayRole.Table => BoxRole.Table,
+            FragmentDisplayRole.TableRow => BoxRole.TableRow,
+            FragmentDisplayRole.TableCell => BoxRole.TableCell,
+            _ => BoxRole.Block
+        };
     }
 
     private sealed class FragmentSnapshotMapper

@@ -210,6 +210,12 @@ public sealed class DiagnosticsSessionSerializerTests
                             Path = "html/body/div",
                             Kind = "block",
                             TagName = "div",
+                            SourceNodeId = 3,
+                            SourceContentId = 8,
+                            SourcePath = "body[0]/div[0]/text[0]::anonymous-block",
+                            SourceOrder = 12,
+                            SourceElementIdentity = "div#main",
+                            GeneratedSourceKind = "anonymous-block",
                             X = 10,
                             Y = 20,
                             Size = new SizePt(100, 40),
@@ -304,8 +310,14 @@ public sealed class DiagnosticsSessionSerializerTests
 
         var geometry = events[4].GetProperty("payload");
         geometry.GetProperty("kind").GetString().ShouldBe("layout.geometry");
-        geometry.GetProperty("snapshot").GetProperty("boxes")[0].GetProperty("path").GetString()
-            .ShouldBe("html/body/div");
+        var geometryBox = geometry.GetProperty("snapshot").GetProperty("boxes")[0];
+        geometryBox.GetProperty("path").GetString().ShouldBe("html/body/div");
+        geometryBox.GetProperty("sourceNodeId").GetInt32().ShouldBe(3);
+        geometryBox.GetProperty("sourceContentId").GetInt32().ShouldBe(8);
+        geometryBox.GetProperty("sourcePath").GetString().ShouldBe("body[0]/div[0]/text[0]::anonymous-block");
+        geometryBox.GetProperty("sourceOrder").GetInt32().ShouldBe(12);
+        geometryBox.GetProperty("sourceElementIdentity").GetString().ShouldBe("div#main");
+        geometryBox.GetProperty("generatedSourceKind").GetString().ShouldBe("anonymous-block");
         geometry.GetProperty("snapshot").GetProperty("pagination")[0].GetProperty("placements")[0].GetProperty("fragmentId")
             .GetInt32().ShouldBe(7);
 

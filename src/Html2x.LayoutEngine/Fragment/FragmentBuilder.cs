@@ -1,60 +1,56 @@
-﻿using Html2x.Abstractions.Layout.Fragments;
-using Html2x.LayoutEngine.Box;
 using Html2x.Abstractions.Layout.Fonts;
-using Html2x.LayoutEngine.Models;
+using Html2x.Abstractions.Layout.Fragments;
+using Html2x.LayoutEngine.Geometry.Published;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Fragment;
 
+/// <summary>
+/// Projects published layout facts into renderer-visible fragments.
+/// </summary>
+/// <remarks>
+/// Fragment projection consumes only <see cref="PublishedLayoutTree"/>. Layout may
+/// mutate boxes internally, but rendering must not depend on box internals.
+/// </remarks>
 public sealed class FragmentBuilder
 {
-    private readonly IReadOnlyList<IFragmentBuildObserver> _observers;
-    private readonly BoxToFragmentProjector _projector;
+    private readonly PublishedLayoutToFragmentProjector _projector;
 
     public FragmentBuilder()
-        : this([])
+        : this(new PublishedLayoutToFragmentProjector())
     {
     }
 
-    public FragmentBuilder(IEnumerable<IFragmentBuildObserver> observers)
-        : this(observers, new BoxToFragmentProjector())
+    internal FragmentBuilder(PublishedLayoutToFragmentProjector projector)
     {
-    }
-
-    internal FragmentBuilder(
-        IEnumerable<IFragmentBuildObserver> observers,
-        BoxToFragmentProjector projector)
-    {
-        _observers = observers?.ToArray() ?? [];
         _projector = projector ?? throw new ArgumentNullException(nameof(projector));
     }
 
-    public FragmentTree Build(BoxTree boxes, IFontSource fontSource)
+    internal FragmentTree Build(PublishedLayoutTree layout, IFontSource fontSource)
     {
-        ArgumentNullException.ThrowIfNull(boxes);
+        ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(fontSource);
 
         var fragments = new FragmentTree();
         var pageNumber = 1;
         var nextFragmentId = 1;
 
-        var blockBindings = CreateBlockFragments(boxes, fragments, pageNumber, ref nextFragmentId);
-        blockBindings = AppendInlineFragments(boxes, blockBindings, fontSource, pageNumber, ref nextFragmentId);
-        AppendImageAndRuleFragments(blockBindings, pageNumber, ref nextFragmentId);
-        ReportPaintOrder(fragments);
+        var blockBindings = CreateBlockFragments(layout, fragments, pageNumber, ref nextFragmentId);
+        AppendFlowFragments(layout, blockBindings, fontSource, pageNumber, ref nextFragmentId);
+        AppendSpecialFragments(blockBindings, pageNumber, ref nextFragmentId);
 
         return fragments;
     }
 
-    private IReadOnlyList<BlockFragmentBinding> CreateBlockFragments(
-        BoxTree boxes,
+    private IReadOnlyList<PublishedBlockFragmentBinding> CreateBlockFragments(
+        PublishedLayoutTree layout,
         FragmentTree fragments,
         int pageNumber,
         ref int nextFragmentId)
     {
-        var bindings = new List<BlockFragmentBinding>();
+        var bindings = new List<PublishedBlockFragmentBinding>();
 
-        foreach (var block in boxes.Blocks)
+        foreach (var block in layout.Blocks)
         {
             var fragment = CreateBlockFragmentRecursive(block, bindings, pageNumber, ref nextFragmentId);
             fragments.Blocks.Add(fragment);
@@ -64,163 +60,212 @@ public sealed class FragmentBuilder
     }
 
     private BlockFragment CreateBlockFragmentRecursive(
-        BlockBox blockBox,
-        ICollection<BlockFragmentBinding> bindings,
+        PublishedBlock block,
+        ICollection<PublishedBlockFragmentBinding> bindings,
         int pageNumber,
         ref int nextFragmentId)
     {
-        var fragment = _projector.CreateBlockFragment(blockBox, ReserveFragmentId(ref nextFragmentId), pageNumber);
+        var fragment = _projector.CreateBlockFragment(block, ReserveFragmentId(ref nextFragmentId), pageNumber);
 
-        bindings.Add(new BlockFragmentBinding(blockBox, fragment));
-        NotifyBlockCreated(blockBox, fragment);
+        bindings.Add(new PublishedBlockFragmentBinding(block, fragment));
 
-        foreach (var child in BoxNodeTraversal.EnumerateBlockChildren(blockBox))
+        foreach (var child in block.Children)
         {
-            if (InlineFlowClassifier.IsInlineFlowMember(child))
-            {
-                continue;
-            }
-
             _ = CreateBlockFragmentRecursive(child, bindings, pageNumber, ref nextFragmentId);
         }
 
         return fragment;
     }
 
-    private IReadOnlyList<BlockFragmentBinding> AppendInlineFragments(
-        BoxTree boxes,
-        IReadOnlyList<BlockFragmentBinding> blockBindings,
+    private void AppendFlowFragments(
+        PublishedLayoutTree layout,
+        IReadOnlyList<PublishedBlockFragmentBinding> blockBindings,
         IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
         if (blockBindings.Count == 0)
         {
-            return blockBindings;
+            return;
         }
 
-        var lookup = blockBindings.ToDictionary(static binding => binding.Source, static binding => binding.Fragment);
-        var visited = new HashSet<BlockBox>();
-        var actualBindings = new List<BlockFragmentBinding>(blockBindings.Count);
+        var lookup = blockBindings.ToDictionary(
+            static binding => binding.Source,
+            static binding => binding.Fragment,
+            ReferenceEqualityComparer<PublishedBlock>.Instance);
+        var visited = new HashSet<PublishedBlock>(ReferenceEqualityComparer<PublishedBlock>.Instance);
 
-        foreach (var block in boxes.Blocks)
+        foreach (var block in layout.Blocks)
         {
             if (!lookup.TryGetValue(block, out var fragment))
             {
                 continue;
             }
 
-            AppendInlineFragments(
+            AppendFlowFragments(
                 block,
                 fragment,
                 lookup,
                 visited,
-                actualBindings,
                 fontSource,
                 pageNumber,
                 ref nextFragmentId);
         }
-
-        return actualBindings;
     }
 
-    private void AppendInlineFragments(
-        BlockBox blockBox,
+    private void AppendFlowFragments(
+        PublishedBlock block,
         BlockFragment fragment,
-        IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
-        ISet<BlockBox> visited,
-        ICollection<BlockFragmentBinding> actualBindings,
+        IReadOnlyDictionary<PublishedBlock, BlockFragment> lookup,
+        ISet<PublishedBlock> visited,
         IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
-        if (!visited.Add(blockBox))
+        if (!visited.Add(block))
         {
             return;
         }
 
-        actualBindings.Add(new BlockFragmentBinding(blockBox, fragment));
-
-        var flowState = new InlineFragmentFlowState(SegmentIndex: 0, HasPendingInlineFlow: false);
-
-        foreach (var child in BoxNodeTraversal.EnumerateFlowChildren(blockBox))
+        foreach (var item in block.Flow.OrderBy(static item => item.Order))
         {
-            if (InlineFlowClassifier.IsInlineFlowMember(child))
+            switch (item)
             {
-                flowState = flowState.QueueInlineFlow();
-                continue;
+                case PublishedInlineFlowSegmentItem inlineSegment:
+                    EmitSegment(fragment, inlineSegment.Segment, fontSource, pageNumber, ref nextFragmentId);
+                    break;
+                case PublishedChildBlockItem childBlock when lookup.TryGetValue(childBlock.Block, out var childFragment):
+                    fragment.AddChild(childFragment);
+                    AppendFlowFragments(
+                        childBlock.Block,
+                        childFragment,
+                        lookup,
+                        visited,
+                        fontSource,
+                        pageNumber,
+                        ref nextFragmentId);
+                    break;
             }
+        }
+    }
 
-            flowState = FlushPendingInlineFlow(blockBox, fragment, flowState, fontSource, pageNumber, ref nextFragmentId);
+    private void AppendSpecialFragments(
+        IReadOnlyList<PublishedBlockFragmentBinding> blockBindings,
+        int pageNumber,
+        ref int nextFragmentId)
+    {
+        if (blockBindings.Count == 0)
+        {
+            return;
+        }
 
-            if (child is not BlockBox childBlock || !lookup.TryGetValue(childBlock, out var childFragment))
-            {
-                continue;
-            }
+        var lookup = blockBindings.ToDictionary(
+            static binding => binding.Source,
+            static binding => binding.Fragment,
+            ReferenceEqualityComparer<PublishedBlock>.Instance);
+        var visited = new HashSet<PublishedBlock>(ReferenceEqualityComparer<PublishedBlock>.Instance);
 
-            fragment.AddChild(childFragment);
-            AppendInlineFragments(
-                childBlock,
-                childFragment,
+        foreach (var binding in blockBindings)
+        {
+            AppendSpecialFragments(
+                binding.Source,
+                binding.Fragment,
                 lookup,
                 visited,
-                actualBindings,
-                fontSource,
                 pageNumber,
                 ref nextFragmentId);
         }
-
-        FlushPendingInlineFlow(blockBox, fragment, flowState, fontSource, pageNumber, ref nextFragmentId);
     }
 
-    private InlineFragmentFlowState FlushPendingInlineFlow(
-        BlockBox blockContext,
-        BlockFragment parentFragment,
-        InlineFragmentFlowState flowState,
+    private void AppendSpecialFragments(
+        PublishedBlock block,
+        BlockFragment fragment,
+        IReadOnlyDictionary<PublishedBlock, BlockFragment> lookup,
+        ISet<PublishedBlock> visited,
+        int pageNumber,
+        ref int nextFragmentId)
+    {
+        if (!visited.Add(block))
+        {
+            return;
+        }
+
+        if (HasSpecialFragment(block) &&
+            _projector.TryCreateSpecialFragment(
+                block,
+                ReserveFragmentId(ref nextFragmentId),
+                pageNumber,
+                out var ownFragment))
+        {
+            fragment.AddChild(ownFragment);
+        }
+
+        foreach (var child in block.Children)
+        {
+            if (lookup.TryGetValue(child, out var childFragment))
+            {
+                AppendSpecialFragments(child, childFragment, lookup, visited, pageNumber, ref nextFragmentId);
+            }
+        }
+    }
+
+    private BlockFragment CreateInlineObjectBlockFragment(
+        PublishedBlock block,
         IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
-        if (!flowState.HasPendingInlineFlow)
+        var fragment = _projector.CreateBlockFragment(block, ReserveFragmentId(ref nextFragmentId), pageNumber);
+
+        if (HasSpecialFragment(block) &&
+            _projector.TryCreateSpecialFragment(
+                block,
+                ReserveFragmentId(ref nextFragmentId),
+                pageNumber,
+                out var ownFragment))
         {
-            return flowState;
+            fragment.AddChild(ownFragment);
         }
 
-        var nextState = flowState.ClearPendingInlineFlow();
-
-        if (blockContext.InlineLayout is null || flowState.SegmentIndex >= blockContext.InlineLayout.Segments.Count)
+        foreach (var item in block.Flow.OrderBy(static item => item.Order))
         {
-            return nextState;
+            switch (item)
+            {
+                case PublishedInlineFlowSegmentItem inlineSegment:
+                    EmitSegment(fragment, inlineSegment.Segment, fontSource, pageNumber, ref nextFragmentId);
+                    break;
+                case PublishedChildBlockItem childBlock:
+                    fragment.AddChild(CreateInlineObjectFragment(
+                        childBlock.Block,
+                        fontSource,
+                        pageNumber,
+                        ref nextFragmentId));
+                    break;
+            }
         }
 
-        EmitSegment(
-            parentFragment,
-            blockContext.InlineLayout.Segments[flowState.SegmentIndex],
-            fontSource,
-            pageNumber,
-            ref nextFragmentId);
-        return nextState.AdvanceSegment();
+        return fragment;
     }
 
     private void EmitSegment(
         BlockFragment parentFragment,
-        InlineFlowSegmentLayout segment,
+        PublishedInlineFlowSegment segment,
         IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
         foreach (var line in segment.Lines)
         {
-            foreach (var item in line.Items)
+            foreach (var item in line.Items.OrderBy(static item => item.Order))
             {
                 switch (item)
                 {
-                    case InlineTextItemLayout textItem:
+                    case PublishedInlineTextItem textItem:
                         EmitTextItem(parentFragment, line, textItem, fontSource, pageNumber, ref nextFragmentId);
                         break;
-                    case InlineObjectItemLayout objectItem:
+                    case PublishedInlineObjectItem objectItem:
                         parentFragment.AddChild(
-                            BuildInlineObjectFragment(objectItem.ContentBox, fontSource, pageNumber, ref nextFragmentId));
+                            CreateInlineObjectFragment(objectItem.Content, fontSource, pageNumber, ref nextFragmentId));
                         break;
                 }
             }
@@ -229,8 +274,8 @@ public sealed class FragmentBuilder
 
     private void EmitTextItem(
         BlockFragment parentFragment,
-        InlineLineLayout line,
-        InlineTextItemLayout textItem,
+        PublishedInlineLine line,
+        PublishedInlineTextItem textItem,
         IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
@@ -253,14 +298,25 @@ public sealed class FragmentBuilder
         };
 
         parentFragment.AddChild(fragment);
+    }
 
-        foreach (var source in textItem.Sources.Distinct())
+    private LayoutFragment CreateInlineObjectFragment(
+        PublishedBlock content,
+        IFontSource fontSource,
+        int pageNumber,
+        ref int nextFragmentId)
+    {
+        if (HasSpecialFragment(content) &&
+            _projector.TryCreateSpecialFragment(
+                content,
+                ReserveFragmentId(ref nextFragmentId),
+                pageNumber,
+                out var specialFragment))
         {
-            foreach (var observer in _observers)
-            {
-                observer.OnInlineFragmentCreated(source, parentFragment, fragment);
-            }
+            return specialFragment;
         }
+
+        return CreateInlineObjectBlockFragment(content, fontSource, pageNumber, ref nextFragmentId);
     }
 
     private static List<TextRun> ResolveTextRuns(IFontSource fontSource, IReadOnlyList<TextRun> runs)
@@ -274,153 +330,13 @@ public sealed class FragmentBuilder
         return resolved;
     }
 
-    private LayoutFragment BuildInlineObjectFragment(
-        BlockBox contentBox,
-        IFontSource fontSource,
-        int pageNumber,
-        ref int nextFragmentId)
+    private static bool HasSpecialFragment(PublishedBlock block)
     {
-        if (contentBox is RuleBox or ImageBox &&
-            _projector.TryCreateSpecialFragment(
-                contentBox,
-                ReserveFragmentId(ref nextFragmentId),
-                pageNumber,
-                out var specialFragment))
-        {
-            NotifySpecialCreated(contentBox, specialFragment);
-            return specialFragment;
-        }
-
-        var fragment = _projector.CreateBlockFragment(contentBox, ReserveFragmentId(ref nextFragmentId), pageNumber);
-        NotifyBlockCreated(contentBox, fragment);
-
-        if (contentBox.InlineLayout is not null)
-        {
-            foreach (var segment in contentBox.InlineLayout.Segments)
-            {
-                EmitSegment(fragment, segment, fontSource, pageNumber, ref nextFragmentId);
-            }
-        }
-
-        return fragment;
-    }
-
-    private void AppendImageAndRuleFragments(
-        IReadOnlyList<BlockFragmentBinding> blockBindings,
-        int pageNumber,
-        ref int nextFragmentId)
-    {
-        if (blockBindings.Count == 0)
-        {
-            return;
-        }
-
-        var lookup = blockBindings.ToDictionary(static binding => binding.Source, static binding => binding.Fragment);
-        var visited = new HashSet<BlockBox>();
-
-        foreach (var binding in blockBindings)
-        {
-            AppendImageAndRuleFragments(
-                binding.Source,
-                binding.Fragment,
-                lookup,
-                visited,
-                pageNumber,
-                ref nextFragmentId);
-        }
-    }
-
-    private void AppendImageAndRuleFragments(
-        BlockBox blockBox,
-        BlockFragment blockFragment,
-        IReadOnlyDictionary<BlockBox, BlockFragment> lookup,
-        ISet<BlockBox> visited,
-        int pageNumber,
-        ref int nextFragmentId)
-    {
-        if (!visited.Add(blockBox))
-        {
-            return;
-        }
-
-        if (blockBox is RuleBox or ImageBox &&
-            _projector.TryCreateSpecialFragment(
-                blockBox,
-                ReserveFragmentId(ref nextFragmentId),
-                pageNumber,
-                out var ownFragment))
-        {
-            blockFragment.AddChild(ownFragment);
-            NotifySpecialCreated(blockBox, ownFragment);
-        }
-
-        foreach (var child in blockBox.Children)
-        {
-            if (child is BlockBox nested && lookup.TryGetValue(nested, out var nestedFragment))
-            {
-                AppendImageAndRuleFragments(nested, nestedFragment, lookup, visited, pageNumber, ref nextFragmentId);
-            }
-        }
-    }
-
-    private void ReportPaintOrder(FragmentTree fragments)
-    {
-        var orderedFragments = fragments.Blocks
-            .SelectMany(Flatten)
-            .OrderBy(static fragment => fragment.ZOrder)
-            .ToList();
-
-        foreach (var observer in _observers)
-        {
-            observer.OnZOrderCompleted(orderedFragments);
-        }
+        return block.Image is not null || block.Rule is not null;
     }
 
     private static int ReserveFragmentId(ref int nextFragmentId)
     {
         return nextFragmentId++;
-    }
-
-    private static IEnumerable<LayoutFragment> Flatten(LayoutFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        foreach (var sub in Flatten(child))
-        {
-            yield return sub;
-        }
-    }
-
-    private void NotifyBlockCreated(BlockBox source, BlockFragment fragment)
-    {
-        foreach (var observer in _observers)
-        {
-            observer.OnBlockFragmentCreated(source, fragment);
-        }
-    }
-
-    private void NotifySpecialCreated(BoxNode source, LayoutFragment fragment)
-    {
-        foreach (var observer in _observers)
-        {
-            observer.OnSpecialFragmentCreated(source, fragment);
-        }
-    }
-
-    private readonly record struct InlineFragmentFlowState(
-        int SegmentIndex,
-        bool HasPendingInlineFlow)
-    {
-        public InlineFragmentFlowState QueueInlineFlow() => this with { HasPendingInlineFlow = true };
-
-        public InlineFragmentFlowState ClearPendingInlineFlow() => this with { HasPendingInlineFlow = false };
-
-        public InlineFragmentFlowState AdvanceSegment() => this with { SegmentIndex = SegmentIndex + 1 };
     }
 }

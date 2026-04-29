@@ -1,4 +1,3 @@
-﻿using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -54,7 +53,7 @@ internal static class BoxTreeAssertions
     {
         if (expected.HasElement)
         {
-            actual.Element.ShouldBeSameAs(expected.Element, $"{path}.Element mismatch");
+            AssertElement(actual.Element, expected.Element, $"{path}.Element");
         }
 
         if (expected.IsAnonymous.HasValue)
@@ -64,18 +63,21 @@ internal static class BoxTreeAssertions
 
         if (expected.Position.HasValue)
         {
-            actual.X.ShouldBe(expected.Position.Value.X, $"{path}.X mismatch");
-            actual.Y.ShouldBe(expected.Position.Value.Y, $"{path}.Y mismatch");
+            var geometry = actual.UsedGeometry.ShouldNotBeNull($"{path}.UsedGeometry missing");
+            geometry.X.ShouldBe(expected.Position.Value.X, $"{path}.X mismatch");
+            geometry.Y.ShouldBe(expected.Position.Value.Y, $"{path}.Y mismatch");
         }
 
         if (expected.Width.HasValue)
         {
-            actual.Width.ShouldBe(expected.Width.Value, $"{path}.Width mismatch");
+            var geometry = actual.UsedGeometry.ShouldNotBeNull($"{path}.UsedGeometry missing");
+            geometry.Width.ShouldBe(expected.Width.Value, $"{path}.Width mismatch");
         }
 
         if (expected.Height.HasValue)
         {
-            actual.Height.ShouldBe(expected.Height.Value, $"{path}.Height mismatch");
+            var geometry = actual.UsedGeometry.ShouldNotBeNull($"{path}.UsedGeometry missing");
+            geometry.Height.ShouldBe(expected.Height.Value, $"{path}.Height mismatch");
         }
 
         if (expected.Padding.HasValue)
@@ -95,7 +97,7 @@ internal static class BoxTreeAssertions
     {
         if (expected.HasElement)
         {
-            actual.Element.ShouldBeSameAs(expected.Element, $"{path}.Element mismatch");
+            AssertElement(actual.Element, expected.Element, $"{path}.Element");
         }
 
         if (expected.Text is not null)
@@ -122,6 +124,16 @@ internal static class BoxTreeAssertions
         {
             AssertNode(actualChildren[i], expectedChildren[i], $"{path}.Children[{i}]");
         }
+    }
+
+    private static void AssertElement(StyledElementFacts? actual, StyledElementFacts? expected, string path)
+    {
+        actual.ShouldNotBeNull($"{path} missing");
+        expected.ShouldNotBeNull($"{path} expectation missing");
+
+        actual.TagName.ShouldBe(expected.TagName, $"{path}.TagName mismatch");
+        actual.Id.ShouldBe(expected.Id, $"{path}.Id mismatch");
+        actual.ClassAttribute.ShouldBe(expected.ClassAttribute, $"{path}.ClassAttribute mismatch");
     }
 }
 
@@ -163,9 +175,9 @@ internal sealed class BlockExpectationBuilder(BlockExpectation block)
         return this;
     }
 
-    public BlockExpectationBuilder Element(IElement element)
+    public BlockExpectationBuilder Element(string tagName)
     {
-        block.Element = element;
+        block.Element = StyledElementFacts.Create(tagName);
         block.HasElement = true;
         return this;
     }
@@ -225,9 +237,9 @@ internal sealed class BlockExpectationBuilder(BlockExpectation block)
 
 internal sealed class InlineExpectationBuilder(InlineExpectation inline)
 {
-    public InlineExpectationBuilder Element(IElement element)
+    public InlineExpectationBuilder Element(string tagName)
     {
-        inline.Element = element;
+        inline.Element = StyledElementFacts.Create(tagName);
         inline.HasElement = true;
         return this;
     }
@@ -269,7 +281,7 @@ internal sealed class BlockExpectation : NodeExpectation
 {
     public bool HasElement { get; set; }
 
-    public IElement? Element { get; set; }
+    public StyledElementFacts? Element { get; set; }
 
     public bool? IsAnonymous { get; set; }
 
@@ -288,7 +300,7 @@ internal sealed class InlineExpectation : NodeExpectation
 {
     public bool HasElement { get; set; }
 
-    public IElement? Element { get; set; }
+    public StyledElementFacts? Element { get; set; }
 
     public string? Text { get; set; }
 }

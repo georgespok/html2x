@@ -1,0 +1,21 @@
+using System.Globalization;
+
+namespace Html2x.LayoutEngine.Models;
+
+public readonly record struct StyleNodeId
+{
+    public StyleNodeId(int value)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(value);
+
+        Value = value;
+    }
+
+    public static StyleNodeId Unspecified { get; } = new(0);
+
+    public int Value { get; }
+
+    public bool IsSpecified => Value > 0;
+
+    public override string ToString() => Value.ToString(CultureInfo.InvariantCulture);
+}

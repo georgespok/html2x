@@ -1,7 +1,5 @@
-﻿using AngleSharp.Dom;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
-using Moq;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Display;
@@ -55,14 +53,7 @@ public sealed class ListMarkerPolicyTests
     {
         return new BlockBox(BoxRole.Block)
         {
-            Element = CreateElement(tagName)
+            Element = StyledElementFacts.Create(tagName)
         };
-    }
-
-    private static IElement CreateElement(string tagName)
-    {
-        var element = new Mock<IElement>();
-        element.SetupGet(static x => x.TagName).Returns(tagName);
-        return element.Object;
     }
 }

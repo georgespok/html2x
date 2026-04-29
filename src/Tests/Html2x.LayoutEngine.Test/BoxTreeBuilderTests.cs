@@ -1,5 +1,3 @@
-using AngleSharp;
-using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
@@ -11,19 +9,12 @@ namespace Html2x.LayoutEngine.Test;
 public class BoxTreeBuilderTests
 {
     [Fact]
-    public async Task Build_UsesStylePageMargins_AndBuildsBlocks()
+    public void Build_UsesStylePageMargins_AndBuildsBlocks()
     {
-        // Arrange: simple DOM with <p> child so we get a block
-        const string html = "<html><body><p>Text</p></body></html>";
-        var doc = await ParseHtml(html);
-
-        var p = doc.QuerySelector("p")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var styles = BuildStyleTree()
             .WithPageMargins(72, 10, 20, 30)
-            .AddChild(p, 12, 4);
+            .AddChild(HtmlCssConstants.HtmlTags.P, "Text", marginTop: 12, marginLeft: 4);
 
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
         actual.ShouldMatch(tree => tree
@@ -32,202 +23,135 @@ public class BoxTreeBuilderTests
     }
 
     [Fact]
-    public async Task Build_DivAndText_BuildsBlockAtExpectedPosition()
+    public void Build_DivAndText_BuildsBlockAtExpectedPosition()
     {
-        // Arrange: <div> with text; expect a block positioned by div margins
-        const string html = "<html><body><div>Hello</div></body></html>";
-        var doc = await ParseHtml(html);
-
-        var div = doc.QuerySelector("div")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(div, 15, 5);
+            .AddChild(HtmlCssConstants.HtmlTags.Div, "Hello", marginTop: 15, marginLeft: 5);
 
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
-            .Block(b => b.Element(div)
+            .Block(b => b.Element(HtmlCssConstants.HtmlTags.Div)
                 .Position(5f, 15f)
                 .Inline(i => i.Text("Hello"))));
     }
 
     [Fact]
-    public async Task Build_DivAndBorder_BuildsBlockAtExpectedPosition()
+    public void Build_DivAndBorder_BuildsBlockAtExpectedPosition()
     {
-        // Arrange
-        const string html = "<html><body><div style='border-width: 1px; border-style: solid;'>Hello</div></body></html>";
-        var doc = await ParseHtml(html);
-
-        var div = doc.QuerySelector("div")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var border = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid));
+        var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(div, divNode => divNode
-                .WithBorders(BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))));
+            .AddChild(HtmlCssConstants.HtmlTags.Div, divNode => divNode
+                .WithBorders(border)
+                .AddText("Hello"));
 
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
-        // Assert
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
-            .Block(b => b.Element(div)
-                .Style(new ComputedStyle { Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid)) })
-                .Inline(i => i.Text("Hello"))
-            )
-        );
+            .Block(b => b.Element(HtmlCssConstants.HtmlTags.Div)
+                .Style(new ComputedStyle { Borders = border })
+                .Inline(i => i.Text("Hello"))));
     }
 
     [Fact]
-    public async Task Build_ListItems_BuildsBlockAtExpectedPosition()
+    public void Build_ListItems_BuildsBlockAtExpectedPosition()
     {
-        // Arrange
-        const string html = "<html><ul><li>item 1</li><li>item 2</li></ul></html>";
-        var doc = await ParseHtml(html);
+        var styles = BuildStyleTree()
+            .AddChild(
+                HtmlCssConstants.HtmlTags.Ul,
+                ul => ul
+                    .AddChild(HtmlCssConstants.HtmlTags.Li, "item 1")
+                    .AddChild(HtmlCssConstants.HtmlTags.Li, "item 2"),
+                marginTop: 15f,
+                marginLeft: 5f);
 
-        var ul = doc.QuerySelector("ul")!;
-        var listItems = doc.QuerySelectorAll("li");
-        var firstLi = listItems[0]!;
-        var secondLi = listItems[1]!;
-        var root = new StyleNode { Element = doc.Body!, Style = new ComputedStyle() };
-
-        var ulNode = new StyleNode
-        {
-            Element = ul,
-            Style = new ComputedStyle
-            {
-                Margin = new Spacing(15f, 0f, 0f, 5f)
-            }
-        };
-        ulNode.Children.Add(new StyleNode { Element = firstLi, Style = new ComputedStyle() });
-        ulNode.Children.Add(new StyleNode { Element = secondLi, Style = new ComputedStyle() });
-        root.Children.Add(ulNode);
-        var styles = new StyleTree { Root = root };
-
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
-        const string markerChar = "•";
-
+        const string markerText = "\u2022 ";
         actual.ShouldMatch(tree => tree
             .Block(b =>
             {
-                b.Element(ul)
-                    .Block(firstLiBlock => firstLiBlock.Element(firstLi)
-                        .Inline(marker => marker.Text($"{markerChar} "))
+                b.Element(HtmlCssConstants.HtmlTags.Ul)
+                    .Block(firstLiBlock => firstLiBlock.Element(HtmlCssConstants.HtmlTags.Li)
+                        .Inline(marker => marker.Text(markerText))
                         .Inline(text => text.Text("item 1")))
-                    .Block(secondLiBlock => secondLiBlock.Element(secondLi)
-                        .Inline(marker => marker.Text($"{markerChar} "))
+                    .Block(secondLiBlock => secondLiBlock.Element(HtmlCssConstants.HtmlTags.Li)
+                        .Inline(marker => marker.Text(markerText))
                         .Inline(text => text.Text("item 2")));
             }));
     }
 
     [Fact]
-    public async Task Build_DivWithSpanAndParagraph_HasInlineSpanAndBlockParagraph()
+    public void Build_DivWithSpanAndParagraph_HasInlineSpanAndBlockParagraph()
     {
-        // Arrange
-        var doc = await ParseHtml(@"
-            <html><body>
-                <div>
-                    <span>Span inside Div</span>
-                    <p>Paragraph inside Div</p>
-                </div>
-            </body></html>");
-
-        var div = doc.QuerySelector("div")!;
-        var span = doc.QuerySelector("span")!;
-        var p = doc.QuerySelector("p")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(div, divNode => divNode
-                .AddChild(span)
-                .AddChild(p));
+            .AddChild(HtmlCssConstants.HtmlTags.Div, divNode => divNode
+                .AddChild(HtmlCssConstants.HtmlTags.Span, "Span inside Div")
+                .AddChild(HtmlCssConstants.HtmlTags.P, "Paragraph inside Div"));
 
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
-            .Block(b => b.Element(div)
+            .Block(b => b.Element(HtmlCssConstants.HtmlTags.Div)
                 .Block(anon => anon.IsAnonymous(true)
-                    .Inline(i => i.Element(span)
+                    .Inline(i => i.Element(HtmlCssConstants.HtmlTags.Span)
                         .Text("Span inside Div")))
-                .Block(child => child.Element(p)
+                .Block(child => child.Element(HtmlCssConstants.HtmlTags.P)
                     .Inline(i => i.Text("Paragraph inside Div")))));
     }
 
     [Fact]
-    public async Task Build_DivWithNestedDivInsideParagraph_BuildsNestedStructure()
+    public void Build_DivWithNestedDivInsideParagraph_BuildsNestedStructure()
     {
-        const string html =
-            "<html><body><div><span>Span inside Div</span><p>Paragraph inside Div<div>Nested Div inside Paragraph<span>Nested Span inside nested Div</span></div></p></div></body></html>";
-        var doc = await ParseHtml(html);
-
-        var divs = doc.QuerySelectorAll("div");
-        var outerDiv = divs[0]!;
-        var nestedDiv = divs[1]!;
-        var spans = doc.QuerySelectorAll("span");
-        var outerSpan = spans[0]!;
-        var nestedSpan = spans[1]!;
-        var paragraph = doc.QuerySelector("p")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(outerDiv, divNode => divNode
-                .AddChild(outerSpan)
-                .AddChild(paragraph)
-                .AddChild(nestedDiv, nestedDivNode => nestedDivNode
-                    .AddChild(nestedSpan)));
+            .AddChild(HtmlCssConstants.HtmlTags.Div, divNode => divNode
+                .AddChild(HtmlCssConstants.HtmlTags.Span, "Span inside Div")
+                .AddChild(HtmlCssConstants.HtmlTags.P, "Paragraph inside Div")
+                .AddChild(HtmlCssConstants.HtmlTags.Div, nestedDivNode => nestedDivNode
+                    .AddText("Nested Div inside Paragraph")
+                    .AddChild(HtmlCssConstants.HtmlTags.Span, "Nested Span inside nested Div")));
 
         var actual = CreateBoxTreeBuilder().Build(styles);
 
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
-            .Block(b => b.Element(outerDiv)
+            .Block(b => b.Element(HtmlCssConstants.HtmlTags.Div)
                 .Block(anon => anon.IsAnonymous(true)
-                    .Inline(i => i.Element(outerSpan)
+                    .Inline(i => i.Element(HtmlCssConstants.HtmlTags.Span)
                         .Text("Span inside Div")))
-                .Block(paragraphBlock => paragraphBlock.Element(paragraph)
+                .Block(paragraphBlock => paragraphBlock.Element(HtmlCssConstants.HtmlTags.P)
                     .Inline(i => i.Text("Paragraph inside Div")))
-                .Block(nestedBlock => nestedBlock.Element(nestedDiv)
+                .Block(nestedBlock => nestedBlock.Element(HtmlCssConstants.HtmlTags.Div)
                     .Inline(i => i.Text("Nested Div inside Paragraph"))
-                    .Inline(i => i.Element(nestedSpan)
+                    .Inline(i => i.Element(HtmlCssConstants.HtmlTags.Span)
                         .Inline(child => child.Text("Nested Span inside nested Div"))))));
     }
 
     [Fact]
-    public async Task BlockBoxWithPadding_ReducesContentArea()
+    public void BlockBoxWithPadding_ReducesContentArea()
     {
-        // Arrange: Block with padding should have padding values copied from ComputedStyle
-        const string html = "<html><body><div>Content</div></body></html>";
-        var doc = await ParseHtml(html);
-
-        var div = doc.QuerySelector("div")!;
-
-        var styles = BuildStyleTree(doc.Body!)
+        var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(div, divNode => divNode.WithPadding(15f, 11.25f, 7.5f, 3.75f));
+            .AddChild(HtmlCssConstants.HtmlTags.Div, divNode => divNode
+                .WithPadding(15f, 11.25f, 7.5f, 3.75f)
+                .AddText("Content"));
 
-        // Act
         var actual = CreateBoxTreeBuilder().Build(styles);
 
-        // Assert: Padding values should be copied to BlockBox.Padding
         actual.ShouldMatch(tree => tree
             .Page(p => p.Margins(0f, 0f, 0f, 0f))
-            .Block(b => b.Element(div)
+            .Block(b => b.Element(HtmlCssConstants.HtmlTags.Div)
                 .Padding(15f, 11.25f, 7.5f, 3.75f)));
     }
 
-    private static StyleTreeBuilder BuildStyleTree(IElement body) => new(body);
+    private static StyleTreeBuilder BuildStyleTree() => new();
 
     private static BoxTreeBuilder CreateBoxTreeBuilder() => new();
-
-    private static async Task<IDocument> ParseHtml(string html) =>
-        await BrowsingContext
-            .New(Configuration.Default)
-            .OpenAsync(req => req.Content(html));
 }

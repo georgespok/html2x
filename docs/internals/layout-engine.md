@@ -1,47 +1,56 @@
 # Layout Engine
 
-`Html2x.LayoutEngine` owns the conversion from parsed HTML and CSS to `HtmlLayout` pages.
+`Html2x.LayoutEngine` composes the conversion pipeline from raw HTML to
+`HtmlLayout` pages. It does not own parser implementation details or layout
+geometry algorithms directly.
 
 ## Responsibilities
 
-- Parse HTML and CSS through AngleSharp wrappers.
-- Compute style values with inheritance, defaults, and supported unit conversion.
-- Build style and box trees.
-- Resolve block, inline, image, list, rule, and table layout.
-- Project boxes into fragments.
+- Call the style module to parse HTML and CSS and produce `StyleTree`.
+- Call the geometry module to produce `PublishedLayoutTree`.
+- Project published layout into fragments.
 - Paginate fragments into pages.
 - Emit layout diagnostics when diagnostics are enabled.
+
+## Related Modules
+
+- `Html2x.LayoutEngine.Style` owns AngleSharp usage, user agent stylesheet
+  application, CSS parsing, computed style construction, style diagnostics, and
+  the parser-free `StyleTree` handoff.
+- `Html2x.LayoutEngine.Geometry` consumes `StyleTree` and produces published
+  layout geometry.
+- `Html2x.Renderers.Pdf` consumes `HtmlLayout` only.
 
 ## Primary Entry Points
 
 - `LayoutBuilder`
-- `AngleSharpDomProvider`
-- `CssStyleComputer`
-- `BoxTreeBuilder`
-- `InitialBoxTreeBuilder`
-- `BlockLayoutEngine`
-- `InlineLayoutEngine`
-- `TableLayoutEngine`
+- `IStyleTreeBuilder`
+- `StyleTreeBuilder`
+- `LayoutGeometryBuilder`
 - `FragmentBuilder`
 - `BoxToFragmentProjector`
 - `BlockPaginator`
 
 ## Internal Boundaries
 
-`LayoutBuilder` constructs the concrete pipeline stages for the converter flow. The current structure favors direct internal collaborators over separate interfaces for the main layout stages.
+`LayoutBuilder` constructs the concrete pipeline stages for the converter flow.
+The style stage is reached through `IStyleTreeBuilder`. The geometry stage is
+reached through `LayoutGeometryBuilder`.
 
-`BoxTreeBuilder` coordinates the initial box pass and layout geometry pass. `InitialBoxTreeBuilder` materializes box roles from the style tree, then the block, inline, image, and table layout services publish `UsedGeometry` and layout metadata.
-
-The layout engine should keep parser, style, box construction, geometry, fragment, and pagination responsibilities separable even when some implementation classes coordinate multiple steps.
+The layout engine should keep style, geometry, fragment, and pagination
+responsibilities separable even when implementation classes coordinate multiple
+steps.
 
 When adding behavior:
 
 1. Add style support first if the behavior comes from CSS.
-2. Add box role or box model support if layout changes.
+2. Add geometry support if layout changes.
 3. Add fragment fields only when renderers need the fact.
 4. Add pagination translation support for new geometry-bearing fragment types.
 5. Add diagnostics for unsupported or fallback behavior.
 
 ## Unsupported Modes
 
-Unsupported future layout modes must remain explicit. Floats, absolute positioning, and flexbox should emit diagnostics and use the documented fallback until a real formatting context exists.
+Unsupported future layout modes must remain explicit. Floats, absolute
+positioning, and flexbox should emit diagnostics and use the documented fallback
+until a real formatting context exists.

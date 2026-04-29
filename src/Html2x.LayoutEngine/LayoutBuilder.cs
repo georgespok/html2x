@@ -1,15 +1,14 @@
-﻿using AngleSharp;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Options;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 
@@ -21,10 +20,9 @@ namespace Html2x.LayoutEngine;
 /// </summary>
 public class LayoutBuilder
 {
-    private readonly BoxTreeBuilder _boxBuilder;
-    private readonly AngleSharpDomProvider _domProvider;
+    private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
     private readonly FragmentBuilder _fragmentBuilder;
-    private readonly CssStyleComputer _styleComputer;
+    private readonly IStyleTreeBuilder _styleTreeBuilder;
     private readonly IImageProvider _imageProvider;
     private readonly IFontSource _fontSource;
 
@@ -38,11 +36,9 @@ public class LayoutBuilder
         ArgumentNullException.ThrowIfNull(imageProvider);
 
         var blockFormattingContext = new BlockFormattingContext();
-        var angleSharpConfig = Configuration.Default.WithCss();
 
-        _domProvider = new AngleSharpDomProvider(angleSharpConfig);
-        _styleComputer = new CssStyleComputer();
-        _boxBuilder = new BoxTreeBuilder(textMeasurer, blockFormattingContext);
+        _styleTreeBuilder = new StyleTreeBuilder();
+        _layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer, blockFormattingContext);
         _fragmentBuilder = new FragmentBuilder();
         _imageProvider = imageProvider;
         _fontSource = fontSource;
@@ -54,11 +50,9 @@ public class LayoutBuilder
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options);
 
-        var dom = await RunStageAsync("stage/dom", () => _domProvider.LoadAsync(html, options), diagnosticsSession);
-        
-        var styleTree = RunStage("stage/style", () => _styleComputer.Compute(dom, diagnosticsSession), diagnosticsSession);
+        var styleTree = await _styleTreeBuilder.BuildAsync(html, options, diagnosticsSession);
 
-        var boxTree = RunStage("stage/box-tree", () => _boxBuilder.Build(
+        var publishedLayout = RunStage("stage/box-tree", () => _layoutGeometryBuilder.Build(
             styleTree,
             diagnosticsSession,
             new LayoutGeometryRequest
@@ -69,25 +63,29 @@ public class LayoutBuilder
                 MaxImageSizeBytes = options.MaxImageSizeBytes
             }), diagnosticsSession);
         var fragments = RunStage("stage/fragment-tree", () => _fragmentBuilder.Build(
-            boxTree,
+            publishedLayout,
             _fontSource), diagnosticsSession);
         
         return RunStage(
             "stage/pagination",
-            () => CreateHtmlLayout(options, boxTree, fragments, diagnosticsSession),
+            () => CreateHtmlLayout(options, publishedLayout, fragments, diagnosticsSession),
             diagnosticsSession);
     }
 
     private static HtmlLayout CreateHtmlLayout(
         LayoutOptions options,
-        Models.BoxTree boxTree,
+        PublishedLayoutTree publishedLayout,
         FragmentTree fragments,
         DiagnosticsSession? diagnosticsSession)
     {
         var paginator = new BlockPaginator();
-        var pagination = paginator.Paginate(fragments.Blocks, options.PageSize, boxTree.Page.Margin, diagnosticsSession);
+        var pagination = paginator.Paginate(
+            fragments.Blocks,
+            options.PageSize,
+            publishedLayout.Page.Margin,
+            diagnosticsSession);
         var layout = CreateHtmlLayout(pagination);
-        PublishGeometrySnapshot(boxTree, layout, pagination, diagnosticsSession);
+        PublishGeometrySnapshot(publishedLayout, layout, pagination, diagnosticsSession);
         return layout;
     }
 
@@ -114,7 +112,7 @@ public class LayoutBuilder
     }
 
     private static void PublishGeometrySnapshot(
-        Models.BoxTree boxTree,
+        PublishedLayoutTree publishedLayout,
         HtmlLayout layout,
         PaginationResult pagination,
         DiagnosticsSession? diagnosticsSession)
@@ -131,7 +129,7 @@ public class LayoutBuilder
             Severity = DiagnosticSeverity.Info,
             Payload = new GeometrySnapshotPayload
             {
-                Snapshot = GeometrySnapshotMapper.From(boxTree, layout, pagination)
+                Snapshot = GeometrySnapshotMapper.From(publishedLayout, layout, pagination)
             }
         });
     }
@@ -161,24 +159,6 @@ public class LayoutBuilder
         }, diagnosticsSession);
     }
 
-    private static async Task<T> RunStageAsync<T>(
-        string stage,
-        Func<Task<T>> action,
-        DiagnosticsSession? diagnosticsSession = null)
-    {
-        diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageStarted(stage));
-        try
-        {
-            var result = await action();
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageSucceeded(stage));
-            return result;
-        }
-        catch (Exception exception)
-        {
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageFailed(stage, exception.Message));
-            throw;
-        }
-    }
 }
 
 

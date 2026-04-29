@@ -12,6 +12,18 @@ public sealed class BoxGeometrySnapshot
 
     public string? TagName { get; init; }
 
+    public int? SourceNodeId { get; init; }
+
+    public int? SourceContentId { get; init; }
+
+    public string? SourcePath { get; init; }
+
+    public int? SourceOrder { get; init; }
+
+    public string? SourceElementIdentity { get; init; }
+
+    public string? GeneratedSourceKind { get; init; }
+
     public float X { get; init; }
 
     public float Y { get; init; }

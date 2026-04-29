@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using AngleSharp;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
@@ -9,9 +8,10 @@ using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
 using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
@@ -36,34 +36,41 @@ internal static class GeometryTestHarness
         var textMeasurer = CreateTextMeasurer();
         var fontSource = LayoutBuilderFixture.CreateFontSource();
         var imageProvider = new NoopImageProvider();
-        var domProvider = new AngleSharpDomProvider(Configuration.Default.WithCss());
-        var styleComputer = new CssStyleComputer();
+        var styleTreeBuilder = new StyleTreeBuilder();
         var boxBuilder = new BoxTreeBuilder(textMeasurer);
-        var observer = new RecordingFragmentBuildObserver();
-        var fragmentBuilder = new FragmentBuilder([observer]);
+        var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
+        var fragmentBuilder = new FragmentBuilder();
 
-        var document = await domProvider.LoadAsync(html, options);
-        var styleTree = styleComputer.Compute(document, diagnosticsSession);
-        var boxTree = boxBuilder.Build(
+        var styleTree = await styleTreeBuilder.BuildAsync(html, options, diagnosticsSession);
+        var geometryRequest = new LayoutGeometryRequest
+        {
+            PageSize = options.PageSize,
+            ImageProvider = imageProvider,
+            HtmlDirectory = Directory.GetCurrentDirectory(),
+            MaxImageSizeBytes = 10 * 1024 * 1024
+        };
+        var boxTree = boxBuilder.Build(styleTree, diagnosticsSession, geometryRequest);
+        var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
             diagnosticsSession,
-            new LayoutGeometryRequest
-            {
-                PageSize = options.PageSize,
-                ImageProvider = imageProvider,
-                HtmlDirectory = Directory.GetCurrentDirectory(),
-                MaxImageSizeBytes = 10 * 1024 * 1024
-            });
-        var fragments = fragmentBuilder.Build(boxTree, fontSource);
+            geometryRequest);
+        var fragments = fragmentBuilder.Build(publishedLayout, fontSource);
         var pagination = new BlockPaginator().Paginate(
             fragments.Blocks,
             options.PageSize,
-            boxTree.Page.Margin,
+            publishedLayout.Page.Margin,
             diagnosticsSession);
         var layout = CreateLayout(pagination);
-        var snapshot = GeometrySnapshotMapper.From(boxTree, layout, pagination);
+        var snapshot = GeometrySnapshotMapper.From(publishedLayout, layout, pagination);
 
-        return new GeometryPipelineResult(boxTree, fragments, layout, pagination, snapshot, observer, diagnosticsSession);
+        return new GeometryPipelineResult(
+            boxTree,
+            publishedLayout,
+            fragments,
+            layout,
+            pagination,
+            snapshot,
+            diagnosticsSession);
     }
 
     public static string RenderSnapshot(GeometrySnapshot snapshot)
@@ -249,41 +256,12 @@ internal static class GeometryTestHarness
 
 internal sealed record GeometryPipelineResult(
     BoxTree BoxTree,
+    PublishedLayoutTree PublishedLayout,
     FragmentTree Fragments,
     HtmlLayout Layout,
     PaginationResult Pagination,
     GeometrySnapshot Snapshot,
-    RecordingFragmentBuildObserver Observer,
     DiagnosticsSession Diagnostics);
-
-internal sealed record BlockBinding(BlockBox Source, BlockFragment Fragment);
-
-internal sealed record SpecialBinding(BoxNode Source, LayoutFragment Fragment);
-
-internal sealed class RecordingFragmentBuildObserver : IFragmentBuildObserver
-{
-    public List<BlockBinding> BlockBindings { get; } = [];
-
-    public List<SpecialBinding> SpecialBindings { get; } = [];
-
-    public void OnBlockFragmentCreated(BlockBox source, BlockFragment fragment)
-    {
-        BlockBindings.Add(new BlockBinding(source, fragment));
-    }
-
-    public void OnInlineFragmentCreated(InlineBox source, BlockFragment parent, LineBoxFragment line)
-    {
-    }
-
-    public void OnSpecialFragmentCreated(BoxNode source, LayoutFragment fragment)
-    {
-        SpecialBindings.Add(new SpecialBinding(source, fragment));
-    }
-
-    public void OnZOrderCompleted(IReadOnlyList<LayoutFragment> fragments)
-    {
-    }
-}
 
 internal sealed class ReferenceEqualityComparer : IEqualityComparer<BlockBox>
 {

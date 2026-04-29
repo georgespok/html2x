@@ -74,6 +74,29 @@ public sealed class GeometryDriftTests
     }
 
     [Fact]
+    public async Task Build_GeometrySnapshotCarriesSourceIdentityWithoutChangingLayoutPath()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div id='main' style='margin: 0;'>Alpha</div>
+              </body>
+            </html>
+            """);
+
+        var box = result.Snapshot.Boxes.ShouldHaveSingleItem();
+
+        box.Path.ShouldBe("body/div");
+        box.SourceNodeId.ShouldNotBeNull().ShouldBeGreaterThan(0);
+        box.SourceContentId.ShouldBeNull();
+        box.SourcePath.ShouldBe("body[0]/div[0]");
+        box.SourceOrder.ShouldNotBeNull().ShouldBeGreaterThan(0);
+        box.SourceElementIdentity.ShouldBe("div#main");
+        box.GeneratedSourceKind.ShouldBeNull();
+    }
+
+    [Fact]
     public void Paginate_MetadataRichSubtree_PreservesGeometryAndMetadata()
     {
         var style = new VisualStyle(

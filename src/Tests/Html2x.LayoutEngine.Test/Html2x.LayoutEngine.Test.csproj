@@ -25,6 +25,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
+    <ProjectReference Include="..\..\Html2x.LayoutEngine.Geometry\Html2x.LayoutEngine.Geometry.csproj" />
+    <ProjectReference Include="..\..\Html2x.LayoutEngine.Style\Html2x.LayoutEngine.Style.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
   </ItemGroup>
 

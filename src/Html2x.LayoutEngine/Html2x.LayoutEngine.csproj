@@ -7,17 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" />
-    <PackageReference Include="AngleSharp.Css" />
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
+    <ProjectReference Include="..\Html2x.LayoutEngine.Geometry\Html2x.LayoutEngine.Geometry.csproj" />
+    <ProjectReference Include="..\Html2x.LayoutEngine.Style\Html2x.LayoutEngine.Style.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\DefaultUserAgent.css" />
-  </ItemGroup>
-
 </Project>

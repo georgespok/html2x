@@ -1,4 +1,3 @@
-﻿using AngleSharp;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Fragments;
@@ -6,10 +5,8 @@ using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Fragment;
-using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
@@ -89,10 +86,9 @@ public class LayoutIntegrationTests
         const string html =
             "<html><body><div><span>Span inside Div</span><p>Paragraph inside Div<div>Nested Div inside Paragraph<span>Nested Span inside nested Div</span></div></p></div></body></html>";
 
-        var config = Configuration.Default.WithCss();
-        var domProvider = new AngleSharpDomProvider(config);
-        var styleComputer = new CssStyleComputer();
-        var boxBuilder = new BoxTreeBuilder();
+        var styleTreeBuilder = new Html2x.LayoutEngine.Style.StyleTreeBuilder();
+        var textMeasurer = CreateTextMeasurer();
+        var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
         var builder = CreateLayoutBuilder();
         var layoutOptions = new LayoutOptions
@@ -100,17 +96,19 @@ public class LayoutIntegrationTests
             PageSize = PaperSizes.A4
         };
 
-        var document = await domProvider.LoadAsync(html, layoutOptions);
-        var styleTree = styleComputer.Compute(document);
-        var boxTree = boxBuilder.Build(styleTree, null);
-        var fragmentTree = fragmentBuilder.Build(boxTree, CreateFontSource());
+        var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions);
+        var publishedLayout = layoutGeometryBuilder.Build(
+            styleTree,
+            null,
+            new LayoutGeometryRequest
+            {
+                PageSize = layoutOptions.PageSize,
+                ImageProvider = new NoopImageProvider(),
+                HtmlDirectory = Directory.GetCurrentDirectory(),
+                MaxImageSizeBytes = layoutOptions.MaxImageSizeBytes
+            });
+        var fragmentTree = fragmentBuilder.Build(publishedLayout, CreateFontSource());
         var layout = await builder.BuildAsync(html, layoutOptions);
-
-        var boxTexts = CollectInlineTexts(boxTree.Blocks).ToList();
-        boxTexts.ShouldContain("Span inside Div");
-        boxTexts.ShouldContain("Paragraph inside Div");
-        boxTexts.ShouldContain("Nested Div inside Paragraph");
-        boxTexts.ShouldContain("Nested Span inside nested Div");
 
         var textRuns = CollectTextRuns(fragmentTree.Blocks).ToList();
         textRuns.ShouldContain("Span inside Div");
@@ -744,33 +742,6 @@ public class LayoutIntegrationTests
         }
     }
 
-    private static IEnumerable<string> CollectInlineTexts(IEnumerable<BoxNode> nodes)
-    {
-        foreach (var node in nodes)
-        {
-            foreach (var text in CollectInlineTexts(node))
-            {
-                yield return text;
-            }
-        }
-    }
-
-    private static IEnumerable<string> CollectInlineTexts(BoxNode node)
-    {
-        if (node is InlineBox inline && !string.IsNullOrWhiteSpace(inline.TextContent))
-        {
-            yield return inline.TextContent.Trim();
-        }
-
-        foreach (var child in node.Children)
-        {
-            foreach (var text in CollectInlineTexts(child))
-            {
-                yield return text;
-            }
-        }
-    }
-
     private static IFontSource CreateFontSource()
     {
         var fontSource = new Mock<IFontSource>();
@@ -780,6 +751,16 @@ public class LayoutIntegrationTests
         return fontSource.Object;
     }
 
+    private static ITextMeasurer CreateTextMeasurer()
+    {
+        var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns(10f);
+        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
+            .Returns((9f, 3f));
+        return textMeasurer.Object;
+    }
+
     private static LayoutBuilder CreateLayoutBuilder()
     {
         return CreateLayoutBuilder(new NoopImageProvider());
@@ -787,17 +768,11 @@ public class LayoutIntegrationTests
 
     private static LayoutBuilder CreateLayoutBuilder(IImageProvider imageProvider)
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(10f);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((9f, 3f));
-
         var fontSource = new Mock<IFontSource>();
         fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
             .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
 
-        return new LayoutBuilder(textMeasurer.Object, fontSource.Object, imageProvider);
+        return new LayoutBuilder(CreateTextMeasurer(), fontSource.Object, imageProvider);
     }
 
     private sealed class FixedImageProvider(Func<string, SizePx> resolveSize) : IImageProvider

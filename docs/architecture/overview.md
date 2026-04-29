@@ -9,26 +9,31 @@ Html2x converts static HTML and CSS into PDF through explicit pipeline stages. T
 | `Html2x` | Public converter facade, option wiring, shared service construction. | Contain layout or rendering algorithms. |
 | `Html2x.Abstractions` | Contracts for options, layout documents, fragments, measurements, fonts, and diagnostics payloads. | Reference AngleSharp, SkiaSharp, file IO, or concrete renderers. |
 | `Html2x.Diagnostics` | Diagnostics JSON serialization. | Own layout or renderer decisions. |
-| `Html2x.LayoutEngine` | DOM/CSS parsing, style tree construction, box tree layout, fragment projection, pagination. | Reference SkiaSharp or mutate renderer state. |
+| `Html2x.LayoutEngine.Style` | HTML parsing, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics, and parser-free `StyleTree` output. | Own layout geometry, fragments, pagination, or renderer state. |
+| `Html2x.LayoutEngine.Geometry` | Geometry construction from `StyleTree` into published layout facts. | Parse HTML or CSS, reference parser objects, or expose mutable boxes as the public handoff. |
+| `Html2x.LayoutEngine` | Pipeline composition, fragment projection, pagination, and `HtmlLayout` assembly. | Reference SkiaSharp, own parser implementation details, or mutate renderer state. |
 | `Html2x.Renderers.Pdf` | PDF rendering with SkiaSharp from `HtmlLayout`. | Reach back to DOM, CSS, style tree, or box tree types. |
 
 ## Primary Data Flow
 
 ```text
 HTML/CSS
-  -> DOM + CSSOM
   -> Style tree
-  -> Initial box tree
-  -> Laid-out box tree
+  -> Published layout tree
   -> Fragment tree
   -> Pagination
   -> HtmlLayout
   -> PDF renderer
 ```
 
-There is no separate display tree layer. Display roles are materialized as `BoxRole` values while `InitialBoxTreeBuilder` converts the style tree into the initial box tree.
+There is no separate display tree layer. Display roles are materialized as
+`BoxRole` values inside geometry and then copied into published layout or
+fragment metadata where later stages need them.
 
-The fragment and page model is the renderer-facing contract. If the renderer lacks required data, fix the layout or fragment stage instead of adding renderer lookups into earlier stages.
+`StyleTree` is the parser-free handoff from style to geometry. The fragment and
+page model is the renderer-facing contract. If the renderer lacks required data,
+fix the layout or fragment stage instead of adding renderer lookups into earlier
+stages.
 
 ## Design Principles
 

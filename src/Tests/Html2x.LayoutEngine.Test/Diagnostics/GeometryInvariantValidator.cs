@@ -1,6 +1,8 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
@@ -23,35 +25,14 @@ internal static class GeometryInvariantValidator
             box.UsedGeometry.ShouldNotBeNull(snapshotText);
 
             var geometry = box.UsedGeometry!.Value;
-            RectEquals(geometry.BorderBoxRect, new RectangleF(box.X, box.Y, box.Width, box.Height))
-                .ShouldBeTrue(snapshotText);
-            Math.Abs(box.MarkerOffset - geometry.MarkerOffset).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+            geometry.BorderBoxRect.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            geometry.BorderBoxRect.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            geometry.ContentBoxRect.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            geometry.ContentBoxRect.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            geometry.MarkerOffset.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
         }
 
-        foreach (var binding in result.Observer.BlockBindings)
-        {
-            binding.Source.UsedGeometry.ShouldNotBeNull(snapshotText);
-            RectEquals(binding.Source.UsedGeometry!.Value.BorderBoxRect, binding.Fragment.Rect)
-                .ShouldBeTrue(snapshotText);
-        }
-
-        foreach (var binding in result.Observer.SpecialBindings)
-        {
-            if (binding.Source is not BlockBox sourceBlock || sourceBlock.UsedGeometry is null)
-            {
-                continue;
-            }
-
-            var geometry = sourceBlock.UsedGeometry.Value;
-            RectEquals(geometry.BorderBoxRect, binding.Fragment.Rect)
-                .ShouldBeTrue(snapshotText);
-
-            if (binding.Fragment is ImageFragment imageFragment)
-            {
-                RectEquals(geometry.ContentBoxRect, imageFragment.ContentRect)
-                    .ShouldBeTrue(snapshotText);
-            }
-        }
+        AssertPublishedFragmentsMatch(result.PublishedLayout, result.Fragments, snapshotText);
 
         foreach (var parent in laidOutBoxes)
         {
@@ -123,6 +104,58 @@ internal static class GeometryInvariantValidator
             {
                 yield return child;
             }
+        }
+    }
+
+    private static void AssertPublishedFragmentsMatch(
+        PublishedLayoutTree publishedLayout,
+        FragmentTree fragments,
+        string snapshotText)
+    {
+        publishedLayout.Blocks.Count.ShouldBe(fragments.Blocks.Count, snapshotText);
+
+        for (var i = 0; i < publishedLayout.Blocks.Count; i++)
+        {
+            AssertPublishedBlockMatchesFragment(publishedLayout.Blocks[i], fragments.Blocks[i], snapshotText);
+        }
+    }
+
+    private static void AssertPublishedBlockMatchesFragment(
+        PublishedBlock source,
+        BlockFragment fragment,
+        string snapshotText)
+    {
+        RectEquals(source.Geometry.BorderBoxRect, fragment.Rect).ShouldBeTrue(snapshotText);
+        fragment.DisplayRole.ShouldBe(source.Display.Role, snapshotText);
+        fragment.FormattingContext.ShouldBe(source.Display.FormattingContext, snapshotText);
+        fragment.MarkerOffset.ShouldBe(source.Display.MarkerOffset, snapshotText);
+
+        if (source.Image is not null)
+        {
+            var image = fragment.Children.OfType<ImageFragment>().FirstOrDefault();
+            image.ShouldNotBeNull(snapshotText);
+            RectEquals(source.Geometry.BorderBoxRect, image!.Rect).ShouldBeTrue(snapshotText);
+            RectEquals(source.Geometry.ContentBoxRect, image.ContentRect).ShouldBeTrue(snapshotText);
+        }
+
+        if (source.Rule is not null)
+        {
+            var rule = fragment.Children.OfType<RuleFragment>().FirstOrDefault();
+            rule.ShouldNotBeNull(snapshotText);
+            RectEquals(source.Geometry.BorderBoxRect, rule!.Rect).ShouldBeTrue(snapshotText);
+        }
+
+        var publishedChildren = source.Flow
+            .OrderBy(static item => item.Order)
+            .OfType<PublishedChildBlockItem>()
+            .Select(static item => item.Block)
+            .ToList();
+        var fragmentChildren = fragment.Children.OfType<BlockFragment>().ToList();
+
+        for (var i = 0; i < publishedChildren.Count; i++)
+        {
+            i.ShouldBeLessThan(fragmentChildren.Count, snapshotText);
+            AssertPublishedBlockMatchesFragment(publishedChildren[i], fragmentChildren[i], snapshotText);
         }
     }
 

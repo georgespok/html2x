@@ -1,5 +1,4 @@
-﻿using AngleSharp;
-using AngleSharp.Dom;
+using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -12,32 +11,12 @@ public class InitialBoxTreeBuilderTests
     public async Task Build_SingleDiv_CreateBlockWithInlineText()
     {
         const string html = "<html><body><div>Test</div></body></html>";
-        var document = await ParseHtml(html);
-        var div = document.QuerySelector("div")!;
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = div,
-                        Style = new ComputedStyle()
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var divBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        divBlock.Element.ShouldBe(div);
+        divBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Div).ShouldBeTrue();
         divBlock.Children.Count.ShouldBe(1);
 
         var textInline = divBlock.Children[0].ShouldBeOfType<InlineBox>();
@@ -48,49 +27,20 @@ public class InitialBoxTreeBuilderTests
     public async Task Build_ListItem_CreateBlockWithInlineText()
     {
         const string html = "<html><body><ul><li>Test</li></ul></body></html>";
-        var document = await ParseHtml(html);
-        var ul = document.QuerySelector("ul")!;
-        var li = document.QuerySelector("li")!;
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = ul,
-                        Style = new ComputedStyle(),
-                        Children =
-                        {
-                            new StyleNode
-                            {
-                                Element = li,
-                                Style = new ComputedStyle()
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var ulBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        ulBlock.Element.ShouldBe(ul);
+        ulBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Ul).ShouldBeTrue();
         ulBlock.Children.Count.ShouldBe(1);
 
         var liBlock = ulBlock.Children[0].ShouldBeOfType<BlockBox>();
-        liBlock.Element.ShouldBe(li);
+        liBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Li).ShouldBeTrue();
         liBlock.Children.Count.ShouldBe(2);
 
         var markerInline = liBlock.Children[0].ShouldBeOfType<InlineBox>();
-        markerInline.TextContent.ShouldBe("• ");
+        markerInline.TextContent.ShouldBe("\u2022 ");
 
         var textInline = liBlock.Children[1].ShouldBeOfType<InlineBox>();
         textInline.TextContent.ShouldBe("Test");
@@ -101,38 +51,22 @@ public class InitialBoxTreeBuilderTests
     {
         const string html =
             "<html><body><p>first line<br />second\r\n            line with spacing</p></body></html>";
+        var styleTree = await BuildStyleTree(html);
 
-        var document = await ParseHtml(html);
-        var paragraph = document.QuerySelector("p")!;
-
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = paragraph,
-                        Style = new ComputedStyle()
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        paragraphBlock.Children.Count.ShouldBe(2);
+        paragraphBlock.Children.Count.ShouldBe(3);
 
         var firstInline = paragraphBlock.Children[0].ShouldBeOfType<InlineBox>();
         firstInline.TextContent.ShouldBe("first line");
 
-        var secondInline = paragraphBlock.Children[1].ShouldBeOfType<InlineBox>();
+        var lineBreak = paragraphBlock.Children[1].ShouldBeOfType<InlineBox>();
+        lineBreak.Element!.IsTag(HtmlCssConstants.HtmlTags.Br).ShouldBeTrue();
+        lineBreak.SourceIdentity.NodeId.ShouldBe(
+            FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Br).Identity.NodeId);
+
+        var secondInline = paragraphBlock.Children[2].ShouldBeOfType<InlineBox>();
         secondInline.TextContent.ShouldBe("second line with spacing");
         secondInline.TextContent!.StartsWith(' ').ShouldBeFalse();
     }
@@ -141,37 +75,9 @@ public class InitialBoxTreeBuilderTests
     public async Task Build_SeparatedTextNodes_KeepSingleSpaceBetweenRuns()
     {
         const string html = "<html><body><p>one <span> two</span></p></body></html>";
-        var document = await ParseHtml(html);
-        var paragraph = document.QuerySelector("p")!;
-        var span = document.QuerySelector("span")!;
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = paragraph,
-                        Style = new ComputedStyle(),
-                        Children =
-                        {
-                            new StyleNode
-                            {
-                                Element = span,
-                                Style = new ComputedStyle()
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
 
@@ -185,31 +91,41 @@ public class InitialBoxTreeBuilderTests
     }
 
     [Fact]
+    public async Task Build_MixedTextAndInlineElements_PreservesSourceOrder()
+    {
+        const string html = "<html><body><p>alpha <span>beta</span> gamma</p></body></html>";
+        var styleTree = await BuildStyleTree(html);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var textRuns = new List<string>();
+        CollectInlineText(root.Children[0], textRuns);
+
+        textRuns.ShouldBe(["alpha", " beta", " gamma"]);
+        string.Join(string.Empty, textRuns).ShouldBe("alpha beta gamma");
+    }
+
+    [Fact]
+    public async Task Build_UnsupportedWrapper_PreservesVisibleDescendantText()
+    {
+        const string html = "<html><body><p>alpha <em>beta <span>gamma</span></em> delta</p></body></html>";
+        var styleTree = await BuildStyleTree(html);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var textRuns = new List<string>();
+        CollectInlineText(root.Children[0], textRuns);
+
+        string.Join(string.Empty, textRuns).ShouldBe("alpha beta gamma delta");
+    }
+
+    [Fact]
     public async Task Build_MultipleSpacesInsideRun_CollapseToSingleSpace()
     {
         const string html = "<html><body><p>foo    bar</p></body></html>";
-        var document = await ParseHtml(html);
-        var paragraph = document.QuerySelector("p")!;
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = paragraph,
-                        Style = new ComputedStyle()
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var paragraphBlock = root.Children[0].ShouldBeOfType<BlockBox>();
         var inline = paragraphBlock.Children[0].ShouldBeOfType<InlineBox>();
@@ -220,39 +136,12 @@ public class InitialBoxTreeBuilderTests
     public async Task Build_OrderedList_AssignIncrementingMarkers()
     {
         const string html = "<html><body><ol><li>First</li><li>Second</li><li>Third</li></ol></body></html>";
-        var document = await ParseHtml(html);
-        var ol = document.QuerySelector("ol")!;
-        var liNodes = document.QuerySelectorAll("li");
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = ol,
-                        Style = new ComputedStyle(),
-                        Children =
-                        {
-                            new StyleNode { Element = liNodes[0], Style = new ComputedStyle() },
-                            new StyleNode { Element = liNodes[1], Style = new ComputedStyle() },
-                            new StyleNode { Element = liNodes[2], Style = new ComputedStyle() }
-                        }
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var olBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        olBlock.Element.ShouldBe(ol);
+        olBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Ol).ShouldBeTrue();
         olBlock.Children.Count.ShouldBe(3);
 
         olBlock.Children[0].Children[0].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("1. ");
@@ -269,86 +158,24 @@ public class InitialBoxTreeBuilderTests
     public async Task Build_TableSection_PreserveSectionRole()
     {
         const string html = "<html><body><table><tbody><tr><td>Cell</td></tr></tbody></table></body></html>";
-        var document = await ParseHtml(html);
-        var table = document.QuerySelector("table")!;
-        var tbody = document.QuerySelector("tbody")!;
-        var tr = document.QuerySelector("tr")!;
-        var td = document.QuerySelector("td")!;
+        var styleTree = await BuildStyleTree(html);
 
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = table,
-                        Style = new ComputedStyle(),
-                        Children =
-                        {
-                            new StyleNode
-                            {
-                                Element = tbody,
-                                Style = new ComputedStyle(),
-                                Children =
-                                {
-                                    new StyleNode
-                                    {
-                                        Element = tr,
-                                        Style = new ComputedStyle(),
-                                        Children =
-                                        {
-                                            new StyleNode
-                                            {
-                                                Element = td,
-                                                Style = new ComputedStyle()
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        var builder = new InitialBoxTreeBuilder();
-
-        var root = builder.Build(styleTree);
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         var tableBox = root.Children[0].ShouldBeOfType<TableBox>();
         var sectionBox = tableBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableSectionBox>();
-        sectionBox.Element.ShouldBe(tbody);
+        sectionBox.Element!.IsTag(HtmlCssConstants.HtmlTags.Tbody).ShouldBeTrue();
         sectionBox.Role.ShouldBe(BoxRole.TableSection);
-        sectionBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>().Element.ShouldBe(tr);
+        sectionBox.Children.ShouldHaveSingleItem()
+            .ShouldBeOfType<TableRowBox>()
+            .Element!.IsTag(HtmlCssConstants.HtmlTags.Tr).ShouldBeTrue();
     }
 
     [Fact]
     public async Task Build_CssFloatRight_CreateFloatBoxWithRightDirection()
     {
-        const string html = "<html><body><img src='hero.png' /></body></html>";
-        var document = await ParseHtml(html);
-        var image = document.QuerySelector("img")!;
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = image,
-                        Style = new ComputedStyle { FloatDirection = HtmlCssConstants.CssValues.Right }
-                    }
-                }
-            }
-        };
+        const string html = "<html><body><img style='float: right;' src='hero.png' /></body></html>";
+        var styleTree = await BuildStyleTree(html);
 
         var root = new InitialBoxTreeBuilder().Build(styleTree);
 
@@ -357,37 +184,159 @@ public class InitialBoxTreeBuilderTests
     }
 
     [Fact]
+    public async Task Build_ImageElement_CarriesSourceAndSizeFacts()
+    {
+        const string html = "<html><body><img src='hero.png' width='200' height='100' /></body></html>";
+        var styleTree = await BuildStyleTree(html);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var inlineImage = root.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
+        var imageBox = inlineImage.Children.ShouldHaveSingleItem().ShouldBeOfType<ImageBox>();
+        imageBox.Src.ShouldBe("hero.png");
+        imageBox.Element!.GetAttribute(HtmlCssConstants.HtmlAttributes.Width).ShouldBe("200");
+        imageBox.Element.GetAttribute(HtmlCssConstants.HtmlAttributes.Height).ShouldBe("100");
+    }
+
+    [Fact]
     public async Task Build_HeroClassWithoutCssFloat_DoesNotCreateFloatBox()
     {
         const string html = "<html><body><img class='hero' src='hero.png' /></body></html>";
-        var document = await ParseHtml(html);
-        var image = document.QuerySelector("img")!;
-        var styleTree = new StyleTree
-        {
-            Root = new StyleNode
-            {
-                Element = document.Body!,
-                Style = new ComputedStyle(),
-                Children =
-                {
-                    new StyleNode
-                    {
-                        Element = image,
-                        Style = new ComputedStyle()
-                    }
-                }
-            }
-        };
+        var styleTree = await BuildStyleTree(html);
 
         var root = new InitialBoxTreeBuilder().Build(styleTree);
 
         root.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
     }
 
-    private static async Task<IDocument> ParseHtml(string html)
+    [Fact]
+    public async Task Build_SourceBackedBoxes_CopyStyleNodeIdentity()
     {
-        return await BrowsingContext.New(Configuration.Default)
-            .OpenAsync(req => req.Content(html));
+        const string html = "<html><body><div id='main' class='alpha'><span>Text</span></div></body></html>";
+        var styleTree = await BuildStyleTree(html);
+        var rootStyle = styleTree.Root.ShouldNotBeNull();
+        var divStyle = FindFirst(rootStyle, HtmlCssConstants.HtmlTags.Div);
+        var spanStyle = FindFirst(rootStyle, HtmlCssConstants.HtmlTags.Span);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var divBlock = root.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+        var spanInline = divBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
+
+        AssertSourceIdentity(divBlock.SourceIdentity, divStyle.Identity);
+        AssertSourceIdentity(spanInline.SourceIdentity, spanStyle.Identity);
+    }
+
+    [Fact]
+    public async Task Build_TextRuns_CopyContentIdentityAsGeneratedSourceIdentity()
+    {
+        const string html = "<html><body><p>alpha</p></body></html>";
+        var styleTree = await BuildStyleTree(html);
+        var paragraphStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.P);
+        var textContent = paragraphStyle.Content.ShouldHaveSingleItem();
+        textContent.Kind.ShouldBe(StyleContentNodeKind.Text);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var paragraphBlock = root.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+        var textInline = paragraphBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
+
+        textInline.TextContent.ShouldBe("alpha");
+        textInline.SourceIdentity.NodeId.ShouldBe(textContent.Identity.ParentId);
+        textInline.SourceIdentity.ContentId.ShouldBe(textContent.Identity.ContentId);
+        textInline.SourceIdentity.SourcePath.ShouldBe(textContent.Identity.SourcePath);
+        textInline.SourceIdentity.SourceOrder.ShouldBe(textContent.Identity.SourceOrder);
+        textInline.SourceIdentity.ElementIdentity.ShouldBe(paragraphStyle.Identity.ElementIdentity);
+        textInline.SourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.AnonymousText);
+    }
+
+    [Fact]
+    public async Task Build_InlineBlockContentBox_GetsGeneratedSourceIdentity()
+    {
+        const string html = "<html><body><span style='display: inline-block;'>inside</span></body></html>";
+        var styleTree = await BuildStyleTree(html);
+        var spanStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Span);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var inlineBlock = root.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
+        var contentBox = inlineBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+
+        contentBox.SourceIdentity.NodeId.ShouldBe(spanStyle.Identity.NodeId);
+        contentBox.SourceIdentity.ContentId.ShouldBeNull();
+        contentBox.SourceIdentity.SourcePath.ShouldBe($"{spanStyle.Identity.SourcePath}::inline-block-content");
+        contentBox.SourceIdentity.ElementIdentity.ShouldBe(spanStyle.Identity.ElementIdentity);
+        contentBox.SourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.InlineBlockContent);
+    }
+
+    [Fact]
+    public async Task Build_ListMarker_GetsGeneratedSourceIdentity()
+    {
+        const string html = "<html><body><ul><li>item</li></ul></body></html>";
+        var styleTree = await BuildStyleTree(html);
+        var listItemStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Li);
+
+        var root = new InitialBoxTreeBuilder().Build(styleTree);
+
+        var list = root.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+        var listItem = list.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
+        var marker = listItem.Children[0].ShouldBeOfType<InlineBox>();
+
+        marker.TextContent.ShouldBe("\u2022 ");
+        marker.SourceIdentity.NodeId.ShouldBe(listItemStyle.Identity.NodeId);
+        marker.SourceIdentity.ContentId.ShouldBeNull();
+        marker.SourceIdentity.SourcePath.ShouldBe($"{listItemStyle.Identity.SourcePath}::list-marker");
+        marker.SourceIdentity.ElementIdentity.ShouldBe(listItemStyle.Identity.ElementIdentity);
+        marker.SourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.ListMarker);
+    }
+
+    private static Task<StyleTree> BuildStyleTree(string html)
+    {
+        var builder = new Html2x.LayoutEngine.Style.StyleTreeBuilder();
+        return builder.BuildAsync(
+            html,
+            new LayoutOptions
+            {
+                UseDefaultUserAgentStyleSheet = false
+            });
+    }
+
+    private static StyleNode FindFirst(StyleNode node, string tagName)
+    {
+        if (node.Element.IsTag(tagName))
+        {
+            return node;
+        }
+
+        foreach (var child in node.Children)
+        {
+            var match = FindFirstOrDefault(child, tagName);
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        throw new InvalidOperationException($"Could not find style node for tag '{tagName}'.");
+    }
+
+    private static StyleNode? FindFirstOrDefault(StyleNode node, string tagName)
+    {
+        if (node.Element.IsTag(tagName))
+        {
+            return node;
+        }
+
+        foreach (var child in node.Children)
+        {
+            var match = FindFirstOrDefault(child, tagName);
+            if (match is not null)
+            {
+                return match;
+            }
+        }
+
+        return null;
     }
 
     private static void CollectInlineText(BoxNode node, IList<string> collector)
@@ -401,5 +350,17 @@ public class InitialBoxTreeBuilderTests
         {
             CollectInlineText(child, collector);
         }
+    }
+
+    private static void AssertSourceIdentity(
+        GeometrySourceIdentity actual,
+        StyleSourceIdentity expected)
+    {
+        actual.NodeId.ShouldBe(expected.NodeId);
+        actual.ContentId.ShouldBeNull();
+        actual.SourcePath.ShouldBe(expected.SourcePath);
+        actual.ElementIdentity.ShouldBe(expected.ElementIdentity);
+        actual.SourceOrder.ShouldBe(expected.SourceOrder);
+        actual.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.None);
     }
 }

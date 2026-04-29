@@ -2,50 +2,142 @@
 
 This document explains how Html2x turns HTML and CSS into PDF bytes.
 
-## Stage 1: DOM And CSSOM
+## Composition
 
-`AngleSharpDomProvider` parses raw HTML and associated CSS. AngleSharp types stay inside the layout engine. Later stages consume project-owned style and layout models, not parser-specific objects.
+`LayoutBuilder` is the composition layer. It coordinates style, geometry,
+fragment projection, pagination, and final layout assembly, but it does not own
+HTML parsing or CSS computation directly.
 
-Input: raw HTML and CSS.
-Output: parsed document and CSS rules ready for cascade evaluation.
+Production dependency direction:
 
-## Stage 2: Style Tree
+```text
+Html2x.LayoutEngine
+  uses Html2x.LayoutEngine.Contracts
+  uses Html2x.LayoutEngine.Style
+  uses Html2x.LayoutEngine.Geometry
 
-`CssStyleComputer` applies cascade, inheritance, user agent defaults, and value conversion. `StyleTraversal` walks supported elements and materializes project-owned `StyleNode` values. Unsupported or invalid declarations should be represented through diagnostics when diagnostics are enabled.
+Html2x.LayoutEngine.Geometry
+  uses Html2x.LayoutEngine.Contracts
 
-Input: DOM and CSS rules.
-Output: `StyleTree` with computed style snapshots for layout.
+Html2x.LayoutEngine.Style
+  uses Html2x.LayoutEngine.Contracts
+  uses AngleSharp internally
+```
 
-## Stage 3: Box Tree And Layout Geometry
+AngleSharp and AngleSharp.Css are implementation details of
+`Html2x.LayoutEngine.Style`. `Html2x.LayoutEngine.Contracts` owns internal
+pipeline handoff contracts. Geometry and composition code consume those
+project-owned models and must not depend on parser objects.
 
-`BoxTreeBuilder` owns the style-to-box transition and geometry pass. `InitialBoxTreeBuilder` converts styled nodes into `BoxRole` values such as block, inline, inline-block, table, row, cell, image, list item, and rule. The geometry pass then resolves dimensions, margins, padding, borders, inline layout, image layout, and table placements through the block, inline, and table layout engines.
+## Stage 1: Style
 
-Input: computed styles.
-Output: `BoxTree` with canonical `UsedGeometry`.
+`Html2x.LayoutEngine.Style` owns raw HTML parsing, user agent stylesheet
+application, CSS parsing, supported element traversal, computed style
+construction, and style diagnostics.
 
-## Stage 4: Fragment Projection
+Input: raw HTML, `LayoutOptions`, and an optional `DiagnosticsSession`.
 
-`FragmentBuilder` and `BoxToFragmentProjector` project box geometry and render facts into renderer-facing fragments. Fragment projection may resolve fragment font metadata from the converter-owned font source, but it must not remeasure text or reconstruct geometry already owned by layout.
+Output: contract-owned `StyleTree`.
 
-Input: laid-out boxes.
-Output: fragments such as blocks, lines, text runs, images, tables, cells, and rules.
+The `StyleTree` is the parser-free handoff to geometry and is owned by
+`Html2x.LayoutEngine.Contracts`:
 
-## Stage 5: Pagination
+- `StyleTree.Root` is the body-rooted style tree.
+- `StyleNode.Element` is `StyledElementFacts`.
+- `StyledElementFacts` carries tag, local name, id, class attribute, and
+  case-insensitive attributes required by layout.
+- `StyleNode.Identity` is `StyleSourceIdentity`, assigned during parser
+  traversal before geometry starts.
+- `StyleNode.Content` preserves ordered `StyleContentNode` values for text,
+  elements, and line breaks.
+- `StyleContentNode.Identity` is `StyleContentIdentity`, assigned for every
+  ordered text, element, and line break content item.
+- `StyleNode.Children` preserves supported styled element children.
+- Unsupported parser elements are flattened by the style module before geometry
+  consumes content.
 
-`BlockPaginator` places block fragments onto pages. It uses cloned translated fragments for page-local coordinates and must preserve fragment size and metadata.
+Style owns parser traversal and source identity assignment. Source paths are
+diagnostic labels created from style ancestry. Geometry must consume them, not
+rebuild them from parser state or CSS selectors.
+
+## Stage 2: Layout Geometry
+
+`Html2x.LayoutEngine.Geometry` consumes contract `StyleTree` input and resolves
+layout facts. The module may read computed style values, `StyledElementFacts`,
+and ordered style content from `Html2x.LayoutEngine.Contracts`. It must not read
+DOM nodes, `IElement`, `INode`, child node collections, or AngleSharp types.
+
+`InitialBoxTreeBuilder` converts styled nodes into `BoxRole` values such as
+block, inline, inline-block, table, row, cell, image, list item, and rule. The
+geometry pass then resolves dimensions, margins, padding, borders, inline
+layout, image layout, and table placements.
+
+Input: `StyleTree` and layout geometry options.
+
+Output: contract-owned `PublishedLayoutTree`.
+
+Source identity flow:
+
+- Geometry consumes `StyleTree` and copies source identity into
+  `BoxNode.SourceIdentity`.
+- Geometry creates generated source identity for anonymous text boxes, list
+  markers, inline-block content boxes, anonymous block wrappers, and other
+  generated layout nodes.
+- Published layout carries both layout identity and source identity.
+  `PublishedBlockIdentity.NodePath` remains the layout path, while
+  `PublishedBlockIdentity.SourceIdentity` carries the source identity.
+- Published inline sources use the same split: `NodePath` is layout identity
+  and `SourceIdentity` is source identity.
+- Diagnostics may project source identity through primitive diagnostic fields.
+- Renderer-facing fragments remain independent of style implementation types
+  and geometry source identity implementation types.
+
+`Html2x.LayoutEngine.Contracts` also owns `LayoutGeometryRequest`,
+`UsedGeometry`, shared HTML and CSS vocabulary constants used across style and
+geometry, source identity records, and published layout facts. It must not
+reference parser packages, geometry implementation projects, fragment
+implementation code, renderer implementation code, diagnostics serializers, or
+mutable box types.
+
+## Stage 3: Fragment Projection
+
+`FragmentBuilder` projects published layout facts into renderer-facing
+fragments. Fragment projection may resolve fragment font metadata from the
+converter-owned font source, but it must not remeasure text or reconstruct
+geometry already owned by layout.
+
+Input: `PublishedLayoutTree`.
+
+Output: fragments such as blocks, lines, text runs, images, tables, cells, and
+rules.
+
+## Stage 4: Pagination
+
+`BlockPaginator` places block fragments onto pages. It uses cloned translated
+fragments for page-local coordinates and must preserve fragment size and
+metadata.
 
 Input: unpaginated fragment tree.
+
 Output: page models and final `HtmlLayout.Pages`.
 
-## Stage 6: PDF Rendering
+## Stage 5: PDF Rendering
 
-`PdfRenderer` consumes `HtmlLayout` and `PdfOptions`, builds paint commands, and draws to a SkiaSharp PDF document.
+`PdfRenderer` consumes `HtmlLayout` and `PdfOptions`, builds paint commands, and
+draws to a SkiaSharp PDF document.
 
 Input: `HtmlLayout`.
+
 Output: PDF bytes.
+
+Renderer projects must not reference style implementation details or mutable
+geometry internals. If rendering needs more data, add it to the published layout
+or fragment contract in the owning stage.
 
 ## Failure Model
 
 - Parser and option failures can throw before layout begins.
-- Unsupported CSS or structures should emit diagnostics and use the documented fallback when possible.
-- Contract violations, such as missing required geometry after layout, should fail close to the stage that introduced the invalid state.
+- Unsupported CSS or structures should emit diagnostics and use the documented
+  fallback when possible.
+- Contract violations, such as missing required geometry after layout, should
+  fail close to the stage that introduced the invalid state.

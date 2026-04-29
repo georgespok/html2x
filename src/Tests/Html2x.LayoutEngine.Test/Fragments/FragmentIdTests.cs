@@ -2,6 +2,8 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
 using Moq;
 using Shouldly;
@@ -14,21 +16,33 @@ public class FragmentIdTests
     [Fact]
     public void Build_AssignsUniqueFragmentIds()
     {
-        // Arrange: block with inline text and a nested block containing an image-like child (specialized stage)
-        var boxTree = new BlockBoxBuilder()
-            .Block(0, 0, 200, 120)
-                .Inline("Hello")
-                .Block(20, 40, 60, 30) // nested block to create another fragment
-            .Up()
-            .BuildTree();
-
+        var nestedSegment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "Nested"));
+        var nestedInlineLayout = PublishedLayoutTestBuilder.InlineLayout(nestedSegment);
+        var nestedBlock = PublishedLayoutTestBuilder.Block(
+            nodePath: "body/div/p",
+            sourceOrder: 1,
+            inlineLayout: nestedInlineLayout,
+            flow:
+            [
+                new PublishedInlineFlowSegmentItem(0, nestedSegment)
+            ]);
+        var segment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "Hello"));
+        var inlineLayout = PublishedLayoutTestBuilder.InlineLayout(segment);
+        var root = PublishedLayoutTestBuilder.Block(
+            nodePath: "body/div",
+            sourceOrder: 0,
+            inlineLayout: inlineLayout,
+            children: [nestedBlock],
+            flow:
+            [
+                new PublishedInlineFlowSegmentItem(0, segment),
+                new PublishedChildBlockItem(1, nestedBlock)
+            ]);
         var builder = new FragmentBuilder();
         var fontSource = CreateFontSource();
 
-        // Act
-        var fragments = builder.Build(boxTree, fontSource);
+        var fragments = builder.Build(PublishedLayoutTestBuilder.Tree(root), fontSource);
 
-        // Collect all fragments (top-level + children)
         var all = new List<CoreFragment>();
         foreach (var block in fragments.Blocks)
         {
@@ -36,7 +50,6 @@ public class FragmentIdTests
             all.AddRange(Flatten(block));
         }
 
-        // Assert
         all.Count.ShouldBeGreaterThan(1);
         var ids = all.Select(f => f.FragmentId).ToList();
         ids.All(static id => id > 0).ShouldBeTrue();

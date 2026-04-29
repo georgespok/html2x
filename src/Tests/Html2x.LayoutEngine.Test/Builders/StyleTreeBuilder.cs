@@ -1,42 +1,67 @@
-using AngleSharp.Dom;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test.Builders;
 
-internal sealed class StyleTreeBuilder(IElement body)
+internal sealed class StyleTreeBuilder
 {
-    private readonly StyleTree _tree = new()
+    private readonly PageStyle _page = new();
+    private readonly StyleNodeBuilder _root;
+
+    public StyleTreeBuilder(string rootTagName = HtmlCssConstants.HtmlTags.Body)
     {
-        Root = new StyleNode { Element = body, Style = new ComputedStyle() }
-    };
+        _root = CreateNodeBuilder(StyledElementFacts.Create(rootTagName));
+    }
 
     public StyleTreeBuilder WithPageMargins(float top, float right, float bottom, float left)
     {
-        _tree.Page.Margin = new Spacing(top, right, bottom, left);
+        _page.Margin = new Spacing(top, right, bottom, left);
         return this;
     }
 
-    public StyleTreeBuilder AddChild(IElement element, float? marginTop = null, float? marginLeft = null, float fontSize = 12)
+    public StyleTreeBuilder AddChild(
+        string tagName,
+        string? text = null,
+        float? marginTop = null,
+        float? marginLeft = null,
+        float fontSize = 12)
     {
-        var node = CreateNode(element, marginTop, marginLeft, fontSize);
-        _tree.Root!.Children.Add(node);
+        var child = CreateNodeBuilder(StyledElementFacts.Create(tagName), marginTop, marginLeft, fontSize);
+        if (text is not null)
+        {
+            child.AddText(text);
+        }
+
+        _root.AddChild(child);
         return this;
     }
 
-    public StyleTreeBuilder AddChild(IElement element, Action<StyleNodeBuilder> configure)
+    public StyleTreeBuilder AddChild(
+        string tagName,
+        Action<StyleNodeBuilder> configure,
+        float? marginTop = null,
+        float? marginLeft = null,
+        float fontSize = 12)
     {
-        var node = CreateNode(element);
-        configure(new StyleNodeBuilder(node));
-        _tree.Root!.Children.Add(node);
+        var child = CreateNodeBuilder(StyledElementFacts.Create(tagName), marginTop, marginLeft, fontSize);
+        _root.AddChild(child);
+        configure(child);
         return this;
     }
 
-    public StyleTree Build() => _tree;
+    public StyleTree Build() => new()
+    {
+        Root = _root.Build(),
+        Page = _page
+    };
 
-    public static implicit operator StyleTree(StyleTreeBuilder builder) => builder._tree;
+    public static implicit operator StyleTree(StyleTreeBuilder builder) => builder.Build();
 
-    private static StyleNode CreateNode(IElement el, float? marginTop = null, float? marginLeft = null, float fontSize = 12)
+    internal static StyleNodeBuilder CreateNodeBuilder(
+        StyledElementFacts element,
+        float? marginTop = null,
+        float? marginLeft = null,
+        float fontSize = 12)
     {
         var style = new ComputedStyle { FontSizePt = fontSize };
         var top = marginTop ?? 0f;
@@ -49,6 +74,6 @@ internal sealed class StyleTreeBuilder(IElement body)
             };
         }
 
-        return new StyleNode { Element = el, Style = style };
+        return new StyleNodeBuilder(element, style);
     }
 }
