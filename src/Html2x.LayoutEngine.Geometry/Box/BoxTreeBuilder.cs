@@ -1,5 +1,5 @@
-﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
@@ -53,28 +53,28 @@ internal sealed class BoxTreeBuilder
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
     }
 
-    public BoxTree Build(StyleTree styles, DiagnosticsSession? diagnosticsSession = null, LayoutGeometryRequest? request = null)
+    public BoxTree Build(StyleTree styles, LayoutGeometryRequest? request = null, IDiagnosticsSink? diagnosticsSink = null)
     {
-        var initialBoxRoot = BuildInitial(styles, diagnosticsSession);
-        var boxTree = ApplyLayoutGeometry(initialBoxRoot, styles, diagnosticsSession, request);
-        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(boxTree, diagnosticsSession);
+        var initialBoxRoot = BuildInitial(styles, diagnosticsSink);
+        var boxTree = ApplyLayoutGeometry(initialBoxRoot, styles, request, diagnosticsSink);
+        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(boxTree, diagnosticsSink);
         return boxTree;
     }
 
-    private BoxNode BuildInitial(StyleTree styles, DiagnosticsSession? diagnosticsSession)
+    private BoxNode BuildInitial(StyleTree styles, IDiagnosticsSink? diagnosticsSink)
     {
         ArgumentNullException.ThrowIfNull(styles);
 
         var initialBoxRoot = _initialBoxTreeBuilder.Build(styles);
-        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSession);
+        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSink);
         return initialBoxRoot;
     }
 
     private BoxTree ApplyLayoutGeometry(
         BoxNode initialBoxRoot,
         StyleTree styles,
-        DiagnosticsSession? diagnosticsSession,
-        LayoutGeometryRequest? request)
+        LayoutGeometryRequest? request,
+        IDiagnosticsSink? diagnosticsSink)
     {
         ArgumentNullException.ThrowIfNull(initialBoxRoot);
         ArgumentNullException.ThrowIfNull(styles);
@@ -87,13 +87,13 @@ internal sealed class BoxTreeBuilder
             new DefaultLineHeightStrategy(),
             _blockFormattingContext,
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
         var blockEngine = new BlockLayoutEngine(
             inlineEngine,
             new TableLayoutEngine(inlineEngine, imageResolver),
             _blockFormattingContext,
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
 
         var page = new PageBox
         {
@@ -104,3 +104,4 @@ internal sealed class BoxTreeBuilder
         return blockEngine.Layout(initialBoxRoot, page);
     }
 }
+

@@ -35,7 +35,9 @@ await File.WriteAllBytesAsync("output.pdf", result.PdfBytes);
 
 `PdfOptions.FontPath` is required. It must point to an existing font file or directory before layout begins.
 
-Missing or invalid font paths throw `InvalidOperationException`. When diagnostics are enabled, the exception carries the diagnostics session in `Exception.Data["Diagnostics"]`.
+Missing or invalid font paths throw `InvalidOperationException`. When
+diagnostics are enabled, the exception carries the diagnostics report in
+`Exception.Data["DiagnosticsReport"]`.
 
 ## Diagnostics
 
@@ -48,14 +50,15 @@ var result = await converter.ToPdfAsync(
         Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
     });
 
-var session = result.Diagnostics;
+var report = result.DiagnosticsReport;
 ```
 
-Use `Html2x.Diagnostics.DiagnosticsSessionSerializer.ToJson(session)` to export diagnostics JSON.
+Use `Html2x.Diagnostics.DiagnosticsReportSerializer.ToJson(report)` to export
+diagnostics JSON.
 
 ## Result
 
 `Html2PdfResult` contains:
 
 - `PdfBytes`: rendered PDF bytes.
-- `Diagnostics`: optional diagnostics session when enabled.
+- `DiagnosticsReport`: optional diagnostics report when enabled.

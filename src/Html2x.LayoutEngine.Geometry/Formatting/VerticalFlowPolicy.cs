@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Diagnostics.Contracts;
 
 namespace Html2x.LayoutEngine.Formatting;
 
@@ -11,7 +11,7 @@ internal static class VerticalFlowPolicy
         float nextTopMargin,
         FormattingContextKind contextKind,
         string consumerName,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(formattingContext);
 
@@ -20,7 +20,7 @@ internal static class VerticalFlowPolicy
             nextTopMargin,
             contextKind,
             consumerName,
-            diagnosticsSession);
+            diagnosticsSink);
     }
 
     public static float AdvanceCursorPast(float boxY, float boxHeight)

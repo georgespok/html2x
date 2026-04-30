@@ -1,4 +1,4 @@
-namespace Html2x.Abstractions.Diagnostics;
+namespace Html2x.Diagnostics.Contracts;
 
 public sealed record DiagnosticContext(
     string? Selector,

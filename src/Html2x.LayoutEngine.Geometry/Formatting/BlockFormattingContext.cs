@@ -1,6 +1,6 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 
@@ -57,27 +57,24 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
         float nextTopMargin,
         FormattingContextKind contextKind,
         string consumerName,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         var collapsedTopMargin = CollapseMarginPair(previousBottomMargin, nextTopMargin);
 
-        if (diagnosticsSession is not null)
-        {
-            diagnosticsSession.Events.Add(new DiagnosticsEvent
-            {
-                Type = DiagnosticsEventType.Trace,
-                Name = "layout/margin-collapse",
-                Payload = new MarginCollapsePayload
-                {
-                    PreviousBottomMargin = previousBottomMargin,
-                    NextTopMargin = nextTopMargin,
-                    CollapsedTopMargin = collapsedTopMargin,
-                    Owner = nameof(BlockFormattingContext),
-                    Consumer = consumerName,
-                    FormattingContext = contextKind
-                }
-            });
-        }
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/box-tree",
+            Name: "layout/margin-collapse",
+            Severity: DiagnosticSeverity.Info,
+            Message: null,
+            Context: null,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("previousBottomMargin", previousBottomMargin),
+                DiagnosticFields.Field("nextTopMargin", nextTopMargin),
+                DiagnosticFields.Field("collapsedTopMargin", collapsedTopMargin),
+                DiagnosticFields.Field("owner", nameof(BlockFormattingContext)),
+                DiagnosticFields.Field("consumer", consumerName),
+                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(contextKind))),
+            Timestamp: DateTimeOffset.UtcNow));
 
         return collapsedTopMargin;
     }
@@ -212,7 +209,7 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
                 nextMarginTop,
                 request.ContextKind,
                 request.ConsumerName,
-                request.EmitDiagnostics ? request.DiagnosticsSession : null);
+                request.EmitDiagnostics ? request.DiagnosticsSink : null);
         }
 
         totalHeight += ResolveMargin(blockChildren[^1]).Bottom;

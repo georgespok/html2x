@@ -1,6 +1,7 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
@@ -188,8 +189,8 @@ internal static class GeometryInvariantValidator
         }
     }
 
-    private static IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> FlattenSnapshots(
-        IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> snapshots)
+    private static IEnumerable<FragmentSnapshot> FlattenSnapshots(
+        IEnumerable<FragmentSnapshot> snapshots)
     {
         foreach (var snapshot in snapshots)
         {

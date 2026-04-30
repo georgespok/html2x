@@ -1,4 +1,4 @@
-﻿using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -10,7 +10,7 @@ public sealed class UnsupportedLayoutModePolicyTests
     [Fact]
     public void Report_UnsupportedModes_EmitsExplicitDiagnostics()
     {
-        var diagnostics = new DiagnosticsSession();
+        var diagnostics = new RecordingDiagnosticsSink();
         var root = new BlockBox(BoxRole.Block);
         root.Children.Add(new FloatBox(BoxRole.Float)
         {
@@ -39,9 +39,9 @@ public sealed class UnsupportedLayoutModePolicyTests
 
         new UnsupportedLayoutModePolicy().Report(root, diagnostics);
 
-        diagnostics.Events
+        diagnostics.Records
             .Where(static e => e.Name == "layout/unsupported-mode")
-            .Select(static e => ((UnsupportedStructurePayload)e.Payload!).StructureKind)
+            .Select(static e => e.Fields["structureKind"].ShouldBeOfType<DiagnosticStringValue>().Value)
             .ShouldBe(["float", "display:flex", "position:absolute"]);
     }
 }

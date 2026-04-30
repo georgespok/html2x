@@ -1,10 +1,10 @@
 using System.Text;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
@@ -30,7 +30,7 @@ internal static class GeometryTestHarness
             PageSize = PaperSizes.Letter
         };
 
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new HarnessDiagnosticsSink();
         var textMeasurer = CreateTextMeasurer();
         var fontSource = LayoutBuilderFixture.CreateFontSource();
         var imageProvider = new NoopImageProvider();
@@ -39,7 +39,7 @@ internal static class GeometryTestHarness
         var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
 
-        var styleTree = await styleTreeBuilder.BuildAsync(html, options, diagnosticsSession);
+        var styleTree = await styleTreeBuilder.BuildAsync(html, options, diagnosticsSink: diagnosticsSink);
         var geometryRequest = new LayoutGeometryRequest
         {
             PageSize = options.PageSize,
@@ -47,17 +47,17 @@ internal static class GeometryTestHarness
             HtmlDirectory = Directory.GetCurrentDirectory(),
             MaxImageSizeBytes = 10 * 1024 * 1024
         };
-        var boxTree = boxBuilder.Build(styleTree, diagnosticsSession, geometryRequest);
+        var boxTree = boxBuilder.Build(styleTree, geometryRequest, diagnosticsSink);
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
-            diagnosticsSession,
-            geometryRequest);
+            geometryRequest,
+            diagnosticsSink);
         var fragments = fragmentBuilder.Build(publishedLayout, fontSource);
         var pagination = new BlockPaginator().Paginate(
             fragments.Blocks,
             options.PageSize,
             publishedLayout.Page.Margin,
-            diagnosticsSession);
+            diagnosticsSink);
         var layout = CreateLayout(pagination);
         var snapshot = GeometrySnapshotMapper.From(publishedLayout, layout, pagination);
 
@@ -68,7 +68,7 @@ internal static class GeometryTestHarness
             layout,
             pagination,
             snapshot,
-            diagnosticsSession);
+            diagnosticsSink.Records);
     }
 
     public static string RenderSnapshot(GeometrySnapshot snapshot)
@@ -259,7 +259,7 @@ internal sealed record GeometryPipelineResult(
     HtmlLayout Layout,
     PaginationResult Pagination,
     GeometrySnapshot Snapshot,
-    DiagnosticsSession Diagnostics);
+    IReadOnlyList<DiagnosticRecord> Diagnostics);
 
 internal sealed class ReferenceEqualityComparer : IEqualityComparer<BlockBox>
 {
@@ -273,5 +273,17 @@ internal sealed class ReferenceEqualityComparer : IEqualityComparer<BlockBox>
     public int GetHashCode(BlockBox obj)
     {
         return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
+    }
+}
+
+internal sealed class HarnessDiagnosticsSink : IDiagnosticsSink
+{
+    private readonly List<DiagnosticRecord> _records = [];
+
+    public IReadOnlyList<DiagnosticRecord> Records => _records;
+
+    public void Emit(DiagnosticRecord record)
+    {
+        _records.Add(record);
     }
 }

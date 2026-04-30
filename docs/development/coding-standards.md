@@ -13,7 +13,10 @@ Html2x.Abstractions
   -> Html2x
 ```
 
-The facade wires services together. Layout owns HTML/CSS interpretation. Renderers consume fragments and pages. Diagnostics contracts live in abstractions, while JSON serialization lives in `Html2x.Diagnostics`.
+The facade wires services together. Layout owns HTML/CSS interpretation.
+Renderers consume fragments and pages. Diagnostics contracts live in
+`Html2x.Diagnostics.Contracts`, while collection and JSON serialization live in
+`Html2x.Diagnostics`.
 
 ## Implementation Conventions
 
@@ -30,12 +33,12 @@ The facade wires services together. Layout owns HTML/CSS interpretation. Rendere
 - Use existing log helper classes such as `LayoutLog` and `PdfRendererLog`.
 - Use `LoggerMessage.Define` for reusable events.
 - Guard high-volume trace or debug events with `logger.IsEnabled`.
-- Prefer structured diagnostics payloads when a behavior needs testable evidence.
+- Prefer structured diagnostics fields when a behavior needs testable evidence.
 
 ## Error Handling
 
 - Validate early and throw clear exceptions.
-- Log or emit diagnostics before rethrowing stage failures when a diagnostics session exists.
+- Log or emit diagnostics before rethrowing conversion failures when a diagnostics sink exists.
 - Do not silently swallow invalid input that changes output.
 - Unsupported but recoverable features should produce deterministic fallback behavior and diagnostics.
 

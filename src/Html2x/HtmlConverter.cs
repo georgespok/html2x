@@ -1,7 +1,8 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Files;
 using Html2x.Fonts;
 using Html2x.LayoutEngine;
@@ -21,14 +22,13 @@ public class HtmlConverter
 
         options ??= new HtmlConverterOptions();
 
-        DiagnosticsSession? session = null;
+        DiagnosticsCollector? collector = null;
+        IDiagnosticsSink? diagnosticsSink = null;
         if (options.Diagnostics.EnableDiagnostics)
         {
-            session = new DiagnosticsSession
-            {
-                StartTime = DateTimeOffset.UtcNow,
-                Options = options
-            };
+            var diagnosticsStartTime = DateTimeOffset.UtcNow;
+            collector = new DiagnosticsCollector(diagnosticsStartTime);
+            diagnosticsSink = collector;
         }
 
         var fileDirectory = new FileDirectory();
@@ -37,118 +37,147 @@ public class HtmlConverter
         {
             throw CreateFontPathException(
                 "PdfOptions.FontPath must be provided before layout can begin.",
-                session);
+                collector);
         }
 
         if (!fileDirectory.FileExists(fontPath) && !fileDirectory.DirectoryExists(fontPath))
         {
             throw CreateFontPathException(
                 $"PdfOptions.FontPath '{fontPath}' does not exist.",
-                session);
+                collector);
         }
 
         IFontSource fontSource = new FontPathSource(fontPath, fileDirectory);
-        if (session is not null)
+        if (diagnosticsSink is not null)
         {
-            fontSource = new DiagnosticsFontSource(fontSource, session);
+            fontSource = new DiagnosticsFontSource(fontSource, diagnosticsSink);
         }
 
         var measurer = new SkiaTextMeasurer(fontSource);
         var imageProvider = new FileSystemImageProvider();
 
-        session?.Events.Add(DiagnosticsEventFactory.StageStarted(
+        EmitStageStarted(
+            diagnosticsSink,
             "LayoutBuild",
-            new HtmlPayload { Html = html.Trim() }));
+            DiagnosticFields.Create(DiagnosticFields.Field("html", html.Trim())));
 
         var layoutBuilder = new LayoutBuilder(measurer, fontSource, imageProvider);
 
         HtmlLayout layout;
         try
         {
-            layout = await layoutBuilder.BuildAsync(html, options.Layout, session);
+            layout = await layoutBuilder.BuildAsync(html, options.Layout, diagnosticsSink);
         }
         catch (Exception exception)
         {
-            session?.Events.Add(DiagnosticsEventFactory.StageFailed("LayoutBuild", exception.Message));
-            session?.Events.Add(DiagnosticsEventFactory.StageSkipped("PdfRender", "Skipped because LayoutBuild failed."));
-            AttachDiagnostics(exception, session);
+            EmitStageFailed(diagnosticsSink, "LayoutBuild", exception.Message);
+            EmitStageSkipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
+            AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
-        session?.Events.Add(DiagnosticsEventFactory.StageSucceeded(
+        EmitStageSucceeded(
+            diagnosticsSink,
             "LayoutBuild",
-            new LayoutSnapshotPayload
-            {
-                Snapshot = LayoutSnapshotMapper.From(layout)
-            }));
+            DiagnosticFields.Create(
+                DiagnosticFields.Field("snapshot", LayoutSnapshotMapper.ToDiagnosticObject(layout))));
 
         var renderer = new PdfRenderer(fileDirectory);
 
-        session?.Events.Add(DiagnosticsEventFactory.StageStarted(
-            "PdfRender",
-            null));
+        EmitStageStarted(diagnosticsSink, "PdfRender");
 
         byte[] pdfBytes;
         try
         {
-            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, session, fontSource);
+            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, fontSource, diagnosticsSink);
         }
         catch (Exception exception)
         {
-            session?.Events.Add(DiagnosticsEventFactory.StageFailed("PdfRender", exception.Message));
-            AttachDiagnostics(exception, session);
+            EmitStageFailed(diagnosticsSink, "PdfRender", exception.Message);
+            AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
-        session?.Events.Add(DiagnosticsEventFactory.StageSucceeded(
-            "PdfRender", new RenderSummaryPayload()
-            {
-                PdfSize = pdfBytes.Length,
-                PageCount = layout.Pages.Count
-            }));
+        EmitStageSucceeded(
+            diagnosticsSink,
+            "PdfRender",
+            DiagnosticFields.Create(
+                DiagnosticFields.Field("pdfSize", pdfBytes.Length),
+                DiagnosticFields.Field("pageCount", layout.Pages.Count)));
+
+        var report = CompleteDiagnostics(collector);
 
         return new Html2PdfResult(pdfBytes)
         {
-            Diagnostics = session
+            DiagnosticsReport = report
         };
     }
 
-    private static void AddDiagnosticsEvent(
-        DiagnosticsSession? session,
-        DiagnosticsEventType type,
-        string name,
-        IDiagnosticsPayload? payload) =>
-        session?.Events.Add(new DiagnosticsEvent
-        {
-            Type = type,
-            Name = name,
-            Timestamp = DateTimeOffset.UtcNow,
-            Payload = payload
-        });
-
-    private static InvalidOperationException CreateFontPathException(string message, DiagnosticsSession? session)
+    private static InvalidOperationException CreateFontPathException(
+        string message,
+        DiagnosticsCollector? collector)
     {
-        AddDiagnosticsEvent(session, DiagnosticsEventType.Error, "FontPath", null);
-        session?.Events.Add(DiagnosticsEventFactory.StageFailed("LayoutBuild", message));
-        session?.Events.Add(DiagnosticsEventFactory.StageSkipped("PdfRender", "Skipped because LayoutBuild failed."));
+        IDiagnosticsSink? diagnosticsSink = collector;
+        EmitDiagnosticsRecord(diagnosticsSink, "Configuration", "font-path/error", DiagnosticSeverity.Error, message);
+        EmitStageFailed(diagnosticsSink, "LayoutBuild", message);
+        EmitStageSkipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
 
         var exception = new InvalidOperationException(message);
-        if (session is not null)
-        {
-            exception.Data["Diagnostics"] = session;
-        }
-
+        AttachDiagnosticsReport(exception, collector);
         return exception;
     }
 
-    private static void AttachDiagnostics(Exception exception, DiagnosticsSession? session)
+    private static void AttachDiagnosticsReport(
+        Exception exception,
+        DiagnosticsCollector? collector)
     {
-        if (session is null)
+        var report = CompleteDiagnostics(collector);
+        if (report is not null)
         {
-            return;
+            exception.Data["DiagnosticsReport"] = report;
         }
+    }
 
-        exception.Data["Diagnostics"] = session;
+    private static DiagnosticsReport? CompleteDiagnostics(DiagnosticsCollector? collector)
+    {
+        var endTime = DateTimeOffset.UtcNow;
+        return collector?.ToReport(endTime);
+    }
+
+    private static void EmitStageStarted(
+        IDiagnosticsSink? diagnosticsSink,
+        string stage,
+        DiagnosticFields? fields = null) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/started", DiagnosticSeverity.Info, null, fields);
+
+    private static void EmitStageSucceeded(
+        IDiagnosticsSink? diagnosticsSink,
+        string stage,
+        DiagnosticFields? fields = null) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/succeeded", DiagnosticSeverity.Info, null, fields);
+
+    private static void EmitStageFailed(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/failed", DiagnosticSeverity.Error, message);
+
+    private static void EmitStageSkipped(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/skipped", DiagnosticSeverity.Info, message);
+
+    private static void EmitDiagnosticsRecord(
+        IDiagnosticsSink? diagnosticsSink,
+        string stage,
+        string name,
+        DiagnosticSeverity severity,
+        string? message,
+        DiagnosticFields? fields = null)
+    {
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: stage,
+            Name: name,
+            Severity: severity,
+            Message: message,
+            Context: null,
+            Fields: fields ?? DiagnosticFields.Empty,
+            Timestamp: DateTimeOffset.UtcNow));
     }
 }
 

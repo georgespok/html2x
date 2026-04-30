@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.Diagnostics.Contracts\Html2x.Diagnostics.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
   </ItemGroup>
 

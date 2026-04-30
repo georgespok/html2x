@@ -98,7 +98,6 @@ public class LayoutIntegrationTests
         var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions);
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
-            null,
             new LayoutGeometryRequest
             {
                 PageSize = layoutOptions.PageSize,

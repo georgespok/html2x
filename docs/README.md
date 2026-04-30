@@ -14,7 +14,7 @@ This directory contains developer-oriented documentation for maintaining and ext
 - [Processing Pipeline](architecture/pipeline.md): HTML input through PDF output.
 - [Stage Ownership](architecture/stage-ownership.md): read/write boundaries between parser, style, layout, fragments, pagination, and paint.
 - [Geometry](architecture/geometry.md): geometry authority, projection rules, and validation policy.
-- [Diagnostics Architecture](architecture/diagnostics.md): diagnostic session flow and payload ownership.
+- [Diagnostics Architecture](architecture/diagnostics.md): diagnostics report flow and ownership.
 
 ## Development
 
@@ -45,6 +45,6 @@ This directory contains developer-oriented documentation for maintaining and ext
 ## Documentation Standards
 
 - Use direct, developer-focused language.
-- Keep durable docs separate from feature plans, migration notes, and one-off refactor artifacts.
+- Keep durable docs focused on current behavior, contracts, and operating guidance.
 - Prefer current contracts, supported behavior, failure modes, and test locations over historical narrative.
 - Use ASCII punctuation and stable relative links.

@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Html2x.Diagnostics.Contracts\Html2x.Diagnostics.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

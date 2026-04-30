@@ -1,7 +1,7 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
 
@@ -32,9 +32,10 @@ public sealed class BlockPaginator
         IReadOnlyList<BlockFragment> blocks,
         SizePt pageSize,
         Spacing margins,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(blocks);
+
         var orderedBlocks = ToDeterministicOrder(blocks);
 
         var contentArea = PageContentArea.From(pageSize, margins);
@@ -48,11 +49,14 @@ public sealed class BlockPaginator
             GetInitialCursorY(orderedBlocks, contentTop),
             orderedBlocks.Count);
 
-        PaginationDiagnostics.EmitPageCreated(diagnosticsSession, paginationState.PageNumber, InitialPageReason);
+        PaginationDiagnostics.EmitPageCreated(
+            diagnosticsSink,
+            paginationState.PageNumber,
+            InitialPageReason);
 
         if (orderedBlocks.Count == 0)
         {
-            PaginationDiagnostics.EmitEmptyDocument(diagnosticsSession, paginationState.PageNumber);
+            PaginationDiagnostics.EmitEmptyDocument(diagnosticsSink, paginationState.PageNumber);
         }
 
         var pageContentHeight = contentBottom - contentTop;
@@ -66,7 +70,7 @@ public sealed class BlockPaginator
             if (paginationState.ShouldStartNewPage(blockHeight))
             {
                 paginationState.AdvanceToNextPage(
-                    diagnosticsSession,
+                    diagnosticsSink,
                     block,
                     blockHeight,
                     remainingSpace);
@@ -77,7 +81,7 @@ public sealed class BlockPaginator
             if (isOversized)
             {
                 PaginationDiagnostics.EmitOversizedBlock(
-                    diagnosticsSession,
+                    diagnosticsSink,
                     paginationState.PageNumber,
                     block.FragmentId,
                     blockHeight,
@@ -89,7 +93,7 @@ public sealed class BlockPaginator
             paginationState.AddPlacement(CreatePlacement(placedFragment, paginationState.PageNumber, isOversized, i));
 
             PaginationDiagnostics.EmitBlockPlaced(
-                diagnosticsSession,
+                diagnosticsSink,
                 paginationState.PageNumber,
                 placedFragment.FragmentId,
                 placedFragment.Rect.Y,
@@ -230,13 +234,13 @@ public sealed class BlockPaginator
         }
 
         public void AdvanceToNextPage(
-            DiagnosticsSession? diagnosticsSession,
+            IDiagnosticsSink? diagnosticsSink,
             BlockFragment block,
             float blockHeight,
             float remainingSpace)
         {
             PaginationDiagnostics.EmitBlockMovedNextPage(
-                diagnosticsSession,
+                diagnosticsSink,
                 PageNumber,
                 PageNumber + 1,
                 block.FragmentId,
@@ -247,7 +251,7 @@ public sealed class BlockPaginator
             PageNumber++;
             _placements = [];
             CursorY = contentTop;
-            PaginationDiagnostics.EmitPageCreated(diagnosticsSession, PageNumber, OverflowPageReason);
+            PaginationDiagnostics.EmitPageCreated(diagnosticsSink, PageNumber, OverflowPageReason);
         }
 
         public IReadOnlyList<PageModel> Complete()

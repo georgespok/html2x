@@ -4,7 +4,7 @@ using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
@@ -90,7 +90,7 @@ public class BlockFlowTests
     }
 
     [Fact]
-    public async Task MarginCollapse_EmitsDiagnosticsEvent()
+    public async Task MarginCollapse_EmitsDiagnosticsRecord()
     {
         const string html = @"
             <html>
@@ -100,24 +100,20 @@ public class BlockFlowTests
               </body>
             </html>";
 
-        var diagnosticsSession = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        _ = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession);
+        _ = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
-        var marginEvents = diagnosticsSession.Events
-            .Where(e => e.Payload is MarginCollapsePayload)
-            .Select(e => (MarginCollapsePayload)e.Payload!)
+        var marginEvents = diagnosticsSink.Records
+            .Where(e => e.Name == "layout/margin-collapse")
             .ToList();
 
         marginEvents.ShouldNotBeEmpty();
         var match = marginEvents.FirstOrDefault(e =>
-            Math.Abs(e.PreviousBottomMargin - 20f) < 0.01f &&
-            Math.Abs(e.NextTopMargin - 6f) < 0.01f &&
-            Math.Abs(e.CollapsedTopMargin - 20f) < 0.01f);
+            Math.Abs(NumberField(e, "previousBottomMargin") - 20f) < 0.01f &&
+            Math.Abs(NumberField(e, "nextTopMargin") - 6f) < 0.01f &&
+            Math.Abs(NumberField(e, "collapsedTopMargin") - 20f) < 0.01f);
 
         match.ShouldNotBeNull();
     }
@@ -390,16 +386,13 @@ public class BlockFlowTests
               </body>
             </html>";
 
-        var diagnosticsSession = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        var layout = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession);
+        var layout = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         layout.Pages.Count.ShouldBe(1);
-        diagnosticsSession.Events
+        diagnosticsSink.Records
             .Any(e => e.Name == "layout/inline-block/unsupported-structure")
             .ShouldBeFalse();
     }
@@ -449,10 +442,7 @@ public class BlockFlowTests
     [Fact]
     public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
     {
-        var diagnosticsSession = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
         var formattingContext = new BlockFormattingContext();
         var measurementService = new BlockMeasurementService(formattingContext);
         var imageResolver = new ImageLayoutResolver();
@@ -503,7 +493,7 @@ public class BlockFlowTests
             tableLayoutEngine,
             formattingContext,
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
 
         var boxTree = engine.Layout(root, new PageBox
         {
@@ -517,28 +507,26 @@ public class BlockFlowTests
             300f,
             static (block, _) => block.UsedGeometry?.Height ?? 0f,
             static (table, _) => table.UsedGeometry?.Height ?? 0f,
-            diagnosticsSession);
+            diagnosticsSink);
 
         measuredHeight.ShouldBe(laidOutContainer.UsedGeometry.ShouldNotBeNull().Height, 0.1f);
 
-        diagnosticsSession.Events
-            .Where(static e => e.Payload is MarginCollapsePayload)
-            .Select(static e => (MarginCollapsePayload)e.Payload!)
+        diagnosticsSink.Records
+            .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                payload.Consumer == nameof(BlockLayoutEngine) &&
-                payload.Owner == nameof(BlockFormattingContext) &&
-                payload.FormattingContext == FormattingContextKind.Block &&
-                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+                StringField(payload, "consumer") == nameof(BlockLayoutEngine) &&
+                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
+                Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
 
-        diagnosticsSession.Events
-            .Where(static e => e.Payload is MarginCollapsePayload)
-            .Select(static e => (MarginCollapsePayload)e.Payload!)
+        diagnosticsSink.Records
+            .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                payload.Consumer == nameof(BlockMeasurementService) &&
-                payload.Owner == nameof(BlockFormattingContext) &&
-                payload.FormattingContext == FormattingContextKind.Block &&
-                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+                StringField(payload, "consumer") == nameof(BlockMeasurementService) &&
+                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
+                Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
     }
 
@@ -619,6 +607,12 @@ public class BlockFlowTests
             firstLine.Rect.Height,
             secondLine.Rect.Height);
     }
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 
     private static IReadOnlyList<string> ExtractInlineText(BoxNode node)
     {

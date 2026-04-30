@@ -1,8 +1,8 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;
@@ -18,7 +18,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         ICssStyleDeclaration css,
         IElement element,
         ComputedStyleBuilder style,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         var margin = ParseSpacingWithOverrides(
             css,
@@ -28,7 +28,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
             element,
-            diagnosticsSession);
+            diagnosticsSink);
 
         style.Margin = margin;
 
@@ -40,7 +40,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             HtmlCssConstants.CssProperties.PaddingBottom,
             HtmlCssConstants.CssProperties.PaddingLeft,
             element,
-            diagnosticsSession);
+            diagnosticsSink);
 
         style.Padding = new Spacing(
             Math.Max(0, padding.Top),
@@ -57,7 +57,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         string bottomProperty,
         string leftProperty,
         IElement element,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         var top = 0f;
         var right = 0f;
@@ -72,7 +72,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             bottomProperty,
             leftProperty,
             element,
-            diagnosticsSession,
+            diagnosticsSink,
             value => top = value,
             value => right = value,
             value => bottom = value,
@@ -89,24 +89,32 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         string bottomProperty,
         string leftProperty,
         IElement element,
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        ApplySpacingShorthand(css, shorthandProperty, element, diagnosticsSession, setTop, setRight, setBottom, setLeft);
-        OverrideSpacingSide(css, topProperty, element, diagnosticsSession, setTop);
-        OverrideSpacingSide(css, rightProperty, element, diagnosticsSession, setRight);
-        OverrideSpacingSide(css, bottomProperty, element, diagnosticsSession, setBottom);
-        OverrideSpacingSide(css, leftProperty, element, diagnosticsSession, setLeft);
+        ApplySpacingShorthand(
+            css,
+            shorthandProperty,
+            element,
+            diagnosticsSink,
+            setTop,
+            setRight,
+            setBottom,
+            setLeft);
+        OverrideSpacingSide(css, topProperty, element, diagnosticsSink, setTop);
+        OverrideSpacingSide(css, rightProperty, element, diagnosticsSink, setRight);
+        OverrideSpacingSide(css, bottomProperty, element, diagnosticsSink, setBottom);
+        OverrideSpacingSide(css, leftProperty, element, diagnosticsSink, setLeft);
     }
 
     private void OverrideSpacingSide(
         ICssStyleDeclaration css,
         string property,
         IElement element,
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         Action<float> setter)
     {
         var raw = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
@@ -116,14 +124,14 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             return;
         }
 
-        setter(GetSpacingWithLogging(css, property, element, diagnosticsSession));
+        setter(GetSpacingWithLogging(css, property, element, diagnosticsSink));
     }
 
     private void ApplySpacingShorthand(
         ICssStyleDeclaration css,
         string shorthandProperty,
         IElement element,
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         Action<float> setTop,
         Action<float> setRight,
         Action<float> setBottom,
@@ -136,7 +144,12 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             return;
         }
 
-        if (!TryParseSpacingValues(shorthandProperty, shorthandValue, element, diagnosticsSession, out var parsedValues))
+        if (!TryParseSpacingValues(
+                shorthandProperty,
+                shorthandValue,
+                element,
+                diagnosticsSink,
+                out var parsedValues))
         {
             return;
         }
@@ -176,7 +189,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         string property,
         string shorthandValue,
         IElement element,
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         out List<float> parsedValues)
     {
         parsedValues = [];
@@ -193,14 +206,12 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
 
         if (tokens.Length > 4)
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/ignored-declaration",
+            StyleDiagnostics.EmitIgnoredDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 shorthandValue.Trim(),
                 null,
-                "Ignored",
                 $"{property} shorthand has {tokens.Length} values; expected 1 to 4.");
             return false;
         }
@@ -210,28 +221,23 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(token);
             if (unsupportedUnit != null)
             {
-                StyleDiagnosticEmitter.Emit(
-                    diagnosticsSession,
-                    "style/unsupported-declaration",
+                StyleDiagnostics.EmitUnsupportedDeclaration(
+                    diagnosticsSink,
                     element,
                     property,
                     token,
-                    null,
-                    "Unsupported",
                     $"Unsupported unit '{unsupportedUnit}' for {property}.");
                 return false;
             }
 
             if (!_converter.TryGetLengthPt(token, out var points))
             {
-                StyleDiagnosticEmitter.Emit(
-                    diagnosticsSession,
-                    "style/ignored-declaration",
+                StyleDiagnostics.EmitIgnoredDeclaration(
+                    diagnosticsSink,
                     element,
                     property,
                     token,
                     null,
-                    "Ignored",
                     $"Unable to parse {property} token as a supported length.");
                 return false;
             }
@@ -240,8 +246,8 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             {
                 var decision = CreateNegativeSpacingDecision(property, points);
 
-                StyleDiagnosticEmitter.Emit(
-                    diagnosticsSession,
+                StyleDiagnostics.Emit(
+                    diagnosticsSink,
                     decision.EventName,
                     element,
                     property,
@@ -261,7 +267,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         ICssStyleDeclaration css,
         string property,
         IElement element,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink)
     {
         var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
 
@@ -275,28 +281,23 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/unsupported-declaration",
+            StyleDiagnostics.EmitUnsupportedDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 trimmed,
-                null,
-                "Unsupported",
                 $"Unsupported unit '{unsupportedUnit}' for {property}.");
             return 0;
         }
 
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/ignored-declaration",
+            StyleDiagnostics.EmitIgnoredDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 trimmed,
                 null,
-                "Ignored",
                 $"Unable to parse {property} as a supported length.");
             return 0;
         }
@@ -305,8 +306,8 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         {
             var decision = CreateNegativeSpacingDecision(property, points);
 
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
+            StyleDiagnostics.Emit(
+                diagnosticsSink,
                 decision.EventName,
                 element,
                 property,

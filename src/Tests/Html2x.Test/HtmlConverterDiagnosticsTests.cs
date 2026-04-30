@@ -1,5 +1,6 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 
 namespace Html2x.Test;
@@ -37,36 +38,32 @@ public sealed class HtmlConverterDiagnosticsTests
         var result = await converter.ToPdfAsync(html, DiagnosticsOptions);
 
         result.PdfBytes.ShouldNotBeEmpty();
-        result.Diagnostics.ShouldNotBeNull();
+        result.DiagnosticsReport.ShouldNotBeNull();
 
-        var diagnostics = result.Diagnostics!;
-        var styleDiagnostics = diagnostics.Events
-            .Where(static x => x.Payload is StyleDiagnosticPayload)
+        var diagnostics = result.DiagnosticsReport!;
+        var styleDiagnostics = diagnostics.Records
+            .Where(static x => x.Stage == "stage/style" && x.Name.StartsWith("style/", StringComparison.Ordinal))
             .ToList();
 
         styleDiagnostics.ShouldContain(static x => x.Name == "style/unsupported-declaration");
         styleDiagnostics.ShouldContain(static x => x.Name == "style/ignored-declaration");
 
         var unsupportedWidth = styleDiagnostics
-            .Select(static x => x.Payload)
-            .OfType<StyleDiagnosticPayload>()
-            .Single(static x => x.PropertyName == "width");
+            .Single(static x => x.Fields["propertyName"] is DiagnosticStringValue { Value: "width" });
 
-        unsupportedWidth.RawValue.ShouldBe("10rem");
-        unsupportedWidth.Decision.ShouldBe("Unsupported");
-        unsupportedWidth.Reason.ShouldContain("Unsupported unit");
+        StringField(unsupportedWidth, "rawValue").ShouldBe("10rem");
+        StringField(unsupportedWidth, "decision").ShouldBe("Unsupported");
+        StringField(unsupportedWidth, "reason").ShouldContain("Unsupported unit");
         unsupportedWidth.Context.ShouldNotBeNull();
         unsupportedWidth.Context.ElementIdentity.ShouldBe("section#invoice");
         unsupportedWidth.Context.StyleDeclaration.ShouldBe("width: 10rem");
 
         var ignoredPadding = styleDiagnostics
-            .Select(static x => x.Payload)
-            .OfType<StyleDiagnosticPayload>()
-            .Single(static x => x.PropertyName == "padding");
+            .Single(static x => x.Fields["propertyName"] is DiagnosticStringValue { Value: "padding" });
 
-        ignoredPadding.RawValue.ShouldBe("1px 2px 3px 4px 5px");
-        ignoredPadding.Decision.ShouldBe("Ignored");
-        ignoredPadding.Reason.ShouldContain("expected 1 to 4");
+        StringField(ignoredPadding, "rawValue").ShouldBe("1px 2px 3px 4px 5px");
+        StringField(ignoredPadding, "decision").ShouldBe("Ignored");
+        StringField(ignoredPadding, "reason").ShouldContain("expected 1 to 4");
         ignoredPadding.Context.ShouldNotBeNull();
         ignoredPadding.Context.ElementIdentity.ShouldBe("section#invoice");
         ignoredPadding.Context.StyleDeclaration.ShouldBe("padding: 1px 2px 3px 4px 5px");
@@ -95,17 +92,16 @@ public sealed class HtmlConverterDiagnosticsTests
             var converter = new HtmlConverter();
             var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
 
-            var diagnostics = exception.Data["Diagnostics"].ShouldBeOfType<DiagnosticsSession>();
-            var payload = diagnostics.Events
+            var diagnostics = exception.Data["DiagnosticsReport"].ShouldBeOfType<DiagnosticsReport>();
+            var payload = diagnostics.Records
                 .Where(static x => x.Name == "font/resolve")
-                .Select(static x => x.Payload)
-                .OfType<FontResolutionPayload>()
-                .Single(static x => x.Consumer == "SkiaTextMeasurer" && x.Outcome == "Failed");
+                .Single(static x =>
+                    x.Fields["consumer"] is DiagnosticStringValue { Value: "SkiaTextMeasurer" } &&
+                    x.Fields["outcome"] is DiagnosticStringValue { Value: "Failed" });
 
-            payload.Owner.ShouldBe("FontPathSource");
-            payload.ConfiguredPath.ShouldBe(tempDirectory.FullName);
-            payload.Reason.ShouldNotBeNull();
-            payload.Reason.ShouldContain("not found in directory");
+            StringField(payload, "owner").ShouldBe("FontPathSource");
+            StringField(payload, "configuredPath").ShouldBe(tempDirectory.FullName);
+            StringField(payload, "reason").ShouldContain("not found in directory");
         }
         finally
         {
@@ -139,22 +135,24 @@ public sealed class HtmlConverterDiagnosticsTests
             var converter = new HtmlConverter();
             var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
 
-            var diagnostics = exception.Data["Diagnostics"].ShouldBeOfType<DiagnosticsSession>();
-            var payload = diagnostics.Events
+            var diagnostics = exception.Data["DiagnosticsReport"].ShouldBeOfType<DiagnosticsReport>();
+            var payload = diagnostics.Records
                 .Where(static x => x.Name == "font/resolve")
-                .Select(static x => x.Payload)
-                .OfType<FontResolutionPayload>()
-                .Single(static x => x.Consumer == "SkiaTextMeasurer" && x.Outcome == "Failed");
+                .Single(static x =>
+                    x.Fields["consumer"] is DiagnosticStringValue { Value: "SkiaTextMeasurer" } &&
+                    x.Fields["outcome"] is DiagnosticStringValue { Value: "Failed" });
 
-            payload.Owner.ShouldBe("FontPathSource");
-            payload.ConfiguredPath.ShouldBe(invalidFontPath);
-            payload.FilePath.ShouldBeNull();
-            payload.Reason.ShouldNotBeNull();
-            payload.Reason.ShouldContain("Failed to load font file");
+            StringField(payload, "owner").ShouldBe("FontPathSource");
+            StringField(payload, "configuredPath").ShouldBe(invalidFontPath);
+            payload.Fields["filePath"].ShouldBeNull();
+            StringField(payload, "reason").ShouldContain("Failed to load font file");
         }
         finally
         {
             tempDirectory.Delete(recursive: true);
         }
     }
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 }

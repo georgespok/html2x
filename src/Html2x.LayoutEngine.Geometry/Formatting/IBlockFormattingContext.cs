@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 
@@ -14,5 +14,5 @@ internal interface IBlockFormattingContext
         float nextTopMargin,
         FormattingContextKind contextKind,
         string consumerName,
-        DiagnosticsSession? diagnosticsSession = null);
+        IDiagnosticsSink? diagnosticsSink = null);
 }

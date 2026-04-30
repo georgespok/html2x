@@ -8,7 +8,7 @@ is for developers changing the codebase, not a public API contract.
 | Stage | Project | Input | Owned Output | May Write | Must Not Write |
 | --- | --- | --- | --- | --- | --- |
 | Contracts | `Html2x.LayoutEngine.Contracts` | None | Internal pipeline handoff contracts | Immutable contract facts and validation helpers | Parser traversal, CSS computation, mutable boxes, layout algorithms, fragments, pagination pages, renderer state |
-| Style | `Html2x.LayoutEngine.Style` | Raw HTML, layout options, optional diagnostics session | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
+| Style | `Html2x.LayoutEngine.Style` | Raw HTML, layout options, optional diagnostics sink | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
 | Layout Geometry | `Html2x.LayoutEngine.Geometry` | Contract `StyleTree` and layout geometry request | Contract `PublishedLayoutTree` and internal box geometry | Box roles, text runs, list markers, unsupported mode diagnostics, image layout facts, table placements, `UsedGeometry` | CSS parsing, DOM traversal, parser objects, fragments, pagination pages, renderer state |
 | Fragment | `Html2x.LayoutEngine.Fragments` | Contract `PublishedLayoutTree` and font source | Fragment tree | Published layout traversal, fragment ID allocation, `VisualStyle` projection, and text run font resolution | Mutable boxes, CSS, DOM, pagination pages, renderer state |
 | Pagination | `Html2x.LayoutEngine` | Fragment tree | `HtmlLayout.Pages` | Page models and translated fragment clones | Source fragments, boxes, styles |
@@ -92,8 +92,8 @@ renderer-facing fragments after composition and pagination have finished.
 
 ## Diagnostics Ownership
 
-Diagnostics may expose source identity only through the Phase 5 diagnostic contract.
-Diagnostic payloads use nullable primitive fields such as `SourceNodeId`,
+Diagnostics may expose source identity only through generic diagnostic fields.
+Diagnostic records use nullable primitive fields such as `SourceNodeId`,
 `SourceContentId`, `SourcePath`, `SourceOrder`, `SourceElementIdentity`, and
 `GeneratedSourceKind`. They must not expose `StyleSourceIdentity`,
 `StyleContentIdentity`, or `GeometrySourceIdentity`.

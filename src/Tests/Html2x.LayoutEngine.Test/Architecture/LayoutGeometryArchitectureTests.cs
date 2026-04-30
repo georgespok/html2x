@@ -717,31 +717,27 @@ public sealed class LayoutGeometryArchitectureTests
     public void DiagnosticsSourceIdentity_UsesPrimitiveSnapshotFieldsOnly()
     {
         var diagnosticsDirectory = Path.Combine(FindRepoRoot(), "src", "Html2x.Abstractions", "Diagnostics");
-        foreach (var file in Directory.GetFiles(diagnosticsDirectory, "*.cs"))
-        {
-            var source = File.ReadAllText(file);
-            var relativePath = Path.GetRelativePath(diagnosticsDirectory, file);
-
-            source.ShouldNotContain("Html2x.LayoutEngine.Style");
-            source.ShouldNotContain("Html2x.LayoutEngine.Geometry");
-            source.Contains("GeometrySourceIdentity", StringComparison.Ordinal).ShouldBeFalse(
-                $"{relativePath} should not expose geometry implementation identity.");
-            source.Contains("StyleSourceIdentity", StringComparison.Ordinal).ShouldBeFalse(
-                $"{relativePath} should not expose style implementation identity.");
-            source.Contains("StyleContentIdentity", StringComparison.Ordinal).ShouldBeFalse(
-                $"{relativePath} should not expose style implementation identity.");
-            source.Contains("StyleNodeId", StringComparison.Ordinal).ShouldBeFalse(
-                $"{relativePath} should not expose style implementation identity.");
-            source.Contains("StyleContentId", StringComparison.Ordinal).ShouldBeFalse(
-                $"{relativePath} should not expose style implementation identity.");
-        }
+        Directory.Exists(diagnosticsDirectory).ShouldBeFalse(
+            "Html2x.Abstractions should not expose diagnostics snapshots after the diagnostics contract split.");
 
         var boxGeometrySnapshot = ReadSource(
             "src",
-            "Html2x.Abstractions",
+            "Html2x.LayoutEngine",
             "Diagnostics",
-            "BoxGeometrySnapshot.cs");
+            "DiagnosticSnapshots.cs");
 
+        boxGeometrySnapshot.ShouldNotContain("Html2x.LayoutEngine.Style");
+        boxGeometrySnapshot.ShouldNotContain("Html2x.LayoutEngine.Geometry");
+        boxGeometrySnapshot.Contains("GeometrySourceIdentity", StringComparison.Ordinal).ShouldBeFalse(
+            "Diagnostic snapshots should expose primitive source identity fields only.");
+        boxGeometrySnapshot.Contains("StyleSourceIdentity", StringComparison.Ordinal).ShouldBeFalse(
+            "Diagnostic snapshots should expose primitive source identity fields only.");
+        boxGeometrySnapshot.Contains("StyleContentIdentity", StringComparison.Ordinal).ShouldBeFalse(
+            "Diagnostic snapshots should expose primitive source identity fields only.");
+        boxGeometrySnapshot.Contains("StyleNodeId", StringComparison.Ordinal).ShouldBeFalse(
+            "Diagnostic snapshots should expose primitive source identity fields only.");
+        boxGeometrySnapshot.Contains("StyleContentId", StringComparison.Ordinal).ShouldBeFalse(
+            "Diagnostic snapshots should expose primitive source identity fields only.");
         boxGeometrySnapshot.ShouldContain("int? SourceNodeId");
         boxGeometrySnapshot.ShouldContain("int? SourceContentId");
         boxGeometrySnapshot.ShouldContain("string? SourcePath");
@@ -1028,7 +1024,7 @@ public sealed class LayoutGeometryArchitectureTests
         stageOwnership.ShouldContain(ParserPackageName());
         stageOwnership.ShouldContain("Style owns StyleNodeId, StyleContentId, StyleSourceIdentity, and StyleContentIdentity assignment");
         stageOwnership.ShouldContain("Geometry owns BoxNode.SourceIdentity propagation and generated source identity");
-        stageOwnership.ShouldContain("Phase 5 diagnostic contract");
+        stageOwnership.ShouldContain("generic diagnostic fields");
         testing.ShouldContain("Html2x.LayoutEngine.Style.Test");
         testing.ShouldContain("Geometry tests must not reference " + ParserPackageName());
         testing.ShouldContain("unspecified identity");

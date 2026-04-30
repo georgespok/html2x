@@ -7,8 +7,9 @@ Html2x converts static HTML and CSS into PDF through explicit pipeline stages. T
 | Project | Responsibility | Must Not Do |
 | --- | --- | --- |
 | `Html2x` | Public converter facade, option wiring, shared service construction. | Contain layout or rendering algorithms. |
-| `Html2x.Abstractions` | Contracts for options, layout documents, fragments, measurements, fonts, and diagnostics payloads. | Reference AngleSharp, SkiaSharp, file IO, or concrete renderers. |
-| `Html2x.Diagnostics` | Diagnostics JSON serialization. | Own layout or renderer decisions. |
+| `Html2x.Abstractions` | Contracts for options, layout documents, fragments, measurements, and fonts. | Reference AngleSharp, SkiaSharp, file IO, concrete renderers, or diagnostics types. |
+| `Html2x.Diagnostics.Contracts` | Generic diagnostics emission contracts and constrained diagnostic field values. | Reference layout, renderer, parser, or diagnostics runtime projects. |
+| `Html2x.Diagnostics` | Diagnostics collection, report model, and JSON serialization. | Own layout or renderer decisions. |
 | `Html2x.LayoutEngine.Style` | HTML parsing, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics, and parser-free `StyleTree` output. | Own layout geometry, fragments, pagination, or renderer state. |
 | `Html2x.LayoutEngine.Geometry` | Geometry construction from `StyleTree` into published layout facts. | Parse HTML or CSS, reference parser objects, or expose mutable boxes as the public handoff. |
 | `Html2x.LayoutEngine` | Pipeline composition, fragment projection, pagination, and `HtmlLayout` assembly. | Reference SkiaSharp, own parser implementation details, or mutate renderer state. |

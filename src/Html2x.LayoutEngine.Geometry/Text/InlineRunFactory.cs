@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
@@ -12,10 +12,10 @@ internal sealed class InlineRunFactory
     private readonly IFontMetricsProvider _metrics;
     private readonly IBlockFormattingContext _blockFormattingContext;
     private readonly IImageLayoutResolver? _imageResolver;
-    private readonly DiagnosticsSession? _diagnosticsSession;
+    private readonly IDiagnosticsSink? _diagnosticsSink;
 
     public InlineRunFactory(IFontMetricsProvider metrics)
-        : this(metrics, new BlockFormattingContext(), imageResolver: null, diagnosticsSession: null)
+        : this(metrics, new BlockFormattingContext(), imageResolver: null, diagnosticsSink: null)
     {
     }
 
@@ -23,12 +23,12 @@ internal sealed class InlineRunFactory
         IFontMetricsProvider metrics,
         IBlockFormattingContext blockFormattingContext,
         IImageLayoutResolver? imageResolver = null,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
         _imageResolver = imageResolver;
-        _diagnosticsSession = diagnosticsSession;
+        _diagnosticsSink = diagnosticsSink;
     }
 
     public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
@@ -72,7 +72,7 @@ internal sealed class InlineRunFactory
             lineHeightStrategy,
             _blockFormattingContext,
             _imageResolver,
-            _diagnosticsSession);
+            _diagnosticsSink);
         return builder.TryBuildInlineBlockLayout(inline, availableWidth, out layout);
     }
 
@@ -195,3 +195,4 @@ internal sealed class InlineRunFactory
     }
 
 }
+

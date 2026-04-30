@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
@@ -35,21 +35,21 @@ public class ImageRenderingTests
         // assert
         bytes.ShouldNotBeNull();
 
-        var images = GetImageRenderPayloads(diagnostics);
+        var images = GetImageRenderRecords(diagnostics);
 
         images.Count.ShouldBe(3);
-        images[0].Status.ShouldBe(ImageStatus.Ok);
-        images[1].Status.ShouldBe(ImageStatus.Missing);
-        images[2].Status.ShouldBe(ImageStatus.Oversize);
+        GetStatus(images[0]).ShouldBe("Ok");
+        GetStatus(images[1]).ShouldBe("Missing");
+        GetStatus(images[2]).ShouldBe("Oversize");
 
-        images[0].RenderedSize.Width.ShouldBe(120, 1);
-        images[0].RenderedSize.Height.ShouldBe(120, 1);
+        GetNumber(images[0], "renderedWidth").ShouldBe(120d, 1d);
+        GetNumber(images[0], "renderedHeight").ShouldBe(120d, 1d);
 
-        images[1].RenderedSize.Width.ShouldBe(80, 1);
-        images[1].RenderedSize.Height.ShouldBe(80, 1);
+        GetNumber(images[1], "renderedWidth").ShouldBe(80d, 1d);
+        GetNumber(images[1], "renderedHeight").ShouldBe(80d, 1d);
 
-        images[2].RenderedSize.Width.ShouldBe(140, 1);
-        images[2].RenderedSize.Height.ShouldBe(70, 1);
+        GetNumber(images[2], "renderedWidth").ShouldBe(140d, 1d);
+        GetNumber(images[2], "renderedHeight").ShouldBe(70d, 1d);
     }
 
     [Fact]
@@ -68,22 +68,17 @@ public class ImageRenderingTests
 
         bytes.ShouldNotBeNull();
 
-        var evt = diagnostics.Events.ShouldHaveSingleItem();
+        var evt = diagnostics.ShouldHaveSingleItem();
         evt.Name.ShouldBe("image/render");
         evt.Severity.ShouldBe(DiagnosticSeverity.Warning);
         evt.Context.ShouldNotBeNull();
         evt.Context!.ElementIdentity.ShouldBe("img");
         evt.Context.StructuralPath.ShouldBe("image:missing.png");
-        evt.RawUserInput.ShouldBe("missing.png");
-
-        var payload = evt.Payload.ShouldBeOfType<ImageRenderPayload>();
-        payload.Src.ShouldBe("missing.png");
-        payload.Status.ShouldBe(ImageStatus.Missing);
-        payload.Severity.ShouldBe(DiagnosticSeverity.Warning);
-        payload.Context.ShouldNotBeNull();
-        payload.Context!.RawUserInput.ShouldBe("missing.png");
-        payload.RenderedSize.Width.ShouldBe(120, 1);
-        payload.RenderedSize.Height.ShouldBe(80, 1);
+        evt.Context.RawUserInput.ShouldBe("missing.png");
+        evt.Fields["src"].ShouldBe(new DiagnosticStringValue("missing.png"));
+        evt.Fields["status"].ShouldBe(new DiagnosticStringValue("Missing"));
+        GetNumber(evt, "renderedWidth").ShouldBe(120d, 1d);
+        GetNumber(evt, "renderedHeight").ShouldBe(80d, 1d);
     }
 
     [Theory]
@@ -109,15 +104,16 @@ public class ImageRenderingTests
 
         bytes.ShouldNotBeNull();
 
-        var payload = GetSingleImageRenderPayload(diagnostics);
+        var payload = GetSingleImageRenderRecord(diagnostics);
 
         payload.ShouldNotBeNull();
-        payload!.Status.ShouldBe(status);
-        payload!.Borders.ShouldNotBeNull();
-        payload.Borders!.Top.ShouldNotBeNull();
-        payload.Borders.Top!.Width.ShouldBe(borderWidth);
-        payload.Borders.Top!.Color.ShouldBe(borderColor);
-        payload.Borders.Top!.LineStyle.ShouldBe(lineStyle);
+        GetStatus(payload!).ShouldBe(status.ToString());
+        var bordersObject = GetBorders(payload);
+        var top = GetBorderSide(bordersObject, "top");
+        top.ShouldNotBeNull();
+        GetNumber(top!, "width").ShouldBe((double)borderWidth, 0.01d);
+        top["color"].ShouldBe(new DiagnosticStringValue(borderColor.ToHex()));
+        top["lineStyle"].ShouldBe(new DiagnosticStringValue(lineStyle.ToString()));
     }
 
     [Fact]
@@ -138,13 +134,13 @@ public class ImageRenderingTests
 
         bytes.ShouldNotBeNull();
 
-        var payload = GetSingleImageRenderPayload(diagnostics);
+        var payload = GetSingleImageRenderRecord(diagnostics);
 
         payload.ShouldNotBeNull();
-        payload!.Borders.ShouldNotBeNull();
-        payload.Borders!.Top.ShouldNotBeNull();
-        payload.Borders.Top!.Width.ShouldBe(0f);
-        payload.Borders.Top!.LineStyle.ShouldBe(BorderLineStyle.None);
+        var top = GetBorderSide(GetBorders(payload!), "top");
+        top.ShouldNotBeNull();
+        GetNumber(top!, "width").ShouldBe(0d);
+        top["lineStyle"].ShouldBe(new DiagnosticStringValue(BorderLineStyle.None.ToString()));
     }
 
     private static ImageFragment CreateImageFragment(
@@ -200,39 +196,63 @@ public class ImageRenderingTests
         ];
     }
 
-    private static List<ImageRenderPayload> GetImageRenderPayloads(DiagnosticsSession diagnostics)
+    private static List<DiagnosticRecord> GetImageRenderRecords(IReadOnlyList<DiagnosticRecord> diagnostics)
     {
-        return diagnostics.Events
-            .Where(e => e.Name == "image/render")
-            .Select(e => e.Payload)
-            .OfType<ImageRenderPayload>()
+        return diagnostics
+            .Where(static e => e.Name == "image/render")
             .ToList();
     }
 
-    private static ImageRenderPayload? GetSingleImageRenderPayload(DiagnosticsSession diagnostics)
-        => GetImageRenderPayloads(diagnostics).SingleOrDefault();
+    private static DiagnosticRecord? GetSingleImageRenderRecord(IReadOnlyList<DiagnosticRecord> diagnostics)
+        => GetImageRenderRecords(diagnostics).SingleOrDefault();
 
-    private static async Task<(byte[]? Bytes, DiagnosticsSession Diagnostics)> RenderLayoutAsync(HtmlLayout layout)
+    private static string GetStatus(DiagnosticRecord record) =>
+        record.Fields["status"].ShouldBeOfType<DiagnosticStringValue>().Value;
+
+    private static double GetNumber(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static double GetNumber(DiagnosticObject diagnosticObject, string fieldName) =>
+        diagnosticObject[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static DiagnosticObject GetBorders(DiagnosticRecord record) =>
+        record.Fields["borders"].ShouldBeOfType<DiagnosticObject>();
+
+    private static DiagnosticObject? GetBorderSide(DiagnosticObject borders, string side) =>
+        borders[side]?.ShouldBeOfType<DiagnosticObject>();
+
+    private static async Task<(byte[]? Bytes, IReadOnlyList<DiagnosticRecord> Diagnostics)> RenderLayoutAsync(HtmlLayout layout)
     {
         var pdfOptions = new PdfOptions
         {
             HtmlDirectory = Directory.GetCurrentDirectory()
         };
 
-        var diagnostics = new DiagnosticsSession
-        {
-            StartTime = DateTimeOffset.UtcNow,
-            Options = new HtmlConverterOptions
-            {
-                Pdf = pdfOptions,
-                Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
-            }
-        };
+        var diagnostics = new RecordingDiagnosticsSink();
 
         var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
         var renderer = new PdfRenderer(fileDirectory.Object);
 
-        var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnostics);
-        return (bytes, diagnostics);
+        var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnosticsSink: diagnostics);
+        return (bytes, diagnostics.Records);
+    }
+
+    public enum ImageStatus
+    {
+        Ok,
+        Missing,
+        Oversize
+    }
+
+    private sealed class RecordingDiagnosticsSink : IDiagnosticsSink
+    {
+        private readonly List<DiagnosticRecord> _records = [];
+
+        public IReadOnlyList<DiagnosticRecord> Records => _records;
+
+        public void Emit(DiagnosticRecord record)
+        {
+            _records.Add(record);
+        }
     }
 }

@@ -19,14 +19,20 @@ Html2x.LayoutEngine
 
 Html2x.LayoutEngine.Geometry
   uses Html2x.LayoutEngine.Contracts
+  uses Html2x.Diagnostics.Contracts
 
 Html2x.LayoutEngine.Style
   uses Html2x.LayoutEngine.Contracts
+  uses Html2x.Diagnostics.Contracts
   uses AngleSharp internally
 
 Html2x.LayoutEngine.Fragments
   uses Html2x.Abstractions
   uses Html2x.LayoutEngine.Contracts
+
+Html2x.Renderers.Pdf
+  uses Html2x.Abstractions
+  uses Html2x.Diagnostics.Contracts
 ```
 
 AngleSharp and AngleSharp.Css are implementation details of
@@ -38,13 +44,13 @@ Fragment projection lives in `Html2x.LayoutEngine.Fragments`. Composition calls
 that module after geometry publishes layout facts. Renderer-facing fragment
 models still live in `Html2x.Abstractions.Layout.Fragments`.
 
-## Stage 1: Style
+## Style
 
 `Html2x.LayoutEngine.Style` owns raw HTML parsing, user agent stylesheet
 application, CSS parsing, supported element traversal, computed style
 construction, and style diagnostics.
 
-Input: raw HTML, `LayoutOptions`, and an optional `DiagnosticsSession`.
+Input: raw HTML, `LayoutOptions`, and an optional `IDiagnosticsSink`.
 
 Output: contract-owned `StyleTree`.
 
@@ -69,7 +75,7 @@ Style owns parser traversal and source identity assignment. Source paths are
 diagnostic labels created from style ancestry. Geometry must consume them, not
 rebuild them from parser state or CSS selectors.
 
-## Stage 2: Layout Geometry
+## Layout Geometry
 
 `Html2x.LayoutEngine.Geometry` consumes contract `StyleTree` input and resolves
 layout facts. The module may read computed style values, `StyledElementFacts`,
@@ -108,7 +114,7 @@ reference parser packages, geometry implementation projects, fragment
 implementation code, renderer implementation code, diagnostics serializers, or
 mutable box types.
 
-## Stage 3: Fragment Projection
+## Fragment Projection
 
 `Html2x.LayoutEngine.Fragments` owns the projection from published layout facts
 into renderer-facing fragments. `FragmentBuilder` consumes `PublishedLayoutTree`
@@ -126,7 +132,7 @@ Fragment projection does not consume mutable boxes, CSS parser state, DOM
 objects, pagination pages, or renderer state. It must not remeasure text or
 reconstruct geometry already owned by layout.
 
-## Stage 4: Pagination
+## Pagination
 
 `BlockPaginator` places block fragments onto pages. It uses cloned translated
 fragments for page-local coordinates and must preserve fragment size and
@@ -136,7 +142,7 @@ Input: unpaginated fragment tree.
 
 Output: page models and final `HtmlLayout.Pages`.
 
-## Stage 5: PDF Rendering
+## PDF Rendering
 
 `PdfRenderer` consumes `HtmlLayout` and `PdfOptions`, builds paint commands, and
 draws to a SkiaSharp PDF document.

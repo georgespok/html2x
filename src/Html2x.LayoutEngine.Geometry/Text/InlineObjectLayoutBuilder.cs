@@ -1,7 +1,7 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
@@ -18,7 +18,7 @@ internal sealed class InlineObjectLayoutBuilder(
     ILineHeightStrategy lineHeightStrategy,
     IBlockFormattingContext blockFormattingContext,
     IImageLayoutResolver? imageResolver = null,
-    DiagnosticsSession? diagnosticsSession = null)
+    IDiagnosticsSink? diagnosticsSink = null)
 {
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -27,12 +27,12 @@ internal sealed class InlineObjectLayoutBuilder(
         metrics,
         blockFormattingContext,
         imageResolver ?? new ImageLayoutResolver(),
-        diagnosticsSession);
+        diagnosticsSink);
     private readonly TextLayoutEngine _layoutEngine = new(measurer);
     private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
     private readonly IBlockGeometryMeasurer _geometryMeasurer = new BlockMeasurementService(blockFormattingContext);
     private readonly IImageLayoutResolver _imageResolver = imageResolver ?? new ImageLayoutResolver();
-    private readonly DiagnosticsSession? _diagnosticsSession = diagnosticsSession;
+    private readonly IDiagnosticsSink? _diagnosticsSink = diagnosticsSink;
 
     public bool TryBuildInlineBlockLayout(InlineBox inline, float availableWidth, out InlineObjectLayout layout)
     {
@@ -114,8 +114,8 @@ internal sealed class InlineObjectLayoutBuilder(
                 contentBox,
                 availableWidth,
                 consumerName: nameof(InlineLayoutEngine),
-                diagnosticsSession: _diagnosticsSession,
-                emitDiagnostics: _diagnosticsSession is not null);
+                diagnosticsSink: _diagnosticsSink,
+                emitDiagnostics: _diagnosticsSink is not null);
             return _blockFormattingContext.Format(request);
         }
 
@@ -123,8 +123,8 @@ internal sealed class InlineObjectLayoutBuilder(
             FormattingContextKind.InlineBlock,
             contentBox,
             consumerName: nameof(InlineLayoutEngine),
-            diagnosticsSession: _diagnosticsSession,
-            emitDiagnostics: _diagnosticsSession is not null);
+            diagnosticsSink: _diagnosticsSink,
+            emitDiagnostics: _diagnosticsSink is not null);
         return _blockFormattingContext.Format(unboundedRequest);
     }
 
@@ -315,3 +315,4 @@ internal sealed class InlineObjectLayoutBuilder(
         return ascent;
     }
 }
+

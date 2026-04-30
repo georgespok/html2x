@@ -1,38 +1,52 @@
 # Extending Diagnostics
 
-Add diagnostics when a behavior needs to be observable, testable, or explainable without stepping through a debugger.
+Add diagnostics when a behavior needs to be observable, testable, or
+explainable without stepping through a debugger.
 
-## Add A Payload
+## Define The Record
 
-Payload contracts that cross projects belong in `Html2x.Abstractions` and should implement `IDiagnosticsPayload`.
+Diagnostics emitted across project boundaries use
+`Html2x.Diagnostics.Contracts.DiagnosticRecord`.
 
-Payloads should include:
+Records should include:
 
-- `Kind`.
-- Stable event-specific fields.
+- Stable `Stage` and `Name` values.
+- `DiagnosticSeverity`.
+- A short message when the record describes a warning or error.
 - Context needed to find the affected input or output.
+- Stable event-specific fields.
 - Raw user input only when diagnostics are enabled and reproduction requires it.
 
-## Emit The Event
+Use `DiagnosticFields` for event-specific data. Field values must be strings,
+numbers, booleans, enum names as strings, nulls, diagnostic arrays, or nested
+diagnostic objects.
 
-Emit events from the stage that owns the decision:
+## Emit The Record
+
+Emit records from the module that owns the decision:
 
 - Style diagnostics from style computation.
 - Geometry, pagination, table, image, and unsupported mode diagnostics from layout.
-- Stage lifecycle diagnostics from the converter facade.
+- Conversion lifecycle diagnostics from the converter facade.
 - Render summaries and renderer failures from the renderer.
 
-## Update Serialization
+Producer modules should use small local helper methods when a record needs to
+flatten local domain models. `Html2x.Diagnostics` must not reference those
+domain models.
 
-Add mapping support in `Html2x.Diagnostics.DiagnosticsSessionSerializer` for known payload fields. Unknown payloads should still preserve `kind`.
+## Serialization
+
+`Html2x.Diagnostics.DiagnosticsReportSerializer` serializes
+`DiagnosticsReport` generically. New diagnostic families should not require
+serializer-specific mapping code.
 
 ## Test
 
 Add tests for:
 
+- Record stage.
 - Event name.
 - Severity.
-- Payload kind.
-- Known serialized fields.
-- Forward-compatible unknown payload behavior when relevant.
+- Important field values.
+- Nested diagnostic objects or arrays when used.
 - Stable ordering when ordering is part of the contract.

@@ -1,4 +1,4 @@
-﻿using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
@@ -14,7 +14,7 @@ internal sealed class UnsupportedLayoutModePolicy
 
     public void Report(
         BoxNode root,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(root);
 
@@ -22,7 +22,7 @@ internal sealed class UnsupportedLayoutModePolicy
         {
             foreach (var unsupported in ResolveUnsupportedModes(node))
             {
-                EmitDiagnostic(diagnosticsSession, node, unsupported);
+                EmitDiagnostic(diagnosticsSink, node, unsupported);
             }
         }
     }
@@ -54,29 +54,25 @@ internal sealed class UnsupportedLayoutModePolicy
     }
 
     private static void EmitDiagnostic(
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         BoxNode node,
         UnsupportedLayoutMode unsupported)
     {
-        if (diagnosticsSession is null)
-        {
-            return;
-        }
+        var nodePath = BoxNodePathBuilder.Build(node);
+        var formattingContext = ResolveFormattingContext(node);
 
-        diagnosticsSession.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Warning,
-            Name = UnsupportedModeEvent,
-            Description = unsupported.Reason,
-            Severity = DiagnosticSeverity.Warning,
-            Payload = new UnsupportedStructurePayload
-            {
-                NodePath = BoxNodePathBuilder.Build(node),
-                StructureKind = unsupported.StructureKind,
-                Reason = unsupported.Reason,
-                FormattingContext = ResolveFormattingContext(node)
-            }
-        });
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/box-tree",
+            Name: UnsupportedModeEvent,
+            Severity: DiagnosticSeverity.Warning,
+            Message: unsupported.Reason,
+            Context: null,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("nodePath", nodePath),
+                DiagnosticFields.Field("structureKind", unsupported.StructureKind),
+                DiagnosticFields.Field("reason", unsupported.Reason),
+                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(formattingContext))),
+            Timestamp: DateTimeOffset.UtcNow));
     }
 
     private static FormattingContextKind ResolveFormattingContext(BoxNode node)

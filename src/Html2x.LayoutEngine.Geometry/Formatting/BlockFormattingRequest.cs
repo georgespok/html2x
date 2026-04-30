@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Formatting;
@@ -13,7 +13,7 @@ internal sealed record BlockFormattingRequest
         bool isWidthUnbounded = false,
         object? pageContext = null,
         string consumerName = "unknown",
-        DiagnosticsSession? diagnosticsSession = null,
+        IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
         Func<BlockBox, float, float>? blockHeightMeasurer = null,
         Func<TableBox, float, float>? tableHeightMeasurer = null)
@@ -24,7 +24,7 @@ internal sealed record BlockFormattingRequest
         IsWidthUnbounded = isWidthUnbounded;
         PageContext = pageContext;
         ConsumerName = string.IsNullOrWhiteSpace(consumerName) ? "unknown" : consumerName;
-        DiagnosticsSession = diagnosticsSession;
+        DiagnosticsSink = diagnosticsSink;
         EmitDiagnostics = emitDiagnostics;
         BlockHeightMeasurer = blockHeightMeasurer;
         TableHeightMeasurer = tableHeightMeasurer;
@@ -44,7 +44,7 @@ internal sealed record BlockFormattingRequest
 
     public string ConsumerName { get; }
 
-    public DiagnosticsSession? DiagnosticsSession { get; }
+    public IDiagnosticsSink? DiagnosticsSink { get; }
 
     public bool EmitDiagnostics { get; }
 
@@ -56,7 +56,7 @@ internal sealed record BlockFormattingRequest
         BlockBox rootBlock,
         float availableWidth,
         string consumerName = "unknown",
-        DiagnosticsSession? diagnosticsSession = null,
+        IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
         Func<BlockBox, float, float>? blockHeightMeasurer = null,
         Func<TableBox, float, float>? tableHeightMeasurer = null)
@@ -68,7 +68,7 @@ internal sealed record BlockFormattingRequest
             isWidthUnbounded: false,
             pageContext: null,
             consumerName,
-            diagnosticsSession,
+            diagnosticsSink,
             emitDiagnostics,
             blockHeightMeasurer,
             tableHeightMeasurer);
@@ -79,7 +79,7 @@ internal sealed record BlockFormattingRequest
         float availableWidth,
         object? pageContext = null,
         string consumerName = "unknown",
-        DiagnosticsSession? diagnosticsSession = null,
+        IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
         Func<BlockBox, float, float>? blockHeightMeasurer = null,
         Func<TableBox, float, float>? tableHeightMeasurer = null)
@@ -91,7 +91,7 @@ internal sealed record BlockFormattingRequest
             isWidthUnbounded: false,
             pageContext,
             consumerName,
-            diagnosticsSession,
+            diagnosticsSink,
             emitDiagnostics,
             blockHeightMeasurer,
             tableHeightMeasurer);
@@ -102,7 +102,7 @@ internal sealed record BlockFormattingRequest
         BlockBox rootBlock,
         object? pageContext = null,
         string consumerName = "unknown",
-        DiagnosticsSession? diagnosticsSession = null,
+        IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
         Func<BlockBox, float, float>? blockHeightMeasurer = null,
         Func<TableBox, float, float>? tableHeightMeasurer = null)
@@ -114,7 +114,7 @@ internal sealed record BlockFormattingRequest
             isWidthUnbounded: true,
             pageContext,
             consumerName,
-            diagnosticsSession,
+            diagnosticsSink,
             emitDiagnostics,
             blockHeightMeasurer,
             tableHeightMeasurer);

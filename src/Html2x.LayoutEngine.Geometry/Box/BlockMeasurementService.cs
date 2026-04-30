@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 
@@ -87,7 +87,7 @@ internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
         float availableWidth,
         Func<BlockBox, float, float> measureBlockHeight,
         Func<TableBox, float, float> measureTableHeight,
-        DiagnosticsSession? diagnosticsSession = null,
+        IDiagnosticsSink? diagnosticsSink = null,
         FormattingContextKind formattingContext = FormattingContextKind.Block)
     {
         ArgumentNullException.ThrowIfNull(children);
@@ -112,8 +112,8 @@ internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
             syntheticRoot,
             availableWidth,
             consumerName: nameof(BlockMeasurementService),
-            diagnosticsSession: diagnosticsSession,
-            emitDiagnostics: diagnosticsSession is not null,
+            diagnosticsSink: diagnosticsSink,
+            emitDiagnostics: diagnosticsSink is not null,
             blockHeightMeasurer: measureBlockHeight,
             tableHeightMeasurer: measureTableHeight);
 
@@ -130,3 +130,4 @@ internal readonly record struct BlockMeasurementBasis(
     Spacing Border,
     float BorderBoxWidth,
     float ContentFlowWidth);
+

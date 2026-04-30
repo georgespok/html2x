@@ -135,16 +135,16 @@ not convert a test to a theory when the data table hides the scenario.
 ## Diagnostics-First Verification
 
 When PDF internals are hard to assert, expose the fact through diagnostics and
-assert the serialized payload. This is more stable than parsing raw content
+assert the serialized fields. This is more stable than parsing raw content
 streams.
 
 Good diagnostic assertions cover:
 
 - Event name.
 - Severity.
-- Stage state when relevant.
-- Payload kind.
+- Lifecycle state when relevant.
 - Source context.
+- Important field values.
 - Stable ordering where ordering is part of the contract.
 
 ## Snapshot Guidance

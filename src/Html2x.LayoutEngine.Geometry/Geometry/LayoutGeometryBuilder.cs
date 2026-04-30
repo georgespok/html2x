@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
@@ -56,29 +56,31 @@ internal sealed class LayoutGeometryBuilder
 
     public PublishedLayoutTree Build(
         StyleTree styles,
-        DiagnosticsSession? diagnosticsSession = null,
-        LayoutGeometryRequest? request = null)
+        LayoutGeometryRequest? request = null,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(styles);
 
-        var initialBoxRoot = BuildInitialBoxes(styles, diagnosticsSession);
-        return BuildFromInitialBoxes(initialBoxRoot, styles, diagnosticsSession, request);
+        var initialBoxRoot = BuildInitialBoxes(styles, diagnosticsSink);
+        return BuildFromInitialBoxes(initialBoxRoot, styles, request, diagnosticsSink);
     }
 
-    private BoxNode BuildInitialBoxes(StyleTree styles, DiagnosticsSession? diagnosticsSession)
+    private BoxNode BuildInitialBoxes(
+        StyleTree styles,
+        IDiagnosticsSink? diagnosticsSink)
     {
         var initialBoxRoot = _initialBoxTreeBuilder.Build(styles);
-        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSession);
+        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSink);
         return initialBoxRoot;
     }
 
     private PublishedLayoutTree BuildFromInitialBoxes(
         BoxNode initialBoxRoot,
         StyleTree styles,
-        DiagnosticsSession? diagnosticsSession,
-        LayoutGeometryRequest? request = null)
+        LayoutGeometryRequest? request = null,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
-        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(initialBoxRoot, diagnosticsSession);
+        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(initialBoxRoot, diagnosticsSink);
 
         var geometryRequest = request ?? LayoutGeometryRequest.Default;
         var imageResolver = new ImageLayoutResolver(geometryRequest);
@@ -88,13 +90,13 @@ internal sealed class LayoutGeometryBuilder
             new DefaultLineHeightStrategy(),
             _blockFormattingContext,
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
         var blockEngine = new BlockLayoutEngine(
             inlineEngine,
             new TableLayoutEngine(inlineEngine, imageResolver),
             _blockFormattingContext,
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
         var page = new PageBox
         {
             Margin = styles.Page.Margin,
@@ -102,7 +104,7 @@ internal sealed class LayoutGeometryBuilder
         };
 
         var layout = blockEngine.LayoutPublished(initialBoxRoot, page);
-        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(layout, diagnosticsSession);
+        GeometryLayoutStructureValidator.ValidateInlineBlockStructures(layout, diagnosticsSink);
         return layout;
     }
 }

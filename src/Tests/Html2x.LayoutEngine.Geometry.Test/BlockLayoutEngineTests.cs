@@ -1,8 +1,8 @@
 ﻿using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Text;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
@@ -787,7 +787,7 @@ public class BlockLayoutEngineTests
     [Fact]
     public void Layout_UnsupportedTable_EmitsDiagnosticsAndSkipsRows()
     {
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
         var row = new TableRowBox(BoxRole.TableRow)
         {
             Style = new ComputedStyle()
@@ -812,26 +812,24 @@ public class BlockLayoutEngineTests
         };
         root.Children.Add(row);
 
-        var result = CreateBlockLayoutEngine(diagnosticsSession).Layout(root, DefaultPage());
+        var result = CreateBlockLayoutEngine(diagnosticsSink).Layout(root, DefaultPage());
 
         var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
         table.Role.ShouldBe(BoxRole.Table);
         table.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(0f);
         table.Children.ShouldBeEmpty();
-        diagnosticsSession.Events.Any(e =>
+        diagnosticsSink.Records.Any(e =>
             e.Name == "layout/table/unsupported-structure" &&
-            e.Payload is UnsupportedStructurePayload payload &&
-            payload.StructureKind == HtmlCssConstants.HtmlAttributes.Colspan &&
-            payload.Reason == "Table cell colspan is not supported.").ShouldBeTrue();
-        diagnosticsSession.Events.Any(e =>
+            e.Fields["structureKind"] is DiagnosticStringValue { Value: HtmlCssConstants.HtmlAttributes.Colspan } &&
+            e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." }).ShouldBeTrue();
+        diagnosticsSink.Records.Any(e =>
             e.Name == "layout/table" &&
-            e.Payload is TableLayoutPayload payload &&
-            payload.Outcome == "Unsupported" &&
-            payload.RowCount == 1 &&
-            payload.Reason == "Table cell colspan is not supported.").ShouldBeTrue();
+            e.Fields["outcome"] is DiagnosticStringValue { Value: "Unsupported" } &&
+            e.Fields["rowCount"] is DiagnosticNumberValue { Value: 1 } &&
+            e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." }).ShouldBeTrue();
     }
     
-    private BlockLayoutEngine CreateBlockLayoutEngine(DiagnosticsSession? diagnosticsSession = null)
+    private BlockLayoutEngine CreateBlockLayoutEngine(IDiagnosticsSink? diagnosticsSink = null)
     {
         var imageResolver = new ImageLayoutResolver();
         var inlineEngine = new InlineLayoutEngine(
@@ -840,8 +838,8 @@ public class BlockLayoutEngineTests
             new DefaultLineHeightStrategy(),
             new Html2x.LayoutEngine.Formatting.BlockFormattingContext(),
             imageResolver,
-            diagnosticsSession);
-        return new BlockLayoutEngine(inlineEngine, new TableLayoutEngine(inlineEngine, imageResolver), diagnosticsSession);
+            diagnosticsSink);
+        return new BlockLayoutEngine(inlineEngine, new TableLayoutEngine(inlineEngine, imageResolver), diagnosticsSink);
     }
 
     private static void NormalizeForBlockLayout(BoxNode root)

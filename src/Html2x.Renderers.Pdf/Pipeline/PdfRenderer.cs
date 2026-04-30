@@ -1,8 +1,8 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.File;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
@@ -25,21 +25,21 @@ public class PdfRenderer
     public Task<byte[]> RenderAsync(
         HtmlLayout htmlLayout,
         PdfOptions? options = null,
-        DiagnosticsSession? diagnosticsSession = null,
-        IFontSource? fontSource = null)
+        IFontSource? fontSource = null,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
         options ??= new PdfOptions();
 
-        var bytes = RenderWithSkia(htmlLayout, options, diagnosticsSession, fontSource);
+        var bytes = RenderWithSkia(htmlLayout, options, fontSource, diagnosticsSink);
         return Task.FromResult(bytes);
     }
 
     private byte[] RenderWithSkia(
         HtmlLayout layout,
         PdfOptions options,
-        DiagnosticsSession? diagnosticsSession,
-        IFontSource? fontSource)
+        IFontSource? fontSource,
+        IDiagnosticsSink? diagnosticsSink)
     {
         using var stream = new MemoryStream();
         using var document = SKDocument.CreatePdf(stream);
@@ -50,7 +50,7 @@ public class PdfRenderer
 
         using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory, fontSource);
         var paintOrder = new PaintOrderResolver();
-        var drawer = new SkiaPaintCommandDrawer(options, diagnosticsSession, fontCache);
+        var drawer = new SkiaPaintCommandDrawer(options, fontCache, diagnosticsSink);
 
         foreach (var page in layout.Pages)
         {

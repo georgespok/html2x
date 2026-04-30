@@ -1,33 +1,43 @@
 # Diagnostics Architecture
 
-Diagnostics are developer-facing troubleshooting artifacts. They explain stage lifecycle, unsupported input, layout decisions, rendering decisions, and serializer output without requiring a debugger.
+Diagnostics are developer-facing troubleshooting artifacts. They explain
+conversion lifecycle, unsupported input, layout decisions, rendering decisions,
+and serializer output without requiring a debugger.
 
-## Session Flow
+## Report Flow
 
-`HtmlConverter` creates a `DiagnosticsSession` when `HtmlConverterOptions.Diagnostics.EnableDiagnostics` is true.
+`HtmlConverter` creates a `DiagnosticsCollector` when `HtmlConverterOptions.Diagnostics.EnableDiagnostics` is true. The collector is passed as an `IDiagnosticsSink` through style, geometry, layout, pagination, font, and renderer boundaries. The completed `DiagnosticsReport` is exposed on `Html2PdfResult.DiagnosticsReport`.
 
-Typical event flow:
+Typical record flow:
 
 ```text
-LayoutBuild started
-  -> stage/dom, stage/style, stage/box-tree, stage/fragment-tree, stage/pagination lifecycle events
-  -> style, geometry, table, pagination, image, or font traces
-LayoutBuild succeeded with layout snapshot
-PdfRender started
-PdfRender succeeded with render summary
+LayoutBuild stage/started
+  -> dom, style, box-tree, fragment-tree, and pagination lifecycle records
+  -> style, geometry, table, pagination, image, or font records
+LayoutBuild stage/succeeded with diagnostic snapshot fields
+PdfRender stage/started
+PdfRender stage/succeeded with render fields
 ```
 
-If layout fails, `PdfRender` is skipped and the diagnostics session is attached to the thrown exception when available.
+If layout fails, `PdfRender` is skipped and the diagnostics report is attached to the thrown exception as `DiagnosticsReport` when available.
 
 ## Ownership
 
-Diagnostic contracts that cross project boundaries belong in `Html2x.Abstractions`. JSON export belongs in `Html2x.Diagnostics`.
+Generic diagnostics contracts that cross project boundaries belong in
+`Html2x.Diagnostics.Contracts`. JSON export belongs in `Html2x.Diagnostics`.
+`Html2x.Abstractions` owns no diagnostics contracts, collections, report
+models, snapshot DTOs, or serializers.
+
+`Html2x.Diagnostics` owns `DiagnosticsCollector`, `DiagnosticsReport`, and
+`DiagnosticsReportSerializer`. The report serializer is generic over
+`DiagnosticRecord` and `DiagnosticFields`; it must not special-case layout,
+geometry, table, renderer, image, or font models.
 
 Pipeline stages own the events that describe their decisions:
 
 - Style owns unsupported and ignored CSS declaration diagnostics.
 - Layout owns geometry, formatting, table, pagination, image resolution, and unsupported layout mode diagnostics.
-- The public facade owns stage lifecycle and converter-level font path failures.
+- The public facade owns conversion lifecycle and converter-level font path failures.
 - The PDF renderer owns renderer summaries and renderer-local failures.
 
 ## Severity

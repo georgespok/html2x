@@ -1,11 +1,9 @@
-﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Diagnostics;
@@ -15,62 +13,7 @@ namespace Html2x.LayoutEngine.Diagnostics;
 /// </summary>
 public static class LayoutSnapshotMapper
 {
-    private static readonly HashSet<BoxRole> UnsupportedInlineBlockRoles =
-    [
-        BoxRole.Table,
-        BoxRole.TableRow,
-        BoxRole.TableCell
-    ];
-
-    internal static void ValidateInlineBlockStructures(BoxTree boxTree, DiagnosticsSession? diagnosticsSession)
-    {
-        ArgumentNullException.ThrowIfNull(boxTree);
-
-        foreach (var root in boxTree.Blocks)
-        {
-            ValidateInlineBlockStructure(root, diagnosticsSession);
-        }
-    }
-
-    internal static void ValidateInlineBlockStructures(BoxNode root, DiagnosticsSession? diagnosticsSession)
-    {
-        ArgumentNullException.ThrowIfNull(root);
-
-        ValidateInlineBlockStructure(root, diagnosticsSession);
-    }
-
-    internal static void ValidateInlineBlockStructures(
-        PublishedLayoutTree layout,
-        DiagnosticsSession? diagnosticsSession)
-    {
-        ArgumentNullException.ThrowIfNull(layout);
-
-        foreach (var root in layout.Blocks)
-        {
-            if (TryFindUnsupportedInlineBlockStructure(root, out var unsupportedBlock))
-            {
-                var payload = new UnsupportedStructurePayload
-                {
-                    NodePath = unsupportedBlock.Identity.NodePath,
-                    StructureKind = unsupportedBlock.Display.Role.ToString(),
-                    Reason = "Unsupported structure encountered inside inline-block formatting context.",
-                    FormattingContext = FormattingContextKind.InlineBlock
-                };
-
-                diagnosticsSession?.Events.Add(new DiagnosticsEvent
-                {
-                    Type = DiagnosticsEventType.Error,
-                    Name = "layout/inline-block/unsupported-structure",
-                    Payload = payload
-                });
-
-                throw new InvalidOperationException(
-                    $"Unsupported inline-block internal structure: {payload.StructureKind} at {payload.NodePath}.");
-            }
-        }
-    }
-
-    public static LayoutSnapshot From(HtmlLayout layout)
+    internal static LayoutSnapshot From(HtmlLayout layout)
     {
         if (layout is null)
         {
@@ -101,6 +44,126 @@ public static class LayoutSnapshotMapper
             Pages = pages
         };
     }
+
+    public static DiagnosticObject ToDiagnosticObject(HtmlLayout layout) =>
+        MapLayoutSnapshot(From(layout));
+
+    internal static DiagnosticObject MapLayoutSnapshot(LayoutSnapshot snapshot)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("pageCount", snapshot.PageCount),
+            DiagnosticObject.Field(
+                "pages",
+                new DiagnosticArray(snapshot.Pages.Select(MapPageSnapshot))));
+    }
+
+    private static DiagnosticObject MapPageSnapshot(LayoutPageSnapshot page)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("pageNumber", page.PageNumber),
+            DiagnosticObject.Field("pageSize", MapSize(page.PageSize)),
+            DiagnosticObject.Field("margin", MapSpacing(page.Margin)),
+            DiagnosticObject.Field("fragments", new DiagnosticArray(page.Fragments.Select(MapFragmentSnapshot))));
+    }
+
+    private static DiagnosticObject MapFragmentSnapshot(FragmentSnapshot fragment)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("sequenceId", fragment.SequenceId),
+            DiagnosticObject.Field("kind", fragment.Kind),
+            DiagnosticObject.Field("x", fragment.X),
+            DiagnosticObject.Field("y", fragment.Y),
+            DiagnosticObject.Field("size", MapSize(fragment.Size)),
+            DiagnosticObject.Field("color", MapColor(fragment.Color)),
+            DiagnosticObject.Field("backgroundColor", MapColor(fragment.BackgroundColor)),
+            DiagnosticObject.Field("margin", MapSpacing(fragment.Margin)),
+            DiagnosticObject.Field("padding", MapSpacing(fragment.Padding)),
+            DiagnosticObject.Field("widthPt", FromNullable(fragment.WidthPt)),
+            DiagnosticObject.Field("heightPt", FromNullable(fragment.HeightPt)),
+            DiagnosticObject.Field("display", FromNullable(fragment.Display)),
+            DiagnosticObject.Field("text", FromNullable(fragment.Text)),
+            DiagnosticObject.Field("contentX", FromNullable(fragment.ContentX)),
+            DiagnosticObject.Field("contentY", FromNullable(fragment.ContentY)),
+            DiagnosticObject.Field("contentSize", MapSize(fragment.ContentSize)),
+            DiagnosticObject.Field("occupiedX", FromNullable(fragment.OccupiedX)),
+            DiagnosticObject.Field("occupiedY", FromNullable(fragment.OccupiedY)),
+            DiagnosticObject.Field("occupiedSize", MapSize(fragment.OccupiedSize)),
+            DiagnosticObject.Field("borders", MapBorders(fragment.Borders)),
+            DiagnosticObject.Field("displayRole", FromNullable(fragment.DisplayRole)),
+            DiagnosticObject.Field("formattingContext", FromNullable(fragment.FormattingContext)),
+            DiagnosticObject.Field("markerOffset", FromNullable(fragment.MarkerOffset)),
+            DiagnosticObject.Field("derivedColumnCount", FromNullable(fragment.DerivedColumnCount)),
+            DiagnosticObject.Field("rowIndex", FromNullable(fragment.RowIndex)),
+            DiagnosticObject.Field("columnIndex", FromNullable(fragment.ColumnIndex)),
+            DiagnosticObject.Field("isHeader", FromNullable(fragment.IsHeader)),
+            DiagnosticObject.Field("metadataOwner", FromNullable(fragment.MetadataOwner)),
+            DiagnosticObject.Field("metadataConsumer", FromNullable(fragment.MetadataConsumer)),
+            DiagnosticObject.Field("children", new DiagnosticArray(fragment.Children.Select(MapFragmentSnapshot))));
+    }
+
+    internal static DiagnosticObject MapSize(SizePt size) =>
+        DiagnosticObject.Create(
+            DiagnosticObject.Field("width", size.Width),
+            DiagnosticObject.Field("height", size.Height));
+
+    internal static DiagnosticObject? MapSize(SizePt? size) =>
+        size.HasValue ? MapSize(size.Value) : null;
+
+    internal static DiagnosticObject? MapSpacing(Spacing? spacing)
+    {
+        if (!spacing.HasValue)
+        {
+            return null;
+        }
+
+        var value = spacing.Value;
+        return
+            DiagnosticObject.Create(
+                DiagnosticObject.Field("top", value.Top),
+                DiagnosticObject.Field("right", value.Right),
+                DiagnosticObject.Field("bottom", value.Bottom),
+                DiagnosticObject.Field("left", value.Left));
+    }
+
+    internal static DiagnosticObject? MapBorders(BorderEdges? borders)
+    {
+        return borders is null
+            ? null
+            : DiagnosticObject.Create(
+                DiagnosticObject.Field("top", MapBorderSide(borders.Top)),
+                DiagnosticObject.Field("right", MapBorderSide(borders.Right)),
+                DiagnosticObject.Field("bottom", MapBorderSide(borders.Bottom)),
+                DiagnosticObject.Field("left", MapBorderSide(borders.Left)));
+    }
+
+    private static DiagnosticObject? MapBorderSide(BorderSide? side)
+    {
+        return side is null
+            ? null
+            : DiagnosticObject.Create(
+                DiagnosticObject.Field("width", side.Width),
+                DiagnosticObject.Field("color", side.Color.ToHex()),
+                DiagnosticObject.Field("lineStyle", DiagnosticValue.FromEnum(side.LineStyle)));
+    }
+
+    private static DiagnosticValue? MapColor(ColorRgba? color) =>
+        color.HasValue ? DiagnosticValue.From(color.Value.ToHex()) : null;
+
+    private static DiagnosticValue? FromNullable(string? value) =>
+        value is null ? null : DiagnosticValue.From(value);
+
+    private static DiagnosticValue? FromNullable(float? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable(int? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable(bool? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable<TEnum>(TEnum? value)
+        where TEnum : struct, Enum =>
+        value.HasValue ? DiagnosticValue.FromEnum(value.Value) : null;
 
     private static FragmentSnapshot MapLineBox(LineBoxFragment line, int sequenceId)
     {
@@ -229,121 +292,6 @@ public static class LayoutSnapshotMapper
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)
         => line.Style?.Color ?? line.Runs.FirstOrDefault(static run => run.Color is not null)?.Color;
-
-    private static void ValidateInlineBlockStructure(BoxNode root, DiagnosticsSession? diagnosticsSession)
-    {
-        if (!TryFindUnsupportedInlineBlockStructure(root, out var unsupportedNode))
-        {
-            return;
-        }
-
-        var payload = new UnsupportedStructurePayload
-        {
-            NodePath = BoxNodePathBuilder.Build(unsupportedNode),
-            StructureKind = unsupportedNode.Role.ToString(),
-            Reason = "Unsupported structure encountered inside inline-block formatting context.",
-            FormattingContext = FormattingContextKind.InlineBlock
-        };
-
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Error,
-            Name = "layout/inline-block/unsupported-structure",
-            Payload = payload
-        });
-
-        throw new InvalidOperationException(
-            $"Unsupported inline-block internal structure: {payload.StructureKind} at {payload.NodePath}.");
-    }
-
-    private static bool TryFindUnsupportedInlineBlockStructure(BoxNode root, out BoxNode unsupportedNode)
-    {
-        var rootIsInlineBlockContext = root is BlockBox rootBlock && rootBlock.IsInlineBlockContext;
-        var stack = new Stack<(BoxNode Node, bool InInlineBlockContext)>();
-        stack.Push((root, rootIsInlineBlockContext));
-
-        while (stack.Count > 0)
-        {
-            var (current, inInlineBlockContext) = stack.Pop();
-            if (inInlineBlockContext && UnsupportedInlineBlockRoles.Contains(current.Role))
-            {
-                unsupportedNode = current;
-                return true;
-            }
-
-            var childInlineBlockContext = inInlineBlockContext ||
-                                          (current is BlockBox block && block.IsInlineBlockContext);
-
-            for (var i = current.Children.Count - 1; i >= 0; i--)
-            {
-                stack.Push((current.Children[i], childInlineBlockContext));
-            }
-        }
-
-        unsupportedNode = null!;
-        return false;
-    }
-
-    private static bool TryFindUnsupportedInlineBlockStructure(
-        PublishedBlock root,
-        out PublishedBlock unsupportedBlock)
-    {
-        var stack = new Stack<(PublishedBlock Block, bool InInlineBlockContext)>();
-        stack.Push((root, root.Display.FormattingContext == FormattingContextKind.InlineBlock));
-
-        while (stack.Count > 0)
-        {
-            var (current, inInlineBlockContext) = stack.Pop();
-            if (inInlineBlockContext && UnsupportedInlineBlockRoles.Contains(MapRole(current.Display.Role)))
-            {
-                unsupportedBlock = current;
-                return true;
-            }
-
-            var childInlineBlockContext = inInlineBlockContext ||
-                                          current.Display.FormattingContext == FormattingContextKind.InlineBlock;
-
-            foreach (var child in EnumeratePublishedChildBlocks(current).Reverse())
-            {
-                stack.Push((child, childInlineBlockContext));
-            }
-        }
-
-        unsupportedBlock = null!;
-        return false;
-    }
-
-    private static IEnumerable<PublishedBlock> EnumeratePublishedChildBlocks(PublishedBlock block)
-    {
-        foreach (var child in block.Children)
-        {
-            yield return child;
-        }
-
-        if (block.InlineLayout is null)
-        {
-            yield break;
-        }
-
-        foreach (var inlineObject in block.InlineLayout.Segments
-                     .SelectMany(static segment => segment.Lines)
-                     .SelectMany(static line => line.Items)
-                     .OfType<PublishedInlineObjectItem>())
-        {
-            yield return inlineObject.Content;
-        }
-    }
-
-    private static BoxRole MapRole(FragmentDisplayRole role)
-    {
-        return role switch
-        {
-            FragmentDisplayRole.Table => BoxRole.Table,
-            FragmentDisplayRole.TableRow => BoxRole.TableRow,
-            FragmentDisplayRole.TableCell => BoxRole.TableCell,
-            _ => BoxRole.Block
-        };
-    }
 
     private sealed class FragmentSnapshotMapper
     {

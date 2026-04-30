@@ -1,9 +1,6 @@
 using System.Text.Json;
-using Html2x.Abstractions.Diagnostics;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 
 namespace Html2x.TestConsole.Test;
@@ -13,13 +10,21 @@ public sealed class TestConsoleDiagnosticsSerializerTests
     [Fact]
     public void ToJson_RunContextAndSession_WritesWrappedReproductionEnvelope()
     {
-        var session = new DiagnosticsSession
-        {
-            StartTime = DateTimeOffset.Parse("2026-04-14T10:00:00Z"),
-            EndTime = DateTimeOffset.Parse("2026-04-14T10:00:01Z"),
-            Options = new HtmlConverterOptions()
-        };
-        session.Events.Add(DiagnosticsEventFactory.StageStarted("LayoutBuild"));
+        var startTime = DateTimeOffset.Parse("2026-04-14T10:00:00Z");
+        var endTime = DateTimeOffset.Parse("2026-04-14T10:00:01Z");
+        var report = new DiagnosticsReport(
+            startTime,
+            endTime,
+            [
+                new DiagnosticRecord(
+                    "LayoutBuild",
+                    "stage/started",
+                    DiagnosticSeverity.Info,
+                    null,
+                    null,
+                    DiagnosticFields.Empty,
+                    startTime)
+            ]);
         var options = new ConsoleOptions(
             Path.GetFullPath("input.html"),
             Path.Combine(Path.GetTempPath(), "output.pdf"),
@@ -37,13 +42,13 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             Interactive: true,
             SelectedSamplePath: Path.GetFullPath("sample.html"));
 
-        var json = TestConsoleDiagnosticsSerializer.ToJson(session, options);
+        var json = TestConsoleDiagnosticsSerializer.ToJson(report, options);
 
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         root.TryGetProperty("testConsole", out var testConsole).ShouldBeTrue();
         root.TryGetProperty("environment", out var environment).ShouldBeTrue();
-        root.TryGetProperty("diagnosticsSession", out var diagnosticsSession).ShouldBeTrue();
+        root.TryGetProperty("diagnosticsReport", out var diagnosticsReport).ShouldBeTrue();
         root.TryGetProperty("startTime", out _).ShouldBeFalse();
 
         testConsole.GetProperty("inputPath").GetString().ShouldBe(options.InputPath);
@@ -66,83 +71,56 @@ public sealed class TestConsoleDiagnosticsSerializerTests
         environment.GetProperty("frameworkDescription").GetString().ShouldNotBeNullOrWhiteSpace();
         environment.GetProperty("processArchitecture").GetString().ShouldNotBeNullOrWhiteSpace();
 
-        diagnosticsSession.GetProperty("startTime").GetDateTimeOffset().ShouldBe(session.StartTime);
-        diagnosticsSession.GetProperty("endTime").GetDateTimeOffset().ShouldBe(session.EndTime);
-        diagnosticsSession.GetProperty("events")[0].GetProperty("name").GetString().ShouldBe("LayoutBuild");
+        diagnosticsReport.GetProperty("startTime").GetDateTimeOffset().ShouldBe(report.StartTime);
+        diagnosticsReport.GetProperty("endTime").GetDateTimeOffset().ShouldBe(report.EndTime);
+        diagnosticsReport.GetProperty("records")[0].GetProperty("name").GetString().ShouldBe("stage/started");
     }
 
     [Fact]
     public void ToJson_FeatureDiagnosticsSample_WritesOwnerConsumerEvidence()
     {
-        var session = new DiagnosticsSession
-        {
-            StartTime = DateTimeOffset.Parse("2026-04-23T10:00:00Z"),
-            EndTime = DateTimeOffset.Parse("2026-04-23T10:00:02Z"),
-            Options = new HtmlConverterOptions()
-        };
-        session.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Trace,
-            Name = "layout/margin-collapse",
-            Payload = new MarginCollapsePayload
-            {
-                Owner = "BlockFormattingContext",
-                Consumer = "InlineLayoutEngine",
-                FormattingContext = FormattingContextKind.InlineBlock,
-                PreviousBottomMargin = 12f,
-                NextTopMargin = 4f,
-                CollapsedTopMargin = 12f
-            }
-        });
-        session.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Trace,
-            Name = "font/resolve",
-            Payload = new FontResolutionPayload
-            {
-                Owner = "FontPathSource",
-                Consumer = "SkiaTextMeasurer",
-                RequestedFamily = "Inter",
-                RequestedWeight = FontWeight.W400,
-                RequestedStyle = FontStyle.Normal,
-                ResolvedFamily = "Inter",
-                ResolvedWeight = FontWeight.W400,
-                ResolvedStyle = FontStyle.Normal,
-                SourceId = "file:Inter-Regular.ttf",
-                Outcome = "Resolved"
-            }
-        });
-        session.Events.Add(DiagnosticsEventFactory.StageSucceeded(
-            "LayoutBuild",
-            new LayoutSnapshotPayload
-            {
-                Snapshot = new LayoutSnapshot
-                {
-                    PageCount = 1,
-                    Pages =
-                    [
-                        new LayoutPageSnapshot
-                        {
-                            PageNumber = 1,
-                            PageSize = PaperSizes.A4,
-                            Margin = new Spacing(),
-                            Fragments =
-                            [
-                                new FragmentSnapshot
-                                {
-                                    SequenceId = 1,
-                                    Kind = "table",
-                                    DisplayRole = FragmentDisplayRole.Table,
-                                    FormattingContext = FormattingContextKind.Block,
-                                    DerivedColumnCount = 2,
-                                    MetadataOwner = "FragmentBuilder",
-                                    MetadataConsumer = "LayoutSnapshotMapper"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            }));
+        var startTime = DateTimeOffset.Parse("2026-04-23T10:00:00Z");
+        var endTime = DateTimeOffset.Parse("2026-04-23T10:00:02Z");
+        var report = new DiagnosticsReport(
+            startTime,
+            endTime,
+            [
+                Record(
+                    "stage/box-tree",
+                    "layout/margin-collapse",
+                    DiagnosticFields.Create(
+                        DiagnosticFields.Field("owner", "BlockFormattingContext"),
+                        DiagnosticFields.Field("consumer", "InlineLayoutEngine"),
+                        DiagnosticFields.Field("formattingContext", "InlineBlock"),
+                        DiagnosticFields.Field("previousBottomMargin", 12f),
+                        DiagnosticFields.Field("nextTopMargin", 4f),
+                        DiagnosticFields.Field("collapsedTopMargin", 12f))),
+                Record(
+                    "stage/render",
+                    "font/resolve",
+                    DiagnosticFields.Create(
+                        DiagnosticFields.Field("owner", "FontPathSource"),
+                        DiagnosticFields.Field("consumer", "SkiaTextMeasurer"),
+                        DiagnosticFields.Field("requestedFamily", "Inter"),
+                        DiagnosticFields.Field("requestedWeight", "W400"),
+                        DiagnosticFields.Field("requestedStyle", "Normal"),
+                        DiagnosticFields.Field("resolvedFamily", "Inter"),
+                        DiagnosticFields.Field("resolvedWeight", "W400"),
+                        DiagnosticFields.Field("resolvedStyle", "Normal"),
+                        DiagnosticFields.Field("sourceId", "file:Inter-Regular.ttf"),
+                        DiagnosticFields.Field("outcome", "Resolved"))),
+                Record(
+                    "LayoutBuild",
+                    "stage/succeeded",
+                    DiagnosticFields.Create(
+                        DiagnosticFields.Field("snapshot", DiagnosticObject.Create(
+                            DiagnosticObject.Field("pages", DiagnosticArray.Create(
+                                DiagnosticObject.Create(
+                                    DiagnosticObject.Field("fragments", DiagnosticArray.Create(
+                                        DiagnosticObject.Create(
+                                            DiagnosticObject.Field("metadataOwner", "FragmentBuilder"),
+                                            DiagnosticObject.Field("metadataConsumer", "LayoutSnapshotMapper")))))))))))
+            ]);
 
         var diagnosticsJson = Path.Combine("build", "diagnostics", "centralize-layout-font-policy.json");
         var options = new ConsoleOptions(
@@ -160,7 +138,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             Interactive: false,
             SelectedSamplePath: null);
 
-        var json = TestConsoleDiagnosticsSerializer.ToJson(session, options);
+        var json = TestConsoleDiagnosticsSerializer.ToJson(report, options);
 
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
@@ -180,22 +158,35 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             .Select(static item => item.GetString())
             .ShouldContain("block-formatting:inline-block-descendant-implicit-width");
 
-        var events = root.GetProperty("diagnosticsSession").GetProperty("events").EnumerateArray().ToList();
-        var margin = events.Single(static item => item.GetProperty("name").GetString() == "layout/margin-collapse");
-        margin.GetProperty("payload").GetProperty("owner").GetString().ShouldBe("BlockFormattingContext");
-        margin.GetProperty("payload").GetProperty("consumer").GetString().ShouldBe("InlineLayoutEngine");
+        var records = root.GetProperty("diagnosticsReport").GetProperty("records").EnumerateArray().ToList();
+        var margin = records.Single(static item => item.GetProperty("name").GetString() == "layout/margin-collapse");
+        margin.GetProperty("fields").GetProperty("owner").GetString().ShouldBe("BlockFormattingContext");
+        margin.GetProperty("fields").GetProperty("consumer").GetString().ShouldBe("InlineLayoutEngine");
 
-        var font = events.Single(static item => item.GetProperty("name").GetString() == "font/resolve");
-        font.GetProperty("payload").GetProperty("owner").GetString().ShouldBe("FontPathSource");
-        font.GetProperty("payload").GetProperty("consumer").GetString().ShouldBe("SkiaTextMeasurer");
+        var font = records.Single(static item => item.GetProperty("name").GetString() == "font/resolve");
+        font.GetProperty("fields").GetProperty("owner").GetString().ShouldBe("FontPathSource");
+        font.GetProperty("fields").GetProperty("consumer").GetString().ShouldBe("SkiaTextMeasurer");
 
-        var layout = events.Single(static item => item.GetProperty("name").GetString() == "LayoutBuild");
+        var layout = records.Single(static item => item.GetProperty("stage").GetString() == "LayoutBuild");
         var fragment = layout
-            .GetProperty("payload")
+            .GetProperty("fields")
             .GetProperty("snapshot")
             .GetProperty("pages")[0]
             .GetProperty("fragments")[0];
         fragment.GetProperty("metadataOwner").GetString().ShouldBe("FragmentBuilder");
         fragment.GetProperty("metadataConsumer").GetString().ShouldBe("LayoutSnapshotMapper");
     }
+
+    private static DiagnosticRecord Record(
+        string stage,
+        string name,
+        DiagnosticFields fields) =>
+        new(
+            stage,
+            name,
+            DiagnosticSeverity.Info,
+            null,
+            null,
+            fields,
+            DateTimeOffset.Parse("2026-04-23T10:00:01Z"));
 }

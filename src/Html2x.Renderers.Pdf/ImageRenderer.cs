@@ -1,5 +1,6 @@
 using System.Drawing;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
@@ -13,16 +14,18 @@ internal sealed class ImageRenderer
 {
     private readonly PdfOptions _options;
     private readonly string _htmlDirectory;
-    private readonly DiagnosticsSession? _diagnostics;
+    private readonly IDiagnosticsSink? _diagnosticsSink;
     private const string ImageRenderEvent = "image/render";
 
-    public ImageRenderer(PdfOptions options, DiagnosticsSession? diagnosticsSession)
+    public ImageRenderer(
+        PdfOptions options,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _htmlDirectory = string.IsNullOrWhiteSpace(options.HtmlDirectory)
             ? Directory.GetCurrentDirectory()
             : options.HtmlDirectory;
-        _diagnostics = diagnosticsSession;
+        _diagnosticsSink = diagnosticsSink;
     }
 
     public void Render(SKCanvas canvas, ImagePaintCommand command)
@@ -34,8 +37,8 @@ internal sealed class ImageRenderer
         var width = rect.Width;
         var height = rect.Height;
         var status = command.IsMissing
-            ? ImageStatus.Missing
-            : command.IsOversize ? ImageStatus.Oversize : ImageStatus.Ok;
+            ? ImageRenderStatus.Missing
+            : command.IsOversize ? ImageRenderStatus.Oversize : ImageRenderStatus.Ok;
 
         if (width <= 0 || height <= 0)
         {
@@ -44,7 +47,7 @@ internal sealed class ImageRenderer
             return;
         }
 
-        if (status != ImageStatus.Ok)
+        if (status != ImageRenderStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
             Record(command, status, width, height);
@@ -96,14 +99,9 @@ internal sealed class ImageRenderer
         canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom), paint);
     }
 
-    private void Record(ImagePaintCommand command, ImageStatus status, float width, float height)
+    private void Record(ImagePaintCommand command, ImageRenderStatus status, float width, float height)
     {
-        if (_diagnostics is null)
-        {
-            return;
-        }
-
-        var severity = status == ImageStatus.Ok
+        var severity = status == ImageRenderStatus.Ok
             ? DiagnosticSeverity.Info
             : DiagnosticSeverity.Warning;
         var context = new DiagnosticContext(
@@ -113,23 +111,49 @@ internal sealed class ImageRenderer
             StructuralPath: $"image:{command.Src}",
             RawUserInput: command.Src);
 
-        _diagnostics.Events.Add(new DiagnosticsEvent
+        _diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/render",
+            Name: ImageRenderEvent,
+            Severity: severity,
+            Message: status == ImageRenderStatus.Ok ? null : $"Image render status: {status}.",
+            Context: context,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("src", command.Src),
+                DiagnosticFields.Field("status", DiagnosticValue.FromEnum(status)),
+                DiagnosticFields.Field("renderedWidth", width),
+                DiagnosticFields.Field("renderedHeight", height),
+                DiagnosticFields.Field("borders", MapBorders(command.Style.Borders))),
+            Timestamp: DateTimeOffset.UtcNow));
+    }
+
+    private static DiagnosticObject MapBorders(BorderEdges? borders)
+    {
+        if (borders is null || !borders.HasAny)
         {
-            Type = DiagnosticsEventType.Trace,
-            Name = ImageRenderEvent,
-            Timestamp = DateTimeOffset.UtcNow,
-            Severity = severity,
-            Context = context,
-            RawUserInput = command.Src,
-            Payload = new ImageRenderPayload
-            {
-                Src = command.Src,
-                Severity = severity,
-                Context = context,
-                RenderedSize = new Abstractions.Measurements.Units.SizePt(width, height),
-                Status = status,
-                Borders = command.Style.Borders
-            }
-        });
+            return DiagnosticObject.Empty;
+        }
+
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("top", MapBorderSide(borders.Top)),
+            DiagnosticObject.Field("right", MapBorderSide(borders.Right)),
+            DiagnosticObject.Field("bottom", MapBorderSide(borders.Bottom)),
+            DiagnosticObject.Field("left", MapBorderSide(borders.Left)));
+    }
+
+    private static DiagnosticObject? MapBorderSide(BorderSide? side)
+    {
+        return side is null
+            ? null
+            : DiagnosticObject.Create(
+                DiagnosticObject.Field("width", side.Width),
+                DiagnosticObject.Field("color", side.Color.ToHex()),
+                DiagnosticObject.Field("lineStyle", DiagnosticValue.FromEnum(side.LineStyle)));
+    }
+
+    private enum ImageRenderStatus
+    {
+        Ok,
+        Missing,
+        Oversize
     }
 }

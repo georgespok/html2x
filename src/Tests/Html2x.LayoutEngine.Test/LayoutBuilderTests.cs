@@ -1,4 +1,3 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Images;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fonts;
@@ -6,6 +5,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
@@ -42,28 +42,28 @@ public class LayoutBuilderTests
     }
 
     [Fact]
-    public async Task BuildAsync_DiagnosticsSessionIsProvided_PublishesStageLifecycleEvents()
+    public async Task BuildAsync_DiagnosticsSinkIsProvided_PublishesStageLifecycleRecords()
     {
         const string html = "<html><body><p>diagnostics</p></body></html>";
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession);
+        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         foreach (var stageName in LayoutStageNames)
         {
-            diagnosticsSession.Events.ShouldContain(e =>
-                e.Name == stageName &&
-                e.Type == DiagnosticsEventType.StartStage &&
-                e.StageState == DiagnosticStageState.Started);
-            diagnosticsSession.Events.ShouldContain(e =>
-                e.Name == stageName &&
-                e.Type == DiagnosticsEventType.EndStage &&
-                e.StageState == DiagnosticStageState.Succeeded);
+            diagnosticsSink.Records.ShouldContain(e =>
+                e.Stage == stageName &&
+                e.Name == "stage/started" &&
+                e.Severity == DiagnosticSeverity.Info);
+            diagnosticsSink.Records.ShouldContain(e =>
+                e.Stage == stageName &&
+                e.Name == "stage/succeeded" &&
+                e.Severity == DiagnosticSeverity.Info);
         }
     }
 
     [Fact]
-    public async Task BuildAsync_DiagnosticsSessionIsProvided_PublishesGeometrySnapshotPayload()
+    public async Task BuildAsync_DiagnosticsSinkIsProvided_PublishesGeometrySnapshotRecord()
     {
         const string html = @"
             <html>
@@ -71,19 +71,21 @@ public class LayoutBuilderTests
                 <div style='width: 100pt; height: 20pt;'>snapshot</div>
               </body>
             </html>";
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter }, diagnosticsSession);
+        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter }, diagnosticsSink);
 
-        var geometryEvent = diagnosticsSession.Events
+        var geometryEvent = diagnosticsSink.Records
             .SingleOrDefault(static e => e.Name == "layout/geometry-snapshot");
 
         geometryEvent.ShouldNotBeNull();
-        var payload = geometryEvent!.Payload.ShouldBeOfType<GeometrySnapshotPayload>();
-        payload.Snapshot.Boxes.Count.ShouldBeGreaterThan(0);
-        payload.Snapshot.Fragments.PageCount.ShouldBe(1);
-        payload.Snapshot.Pagination.Count.ShouldBe(1);
-        payload.Snapshot.Pagination[0].Placements.Count.ShouldBeGreaterThan(0);
+        var snapshot = geometryEvent!.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
+        snapshot["boxes"].ShouldBeOfType<DiagnosticArray>().Count.ShouldBeGreaterThan(0);
+        snapshot["fragments"].ShouldBeOfType<DiagnosticObject>()["pageCount"].ShouldBe(new DiagnosticNumberValue(1));
+        var pagination = snapshot["pagination"].ShouldBeOfType<DiagnosticArray>();
+        pagination.Count.ShouldBe(1);
+        pagination[0].ShouldBeOfType<DiagnosticObject>()["placements"].ShouldBeOfType<DiagnosticArray>().Count
+            .ShouldBeGreaterThan(0);
     }
 
     [Fact]
@@ -101,22 +103,21 @@ public class LayoutBuilderTests
                 </div>
               </body>
             </html>";
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession));
+            await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
-        diagnosticsSession.Events.ShouldContain(e =>
-            e.Name == "stage/box-tree" &&
-            e.Type == DiagnosticsEventType.StartStage &&
-            e.StageState == DiagnosticStageState.Started);
-        diagnosticsSession.Events.ShouldContain(e =>
-            e.Name == "stage/box-tree" &&
-            e.Type == DiagnosticsEventType.Error &&
-            e.StageState == DiagnosticStageState.Failed);
-        diagnosticsSession.Events.ShouldNotContain(e =>
-            e.Name == "stage/fragment-tree" &&
-            e.Type == DiagnosticsEventType.StartStage);
+        diagnosticsSink.Records.ShouldContain(e =>
+            e.Stage == "stage/box-tree" &&
+            e.Name == "stage/started");
+        diagnosticsSink.Records.ShouldContain(e =>
+            e.Stage == "stage/box-tree" &&
+            e.Name == "stage/failed" &&
+            e.Severity == DiagnosticSeverity.Error);
+        diagnosticsSink.Records.ShouldNotContain(e =>
+            e.Stage == "stage/fragment-tree" &&
+            e.Name == "stage/started");
     }
 
     private static LayoutBuilder CreateBuilder(

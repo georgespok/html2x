@@ -150,7 +150,7 @@ public sealed class TableFragmentRenderingTests
         var options = new PdfOptions { FontPath = string.Empty };
         var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
         using var fontCache = new SkiaFontCache(fontPath: null, fileDirectory.Object);
-        var drawer = new SkiaFragmentDrawer(options, diagnosticsSession: null, fontCache);
+        var drawer = new SkiaFragmentDrawer(options, fontCache);
 
         using var surface = SKSurface.Create(new SKImageInfo(200, 200, SKColorType.Bgra8888, SKAlphaType.Premul));
         drawer.DrawPage(surface.Canvas, page);

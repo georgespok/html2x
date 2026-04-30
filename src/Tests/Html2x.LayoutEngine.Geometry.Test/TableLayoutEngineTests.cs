@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
@@ -340,15 +340,15 @@ public class TableLayoutEngineTests
             CreateRow(cell));
 
         var result = Layout(table, availableWidth: 200f);
-        var diagnosticsSession = new DiagnosticsSession();
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
         TableLayoutDiagnostics.EmitUnsupportedTable(
-            diagnosticsSession,
             nodePath: "html/body/table",
             structureKind: result.UnsupportedStructureKind ?? string.Empty,
             reason: result.UnsupportedReason ?? string.Empty,
             rowCount: result.RowCount,
             requestedWidth: result.RequestedWidth,
-            resolvedWidth: result.ResolvedWidth);
+            resolvedWidth: result.ResolvedWidth,
+            diagnosticsSink: diagnosticsSink);
 
         result.IsSupported.ShouldBeFalse();
         result.RowCount.ShouldBe(1);
@@ -358,12 +358,10 @@ public class TableLayoutEngineTests
         result.ContentHeight.ShouldBe(0f);
         result.BorderBoxHeight.ShouldBe(0f);
 
-        var unsupportedPayload = diagnosticsSession.Events
-            .Single(e => e.Name == "layout/table")
-            .Payload.ShouldBeOfType<TableLayoutPayload>();
-        var reason = unsupportedPayload.Reason!;
-        unsupportedPayload.Outcome.ShouldBe("Unsupported");
-        unsupportedPayload.RowCount.ShouldBe(1);
+        var unsupportedRecord = diagnosticsSink.Records.Single(e => e.Name == "layout/table");
+        var reason = unsupportedRecord.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value;
+        unsupportedRecord.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
+        unsupportedRecord.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(1));
         reason.ShouldContain(attributeName);
     }
 

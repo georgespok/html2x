@@ -1,6 +1,6 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
 
@@ -52,24 +52,41 @@ public sealed class StyleTreeBuilderTests
     }
 
     [Fact]
-    public async Task BuildAsync_DiagnosticsSession_EmitsStyleDiagnostic()
+    public async Task BuildAsync_DiagnosticsSink_EmitsStyleDiagnostic()
     {
-        var diagnostics = new DiagnosticsSession();
+        var diagnostics = new RecordingDiagnosticsSink();
 
         await BuildAsync(
             "<html><body><div id='hero' style='width: 10rem;'>Box</div></body></html>",
             DefaultOptions(),
             diagnostics);
 
-        diagnostics.Events.ShouldContain(static e => e.Name == "stage/dom");
-        diagnostics.Events.ShouldContain(static e => e.Name == "stage/style");
-        diagnostics.Events.ShouldContain(static e => e.Name == "style/unsupported-declaration");
+        diagnostics.Records.ShouldContain(static e => e.Stage == "stage/dom" && e.Name == "stage/started");
+        diagnostics.Records.ShouldContain(static e => e.Stage == "stage/style" && e.Name == "stage/started");
+        diagnostics.Records.ShouldContain(static e => e.Name == "style/unsupported-declaration");
 
-        var styleEvent = diagnostics.Events.Single(static e => e.Name == "style/unsupported-declaration");
-        var payload = styleEvent.Payload.ShouldBeOfType<StyleDiagnosticPayload>();
-        payload.PropertyName.ShouldBe(HtmlCssConstants.CssProperties.Width);
-        payload.Context.ShouldNotBeNull();
-        payload.Context.ElementIdentity.ShouldBe("div#hero");
+        var styleEvent = diagnostics.Records.Single(static e => e.Name == "style/unsupported-declaration");
+        styleEvent.Fields["propertyName"].ShouldBe(new DiagnosticStringValue(HtmlCssConstants.CssProperties.Width));
+        styleEvent.Context.ShouldNotBeNull();
+        styleEvent.Context.ElementIdentity.ShouldBe("div#hero");
+    }
+
+    [Fact]
+    public async Task BuildAsync_DiagnosticsSink_EmitsLifecycleRecords()
+    {
+        var sink = new RecordingDiagnosticsSink();
+
+        await new Html2x.LayoutEngine.Style.StyleTreeBuilder().BuildAsync(
+            "<html><body><div id='hero' style='width: 10rem;'>Box</div></body></html>",
+            DefaultOptions(),
+            diagnosticsSink: sink);
+
+        var records = sink.Records;
+        records.ShouldContain(static record => record.Stage == "stage/dom" && record.Name == "stage/started");
+        records.ShouldContain(static record => record.Stage == "stage/dom" && record.Name == "stage/succeeded");
+        records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/started");
+        records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/succeeded");
+        records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "style/unsupported-declaration");
     }
 
     [Fact]
@@ -337,10 +354,10 @@ public sealed class StyleTreeBuilderTests
     private static Task<StyleTree> BuildAsync(
         string html,
         LayoutOptions options,
-        DiagnosticsSession? diagnostics = null)
+        IDiagnosticsSink? diagnostics = null)
     {
         return new Html2x.LayoutEngine.Style.StyleTreeBuilder()
-            .BuildAsync(html, options, diagnostics);
+            .BuildAsync(html, options, diagnosticsSink: diagnostics);
     }
 
     private static LayoutOptions DefaultOptions()

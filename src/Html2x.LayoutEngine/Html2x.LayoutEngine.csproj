@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.Diagnostics.Contracts\Html2x.Diagnostics.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Fragments\Html2x.LayoutEngine.Fragments.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Geometry\Html2x.LayoutEngine.Geometry.csproj" />

@@ -1,6 +1,6 @@
 using AngleSharp;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Models;
 
@@ -25,8 +25,8 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
     public async Task<StyleTree> BuildAsync(
         string html,
         LayoutOptions options,
-        DiagnosticsSession? diagnosticsSession = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(options);
@@ -40,30 +40,33 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
                 cancellationToken.ThrowIfCancellationRequested();
                 return loaded;
             },
-            diagnosticsSession);
+            diagnosticsSink);
 
         return RunStage(
             "stage/style",
             () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                return _styleComputer.Compute(document, diagnosticsSession);
+                return _styleComputer.Compute(document, diagnosticsSink);
             },
-            diagnosticsSession);
+            diagnosticsSink);
     }
 
-    private static T RunStage<T>(string stage, Func<T> action, DiagnosticsSession? diagnosticsSession = null)
+    private static T RunStage<T>(
+        string stage,
+        Func<T> action,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
-        diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageStarted(stage));
+        EmitStageStarted(diagnosticsSink, stage);
         try
         {
             var result = action();
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageSucceeded(stage));
+            EmitStageSucceeded(diagnosticsSink, stage);
             return result;
         }
         catch (Exception exception)
         {
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageFailed(stage, exception.Message));
+            EmitStageFailed(diagnosticsSink, stage, exception.Message);
             throw;
         }
     }
@@ -71,19 +74,45 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
     private static async Task<T> RunStageAsync<T>(
         string stage,
         Func<Task<T>> action,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
-        diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageStarted(stage));
+        EmitStageStarted(diagnosticsSink, stage);
         try
         {
             var result = await action();
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageSucceeded(stage));
+            EmitStageSucceeded(diagnosticsSink, stage);
             return result;
         }
         catch (Exception exception)
         {
-            diagnosticsSession?.Events.Add(DiagnosticsEventFactory.StageFailed(stage, exception.Message));
+            EmitStageFailed(diagnosticsSink, stage, exception.Message);
             throw;
         }
+    }
+
+    private static void EmitStageStarted(IDiagnosticsSink? diagnosticsSink, string stage) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/started", DiagnosticSeverity.Info, null);
+
+    private static void EmitStageSucceeded(IDiagnosticsSink? diagnosticsSink, string stage) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/succeeded", DiagnosticSeverity.Info, null);
+
+    private static void EmitStageFailed(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
+        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/failed", DiagnosticSeverity.Error, message);
+
+    private static void EmitDiagnosticsRecord(
+        IDiagnosticsSink? diagnosticsSink,
+        string stage,
+        string name,
+        DiagnosticSeverity severity,
+        string? message)
+    {
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: stage,
+            Name: name,
+            Severity: severity,
+            Message: message,
+            Context: null,
+            Fields: DiagnosticFields.Empty,
+            Timestamp: DateTimeOffset.UtcNow));
     }
 }

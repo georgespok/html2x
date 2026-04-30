@@ -7,7 +7,7 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.LayoutEngine.Test.TestDoubles;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
@@ -557,19 +557,16 @@ public class InlineBlockTests
               </body>
             </html>";
 
-        var diagnosticsSession = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
+        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSession));
+            await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
-        diagnosticsSession.Events
-            .Any(e => e.Payload is UnsupportedStructurePayload payload &&
-                      payload.FormattingContext == FormattingContextKind.InlineBlock)
+        diagnosticsSink.Records
+            .Any(e => e.Name == "layout/inline-block/unsupported-structure" &&
+                      e.Fields["formattingContext"] is DiagnosticStringValue { Value: nameof(FormattingContextKind.InlineBlock) })
             .ShouldBeTrue();
     }
 
@@ -598,14 +595,8 @@ public class InlineBlockTests
               </body>
             </html>";
 
-        var topLevelDiagnostics = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
-        var inlineBlockDiagnostics = new DiagnosticsSession
-        {
-            Options = new HtmlConverterOptions()
-        };
+        var topLevelDiagnostics = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var inlineBlockDiagnostics = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
         var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutOptions { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
@@ -630,24 +621,22 @@ public class InlineBlockTests
         inlineBlockContainer.Rect.Width.ShouldBe(topLevelSecondBlock.Rect.Width, 0.1f);
         inlineBlockContainer.Rect.Height.ShouldBe(topLevelContainer.Rect.Height, 0.1f);
 
-        topLevelDiagnostics.Events
-            .Where(static e => e.Payload is MarginCollapsePayload)
-            .Select(static e => (MarginCollapsePayload)e.Payload!)
+        topLevelDiagnostics.Records
+            .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                payload.Owner == nameof(BlockFormattingContext) &&
-                payload.Consumer == nameof(BlockLayoutEngine) &&
-                payload.FormattingContext == FormattingContextKind.Block &&
-                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "consumer") == nameof(BlockLayoutEngine) &&
+                StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
+                Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
 
-        inlineBlockDiagnostics.Events
-            .Where(static e => e.Payload is MarginCollapsePayload)
-            .Select(static e => (MarginCollapsePayload)e.Payload!)
+        inlineBlockDiagnostics.Records
+            .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                payload.Owner == nameof(BlockFormattingContext) &&
-                payload.Consumer == nameof(InlineLayoutEngine) &&
-                payload.FormattingContext == FormattingContextKind.InlineBlock &&
-                Math.Abs(payload.CollapsedTopMargin - 12f) < 0.01f)
+                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "consumer") == nameof(InlineLayoutEngine) &&
+                StringField(payload, "formattingContext") == nameof(FormattingContextKind.InlineBlock) &&
+                Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
 
         var snapshot = LayoutSnapshotMapper.From(inlineBlockLayout);
@@ -788,6 +777,12 @@ public class InlineBlockTests
             currentIndex = nextIndex;
         }
     }
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 
     private static IEnumerable<FragmentSnapshot> Flatten(IEnumerable<FragmentSnapshot> fragments)
     {

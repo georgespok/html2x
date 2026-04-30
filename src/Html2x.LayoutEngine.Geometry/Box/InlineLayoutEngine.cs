@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Layout.Styles;
+using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
@@ -25,7 +25,7 @@ internal sealed class InlineLayoutEngine
             null,
             new DefaultLineHeightStrategy(),
             new BlockFormattingContext(),
-            diagnosticsSession: null)
+            diagnosticsSink: null)
     {
     }
 
@@ -35,7 +35,7 @@ internal sealed class InlineLayoutEngine
             null,
             new DefaultLineHeightStrategy(),
             new BlockFormattingContext(),
-            diagnosticsSession: null)
+            diagnosticsSink: null)
     {
     }
 
@@ -45,7 +45,7 @@ internal sealed class InlineLayoutEngine
             textMeasurer,
             lineHeightStrategy,
             new BlockFormattingContext(),
-            diagnosticsSession: null)
+            diagnosticsSink: null)
     {
     }
 
@@ -55,7 +55,7 @@ internal sealed class InlineLayoutEngine
         ILineHeightStrategy lineHeightStrategy,
         IBlockFormattingContext blockFormattingContext,
         IImageLayoutResolver? imageResolver = null,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _textMeasurer = textMeasurer ?? new FallbackTextMeasurer(_metrics);
@@ -64,7 +64,7 @@ internal sealed class InlineLayoutEngine
             _metrics,
             blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext)),
             imageResolver,
-            diagnosticsSession);
+            diagnosticsSink);
         _textLayout = new TextLayoutEngine(_textMeasurer);
         _layoutResultBuilder = new InlineLayoutResultBuilder(_textMeasurer);
     }
@@ -326,3 +326,4 @@ internal sealed class InlineLayoutEngine
             _metricsProvider.GetMetrics(font, sizePt);
     }
 }
+

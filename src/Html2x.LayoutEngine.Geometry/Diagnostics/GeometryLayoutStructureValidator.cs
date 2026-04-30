@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 
@@ -14,26 +14,30 @@ internal static class GeometryLayoutStructureValidator
         BoxRole.TableCell
     ];
 
-    public static void ValidateInlineBlockStructures(BoxTree boxTree, DiagnosticsSession? diagnosticsSession)
+    public static void ValidateInlineBlockStructures(
+        BoxTree boxTree,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(boxTree);
 
         foreach (var root in boxTree.Blocks)
         {
-            ValidateInlineBlockStructure(root, diagnosticsSession);
+            ValidateInlineBlockStructure(root, diagnosticsSink);
         }
     }
 
-    public static void ValidateInlineBlockStructures(BoxNode root, DiagnosticsSession? diagnosticsSession)
+    public static void ValidateInlineBlockStructures(
+        BoxNode root,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(root);
 
-        ValidateInlineBlockStructure(root, diagnosticsSession);
+        ValidateInlineBlockStructure(root, diagnosticsSink);
     }
 
     public static void ValidateInlineBlockStructures(
         PublishedLayoutTree layout,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(layout);
 
@@ -41,20 +45,13 @@ internal static class GeometryLayoutStructureValidator
         {
             if (TryFindUnsupportedInlineBlockStructure(root, out var unsupportedBlock))
             {
-                var payload = new UnsupportedStructurePayload
-                {
-                    NodePath = unsupportedBlock.Identity.NodePath,
-                    StructureKind = unsupportedBlock.Display.Role.ToString(),
-                    Reason = "Unsupported structure encountered inside inline-block formatting context.",
-                    FormattingContext = FormattingContextKind.InlineBlock
-                };
+                var payload = new UnsupportedStructureDiagnostic(
+                    unsupportedBlock.Identity.NodePath,
+                    unsupportedBlock.Display.Role.ToString(),
+                    "Unsupported structure encountered inside inline-block formatting context.",
+                    FormattingContextKind.InlineBlock);
 
-                diagnosticsSession?.Events.Add(new DiagnosticsEvent
-                {
-                    Type = DiagnosticsEventType.Error,
-                    Name = "layout/inline-block/unsupported-structure",
-                    Payload = payload
-                });
+                EmitUnsupportedStructure(diagnosticsSink, payload);
 
                 throw new InvalidOperationException(
                     $"Unsupported inline-block internal structure: {payload.StructureKind} at {payload.NodePath}.");
@@ -62,31 +59,50 @@ internal static class GeometryLayoutStructureValidator
         }
     }
 
-    private static void ValidateInlineBlockStructure(BoxNode root, DiagnosticsSession? diagnosticsSession)
+    private static void ValidateInlineBlockStructure(
+        BoxNode root,
+        IDiagnosticsSink? diagnosticsSink)
     {
         if (!TryFindUnsupportedInlineBlockStructure(root, out var unsupportedNode))
         {
             return;
         }
 
-        var payload = new UnsupportedStructurePayload
-        {
-            NodePath = BoxNodePathBuilder.Build(unsupportedNode),
-            StructureKind = unsupportedNode.Role.ToString(),
-            Reason = "Unsupported structure encountered inside inline-block formatting context.",
-            FormattingContext = FormattingContextKind.InlineBlock
-        };
+        var payload = new UnsupportedStructureDiagnostic(
+            BoxNodePathBuilder.Build(unsupportedNode),
+            unsupportedNode.Role.ToString(),
+            "Unsupported structure encountered inside inline-block formatting context.",
+            FormattingContextKind.InlineBlock);
 
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Error,
-            Name = "layout/inline-block/unsupported-structure",
-            Payload = payload
-        });
+        EmitUnsupportedStructure(diagnosticsSink, payload);
 
         throw new InvalidOperationException(
             $"Unsupported inline-block internal structure: {payload.StructureKind} at {payload.NodePath}.");
     }
+
+    private static void EmitUnsupportedStructure(
+        IDiagnosticsSink? diagnosticsSink,
+        UnsupportedStructureDiagnostic payload)
+    {
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/box-tree",
+            Name: "layout/inline-block/unsupported-structure",
+            Severity: DiagnosticSeverity.Error,
+            Message: payload.Reason,
+            Context: null,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("nodePath", payload.NodePath),
+                DiagnosticFields.Field("structureKind", payload.StructureKind),
+                DiagnosticFields.Field("reason", payload.Reason),
+                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(payload.FormattingContext))),
+            Timestamp: DateTimeOffset.UtcNow));
+    }
+
+    private sealed record UnsupportedStructureDiagnostic(
+        string NodePath,
+        string StructureKind,
+        string Reason,
+        FormattingContextKind FormattingContext);
 
     private static bool TryFindUnsupportedInlineBlockStructure(BoxNode root, out BoxNode unsupportedNode)
     {

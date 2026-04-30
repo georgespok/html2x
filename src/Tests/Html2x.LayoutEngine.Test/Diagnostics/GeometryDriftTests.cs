@@ -2,6 +2,7 @@ using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
@@ -557,8 +558,8 @@ public sealed class GeometryDriftTests
         ];
     }
 
-    private static IEnumerable<Abstractions.Diagnostics.FragmentSnapshot> Flatten(
-        IReadOnlyList<Abstractions.Diagnostics.FragmentSnapshot> fragments)
+    private static IEnumerable<FragmentSnapshot> Flatten(
+        IReadOnlyList<FragmentSnapshot> fragments)
     {
         foreach (var fragment in fragments)
         {
@@ -571,8 +572,8 @@ public sealed class GeometryDriftTests
         }
     }
 
-    private static IEnumerable<Abstractions.Diagnostics.BoxGeometrySnapshot> FlattenBoxes(
-        Abstractions.Diagnostics.BoxGeometrySnapshot box)
+    private static IEnumerable<BoxGeometrySnapshot> FlattenBoxes(
+        BoxGeometrySnapshot box)
     {
         yield return box;
 

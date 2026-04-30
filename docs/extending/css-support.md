@@ -40,4 +40,4 @@ Add focused coverage in this order:
 2. Layout or fragment tests.
 3. Renderer tests when drawing changes.
 4. Integration tests when public converter behavior changes.
-5. Diagnostics serializer tests when payloads change.
+5. Diagnostics serializer tests when record fields change.

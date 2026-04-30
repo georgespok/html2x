@@ -1,8 +1,10 @@
 # Diagnostics Events
 
-This reference lists the main diagnostics event families. Payload contracts live in `Html2x.Abstractions`; JSON export lives in `Html2x.Diagnostics`.
+This reference lists the main diagnostics record families. Generic contracts
+live in `Html2x.Diagnostics.Contracts`; JSON export lives in
+`Html2x.Diagnostics`.
 
-## Stage Lifecycle
+## Conversion Lifecycle
 
 - `LayoutBuild`
 - `PdfRender`
@@ -59,4 +61,4 @@ Font diagnostics should identify owner, consumer, request, configured path, reso
 
 ## Rendering
 
-Render summary payloads include PDF size and page count after `PdfRender` succeeds.
+Render summary fields include PDF size and page count after `PdfRender` succeeds.

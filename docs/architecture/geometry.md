@@ -9,7 +9,7 @@ AngleSharp, or traverse DOM nodes.
 
 ## Authority
 
-`UsedGeometry` is the canonical geometry payload for block-level layout nodes. It carries:
+`UsedGeometry` is the canonical geometry value for block-level layout nodes. It carries:
 
 - Border box rectangle.
 - Content box rectangle.

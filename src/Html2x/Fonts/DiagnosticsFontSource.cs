@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Styles;
 
@@ -7,14 +7,16 @@ namespace Html2x.Fonts;
 internal sealed class DiagnosticsFontSource : IFontSource
 {
     private readonly IFontSource _inner;
-    private readonly DiagnosticsSession _session;
+    private readonly IDiagnosticsSink _diagnosticsSink;
     private readonly HashSet<ResolutionEventKey> _published = [];
     private readonly object _gate = new();
 
-    public DiagnosticsFontSource(IFontSource inner, DiagnosticsSession session)
+    public DiagnosticsFontSource(
+        IFontSource inner,
+        IDiagnosticsSink diagnosticsSink)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _diagnosticsSink = diagnosticsSink ?? throw new ArgumentNullException(nameof(diagnosticsSink));
     }
 
     public ResolvedFont Resolve(FontKey requested, string consumer)
@@ -71,30 +73,28 @@ internal sealed class DiagnosticsFontSource : IFontSource
             }
         }
 
-        _session.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Trace,
-            Name = "font/resolve",
-            Severity = severity,
-            Description = reason,
-            Payload = new FontResolutionPayload
-            {
-                Owner = nameof(FontPathSource),
-                Consumer = consumer,
-                RequestedFamily = requested.Family,
-                RequestedWeight = requested.Weight,
-                RequestedStyle = requested.Style,
-                ResolvedFamily = resolved?.Family,
-                ResolvedWeight = resolved?.Weight,
-                ResolvedStyle = resolved?.Style,
-                SourceId = resolved?.SourceId,
-                ConfiguredPath = resolved?.ConfiguredPath,
-                FilePath = resolved?.FilePath,
-                FaceIndex = resolved?.FaceIndex,
-                Outcome = outcome,
-                Reason = reason
-            }
-        });
+        _diagnosticsSink.Emit(new DiagnosticRecord(
+            Stage: "stage/font",
+            Name: "font/resolve",
+            Severity: severity,
+            Message: reason,
+            Context: null,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("owner", nameof(FontPathSource)),
+                DiagnosticFields.Field("consumer", consumer),
+                DiagnosticFields.Field("requestedFamily", requested.Family),
+                DiagnosticFields.Field("requestedWeight", DiagnosticValue.FromEnum(requested.Weight)),
+                DiagnosticFields.Field("requestedStyle", DiagnosticValue.FromEnum(requested.Style)),
+                DiagnosticFields.Field("resolvedFamily", resolved?.Family is null ? null : DiagnosticValue.From(resolved.Family)),
+                DiagnosticFields.Field("resolvedWeight", resolved is null ? null : DiagnosticValue.FromEnum(resolved.Weight)),
+                DiagnosticFields.Field("resolvedStyle", resolved is null ? null : DiagnosticValue.FromEnum(resolved.Style)),
+                DiagnosticFields.Field("sourceId", resolved?.SourceId is null ? null : DiagnosticValue.From(resolved.SourceId)),
+                DiagnosticFields.Field("configuredPath", resolved?.ConfiguredPath is null ? null : DiagnosticValue.From(resolved.ConfiguredPath)),
+                DiagnosticFields.Field("filePath", resolved?.FilePath is null ? null : DiagnosticValue.From(resolved.FilePath)),
+                DiagnosticFields.Field("faceIndex", resolved is null ? null : DiagnosticValue.From(resolved.FaceIndex)),
+                DiagnosticFields.Field("outcome", outcome),
+                DiagnosticFields.Field("reason", reason is null ? null : DiagnosticValue.From(reason))),
+            Timestamp: DateTimeOffset.UtcNow));
     }
 
     private readonly record struct ResolutionEventKey(

@@ -1,5 +1,7 @@
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -54,7 +56,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         diagnostics.ShouldNotBeNull();
         result.PdfBytes.ShouldNotBeEmpty();
         page.ShouldNotBeNull();
-        diagnostics.Events.Any(e => e.Name == "layout/table").ShouldBeTrue();
+        diagnostics.Records.Any(e => e.Name == "layout/table").ShouldBeTrue();
         orderedTexts.ShouldBe(["A", "B", "C", "D"]);
         tableFragments.Count.ShouldBe(1);
         tableFragments[0].DerivedColumnCount.ShouldBe(2);
@@ -97,7 +99,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         var tableFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table").ToList();
         var cellFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-cell").ToList();
 
-        diagnostics.Events.Any(e => e.Name == "layout/table").ShouldBeTrue();
+        diagnostics.Records.Any(e => e.Name == "layout/table").ShouldBeTrue();
         tableFragments.Count.ShouldBe(1);
         cellFragments.Count.ShouldBe(2);
         orderedTexts.ShouldContain("Wrapped Table");
@@ -136,7 +138,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
             .Single(static fragment => fragment.Kind == "table");
         var rows = tableFragment.Children.Where(static fragment => fragment.Kind == "table-row").ToList();
 
-        diagnostics.Events.Any(e => e.Name == "layout/table").ShouldBeTrue();
+        diagnostics.Records.Any(e => e.Name == "layout/table").ShouldBeTrue();
         result.PdfBytes.ShouldNotBeEmpty();
         orderedTexts.ShouldBe(["Name", "Status", "Alpha", "Ready"]);
         tableFragment.DerivedColumnCount.ShouldBe(2);
@@ -182,17 +184,15 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         var tableFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table").ToList();
         var rowFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-row").ToList();
         var cellFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-cell").ToList();
-        var unsupportedEvent = diagnostics.Events.FirstOrDefault(e => e.Name == "layout/table/unsupported-structure");
-        var tableLayoutEvent = diagnostics.Events.FirstOrDefault(e => e.Name == "layout/table");
+        var unsupportedEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table/unsupported-structure");
+        var tableLayoutEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table");
 
         result.PdfBytes.ShouldNotBeEmpty();
         unsupportedEvent.ShouldNotBeNull();
-        unsupportedEvent!.Payload.ShouldBeOfType<UnsupportedStructurePayload>();
-        ((UnsupportedStructurePayload)unsupportedEvent.Payload!).StructureKind.ShouldBe("colspan");
+        StringField(unsupportedEvent!, "structureKind").ShouldBe("colspan");
         tableLayoutEvent.ShouldNotBeNull();
-        tableLayoutEvent!.Payload.ShouldBeOfType<TableLayoutPayload>();
-        ((TableLayoutPayload)tableLayoutEvent.Payload!).Outcome.ShouldBe("Unsupported");
-        ((TableLayoutPayload)tableLayoutEvent.Payload!).Reason.ShouldBe("Table cell colspan is not supported.");
+        StringField(tableLayoutEvent!, "outcome").ShouldBe("Unsupported");
+        StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
         tableFragments.Count.ShouldBe(1);
         tableFragments[0].Size.Height.ShouldBe(0f);
         rowFragments.ShouldBeEmpty();
@@ -226,20 +226,16 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         var tableFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table").ToList();
         var rowFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-row").ToList();
         var cellFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-cell").ToList();
-        var unsupportedEvent = diagnostics.Events.FirstOrDefault(e => e.Name == "layout/table/unsupported-structure");
-        var tableLayoutEvent = diagnostics.Events.FirstOrDefault(e => e.Name == "layout/table");
+        var unsupportedEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table/unsupported-structure");
+        var tableLayoutEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table");
 
         result.PdfBytes.ShouldNotBeEmpty();
         unsupportedEvent.ShouldNotBeNull();
-        unsupportedEvent!.Payload.ShouldBeOfType<UnsupportedStructurePayload>();
-        ((UnsupportedStructurePayload)unsupportedEvent.Payload!).StructureKind.ShouldBe("colspan");
+        StringField(unsupportedEvent!, "structureKind").ShouldBe("colspan");
         tableLayoutEvent.ShouldNotBeNull();
-        tableLayoutEvent!.Payload.ShouldBeOfType<TableLayoutPayload>();
-
-        var tablePayload = (TableLayoutPayload)tableLayoutEvent.Payload!;
-        tablePayload.Outcome.ShouldBe("Unsupported");
-        tablePayload.RowCount.ShouldBe(1);
-        tablePayload.Reason.ShouldBe("Table cell colspan is not supported.");
+        StringField(tableLayoutEvent!, "outcome").ShouldBe("Unsupported");
+        NumberField(tableLayoutEvent, "rowCount").ShouldBe(1);
+        StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
 
         orderedTexts.ShouldBe(["before table", "after table"]);
         tableFragments.Count.ShouldBe(1);
@@ -278,25 +274,24 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         orderedTexts.ShouldBe(["A", "B", "C", "D"]);
     }
 
-    private static DiagnosticsSession GetDiagnostics(Html2PdfResult result)
+    private static DiagnosticsReport GetDiagnostics(Html2PdfResult result)
     {
-        result.Diagnostics.ShouldNotBeNull();
-        return result.Diagnostics!;
+        result.DiagnosticsReport.ShouldNotBeNull();
+        return result.DiagnosticsReport!;
     }
 
     private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
     {
         var diagnostics = GetDiagnostics(result);
-        var endLayoutBuild = diagnostics.Events.FirstOrDefault(x =>
-            x is { Type: DiagnosticsEventType.EndStage, Payload: not null, Name: "LayoutBuild" });
+        var endLayoutBuild = diagnostics.Records.FirstOrDefault(x =>
+            x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
 
         endLayoutBuild.ShouldNotBeNull();
-        endLayoutBuild!.Payload.ShouldBeOfType<LayoutSnapshotPayload>();
+        var snapshot = endLayoutBuild!.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
+        var pages = ArrayField(snapshot, "pages");
+        pages.ShouldNotBeEmpty();
 
-        var snapshot = ((LayoutSnapshotPayload)endLayoutBuild.Payload).Snapshot;
-        snapshot.Pages.ShouldNotBeEmpty();
-
-        return snapshot.Pages[0];
+        return MapPage(pages[0].ShouldBeOfType<DiagnosticObject>());
     }
 
     private static IEnumerable<string> EnumerateOrderedTexts(IReadOnlyList<FragmentSnapshot> fragments)
@@ -329,5 +324,76 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
                 yield return child;
             }
         }
+    }
+
+    private static LayoutPageSnapshot MapPage(DiagnosticObject page) =>
+        new()
+        {
+            Fragments = ArrayField(page, "fragments")
+                .Select(static fragment => MapFragment(fragment.ShouldBeOfType<DiagnosticObject>()))
+                .ToList()
+        };
+
+    private static FragmentSnapshot MapFragment(DiagnosticObject fragment) =>
+        new()
+        {
+            Kind = StringFieldOrEmpty(fragment, "kind"),
+            Text = StringFieldOrNull(fragment, "text"),
+            X = (float)NumberField(fragment, "x"),
+            Y = (float)NumberField(fragment, "y"),
+            Size = MapSize(fragment["size"].ShouldBeOfType<DiagnosticObject>()),
+            DerivedColumnCount = NullableIntField(fragment, "derivedColumnCount"),
+            RowIndex = NullableIntField(fragment, "rowIndex"),
+            ColumnIndex = NullableIntField(fragment, "columnIndex"),
+            IsHeader = NullableBoolField(fragment, "isHeader"),
+            Children = ArrayField(fragment, "children")
+                .Select(static child => MapFragment(child.ShouldBeOfType<DiagnosticObject>()))
+                .ToList()
+        };
+
+    private static SizePt MapSize(DiagnosticObject size) =>
+        new((float)NumberField(size, "width"), (float)NumberField(size, "height"));
+
+    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static double NumberField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
+
+    private static string StringFieldOrEmpty(DiagnosticObject value, string fieldName) =>
+        StringFieldOrNull(value, fieldName) ?? string.Empty;
+
+    private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
+        value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
+
+    private static int? NullableIntField(DiagnosticObject value, string fieldName) =>
+        value[fieldName] is DiagnosticNumberValue number ? (int)number.Value : null;
+
+    private static bool? NullableBoolField(DiagnosticObject value, string fieldName) =>
+        value[fieldName] is DiagnosticBooleanValue boolean ? boolean.Value : null;
+
+    private sealed class LayoutPageSnapshot
+    {
+        public IReadOnlyList<FragmentSnapshot> Fragments { get; init; } = [];
+    }
+
+    private sealed class FragmentSnapshot
+    {
+        public string Kind { get; init; } = string.Empty;
+        public string? Text { get; init; }
+        public float X { get; init; }
+        public float Y { get; init; }
+        public SizePt Size { get; init; }
+        public int? DerivedColumnCount { get; init; }
+        public int? RowIndex { get; init; }
+        public int? ColumnIndex { get; init; }
+        public bool? IsHeader { get; init; }
+        public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
     }
 }

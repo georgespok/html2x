@@ -1,5 +1,6 @@
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics.Contracts;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -239,11 +240,12 @@ namespace Html2x.Test.Scenarios
 
         private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
         {
-            var endLayoutBuild = result.Diagnostics!.Events.FirstOrDefault(x => x is { Type: DiagnosticsEventType.EndStage, Payload: not null, Name: "LayoutBuild" });
+            var endLayoutBuild = result.DiagnosticsReport!.Records.FirstOrDefault(
+                x => x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
 
-            var snapshot = ((LayoutSnapshotPayload) endLayoutBuild!.Payload!).Snapshot;
+            var snapshot = endLayoutBuild!.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
 
-            return snapshot.Pages[0];
+            return MapPage(ArrayField(snapshot, "pages")[0].ShouldBeOfType<DiagnosticObject>());
         }
 
         private static IEnumerable<string> EnumerateText(IReadOnlyList<FragmentSnapshot> fragments)
@@ -391,5 +393,72 @@ namespace Html2x.Test.Scenarios
                 lastIndex = currentIndex;
             }
         }
+
+        private static LayoutPageSnapshot MapPage(DiagnosticObject page) =>
+            new()
+            {
+                Fragments = ArrayField(page, "fragments")
+                    .Select(static fragment => MapFragment(fragment.ShouldBeOfType<DiagnosticObject>()))
+                    .ToList()
+            };
+
+        private static FragmentSnapshot MapFragment(DiagnosticObject fragment) =>
+            new()
+            {
+                Kind = StringFieldOrEmpty(fragment, "kind"),
+                Text = StringFieldOrNull(fragment, "text"),
+                BackgroundColor = StringFieldOrNull(fragment, "backgroundColor"),
+                Borders = MapBorders(fragment["borders"]),
+                X = (float)NumberField(fragment, "x"),
+                Y = (float)NumberField(fragment, "y"),
+                Size = MapSize(fragment["size"].ShouldBeOfType<DiagnosticObject>()),
+                Children = ArrayField(fragment, "children")
+                    .Select(static child => MapFragment(child.ShouldBeOfType<DiagnosticObject>()))
+                    .ToList()
+            };
+
+        private static SizePt MapSize(DiagnosticObject size) =>
+            new((float)NumberField(size, "width"), (float)NumberField(size, "height"));
+
+        private static BorderEdgesSnapshot? MapBorders(DiagnosticValue? borders)
+        {
+            if (borders is not DiagnosticObject borderObject)
+            {
+                return null;
+            }
+
+            return new BorderEdgesSnapshot(borderObject.Values.Any(static side => side is DiagnosticObject));
+        }
+
+        private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
+            value[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+        private static double NumberField(DiagnosticObject value, string fieldName) =>
+            value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+        private static string StringFieldOrEmpty(DiagnosticObject value, string fieldName) =>
+            StringFieldOrNull(value, fieldName) ?? string.Empty;
+
+        private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
+            value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
+
+        private sealed class LayoutPageSnapshot
+        {
+            public IReadOnlyList<FragmentSnapshot> Fragments { get; init; } = [];
+        }
+
+        private sealed class FragmentSnapshot
+        {
+            public string Kind { get; init; } = string.Empty;
+            public string? Text { get; init; }
+            public string? BackgroundColor { get; init; }
+            public BorderEdgesSnapshot? Borders { get; init; }
+            public float X { get; init; }
+            public float Y { get; init; }
+            public SizePt Size { get; init; }
+            public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
+        }
+
+        private sealed record BorderEdgesSnapshot(bool HasAny);
     }
 }

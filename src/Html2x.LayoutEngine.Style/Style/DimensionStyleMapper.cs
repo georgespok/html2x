@@ -1,9 +1,9 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Measurements.Dimensions;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;
@@ -58,43 +58,67 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         ICssStyleDeclaration css,
         IElement element,
         ComputedStyleBuilder style,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(css);
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(style);
 
-        var width = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Width, element, diagnosticsSession);
+        var width = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.Width,
+            element,
+            diagnosticsSink);
         if (width.HasValue)
         {
             style.WidthPt = width.Value;
         }
 
-        var minWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinWidth, element, diagnosticsSession);
+        var minWidth = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.MinWidth,
+            element,
+            diagnosticsSink);
         if (minWidth.HasValue)
         {
             style.MinWidthPt = minWidth.Value;
         }
 
-        var maxWidth = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxWidth, element, diagnosticsSession);
+        var maxWidth = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.MaxWidth,
+            element,
+            diagnosticsSink);
         if (maxWidth.HasValue)
         {
             style.MaxWidthPt = maxWidth.Value;
         }
 
-        var height = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.Height, element, diagnosticsSession);
+        var height = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.Height,
+            element,
+            diagnosticsSink);
         if (height.HasValue)
         {
             style.HeightPt = height.Value;
         }
 
-        var minHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MinHeight, element, diagnosticsSession);
+        var minHeight = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.MinHeight,
+            element,
+            diagnosticsSink);
         if (minHeight.HasValue)
         {
             style.MinHeightPt = minHeight.Value;
         }
 
-        var maxHeight = GetDimensionWithLogging(css, HtmlCssConstants.CssProperties.MaxHeight, element, diagnosticsSession);
+        var maxHeight = GetDimensionWithLogging(
+            css,
+            HtmlCssConstants.CssProperties.MaxHeight,
+            element,
+            diagnosticsSink);
         if (maxHeight.HasValue)
         {
             style.MaxHeightPt = maxHeight.Value;
@@ -105,7 +129,7 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         ICssStyleDeclaration css,
         string property,
         IElement element,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink)
     {
         var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
 
@@ -124,42 +148,35 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(trimmed);
         if (unsupportedUnit != null)
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/unsupported-declaration",
+            StyleDiagnostics.EmitUnsupportedDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 trimmed,
-                null,
-                "Unsupported",
                 $"Unsupported unit '{unsupportedUnit}' for {property}.");
             return null;
         }
 
         if (!_converter.TryGetLengthPt(rawValue, out var points))
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/ignored-declaration",
+            StyleDiagnostics.EmitIgnoredDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 trimmed,
                 null,
-                "Ignored",
                 $"Unable to parse {property} as a supported length.");
             return null;
         }
 
         if (points < 0)
         {
-            StyleDiagnosticEmitter.Emit(
-                diagnosticsSession,
-                "style/ignored-declaration",
+            StyleDiagnostics.EmitIgnoredDeclaration(
+                diagnosticsSink,
                 element,
                 property,
                 trimmed,
                 points.ToString(CultureInfo.InvariantCulture),
-                "Ignored",
                 $"Negative dimension value for {property} was ignored.");
             return null;
         }

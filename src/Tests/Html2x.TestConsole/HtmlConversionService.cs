@@ -34,12 +34,12 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
             await File.WriteAllBytesAsync(outputPath, result.PdfBytes);
             logger.LogInformation("PDF created successfully. Size {FileSize:N0} bytes", result.PdfBytes.Length);
 
-            if (!string.IsNullOrWhiteSpace(options.DiagnosticsJson) && result.Diagnostics is { } session)
+            if (!string.IsNullOrWhiteSpace(options.DiagnosticsJson) && result.DiagnosticsReport is { } report)
             {
                 var diagnosticsPath = Path.GetFullPath(options.DiagnosticsJson);
                 Directory.CreateDirectory(Path.GetDirectoryName(diagnosticsPath)!);
 
-                var json = TestConsoleDiagnosticsSerializer.ToJson(session, options);
+                var json = TestConsoleDiagnosticsSerializer.ToJson(report, options);
                 await File.WriteAllTextAsync(diagnosticsPath, json);
 
                 logger.LogInformation("Diagnostics written to {DiagnosticsPath}", diagnosticsPath);

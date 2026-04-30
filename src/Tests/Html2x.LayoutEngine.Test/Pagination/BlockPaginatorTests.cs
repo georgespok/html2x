@@ -1,9 +1,10 @@
 using System.Drawing;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Test;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Pagination;
@@ -153,15 +154,13 @@ public sealed class BlockPaginatorTests
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
-        var diagnostics = new DiagnosticsSession();
+        var diagnostics = new RecordingDiagnosticsSink();
 
         // Act
         _ = paginator.Paginate(blocks, pageSize, margins, diagnostics);
 
         // Assert
-        var traceEvents = diagnostics.Events
-            .Where(static e => e.Type == DiagnosticsEventType.Trace)
-            .ToList();
+        var traceEvents = diagnostics.Records.ToList();
 
         traceEvents.Select(static e => e.Name).ShouldBe([
             "layout/pagination/page-created",
@@ -179,19 +178,48 @@ public sealed class BlockPaginatorTests
         ]);
         traceEvents.All(static e => e.Context is not null).ShouldBeTrue();
 
-        var movedPayload = (PaginationTracePayload)traceEvents[2].Payload!;
-        movedPayload.EventName.ShouldBe("layout/pagination/block-moved-next-page");
-        movedPayload.Severity.ShouldBe(DiagnosticSeverity.Info);
-        movedPayload.Context.ShouldNotBeNull();
-        movedPayload.Context!.StructuralPath.ShouldBe("page[2]/fragment[32]");
-        movedPayload.FromPage.ShouldBe(1);
-        movedPayload.ToPage.ShouldBe(2);
-        movedPayload.FragmentId.ShouldBe(32);
-        movedPayload.RemainingSpace.ShouldBe(20f);
+        var movedRecord = traceEvents[2];
+        movedRecord.Fields["eventName"].ShouldBe(new DiagnosticStringValue("layout/pagination/block-moved-next-page"));
+        movedRecord.Severity.ShouldBe(DiagnosticSeverity.Info);
+        movedRecord.Context.ShouldNotBeNull();
+        movedRecord.Context!.StructuralPath.ShouldBe("page[2]/fragment[32]");
+        movedRecord.Fields["fromPage"].ShouldBe(new DiagnosticNumberValue(1));
+        movedRecord.Fields["toPage"].ShouldBe(new DiagnosticNumberValue(2));
+        movedRecord.Fields["fragmentId"].ShouldBe(new DiagnosticNumberValue(32));
+        movedRecord.Fields["remainingSpace"].ShouldBe(new DiagnosticNumberValue(20f));
 
-        var overflowPagePayload = (PaginationTracePayload)traceEvents[3].Payload!;
-        overflowPagePayload.PageNumber.ShouldBe(2);
-        overflowPagePayload.Reason.ShouldBe("Overflow");
+        var overflowPageRecord = traceEvents[3];
+        overflowPageRecord.Fields["pageNumber"].ShouldBe(new DiagnosticNumberValue(2));
+        overflowPageRecord.Fields["reason"].ShouldBe(new DiagnosticStringValue("Overflow"));
+    }
+
+    [Fact]
+    public void Paginate_DiagnosticsSink_EmitsPaginationFieldRecords()
+    {
+        var paginator = new BlockPaginator();
+        var blocks = new List<BlockFragment>
+        {
+            CreateBlock(31, y: 10f, width: 100f, height: 60f),
+            CreateBlock(32, y: 70f, width: 100f, height: 30f)
+        };
+        var sink = new RecordingDiagnosticsSink();
+
+        _ = paginator.Paginate(
+            blocks,
+            new SizePt(200f, 100f),
+            new Spacing(10f, 10f, 10f, 10f),
+            diagnosticsSink: sink);
+
+        var movedRecord = sink.Records.Single(
+            static record => record.Name == "layout/pagination/block-moved-next-page");
+        movedRecord.Stage.ShouldBe("stage/pagination");
+        movedRecord.Severity.ShouldBe(DiagnosticSeverity.Info);
+        movedRecord.Context.ShouldNotBeNull().StructuralPath.ShouldBe("page[2]/fragment[32]");
+        movedRecord.Fields["fromPage"].ShouldBe(new DiagnosticNumberValue(1));
+        movedRecord.Fields["toPage"].ShouldBe(new DiagnosticNumberValue(2));
+        movedRecord.Fields["fragmentId"].ShouldBe(new DiagnosticNumberValue(32));
+        movedRecord.Fields["remainingSpace"].ShouldBe(new DiagnosticNumberValue(20f));
+        movedRecord.Fields["blockHeight"].ShouldBe(new DiagnosticNumberValue(30f));
     }
 
     [Fact]
@@ -243,8 +271,8 @@ public sealed class BlockPaginatorTests
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f);
-        var firstDiagnostics = new DiagnosticsSession();
-        var secondDiagnostics = new DiagnosticsSession();
+        var firstDiagnostics = new RecordingDiagnosticsSink();
+        var secondDiagnostics = new RecordingDiagnosticsSink();
 
         // Act
         _ = paginator.Paginate(blocks, pageSize, margins, firstDiagnostics);
@@ -290,7 +318,7 @@ public sealed class BlockPaginatorTests
         var blocks = Array.Empty<BlockFragment>();
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f);
-        var diagnostics = new DiagnosticsSession();
+        var diagnostics = new RecordingDiagnosticsSink();
 
         // Act
         var result = paginator.Paginate(blocks, pageSize, margins, diagnostics);
@@ -300,8 +328,7 @@ public sealed class BlockPaginatorTests
         result.TotalPlacements.ShouldBe(0);
         result.Pages[0].Placements.ShouldBeEmpty();
 
-        diagnostics.Events
-            .Where(static e => e.Type == DiagnosticsEventType.Trace)
+        diagnostics.Records
             .Select(static e => e.Name)
             .ShouldBe([
                 "layout/pagination/page-created",
@@ -379,15 +406,14 @@ public sealed class BlockPaginatorTests
         };
     }
 
-    private static IReadOnlyList<(string Name, DiagnosticSeverity? Severity, string? StructuralPath, string PayloadEventName)>
-        ExtractTraceContract(DiagnosticsSession diagnostics)
+    private static IReadOnlyList<(string Name, DiagnosticSeverity Severity, string? StructuralPath, string EventName)>
+        ExtractTraceContract(RecordingDiagnosticsSink diagnostics)
     {
-        return diagnostics.Events
-            .Where(static e => e.Payload is PaginationTracePayload)
+        return diagnostics.Records
             .Select(static e =>
             {
-                var payload = (PaginationTracePayload)e.Payload!;
-                return (e.Name, e.Severity, e.Context?.StructuralPath, payload.EventName);
+                var eventName = e.Fields["eventName"].ShouldBeOfType<DiagnosticStringValue>().Value;
+                return (e.Name, e.Severity, e.Context?.StructuralPath, eventName);
             })
             .ToList();
     }

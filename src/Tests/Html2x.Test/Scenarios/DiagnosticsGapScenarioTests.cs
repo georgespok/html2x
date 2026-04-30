@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Shouldly;
@@ -38,63 +38,67 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
         var result = await converter.ToPdfAsync(html, Options);
 
         result.PdfBytes.ShouldNotBeEmpty();
-        result.Diagnostics.ShouldNotBeNull();
+        result.DiagnosticsReport.ShouldNotBeNull();
 
-        var diagnostics = result.Diagnostics!;
-        diagnostics.Events.Any(static e =>
-            e.Name == "LayoutBuild" &&
-            e.StageState == DiagnosticStageState.Started).ShouldBeTrue();
-        diagnostics.Events.Any(static e =>
-            e.Name == "PdfRender" &&
-            e.StageState == DiagnosticStageState.Succeeded).ShouldBeTrue();
+        var diagnostics = result.DiagnosticsReport!;
+        diagnostics.Records.Any(static e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/started").ShouldBeTrue();
+        diagnostics.Records.Any(static e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/succeeded").ShouldBeTrue();
 
-        var styleDiagnostics = diagnostics.Events
-            .Where(static e => e.Payload is StyleDiagnosticPayload)
+        var styleDiagnostics = diagnostics.Records
+            .Where(static e => e.Stage == "stage/style" && e.Name.StartsWith("style/", StringComparison.Ordinal))
             .ToList();
         styleDiagnostics.ShouldContain(static e => e.Name == "style/ignored-declaration");
-        styleDiagnostics.Any(static e => e.RawUserInput is not null).ShouldBeTrue();
+        styleDiagnostics.Any(static e => e.Context?.RawUserInput is not null).ShouldBeTrue();
 
-        var snapshot = diagnostics.Events
-            .Where(static e => e.Payload is LayoutSnapshotPayload)
-            .Select(static e => ((LayoutSnapshotPayload)e.Payload!).Snapshot)
-            .Single();
-        var fragments = Flatten(snapshot.Pages.SelectMany(static page => page.Fragments).ToList()).ToList();
-        fragments.Any(static fragment => fragment.Color is not null).ShouldBeTrue();
-        fragments.Any(static fragment => fragment.Borders is not null && fragment.Borders.HasAny).ShouldBeTrue();
-        fragments.Any(static fragment => fragment.DisplayRole is not null).ShouldBeTrue();
+        var snapshot = diagnostics.Records
+            .Single(static e => e is { Stage: "LayoutBuild", Name: "stage/succeeded" })
+            .Fields["snapshot"]
+            .ShouldBeOfType<DiagnosticObject>();
+        var fragments = Flatten(ArrayField(snapshot, "pages")
+                .Select(static page => page.ShouldBeOfType<DiagnosticObject>())
+                .SelectMany(static page => ArrayField(page, "fragments")))
+            .ToList();
+        fragments.Any(static fragment => fragment["color"] is DiagnosticStringValue).ShouldBeTrue();
+        fragments.Any(static fragment => fragment["borders"] is DiagnosticObject { Count: > 0 }).ShouldBeTrue();
+        fragments.Any(static fragment => fragment["displayRole"] is DiagnosticStringValue).ShouldBeTrue();
 
-        var tablePayload = diagnostics.Events
+        var tablePayload = diagnostics.Records
             .Where(static e => e.Name == "layout/table")
-            .Select(static e => e.Payload)
-            .OfType<TableLayoutPayload>()
             .Single();
-        tablePayload.Outcome.ShouldBe("Supported");
-        tablePayload.RowContexts.ShouldNotBeEmpty();
-        tablePayload.CellContexts.ShouldNotBeEmpty();
-        tablePayload.ColumnContexts.ShouldNotBeEmpty();
-        tablePayload.GroupContexts.ShouldNotBeEmpty();
+        StringField(tablePayload, "outcome").ShouldBe("Supported");
+        ArrayField(tablePayload, "rows").ShouldNotBeEmpty();
+        ArrayField(tablePayload, "cells").ShouldNotBeEmpty();
+        ArrayField(tablePayload, "columns").ShouldNotBeEmpty();
+        ArrayField(tablePayload, "groups").ShouldNotBeEmpty();
 
-        var imageEvent = diagnostics.Events.Single(static e => e.Name == "image/render");
+        var imageEvent = diagnostics.Records.Single(static e => e.Name == "image/render");
         imageEvent.Severity.ShouldBe(DiagnosticSeverity.Warning);
         imageEvent.Context.ShouldNotBeNull();
         imageEvent.Context!.RawUserInput.ShouldBe("missing-diagnostics-image.png");
-        var imagePayload = imageEvent.Payload.ShouldBeOfType<ImageRenderPayload>();
-        imagePayload.Status.ShouldBe(ImageStatus.Missing);
-        imagePayload.RenderedSize.Width.ShouldBeGreaterThan(0);
+        StringField(imageEvent, "status").ShouldBe("Missing");
+        NumberField(imageEvent, "renderedWidth").ShouldBeGreaterThan(0);
 
-        var json = DiagnosticsSessionSerializer.ToJson(diagnostics);
+        var json = DiagnosticsReportSerializer.ToJson(diagnostics);
         using var document = JsonDocument.Parse(json);
-        var events = document.RootElement.GetProperty("events").EnumerateArray().ToList();
-        events.ShouldContain(static e => e.GetProperty("name").GetString() == "image/render");
-        events.ShouldContain(static e => e.GetProperty("rawUserInput").ValueKind == JsonValueKind.String);
-        events.Any(HasSerializedRows).ShouldBeTrue();
+        var records = document.RootElement.GetProperty("records").EnumerateArray().ToList();
+        records.ShouldContain(static e => e.GetProperty("name").GetString() == "image/render");
+        records.Any(static e =>
+            e.TryGetProperty("context", out var context) &&
+            context.ValueKind == JsonValueKind.Object &&
+            context.TryGetProperty("rawUserInput", out var rawUserInput) &&
+            rawUserInput.ValueKind == JsonValueKind.String).ShouldBeTrue();
+        records.Any(HasSerializedRows).ShouldBeTrue();
     }
 
     private static bool HasSerializedRows(JsonElement e)
     {
-        var payload = e.GetProperty("payload");
-        return payload.ValueKind == JsonValueKind.Object &&
-               payload.TryGetProperty("rowContexts", out var rows) &&
+        var fields = e.GetProperty("fields");
+        return fields.ValueKind == JsonValueKind.Object &&
+               fields.TryGetProperty("rows", out var rows) &&
                rows.GetArrayLength() > 0;
     }
 
@@ -114,16 +118,29 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
         throw new DirectoryNotFoundException("Could not locate repository root.");
     }
 
-    private static IEnumerable<FragmentSnapshot> Flatten(IReadOnlyList<FragmentSnapshot> fragments)
+    private static IEnumerable<DiagnosticObject> Flatten(IEnumerable<DiagnosticValue?> fragments)
     {
         foreach (var fragment in fragments)
         {
-            yield return fragment;
+            var fragmentObject = fragment.ShouldBeOfType<DiagnosticObject>();
+            yield return fragmentObject;
 
-            foreach (var child in Flatten(fragment.Children))
+            foreach (var child in Flatten(ArrayField(fragmentObject, "children")))
             {
                 yield return child;
             }
         }
     }
+
+    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+    private static DiagnosticArray ArrayField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
 }

@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
@@ -81,14 +81,15 @@ public sealed class UnsupportedFeatureBaselineTests
         AssertUnsupportedMode(result.Diagnostics, "display:flex");
     }
 
-    private static void AssertUnsupportedMode(DiagnosticsSession diagnostics, string structureKind)
+    private static void AssertUnsupportedMode(IReadOnlyList<DiagnosticRecord> diagnostics, string structureKind)
     {
-        diagnostics.Events.Any(e =>
-            e.Type == DiagnosticsEventType.Warning &&
+        diagnostics.Any(e =>
+            e.Severity == DiagnosticSeverity.Warning &&
             e.Name == "layout/unsupported-mode" &&
-            e.Payload is UnsupportedStructurePayload payload &&
-            payload.StructureKind == structureKind &&
-            !string.IsNullOrWhiteSpace(payload.Reason))
+            e.Fields["structureKind"] is DiagnosticStringValue { Value: var actualKind } &&
+            actualKind == structureKind &&
+            e.Fields["reason"] is DiagnosticStringValue { Value: var reason } &&
+            !string.IsNullOrWhiteSpace(reason))
             .ShouldBeTrue();
     }
 

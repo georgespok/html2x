@@ -1,9 +1,9 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;
@@ -33,7 +33,9 @@ public sealed class CssStyleComputer
         _borderMapper = new BorderStyleMapper(converter);
     }
 
-    public StyleTree Compute(IDocument doc, DiagnosticsSession? diagnosticsSession = null)
+    public StyleTree Compute(
+        IDocument doc,
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         var tree = new StyleTree();
 
@@ -43,24 +45,26 @@ public sealed class CssStyleComputer
         }
 
         var bodyStyle = body.ComputeCurrentStyle();
-        ApplyPageMargins(tree, bodyStyle, body, diagnosticsSession);
+        ApplyPageMargins(tree, bodyStyle, body, diagnosticsSink);
 
-        tree.Root = _traversal.Build(body, (element, parentStyle) => MapStyle(element, parentStyle, diagnosticsSession));
+        tree.Root = _traversal.Build(
+            body,
+            (element, parentStyle) => MapStyle(element, parentStyle, diagnosticsSink));
         return tree;
     }
 
     private ComputedStyle MapStyle(
         IElement element,
         ComputedStyle? parentStyle,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink)
     {
         var css = element.ComputeCurrentStyle();
 
         var style = new ComputedStyleBuilder();
 
         ApplyTypography(css, style, parentStyle);
-        _spacingMapper.ApplySpacing(css, element, style, diagnosticsSession);
-        _dimensionMapper.ApplyDimensions(css, element, style, diagnosticsSession);
+        _spacingMapper.ApplySpacing(css, element, style, diagnosticsSink);
+        _dimensionMapper.ApplyDimensions(css, element, style, diagnosticsSink);
         ApplyDisplay(css, style);
         ApplyFloat(css, style);
         ApplyPosition(css, style);
@@ -111,7 +115,7 @@ public sealed class CssStyleComputer
         StyleTree tree,
         ICssStyleDeclaration styles,
         IElement element,
-        DiagnosticsSession? diagnosticsSession)
+        IDiagnosticsSink? diagnosticsSink)
     {
         var margin = _spacingMapper.ParseSpacingWithOverrides(
             styles,
@@ -121,7 +125,7 @@ public sealed class CssStyleComputer
             HtmlCssConstants.CssProperties.MarginBottom,
             HtmlCssConstants.CssProperties.MarginLeft,
             element,
-            diagnosticsSession);
+            diagnosticsSink);
 
         tree.Page.Margin = margin;
     }

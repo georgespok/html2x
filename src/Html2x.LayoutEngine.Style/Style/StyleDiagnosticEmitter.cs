@@ -1,12 +1,49 @@
 using AngleSharp.Dom;
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 
 namespace Html2x.LayoutEngine.Style;
 
-internal static class StyleDiagnosticEmitter
+internal static class StyleDiagnostics
 {
+    public static void EmitIgnoredDeclaration(
+        IDiagnosticsSink? diagnosticsSink,
+        IElement element,
+        string propertyName,
+        string rawValue,
+        string? normalizedValue,
+        string reason)
+    {
+        Emit(
+            diagnosticsSink,
+            "style/ignored-declaration",
+            element,
+            propertyName,
+            rawValue,
+            normalizedValue,
+            "Ignored",
+            reason);
+    }
+
+    public static void EmitUnsupportedDeclaration(
+        IDiagnosticsSink? diagnosticsSink,
+        IElement element,
+        string propertyName,
+        string rawValue,
+        string reason)
+    {
+        Emit(
+            diagnosticsSink,
+            "style/unsupported-declaration",
+            element,
+            propertyName,
+            rawValue,
+            normalizedValue: null,
+            "Unsupported",
+            reason);
+    }
+
     public static void Emit(
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         string eventName,
         IElement element,
         string propertyName,
@@ -15,30 +52,22 @@ internal static class StyleDiagnosticEmitter
         string decision,
         string reason)
     {
-        if (diagnosticsSession is null)
-        {
-            return;
-        }
-
         var context = CreateDiagnosticContext(element, propertyName, rawValue);
-        diagnosticsSession.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Warning,
-            Name = eventName,
-            Description = reason,
-            Severity = DiagnosticSeverity.Warning,
-            Context = context,
-            RawUserInput = context.RawUserInput,
-            Payload = new StyleDiagnosticPayload
-            {
-                PropertyName = propertyName,
-                RawValue = rawValue,
-                NormalizedValue = normalizedValue,
-                Decision = decision,
-                Reason = reason,
-                Context = context
-            }
-        });
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/style",
+            Name: eventName,
+            Severity: DiagnosticSeverity.Warning,
+            Message: reason,
+            Context: context,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("propertyName", propertyName),
+                DiagnosticFields.Field("rawValue", rawValue),
+                DiagnosticFields.Field(
+                    "normalizedValue",
+                    normalizedValue is null ? null : DiagnosticValue.From(normalizedValue)),
+                DiagnosticFields.Field("decision", decision),
+                DiagnosticFields.Field("reason", reason)),
+            Timestamp: DateTimeOffset.UtcNow));
     }
 
     private static DiagnosticContext CreateDiagnosticContext(

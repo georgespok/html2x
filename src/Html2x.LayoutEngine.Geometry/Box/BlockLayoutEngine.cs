@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box.Publishing;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
@@ -22,7 +22,7 @@ internal sealed class BlockLayoutEngine
     private readonly InlineLayoutEngine _inlineEngine;
     private readonly BlockMeasurementService _measurement;
     private readonly TableLayoutEngine _tableEngine;
-    private readonly DiagnosticsSession? _diagnosticsSession;
+    private readonly IDiagnosticsSink? _diagnosticsSink;
     private readonly IBlockFormattingContext _blockFormattingContext;
     private readonly IImageLayoutResolver _imageResolver;
     private readonly TablePlacementApplier _tablePlacementApplier;
@@ -33,13 +33,13 @@ internal sealed class BlockLayoutEngine
     public BlockLayoutEngine(
         InlineLayoutEngine inlineEngine,
         TableLayoutEngine tableEngine,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
         : this(
             inlineEngine,
             tableEngine,
             new BlockFormattingContext(),
             new ImageLayoutResolver(),
-            diagnosticsSession)
+            diagnosticsSink)
     {
     }
 
@@ -48,7 +48,7 @@ internal sealed class BlockLayoutEngine
         TableLayoutEngine tableEngine,
         IBlockFormattingContext blockFormattingContext,
         IImageLayoutResolver imageResolver,
-        DiagnosticsSession? diagnosticsSession = null)
+        IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(inlineEngine);
         ArgumentNullException.ThrowIfNull(tableEngine);
@@ -58,7 +58,7 @@ internal sealed class BlockLayoutEngine
         _tableEngine = tableEngine;
         _imageResolver = imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
         _tablePlacementApplier = new TablePlacementApplier();
-        _diagnosticsSession = diagnosticsSession;
+        _diagnosticsSink = diagnosticsSink;
     }
 
     public BoxTree Layout(BoxNode boxRoot, PageBox page)
@@ -101,7 +101,7 @@ internal sealed class BlockLayoutEngine
                 marginTop,
                 FormattingContextKind.Block,
                 nameof(BlockLayoutEngine),
-                _diagnosticsSession);
+                _diagnosticsSink);
             var laidOutBlock = LayoutBlockForCompatibility(
                 block,
                 new BlockLayoutRequest(
@@ -155,7 +155,7 @@ internal sealed class BlockLayoutEngine
                 marginTop,
                 FormattingContextKind.Block,
                 nameof(BlockLayoutEngine),
-                _diagnosticsSession);
+                _diagnosticsSink);
             var publishedBlock = LayoutBlock(
                 block,
                 new BlockLayoutRequest(
@@ -452,7 +452,7 @@ internal sealed class BlockLayoutEngine
                 marginTop,
                 ResolveFormattingContext(parent),
                 nameof(BlockLayoutEngine),
-                _diagnosticsSession);
+                _diagnosticsSink);
             var childRequest = new BlockLayoutRequest(
                 contentX,
                 currentY,
@@ -666,21 +666,20 @@ internal sealed class BlockLayoutEngine
         if (!result.IsSupported)
         {
             TableLayoutDiagnostics.EmitUnsupportedTable(
-                _diagnosticsSession,
                 BoxNodePathBuilder.Build(node),
                 result.UnsupportedStructureKind ?? "unsupported-table-structure",
                 result.UnsupportedReason ?? "Unsupported table structure.",
                 result.RowCount,
                 result.RequestedWidth,
                 result.ResolvedWidth,
-                groupContexts: BuildTableGroupContexts(node));
+                groupContexts: BuildTableGroupContexts(node),
+                diagnosticsSink: _diagnosticsSink);
 
             TablePlacementApplier.ApplyUnsupportedPlaceholder(node, x, y, result.ResolvedWidth, margin);
             return;
         }
 
         TableLayoutDiagnostics.EmitSupportedTable(
-            _diagnosticsSession,
             BoxNodePathBuilder.Build(node),
             result.Rows.Count,
             result.DerivedColumnCount,
@@ -689,7 +688,8 @@ internal sealed class BlockLayoutEngine
             BuildTableRowContexts(result),
             BuildTableCellContexts(result),
             BuildTableColumnContexts(result),
-            BuildTableGroupContexts(node));
+            BuildTableGroupContexts(node),
+            diagnosticsSink: _diagnosticsSink);
 
         _tablePlacementApplier.ApplySupported(node, result, x, y, margin, layoutChildBlocks);
     }
@@ -917,3 +917,4 @@ internal sealed class BlockLayoutEngine
         IReadOnlyList<PublishedBlockFlowItem> PublishedFlow);
 
 }
+

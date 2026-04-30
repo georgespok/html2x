@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
@@ -10,23 +10,22 @@ public static class PaginationDiagnostics
     private const string OversizedBlockEvent = "layout/pagination/oversized-block";
     private const string EmptyDocumentEvent = "layout/pagination/empty-document";
 
-    public static void EmitPageCreated(DiagnosticsSession? diagnosticsSession, int pageNumber, string reason)
+    public static void EmitPageCreated(
+        IDiagnosticsSink? diagnosticsSink,
+        int pageNumber,
+        string reason)
     {
         Emit(
-            diagnosticsSession,
+            diagnosticsSink,
             PageCreatedEvent,
-            new PaginationTracePayload
+            new PaginationDiagnostic(PageCreatedEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, null), pageNumber)
             {
-                EventName = PageCreatedEvent,
-                Severity = DiagnosticSeverity.Info,
-                Context = CreateContext(PageCreatedEvent, pageNumber, null),
-                PageNumber = pageNumber,
                 Reason = reason
             });
     }
 
     public static void EmitBlockMovedNextPage(
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         int fromPage,
         int toPage,
         int fragmentId,
@@ -34,14 +33,10 @@ public static class PaginationDiagnostics
         float blockHeight)
     {
         Emit(
-            diagnosticsSession,
+            diagnosticsSink,
             BlockMovedNextPageEvent,
-            new PaginationTracePayload
+            new PaginationDiagnostic(BlockMovedNextPageEvent, DiagnosticSeverity.Info, CreateContext(toPage, fragmentId), toPage)
             {
-                EventName = BlockMovedNextPageEvent,
-                Severity = DiagnosticSeverity.Info,
-                Context = CreateContext(BlockMovedNextPageEvent, toPage, fragmentId),
-                PageNumber = toPage,
                 FromPage = fromPage,
                 ToPage = toPage,
                 FragmentId = fragmentId,
@@ -51,7 +46,7 @@ public static class PaginationDiagnostics
     }
 
     public static void EmitBlockPlaced(
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         int pageNumber,
         int fragmentId,
         float localY,
@@ -60,14 +55,10 @@ public static class PaginationDiagnostics
         float remainingSpaceAfter)
     {
         Emit(
-            diagnosticsSession,
+            diagnosticsSink,
             BlockPlacedEvent,
-            new PaginationTracePayload
+            new PaginationDiagnostic(BlockPlacedEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, fragmentId), pageNumber)
             {
-                EventName = BlockPlacedEvent,
-                Severity = DiagnosticSeverity.Info,
-                Context = CreateContext(BlockPlacedEvent, pageNumber, fragmentId),
-                PageNumber = pageNumber,
                 FragmentId = fragmentId,
                 LocalY = localY,
                 BlockHeight = blockHeight,
@@ -77,54 +68,67 @@ public static class PaginationDiagnostics
     }
 
     public static void EmitOversizedBlock(
-        DiagnosticsSession? diagnosticsSession,
+        IDiagnosticsSink? diagnosticsSink,
         int pageNumber,
         int fragmentId,
         float blockHeight,
         float pageContentHeight)
     {
         Emit(
-            diagnosticsSession,
+            diagnosticsSink,
             OversizedBlockEvent,
-            new PaginationTracePayload
+            new PaginationDiagnostic(OversizedBlockEvent, DiagnosticSeverity.Warning, CreateContext(pageNumber, fragmentId), pageNumber)
             {
-                EventName = OversizedBlockEvent,
-                Severity = DiagnosticSeverity.Warning,
-                Context = CreateContext(OversizedBlockEvent, pageNumber, fragmentId),
-                PageNumber = pageNumber,
                 FragmentId = fragmentId,
                 BlockHeight = blockHeight,
                 PageContentHeight = pageContentHeight
             });
     }
 
-    public static void EmitEmptyDocument(DiagnosticsSession? diagnosticsSession, int pageNumber)
+    public static void EmitEmptyDocument(
+        IDiagnosticsSink? diagnosticsSink,
+        int pageNumber)
     {
         Emit(
-            diagnosticsSession,
+            diagnosticsSink,
             EmptyDocumentEvent,
-            new PaginationTracePayload
-            {
-                EventName = EmptyDocumentEvent,
-                Severity = DiagnosticSeverity.Info,
-                Context = CreateContext(EmptyDocumentEvent, pageNumber, null),
-                PageNumber = pageNumber
-            });
+            new PaginationDiagnostic(EmptyDocumentEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, null), pageNumber));
     }
 
-    private static void Emit(DiagnosticsSession? diagnosticsSession, string eventName, PaginationTracePayload payload)
+    private static void Emit(
+        IDiagnosticsSink? diagnosticsSink,
+        string eventName,
+        PaginationDiagnostic payload)
     {
-        diagnosticsSession?.Events.Add(new DiagnosticsEvent
-        {
-            Type = DiagnosticsEventType.Trace,
-            Name = eventName,
-            Severity = payload.Severity,
-            Context = payload.Context,
-            Payload = payload
-        });
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: "stage/pagination",
+            Name: eventName,
+            Severity: payload.Severity,
+            Message: payload.Reason,
+            Context: payload.Context,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field("eventName", payload.EventName),
+                DiagnosticFields.Field("pageNumber", payload.PageNumber),
+                DiagnosticFields.Field("fragmentId", FromNullable(payload.FragmentId)),
+                DiagnosticFields.Field("fromPage", FromNullable(payload.FromPage)),
+                DiagnosticFields.Field("toPage", FromNullable(payload.ToPage)),
+                DiagnosticFields.Field("localY", FromNullable(payload.LocalY)),
+                DiagnosticFields.Field("remainingSpace", FromNullable(payload.RemainingSpace)),
+                DiagnosticFields.Field("remainingSpaceBefore", FromNullable(payload.RemainingSpaceBefore)),
+                DiagnosticFields.Field("remainingSpaceAfter", FromNullable(payload.RemainingSpaceAfter)),
+                DiagnosticFields.Field("blockHeight", FromNullable(payload.BlockHeight)),
+                DiagnosticFields.Field("pageContentHeight", FromNullable(payload.PageContentHeight)),
+                DiagnosticFields.Field("reason", payload.Reason is null ? null : DiagnosticValue.From(payload.Reason))),
+            Timestamp: DateTimeOffset.UtcNow));
     }
 
-    private static DiagnosticContext CreateContext(string eventName, int pageNumber, int? fragmentId)
+    private static DiagnosticValue? FromNullable(int? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable(float? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticContext CreateContext(int pageNumber, int? fragmentId)
     {
         var structuralPath = fragmentId.HasValue
             ? $"page[{pageNumber}]/fragment[{fragmentId.Value}]"
@@ -136,6 +140,24 @@ public static class PaginationDiagnostics
             StyleDeclaration: null,
             StructuralPath: structuralPath,
             RawUserInput: null);
+    }
+
+    private sealed record PaginationDiagnostic(
+        string EventName,
+        DiagnosticSeverity Severity,
+        DiagnosticContext Context,
+        int PageNumber)
+    {
+        public int? FragmentId { get; init; }
+        public int? FromPage { get; init; }
+        public int? ToPage { get; init; }
+        public float? LocalY { get; init; }
+        public float? RemainingSpace { get; init; }
+        public float? RemainingSpaceBefore { get; init; }
+        public float? RemainingSpaceAfter { get; init; }
+        public float? BlockHeight { get; init; }
+        public float? PageContentHeight { get; init; }
+        public string? Reason { get; init; }
     }
 
 }

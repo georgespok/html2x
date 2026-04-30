@@ -1,7 +1,7 @@
-﻿using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Measurements.Units;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
@@ -29,6 +29,104 @@ internal static class GeometrySnapshotMapper
             Pagination = pagination.Pages.Select(MapPage).ToList()
         };
     }
+
+    public static DiagnosticObject ToDiagnosticObject(
+        PublishedLayoutTree layoutTree,
+        HtmlLayout layout,
+        PaginationResult pagination)
+    {
+        return MapGeometrySnapshot(From(layoutTree, layout, pagination));
+    }
+
+    private static DiagnosticObject MapGeometrySnapshot(GeometrySnapshot snapshot)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("fragments", LayoutSnapshotMapper.MapLayoutSnapshot(snapshot.Fragments)),
+            DiagnosticObject.Field("boxes", new DiagnosticArray(snapshot.Boxes.Select(MapBoxSnapshot))),
+            DiagnosticObject.Field("pagination", new DiagnosticArray(snapshot.Pagination.Select(MapPaginationPage))));
+    }
+
+    private static DiagnosticObject MapPaginationPage(PaginationPageSnapshot page)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("pageNumber", page.PageNumber),
+            DiagnosticObject.Field("pageSize", LayoutSnapshotMapper.MapSize(page.PageSize)),
+            DiagnosticObject.Field("margin", LayoutSnapshotMapper.MapSpacing(page.Margin)),
+            DiagnosticObject.Field("contentTop", page.ContentTop),
+            DiagnosticObject.Field("contentBottom", page.ContentBottom),
+            DiagnosticObject.Field("placements", new DiagnosticArray(page.Placements.Select(MapPlacementSnapshot))));
+    }
+
+    private static DiagnosticObject MapPlacementSnapshot(PaginationPlacementSnapshot placement)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("fragmentId", placement.FragmentId),
+            DiagnosticObject.Field("kind", placement.Kind),
+            DiagnosticObject.Field("pageNumber", placement.PageNumber),
+            DiagnosticObject.Field("orderIndex", placement.OrderIndex),
+            DiagnosticObject.Field("isOversized", placement.IsOversized),
+            DiagnosticObject.Field("x", placement.X),
+            DiagnosticObject.Field("y", placement.Y),
+            DiagnosticObject.Field("size", LayoutSnapshotMapper.MapSize(placement.Size)),
+            DiagnosticObject.Field("displayRole", FromNullable(placement.DisplayRole)),
+            DiagnosticObject.Field("formattingContext", FromNullable(placement.FormattingContext)),
+            DiagnosticObject.Field("markerOffset", FromNullable(placement.MarkerOffset)),
+            DiagnosticObject.Field("derivedColumnCount", FromNullable(placement.DerivedColumnCount)),
+            DiagnosticObject.Field("rowIndex", FromNullable(placement.RowIndex)),
+            DiagnosticObject.Field("columnIndex", FromNullable(placement.ColumnIndex)),
+            DiagnosticObject.Field("isHeader", FromNullable(placement.IsHeader)),
+            DiagnosticObject.Field("metadataOwner", FromNullable(placement.MetadataOwner)),
+            DiagnosticObject.Field("metadataConsumer", FromNullable(placement.MetadataConsumer)));
+    }
+
+    private static DiagnosticObject MapBoxSnapshot(BoxGeometrySnapshot box)
+    {
+        return DiagnosticObject.Create(
+            DiagnosticObject.Field("sequenceId", box.SequenceId),
+            DiagnosticObject.Field("path", box.Path),
+            DiagnosticObject.Field("kind", box.Kind),
+            DiagnosticObject.Field("tagName", FromNullable(box.TagName)),
+            DiagnosticObject.Field("sourceNodeId", FromNullable(box.SourceNodeId)),
+            DiagnosticObject.Field("sourceContentId", FromNullable(box.SourceContentId)),
+            DiagnosticObject.Field("sourcePath", FromNullable(box.SourcePath)),
+            DiagnosticObject.Field("sourceOrder", FromNullable(box.SourceOrder)),
+            DiagnosticObject.Field("sourceElementIdentity", FromNullable(box.SourceElementIdentity)),
+            DiagnosticObject.Field("generatedSourceKind", FromNullable(box.GeneratedSourceKind)),
+            DiagnosticObject.Field("x", box.X),
+            DiagnosticObject.Field("y", box.Y),
+            DiagnosticObject.Field("size", LayoutSnapshotMapper.MapSize(box.Size)),
+            DiagnosticObject.Field("contentX", FromNullable(box.ContentX)),
+            DiagnosticObject.Field("contentY", FromNullable(box.ContentY)),
+            DiagnosticObject.Field("contentSize", LayoutSnapshotMapper.MapSize(box.ContentSize)),
+            DiagnosticObject.Field("baseline", FromNullable(box.Baseline)),
+            DiagnosticObject.Field("markerOffset", box.MarkerOffset),
+            DiagnosticObject.Field("allowsOverflow", box.AllowsOverflow),
+            DiagnosticObject.Field("isAnonymous", box.IsAnonymous),
+            DiagnosticObject.Field("isInlineBlockContext", box.IsInlineBlockContext),
+            DiagnosticObject.Field("derivedColumnCount", FromNullable(box.DerivedColumnCount)),
+            DiagnosticObject.Field("rowIndex", FromNullable(box.RowIndex)),
+            DiagnosticObject.Field("columnIndex", FromNullable(box.ColumnIndex)),
+            DiagnosticObject.Field("isHeader", FromNullable(box.IsHeader)),
+            DiagnosticObject.Field("metadataOwner", FromNullable(box.MetadataOwner)),
+            DiagnosticObject.Field("metadataConsumer", FromNullable(box.MetadataConsumer)),
+            DiagnosticObject.Field("children", new DiagnosticArray(box.Children.Select(MapBoxSnapshot))));
+    }
+
+    private static DiagnosticValue? FromNullable(string? value) =>
+        value is null ? null : DiagnosticValue.From(value);
+
+    private static DiagnosticValue? FromNullable(float? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable(int? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable(bool? value) =>
+        value.HasValue ? DiagnosticValue.From(value.Value) : null;
+
+    private static DiagnosticValue? FromNullable<TEnum>(TEnum? value)
+        where TEnum : struct, Enum =>
+        value.HasValue ? DiagnosticValue.FromEnum(value.Value) : null;
 
     private static PaginationPageSnapshot MapPage(PageModel page)
     {

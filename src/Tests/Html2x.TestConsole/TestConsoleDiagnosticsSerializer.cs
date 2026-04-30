@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Html2x.Abstractions.Diagnostics;
 using Html2x.Diagnostics;
 
 namespace Html2x.TestConsole;
@@ -16,18 +15,18 @@ internal static class TestConsoleDiagnosticsSerializer
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public static string ToJson(DiagnosticsSession session, ConsoleOptions options)
+    public static string ToJson(DiagnosticsReport report, ConsoleOptions options)
     {
-        if (session is null)
+        if (report is null)
         {
-            throw new ArgumentNullException(nameof(session));
+            throw new ArgumentNullException(nameof(report));
         }
 
         var envelope = new TestConsoleDiagnosticsEnvelope(
             TestConsoleRunDiagnostics.From(options),
             TestConsoleEnvironmentDiagnostics.Capture(),
             PolicyOwnershipDiagnostics.CreateDefault(),
-            DiagnosticsSessionSerializer.ToSerializableObject(session));
+            DiagnosticsReportSerializer.ToSerializableObject(report));
 
         return JsonSerializer.Serialize(envelope, JsonOptions);
     }
@@ -37,7 +36,7 @@ internal sealed record TestConsoleDiagnosticsEnvelope(
     TestConsoleRunDiagnostics TestConsole,
     TestConsoleEnvironmentDiagnostics Environment,
     PolicyOwnershipDiagnostics PolicyOwnership,
-    object DiagnosticsSession);
+    object DiagnosticsReport);
 
 internal sealed record TestConsoleRunDiagnostics(
     string InputPath,

@@ -1,6 +1,7 @@
-﻿using System.Text;
-using Html2x.Abstractions.Diagnostics;
+using System.Text;
 using Html2x.Abstractions.Options;
+using Html2x.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
@@ -63,21 +64,23 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             () => _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
 
         Assert.Contains("FontPath", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.True(exception.Data.Contains("Diagnostics"));
+        Assert.True(exception.Data.Contains("DiagnosticsReport"));
 
-        var diagnostics = exception.Data["Diagnostics"] as DiagnosticsSession;
+        var diagnostics = exception.Data["DiagnosticsReport"] as DiagnosticsReport;
         Assert.NotNull(diagnostics);
-        Assert.Contains(diagnostics.Events, e => e.Type == DiagnosticsEventType.Error && e.Name == "FontPath");
-        Assert.Contains(diagnostics.Events, e =>
-            e.Name == "LayoutBuild" &&
-            e.Type == DiagnosticsEventType.Error &&
-            e.StageState == DiagnosticStageState.Failed &&
-            e.Description == "PdfOptions.FontPath must be provided before layout can begin.");
-        Assert.Contains(diagnostics.Events, e =>
-            e.Name == "PdfRender" &&
-            e.Type == DiagnosticsEventType.EndStage &&
-            e.StageState == DiagnosticStageState.Skipped &&
-            e.Description == "Skipped because LayoutBuild failed.");
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "Configuration" &&
+            e.Name == "font-path/error" &&
+            e.Severity == DiagnosticSeverity.Error);
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/failed" &&
+            e.Severity == DiagnosticSeverity.Error &&
+            e.Message == "PdfOptions.FontPath must be provided before layout can begin.");
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because LayoutBuild failed.");
     }
 
     [Fact]
@@ -93,21 +96,23 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             () => _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
 
         Assert.Contains("FontPath", exception.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.True(exception.Data.Contains("Diagnostics"));
+        Assert.True(exception.Data.Contains("DiagnosticsReport"));
 
-        var diagnostics = exception.Data["Diagnostics"] as DiagnosticsSession;
+        var diagnostics = exception.Data["DiagnosticsReport"] as DiagnosticsReport;
         Assert.NotNull(diagnostics);
-        Assert.Contains(diagnostics.Events, e => e.Type == DiagnosticsEventType.Error && e.Name == "FontPath");
-        Assert.Contains(diagnostics.Events, e =>
-            e.Name == "LayoutBuild" &&
-            e.Type == DiagnosticsEventType.Error &&
-            e.StageState == DiagnosticStageState.Failed &&
-            e.Description == exception.Message);
-        Assert.Contains(diagnostics.Events, e =>
-            e.Name == "PdfRender" &&
-            e.Type == DiagnosticsEventType.EndStage &&
-            e.StageState == DiagnosticStageState.Skipped &&
-            e.Description == "Skipped because LayoutBuild failed.");
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "Configuration" &&
+            e.Name == "font-path/error" &&
+            e.Severity == DiagnosticSeverity.Error);
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/failed" &&
+            e.Severity == DiagnosticSeverity.Error &&
+            e.Message == exception.Message);
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because LayoutBuild failed.");
     }
 
     [Fact]
@@ -128,23 +133,85 @@ public sealed class HtmlConverterTests : IntegrationTestBase
 
         var result = await _htmlConverter.ToPdfAsync(html, options);
 
-        Assert.NotNull(result.Diagnostics);
-        Assert.Contains(result.Diagnostics.Events, e =>
-            e.Name == "LayoutBuild" &&
-            e.Type == DiagnosticsEventType.StartStage &&
-            e.StageState == DiagnosticStageState.Started);
-        Assert.Contains(result.Diagnostics.Events, e =>
-            e.Name == "LayoutBuild" &&
-            e.Type == DiagnosticsEventType.EndStage &&
-            e.StageState == DiagnosticStageState.Succeeded);
-        Assert.Contains(result.Diagnostics.Events, e =>
-            e.Name == "PdfRender" &&
-            e.Type == DiagnosticsEventType.StartStage &&
-            e.StageState == DiagnosticStageState.Started);
-        Assert.Contains(result.Diagnostics.Events, e =>
-            e.Name == "PdfRender" &&
-            e.Type == DiagnosticsEventType.EndStage &&
-            e.StageState == DiagnosticStageState.Succeeded);
+        Assert.NotNull(result.DiagnosticsReport);
+        Assert.Contains(result.DiagnosticsReport.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/started");
+        Assert.Contains(result.DiagnosticsReport.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/succeeded");
+        Assert.Contains(result.DiagnosticsReport.Records, e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/started");
+        Assert.Contains(result.DiagnosticsReport.Records, e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/succeeded");
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DiagnosticsAreEnabled_ExposesSerializableDiagnosticsReport()
+    {
+        const string html = "<html><body><p>Hello diagnostics report</p></body></html>";
+        var options = new HtmlConverterOptions
+        {
+            Pdf = new PdfOptions
+            {
+                FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+        var result = await _htmlConverter.ToPdfAsync(html, options);
+
+        Assert.NotNull(result.DiagnosticsReport);
+        var report = result.DiagnosticsReport;
+        Assert.Contains(report.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/started" &&
+            record.Severity == global::Html2x.Diagnostics.Contracts.DiagnosticSeverity.Info);
+        Assert.Contains(report.Records, static record =>
+            record.Stage == "stage/dom" &&
+            record.Name == "stage/succeeded");
+        Assert.Contains(report.Records, static record =>
+            record.Stage == "stage/pagination" &&
+            record.Name == "stage/succeeded");
+        Assert.Contains(report.Records, static record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/succeeded");
+
+        var layoutStart = Assert.Single(report.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/started");
+        var htmlField = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticStringValue>(
+            layoutStart.Fields["html"]);
+        Assert.Equal(html, htmlField.Value);
+
+        var layoutSucceeded = Assert.Single(report.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/succeeded");
+        var layoutSnapshot = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticObject>(
+            layoutSucceeded.Fields["snapshot"]);
+        Assert.Equal(
+            new global::Html2x.Diagnostics.Contracts.DiagnosticNumberValue(1),
+            layoutSnapshot["pageCount"]);
+
+        var geometrySnapshot = Assert.Single(report.Records, static record =>
+            record.Name == "layout/geometry-snapshot");
+        var geometryFields = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticObject>(
+            geometrySnapshot.Fields["snapshot"]);
+        Assert.True(geometryFields.ContainsKey("fragments"));
+        Assert.True(geometryFields.ContainsKey("boxes"));
+        Assert.True(geometryFields.ContainsKey("pagination"));
+
+        var json = global::Html2x.Diagnostics.DiagnosticsReportSerializer.ToJson(report);
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var records = document.RootElement.GetProperty("records").EnumerateArray().ToArray();
+        Assert.Contains(records, static record =>
+            record.GetProperty("stage").GetString() == "PdfRender" &&
+            record.GetProperty("name").GetString() == "stage/succeeded");
     }
 
     [Fact]
@@ -172,24 +239,39 @@ public sealed class HtmlConverterTests : IntegrationTestBase
 
         var result = await _htmlConverter.ToPdfAsync(html, options);
 
-        Assert.NotNull(result.Diagnostics);
+        Assert.NotNull(result.DiagnosticsReport);
 
-        var fontEvents = result.Diagnostics.Events
+        var fontEvents = result.DiagnosticsReport.Records
             .Where(static x => x.Name == "font/resolve")
-            .Select(static x => x.Payload)
-            .OfType<FontResolutionPayload>()
-            .Where(static x => x.Outcome == "Resolved")
+            .Where(static x => x.Fields["outcome"] is DiagnosticStringValue { Value: "Resolved" })
             .ToList();
 
-        var measurement = Assert.Single(fontEvents, static x => x.Consumer == "SkiaTextMeasurer");
-        var fragmentStage = Assert.Single(fontEvents, static x => x.Consumer == "FragmentBuilder");
+        var measurement = Assert.Single(fontEvents, static x => StringField(x, "consumer") == "SkiaTextMeasurer");
+        var fragmentStage = Assert.Single(fontEvents, static x => StringField(x, "consumer") == "FragmentBuilder");
 
-        Assert.Equal("FontPathSource", measurement.Owner);
-        Assert.Equal(measurement.SourceId, fragmentStage.SourceId);
-        Assert.Equal(measurement.FilePath, fragmentStage.FilePath);
-        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), measurement.ConfiguredPath);
-        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), fragmentStage.ConfiguredPath);
-        Assert.DoesNotContain(fontEvents, static x => x.Consumer == "SkiaFontCache");
+        Assert.Equal("FontPathSource", StringField(measurement, "owner"));
+        Assert.Equal(StringField(measurement, "sourceId"), StringField(fragmentStage, "sourceId"));
+        Assert.Equal(StringField(measurement, "filePath"), StringField(fragmentStage, "filePath"));
+        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), StringField(measurement, "configuredPath"));
+        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), StringField(fragmentStage, "configuredPath"));
+        Assert.DoesNotContain(fontEvents, static x => StringField(x, "consumer") == "SkiaFontCache");
+
+        Assert.NotNull(result.DiagnosticsReport);
+        var fontRecord = Assert.Single(
+            result.DiagnosticsReport.Records,
+            static x => x.Name == "font/resolve" &&
+                        x.Fields.TryGetValue("consumer", out var consumer) &&
+                        consumer is global::Html2x.Diagnostics.Contracts.DiagnosticStringValue { Value: "SkiaTextMeasurer" });
+        Assert.Equal("stage/font", fontRecord.Stage);
+        Assert.Equal(
+            new global::Html2x.Diagnostics.Contracts.DiagnosticStringValue("Resolved"),
+            fontRecord.Fields["outcome"]);
+        Assert.Equal(
+            new global::Html2x.Diagnostics.Contracts.DiagnosticStringValue("FontPathSource"),
+            fontRecord.Fields["owner"]);
     }
+
+    private static string StringField(DiagnosticRecord record, string fieldName) =>
+        Assert.IsType<DiagnosticStringValue>(record.Fields[fieldName]).Value;
 }
 

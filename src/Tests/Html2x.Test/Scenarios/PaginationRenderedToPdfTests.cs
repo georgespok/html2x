@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Diagnostics;
+using Html2x.Diagnostics.Contracts;
 using Html2x.Abstractions.Options;
 using Shouldly;
 using Xunit.Abstractions;
@@ -34,8 +34,8 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         var firstSnapshot = GetLayoutSnapshot(first);
         var secondSnapshot = GetLayoutSnapshot(second);
 
-        firstSnapshot.PageCount.ShouldBe(secondSnapshot.PageCount);
-        firstSnapshot.PageCount.ShouldBeGreaterThan(1);
+        NumberField(firstSnapshot, "pageCount").ShouldBe(NumberField(secondSnapshot, "pageCount"));
+        NumberField(firstSnapshot, "pageCount").ShouldBeGreaterThan(1);
 
         var firstAssignments = ExtractTextAssignments(firstSnapshot);
         var secondAssignments = ExtractTextAssignments(secondSnapshot);
@@ -59,76 +59,91 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         var oversized = await converter.ToPdfAsync(oversizedHtml, DefaultOptions);
         var empty = await converter.ToPdfAsync(emptyHtml, DefaultOptions);
 
-        var oversizedEventNames = oversized.Diagnostics!.Events
-            .Where(static e => e.Type == DiagnosticsEventType.Trace)
+        var oversizedRecords = oversized.DiagnosticsReport!.Records;
+        var oversizedEventNames = oversizedRecords
+            .Where(static e => e.Stage == "stage/pagination")
             .Select(static e => e.Name)
             .ToList();
         oversizedEventNames.ShouldContain("layout/pagination/oversized-block");
 
-        var paginationEvents = oversized.Diagnostics!.Events
-            .Where(static e => e.Payload is PaginationTracePayload)
+        var paginationEvents = oversizedRecords
+            .Where(static e => e.Stage == "stage/pagination" && e.Name.StartsWith("layout/pagination/", StringComparison.Ordinal))
             .ToList();
         paginationEvents.Select(static e => e.Name).ShouldBe(paginationEvents
-            .Select(static e => ((PaginationTracePayload)e.Payload!).EventName));
+            .Select(static e => e.Fields["eventName"].ShouldBeOfType<DiagnosticStringValue>().Value));
         paginationEvents.All(static e => e.Context is not null).ShouldBeTrue();
-        paginationEvents.All(static e => e.Severity is not null).ShouldBeTrue();
+        paginationEvents.All(static e => Enum.IsDefined(e.Severity)).ShouldBeTrue();
 
-        var oversizedEvent = oversized.Diagnostics!.Events
+        var oversizedEvent = oversizedRecords
             .Where(static e => e.Name == "layout/pagination/oversized-block")
             .First();
         oversizedEvent.Severity.ShouldBe(DiagnosticSeverity.Warning);
         oversizedEvent.Context!.ElementIdentity.ShouldStartWith("fragment#");
 
-        var oversizedPayload = (PaginationTracePayload)oversizedEvent.Payload!;
-        oversizedPayload.Severity.ShouldBe(DiagnosticSeverity.Warning);
-        oversizedPayload.Context!.StructuralPath.ShouldStartWith("page[");
-        oversizedPayload.BlockHeight.GetValueOrDefault()
-            .ShouldBeGreaterThan(oversizedPayload.PageContentHeight.GetValueOrDefault());
+        oversizedEvent.Context!.StructuralPath.ShouldStartWith("page[");
+        NumberField(oversizedEvent, "blockHeight")
+            .ShouldBeGreaterThan(NumberField(oversizedEvent, "pageContentHeight"));
 
-        var emptyEventNames = empty.Diagnostics!.Events
-            .Where(static e => e.Type == DiagnosticsEventType.Trace)
+        var emptyEventNames = empty.DiagnosticsReport!.Records
+            .Where(static e => e.Stage == "stage/pagination")
             .Select(static e => e.Name)
             .ToList();
         emptyEventNames.ShouldContain("layout/pagination/empty-document");
 
         var emptySnapshot = GetLayoutSnapshot(empty);
-        emptySnapshot.PageCount.ShouldBe(1);
-        emptySnapshot.Pages[0].Fragments.ShouldBeEmpty();
+        NumberField(emptySnapshot, "pageCount").ShouldBe(1);
+        var firstPage = ArrayField(emptySnapshot, "pages")[0].ShouldBeOfType<DiagnosticObject>();
+        ArrayField(firstPage, "fragments").ShouldBeEmpty();
     }
 
-    private static LayoutSnapshot GetLayoutSnapshot(Html2PdfResult result)
+    private static DiagnosticObject GetLayoutSnapshot(Html2PdfResult result)
     {
-        var layoutEvent = result.Diagnostics!.Events.FirstOrDefault(
-            static x => x is { Type: DiagnosticsEventType.EndStage, Payload: not null, Name: "LayoutBuild" });
+        var layoutEvent = result.DiagnosticsReport!.Records.FirstOrDefault(
+            static x => x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
         layoutEvent.ShouldNotBeNull();
 
-        return ((LayoutSnapshotPayload)layoutEvent.Payload!).Snapshot;
+        return layoutEvent.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
     }
 
-    private static IReadOnlyList<(int PageNumber, string Text, float Y)> ExtractTextAssignments(LayoutSnapshot snapshot)
+    private static IReadOnlyList<(int PageNumber, string Text, double Y)> ExtractTextAssignments(DiagnosticObject snapshot)
     {
-        return snapshot.Pages
-            .OrderBy(static page => page.PageNumber)
+        return ArrayField(snapshot, "pages")
+            .Select(static page => page.ShouldBeOfType<DiagnosticObject>())
+            .OrderBy(static page => NumberField(page, "pageNumber"))
             .SelectMany(static page =>
-                EnumerateText(page.Fragments)
+                EnumerateText(ArrayField(page, "fragments"))
                     .Where(static item => item.Text.StartsWith("Block ", StringComparison.Ordinal))
-                    .Select(item => (page.PageNumber, item.Text, item.Y)))
+                    .Select(item => ((int)NumberField(page, "pageNumber"), item.Text, item.Y)))
             .ToList();
     }
 
-    private static IEnumerable<(string Text, float Y)> EnumerateText(IReadOnlyList<FragmentSnapshot> fragments)
+    private static IEnumerable<(string Text, double Y)> EnumerateText(DiagnosticArray fragments)
     {
         foreach (var fragment in fragments)
         {
-            if (!string.IsNullOrWhiteSpace(fragment.Text))
+            var fragmentObject = fragment.ShouldBeOfType<DiagnosticObject>();
+            var text = StringFieldOrNull(fragmentObject, "text");
+            if (!string.IsNullOrWhiteSpace(text))
             {
-                yield return (fragment.Text.Trim(), fragment.Y);
+                yield return (text.Trim(), NumberField(fragmentObject, "y"));
             }
 
-            foreach (var child in EnumerateText(fragment.Children))
+            foreach (var child in EnumerateText(ArrayField(fragmentObject, "children")))
             {
                 yield return child;
             }
         }
     }
+
+    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static double NumberField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
+        value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
 }

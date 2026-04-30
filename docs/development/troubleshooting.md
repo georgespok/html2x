@@ -41,15 +41,18 @@ Recovery:
 2. Compare placement tuples containing fragment id, page number, page Y, and order index.
 3. Verify font source and font path are identical between runs.
 
-## Diagnostics JSON Missing Payload Fields
+## Diagnostics JSON Missing Fields
 
-Cause: the payload type is not mapped in `DiagnosticsSessionSerializer`.
+Cause candidates:
+
+- The emitter did not include the field in `DiagnosticFields`.
+- The field value uses a type outside the constrained diagnostics value model.
 
 Recovery:
 
-1. Confirm the payload implements `IDiagnosticsPayload`.
-2. Add the mapping in `Html2x.Diagnostics`.
-3. Add serializer tests for known fields and payload kind preservation.
+1. Confirm the emitter adds the expected field to `DiagnosticFields`.
+2. Use strings, numbers, booleans, enum names as strings, nulls, diagnostic arrays, or nested diagnostic objects.
+3. Add serializer tests for important fields and nested diagnostic structures.
 
 ## Unsupported CSS Produces Unexpected Output
 
