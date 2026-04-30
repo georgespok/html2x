@@ -1,5 +1,4 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
