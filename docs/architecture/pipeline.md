@@ -15,6 +15,7 @@ Html2x.LayoutEngine
   uses Html2x.LayoutEngine.Contracts
   uses Html2x.LayoutEngine.Style
   uses Html2x.LayoutEngine.Geometry
+  uses Html2x.LayoutEngine.Fragments
 
 Html2x.LayoutEngine.Geometry
   uses Html2x.LayoutEngine.Contracts
@@ -22,12 +23,20 @@ Html2x.LayoutEngine.Geometry
 Html2x.LayoutEngine.Style
   uses Html2x.LayoutEngine.Contracts
   uses AngleSharp internally
+
+Html2x.LayoutEngine.Fragments
+  uses Html2x.Abstractions
+  uses Html2x.LayoutEngine.Contracts
 ```
 
 AngleSharp and AngleSharp.Css are implementation details of
 `Html2x.LayoutEngine.Style`. `Html2x.LayoutEngine.Contracts` owns internal
 pipeline handoff contracts. Geometry and composition code consume those
 project-owned models and must not depend on parser objects.
+
+Fragment projection lives in `Html2x.LayoutEngine.Fragments`. Composition calls
+that module after geometry publishes layout facts. Renderer-facing fragment
+models still live in `Html2x.Abstractions.Layout.Fragments`.
 
 ## Stage 1: Style
 
@@ -101,15 +110,21 @@ mutable box types.
 
 ## Stage 3: Fragment Projection
 
-`FragmentBuilder` projects published layout facts into renderer-facing
-fragments. Fragment projection may resolve fragment font metadata from the
-converter-owned font source, but it must not remeasure text or reconstruct
-geometry already owned by layout.
+`Html2x.LayoutEngine.Fragments` owns the projection from published layout facts
+into renderer-facing fragments. `FragmentBuilder` consumes `PublishedLayoutTree`
+and `IFontSource`, allocates fragment IDs, copies style and geometry into
+fragment models, and resolves text run fonts.
 
-Input: `PublishedLayoutTree`.
+Input: `PublishedLayoutTree` and `IFontSource`.
 
-Output: fragments such as blocks, lines, text runs, images, tables, cells, and
-rules.
+Contract summary: PublishedLayoutTree and IFontSource in, FragmentTree out.
+
+Output: `FragmentTree`, containing blocks, lines, text runs, images, tables,
+cells, and rules.
+
+Fragment projection does not consume mutable boxes, CSS parser state, DOM
+objects, pagination pages, or renderer state. It must not remeasure text or
+reconstruct geometry already owned by layout.
 
 ## Stage 4: Pagination
 

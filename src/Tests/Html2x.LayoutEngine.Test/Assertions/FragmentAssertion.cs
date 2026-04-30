@@ -1,5 +1,5 @@
 using Html2x.Abstractions.Layout.Fragments;
-using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Fragments;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Assertions;

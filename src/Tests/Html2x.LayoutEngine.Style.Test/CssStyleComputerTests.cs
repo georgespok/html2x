@@ -4,7 +4,6 @@ using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Dom;
-using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.LayoutEngine.Models;
 using Shouldly;

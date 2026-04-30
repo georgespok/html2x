@@ -1,15 +1,13 @@
-﻿using System.Text;
+using System.Text;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Fragment;
-using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;

@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 
-namespace Html2x.LayoutEngine.Fragment;
+namespace Html2x.LayoutEngine.Fragments;
 
 internal sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
     where T : class

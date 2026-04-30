@@ -1,6 +1,6 @@
-﻿using Html2x.Abstractions.Layout.Fragments;
+using Html2x.Abstractions.Layout.Fragments;
 
-namespace Html2x.LayoutEngine.Fragment;
+namespace Html2x.LayoutEngine.Fragments;
 
 public sealed class FragmentTree
 {

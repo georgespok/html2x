@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
+    <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

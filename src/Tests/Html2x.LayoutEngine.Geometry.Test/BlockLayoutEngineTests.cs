@@ -3,13 +3,11 @@ using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
 using Html2x.Abstractions.Diagnostics;
 using Html2x.Abstractions.Layout.Text;
-using Moq;
 using Shouldly;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.Abstractions.Measurements.Units;
 using System.Drawing;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Test.TestDoubles;
 
 namespace Html2x.LayoutEngine.Test;

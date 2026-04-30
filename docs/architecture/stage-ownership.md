@@ -10,7 +10,7 @@ is for developers changing the codebase, not a public API contract.
 | Contracts | `Html2x.LayoutEngine.Contracts` | None | Internal pipeline handoff contracts | Immutable contract facts and validation helpers | Parser traversal, CSS computation, mutable boxes, layout algorithms, fragments, pagination pages, renderer state |
 | Style | `Html2x.LayoutEngine.Style` | Raw HTML, layout options, optional diagnostics session | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
 | Layout Geometry | `Html2x.LayoutEngine.Geometry` | Contract `StyleTree` and layout geometry request | Contract `PublishedLayoutTree` and internal box geometry | Box roles, text runs, list markers, unsupported mode diagnostics, image layout facts, table placements, `UsedGeometry` | CSS parsing, DOM traversal, parser objects, fragments, pagination pages, renderer state |
-| Fragment | `Html2x.LayoutEngine` | Contract `PublishedLayoutTree` and font source | Fragment tree | New fragments copied from published layout facts | Boxes, CSS, DOM, pagination pages |
+| Fragment | `Html2x.LayoutEngine.Fragments` | Contract `PublishedLayoutTree` and font source | Fragment tree | Published layout traversal, fragment ID allocation, `VisualStyle` projection, and text run font resolution | Mutable boxes, CSS, DOM, pagination pages, renderer state |
 | Pagination | `Html2x.LayoutEngine` | Fragment tree | `HtmlLayout.Pages` | Page models and translated fragment clones | Source fragments, boxes, styles |
 | Paint | `Html2x.Renderers.Pdf` | `HtmlLayout` and PDF options | Paint commands and PDF bytes | Renderer-local commands and Skia objects | Layout pages, fragments, boxes, styles, parser objects |
 
@@ -75,6 +75,21 @@ Published identity keeps two concepts separate:
 - `NodePath` is layout identity owned by geometry.
 - `SourceIdentity` is source identity copied or generated from style input.
 
+## Fragment Stage
+
+Html2x.LayoutEngine.Fragments owns published layout traversal, fragment ID
+allocation, style-to-`VisualStyle` conversion, specialized image, rule, and
+table fragment projection, and font resolution for `TextRun` values.
+
+The fragment stage consumes `PublishedLayoutTree` from Contracts and
+`IFontSource` from Abstractions. It copies geometry forward into
+renderer-facing fragment models and must not reference mutable boxes, style
+implementation code, geometry implementation engines, parser state, pagination
+pages, or renderer state.
+
+Renderers do not reference fragment projection. They consume `HtmlLayout` and
+renderer-facing fragments after composition and pagination have finished.
+
 ## Diagnostics Ownership
 
 Diagnostics may expose source identity only through the Phase 5 diagnostic contract.
@@ -87,11 +102,11 @@ Diagnostic payloads use nullable primitive fields such as `SourceNodeId`,
 
 Composition owns orchestration and must not access parser or box internals.
 `LayoutBuilder` calls style first, passes the resulting `StyleTree` to
-geometry, projects fragments from contract published layout, paginates, and
-returns the final layout. Composition orchestrates Style and Geometry
-implementations but reads handoff facts through Contracts. If composition needs
-more data, the owning stage must publish that data through its handoff
-contract.
+geometry, calls the fragment module to project from contract published layout,
+paginates, and returns the final layout. Composition orchestrates Style,
+Geometry, and Fragment implementations but reads handoff facts through
+Contracts. If composition needs more data, the owning stage must publish that
+data through its handoff contract.
 
 ## Mutation Policy
 

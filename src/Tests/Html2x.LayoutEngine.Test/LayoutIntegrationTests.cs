@@ -5,13 +5,12 @@ using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Measurements.Units;
 using Html2x.Abstractions.Options;
-using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
 using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
-using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Test;
 

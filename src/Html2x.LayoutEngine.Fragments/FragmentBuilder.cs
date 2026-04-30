@@ -3,7 +3,7 @@ using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
 
-namespace Html2x.LayoutEngine.Fragment;
+namespace Html2x.LayoutEngine.Fragments;
 
 /// <summary>
 /// Projects published layout facts into renderer-visible fragments.

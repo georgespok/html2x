@@ -37,6 +37,14 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
+    public void LayoutEngineProject_ReferencesFragmentProject()
+    {
+        var source = ReadSource("src", "Html2x.LayoutEngine", "Html2x.LayoutEngine.csproj");
+
+        source.ShouldContain("Html2x.LayoutEngine.Fragments.csproj");
+    }
+
+    [Fact]
     public void StyleProject_DoesNotReferenceLayoutEngineOrGeometryProjects()
     {
         var source = ReadSource("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj");
@@ -95,6 +103,22 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
+    public void FragmentProject_IsInSolution()
+    {
+        var solution = ReadSource("src", "Html2x.sln");
+
+        solution.ShouldContain("Html2x.LayoutEngine.Fragments.csproj");
+    }
+
+    [Fact]
+    public void FragmentTestProject_IsInSolution()
+    {
+        var solution = ReadSource("src", "Html2x.sln");
+
+        solution.ShouldContain("Html2x.LayoutEngine.Fragments.Test.csproj");
+    }
+
+    [Fact]
     public void ContractsProject_ReferencesOnlyAbstractions()
     {
         var source = ReadSource(
@@ -110,6 +134,72 @@ public sealed class LayoutGeometryArchitectureTests
         source.ShouldNotContain("Html2x.LayoutEngine.Geometry.csproj");
         source.ShouldNotContain("Html2x.LayoutEngine.csproj");
         source.ShouldNotContain("Html2x.Renderers.Pdf.csproj");
+    }
+
+    [Fact]
+    public void FragmentProject_ReferencesOnlyAbstractionsAndContracts()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Fragments",
+            "Html2x.LayoutEngine.Fragments.csproj");
+
+        source.ShouldContain("Html2x.Abstractions.csproj");
+        source.ShouldContain("Html2x.LayoutEngine.Contracts.csproj");
+        CountOccurrences(source, "<ProjectReference Include=").ShouldBe(2);
+    }
+
+    [Fact]
+    public void FragmentProject_DoesNotReferenceCompositionStyleGeometryRenderersOrParsers()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Fragments",
+            "Html2x.LayoutEngine.Fragments.csproj");
+        var forbiddenTokens = new[]
+        {
+            "Html2x.LayoutEngine.csproj",
+            "Html2x.LayoutEngine.Geometry.csproj",
+            "Html2x.LayoutEngine.Style.csproj",
+            "Html2x.Renderers.Pdf.csproj",
+            ParserPackageName(),
+            ParserPackageName() + ".Css",
+            "SkiaSharp"
+        };
+
+        foreach (var token in forbiddenTokens)
+        {
+            source.ShouldNotContain(token);
+        }
+    }
+
+    [Fact]
+    public void FragmentTestProject_DoesNotReferenceCompositionStyleGeometryRenderersOrParsers()
+    {
+        var source = ReadSource(
+            "src",
+            "Tests",
+            "Html2x.LayoutEngine.Fragments.Test",
+            "Html2x.LayoutEngine.Fragments.Test.csproj");
+        var forbiddenTokens = new[]
+        {
+            "Html2x.LayoutEngine.csproj",
+            "Html2x.LayoutEngine.Geometry.csproj",
+            "Html2x.LayoutEngine.Style.csproj",
+            "Html2x.Renderers.Pdf.csproj",
+            ParserPackageName(),
+            ParserPackageName() + ".Css",
+            "SkiaSharp"
+        };
+
+        source.ShouldContain("Html2x.Abstractions.csproj");
+        source.ShouldContain("Html2x.LayoutEngine.Contracts.csproj");
+        source.ShouldContain("Html2x.LayoutEngine.Fragments.csproj");
+        CountOccurrences(source, "<ProjectReference Include=").ShouldBe(3);
+        foreach (var token in forbiddenTokens)
+        {
+            source.ShouldNotContain(token);
+        }
     }
 
     [Fact]
@@ -374,6 +464,14 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
+    public void PdfRendererProject_DoesNotReferenceFragmentProjectionProject()
+    {
+        var source = ReadSource("src", "Html2x.Renderers.Pdf", "Html2x.Renderers.Pdf.csproj");
+
+        source.ShouldNotContain("Html2x.LayoutEngine.Fragments.csproj");
+    }
+
+    [Fact]
     public void PdfRendererSource_DoesNotReferenceStyleImplementation()
     {
         var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.Renderers.Pdf");
@@ -386,6 +484,30 @@ public sealed class LayoutGeometryArchitectureTests
             "StyledElementFacts",
             "StyleNode",
             "StyleTree"
+        };
+
+        foreach (var file in Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories))
+        {
+            var source = File.ReadAllText(file);
+            var relativePath = Path.GetRelativePath(directory, file);
+            foreach (var token in forbiddenTokens)
+            {
+                source.Contains(token, StringComparison.Ordinal).ShouldBeFalse(
+                    $"{relativePath} should render from HtmlLayout and renderer-facing fragments.");
+            }
+        }
+    }
+
+    [Fact]
+    public void PdfRendererSource_DoesNotReferenceFragmentProjectionImplementation()
+    {
+        var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.Renderers.Pdf");
+        var forbiddenTokens = new[]
+        {
+            "Html2x.LayoutEngine.Fragments",
+            "FragmentBuilder",
+            "PublishedLayoutTree",
+            "PublishedBlock"
         };
 
         foreach (var file in Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories))
@@ -698,6 +820,27 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
+    public void FragmentProject_FriendAssemblies_AreExplicitAndLimited()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Fragments",
+            "Properties",
+            "InternalsVisibleTo.cs");
+
+        ExtractFriendAssemblies(source)
+            .OrderBy(static assemblyName => assemblyName, StringComparer.Ordinal)
+            .ToArray()
+            .ShouldBe(new[]
+            {
+                "Html2x.LayoutEngine",
+                "Html2x.LayoutEngine.Fragments.Test",
+                "Html2x.LayoutEngine.Geometry.Test",
+                "Html2x.LayoutEngine.Test"
+            }.OrderBy(static assemblyName => assemblyName, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
     public void ContractsProject_FriendAssemblies_AreExplicitAndLimited()
     {
         var source = ReadSource(
@@ -712,11 +855,27 @@ public sealed class LayoutGeometryArchitectureTests
             .ShouldBe(new[]
             {
                 "Html2x.LayoutEngine",
+                "Html2x.LayoutEngine.Fragments",
+                "Html2x.LayoutEngine.Fragments.Test",
                 "Html2x.LayoutEngine.Geometry",
                 "Html2x.LayoutEngine.Geometry.Test",
                 "Html2x.LayoutEngine.Style",
                 "Html2x.LayoutEngine.Test"
             }.OrderBy(static assemblyName => assemblyName, StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void ContractsProject_FriendAssemblies_IncludeFragmentModuleAndTests()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Contracts",
+            "Properties",
+            "InternalsVisibleTo.cs");
+        var assemblies = ExtractFriendAssemblies(source);
+
+        assemblies.ShouldContain("Html2x.LayoutEngine.Fragments");
+        assemblies.ShouldContain("Html2x.LayoutEngine.Fragments.Test");
     }
 
     [Fact]
@@ -732,28 +891,97 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
-    public void FragmentSource_DoesNotReferenceMutableBoxTypes()
+    public void FragmentProductionSource_UsesCanonicalNamespace()
+    {
+        var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.LayoutEngine.Fragments");
+
+        foreach (var file in Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(directory, file);
+            if (IsBuildOutputPath(relativePath) ||
+                relativePath.StartsWith("Properties", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var source = File.ReadAllText(file);
+
+            source.ShouldContain("namespace Html2x.LayoutEngine.Fragments;");
+            source.ShouldNotContain("namespace Html2x.LayoutEngine.Fragment;");
+            source.ShouldNotContain("using Html2x.LayoutEngine.Fragment;");
+        }
+    }
+
+    [Fact]
+    public void FragmentCompatibilityShim_IsNotPresent()
     {
         var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.LayoutEngine", "Fragment");
-        var forbiddenTokens = new[]
-        {
-            "Html2x.LayoutEngine.Box",
-            "BlockBox",
-            "BoxNode",
-            "BoxTree",
-            "InlineBox",
-            "TableBox",
-            "ImageBox",
-            "RuleBox"
-        };
+
+        Directory.Exists(directory).ShouldBeFalse(
+            "Fragment compatibility shims should not be added unless public API compatibility requires them.");
+    }
+
+    [Fact]
+    public void FragmentBuilderAndFragmentTree_PublicSurface_IsPreserved()
+    {
+        var builder = ReadSource("src", "Html2x.LayoutEngine.Fragments", "FragmentBuilder.cs");
+        var tree = ReadSource("src", "Html2x.LayoutEngine.Fragments", "FragmentTree.cs");
+
+        builder.ShouldContain("public sealed class FragmentBuilder");
+        builder.ShouldContain("internal FragmentTree Build(");
+        builder.ShouldNotContain("public FragmentTree Build(");
+        tree.ShouldContain("public sealed class FragmentTree");
+    }
+
+    [Fact]
+    public void PublishedLayoutNamespace_CleanupIsDeferred()
+    {
+        var directory = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Html2x.LayoutEngine.Contracts",
+            "Published");
 
         foreach (var file in Directory.GetFiles(directory, "*.cs"))
         {
             var source = File.ReadAllText(file);
+            source.ShouldContain("namespace Html2x.LayoutEngine.Geometry.Published;");
+        }
+    }
+
+    [Fact]
+    public void FragmentProductionSource_DoesNotReferenceMutableBoxOrImplementationTypes()
+    {
+        var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.LayoutEngine.Fragments");
+        var forbiddenTokens = new[]
+        {
+            "Html2x.LayoutEngine.Box",
+            "BoxNode",
+            "BoxTree",
+            "BlockBox",
+            "InlineBox",
+            "TableBox",
+            "ImageBox",
+            "RuleBox",
+            "BlockLayoutEngine",
+            "InlineLayoutEngine",
+            "TableLayoutEngine",
+            "InitialBoxTreeBuilder"
+        };
+
+        foreach (var file in Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories))
+        {
+            var source = File.ReadAllText(file);
+            var relativePath = Path.GetRelativePath(directory, file);
+            if (IsBuildOutputPath(relativePath))
+            {
+                continue;
+            }
+
             foreach (var token in forbiddenTokens)
             {
                 source.Contains(token, StringComparison.Ordinal).ShouldBeFalse(
-                    $"{Path.GetFileName(file)} should consume published geometry facts, not mutable box type `{token}`.");
+                    $"{relativePath} should consume published geometry facts, not mutable box or implementation token `{token}`.");
             }
         }
     }
@@ -783,7 +1011,7 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
-    public void ArchitectureDocs_DescribeExtractedStyleModuleBoundary()
+    public void ArchitectureDocs_DescribeDeepModuleBoundaries()
     {
         var pipeline = ReadSource("docs", "architecture", "pipeline.md");
         var stageOwnership = ReadSource("docs", "architecture", "stage-ownership.md");
@@ -807,8 +1035,16 @@ public sealed class LayoutGeometryArchitectureTests
         testing.ShouldContain("NodePath");
         testing.ShouldContain("SourcePath");
         pipeline.ShouldContain("Html2x.LayoutEngine.Contracts");
+        pipeline.ShouldContain("Html2x.LayoutEngine.Fragments");
+        pipeline.ShouldContain("PublishedLayoutTree and IFontSource");
+        pipeline.ShouldContain("Fragment projection does not consume mutable boxes");
         stageOwnership.ShouldContain("Html2x.LayoutEngine.Contracts owns internal pipeline handoff contracts");
+        stageOwnership.ShouldContain("Html2x.LayoutEngine.Fragments owns published layout traversal");
+        stageOwnership.ShouldContain("Renderers do not reference fragment projection");
         testing.ShouldContain("Html2x.LayoutEngine.Contracts");
+        testing.ShouldContain("Html2x.LayoutEngine.Fragments.Test");
+        testing.ShouldContain("Fragment projection tests build PublishedLayoutTree inputs directly");
+        testing.ShouldContain("Fragment projection tests must not construct mutable boxes");
     }
 
     private static string ReadSource(params string[] pathSegments)
@@ -831,6 +1067,35 @@ public sealed class LayoutGeometryArchitectureTests
     private static string ParserDomProviderName() => ParserPackageName() + "DomProvider";
 
     private static string StyleComputerTypeName() => "CssStyle" + "Computer";
+
+    private static int CountOccurrences(string source, string value)
+    {
+        var count = 0;
+        var index = 0;
+
+        while (index < source.Length)
+        {
+            index = source.IndexOf(value, index, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return count;
+            }
+
+            count++;
+            index += value.Length;
+        }
+
+        return count;
+    }
+
+    private static bool IsBuildOutputPath(string relativePath)
+    {
+        var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return segments.Length > 0 &&
+            (segments[0].Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+             segments[0].Equals("obj", StringComparison.OrdinalIgnoreCase));
+    }
 
     private static IReadOnlyList<string> ExtractFriendAssemblies(string source)
     {

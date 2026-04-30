@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Drawing;
 using Html2x.Abstractions.Layout.Styles;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
-using Xunit;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 

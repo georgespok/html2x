@@ -1,7 +1,7 @@
 using System.Drawing;
 using Html2x.Abstractions.Layout.Fragments;
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestHelpers;

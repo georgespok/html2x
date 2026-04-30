@@ -4,7 +4,7 @@ using Html2x.Abstractions.Layout.Documents;
 using Html2x.Abstractions.Layout.Fonts;
 using Html2x.Abstractions.Layout.Text;
 using Html2x.Abstractions.Options;
-using Html2x.LayoutEngine.Fragment;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;

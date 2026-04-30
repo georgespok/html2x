@@ -11,7 +11,6 @@ using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
-using Html2x.LayoutEngine.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
