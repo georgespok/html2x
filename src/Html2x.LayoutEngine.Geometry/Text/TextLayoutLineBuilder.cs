@@ -1,5 +1,6 @@
 using System.Text;
-using Html2x.Abstractions.Layout.Text;
+using Html2x.RenderModel;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -119,6 +120,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
                     inlineDescent,
                     buffer.Source.Style.Decorations,
                     buffer.Source.Style.Color,
+                    ResolvedFont: null,
                     inlineObject));
 
                 lineWidth += buffer.LeftSpacing + inlineObject.BorderBoxWidth + buffer.RightSpacing;
@@ -131,8 +133,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
             }
 
             var text = buffer.Text.ToString();
-            var width = _measurer.MeasureWidth(buffer.Source.Font, buffer.Source.FontSizePt, text);
-            var (ascent, descent) = _measurer.GetMetrics(buffer.Source.Font, buffer.Source.FontSizePt);
+            var measurement = _measurer.Measure(buffer.Source.Font, buffer.Source.FontSizePt, text);
 
             var leftSpacing = buffer.LeftSpacing;
             var rightSpacing = buffer.RightSpacing;
@@ -142,15 +143,16 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
                 text,
                 buffer.Source.Font,
                 buffer.Source.FontSizePt,
-                width,
+                measurement.Width,
                 leftSpacing,
                 rightSpacing,
-                ascent,
-                descent,
+                measurement.Ascent,
+                measurement.Descent,
                 buffer.Source.Style.Decorations,
-                buffer.Source.Style.Color));
+                buffer.Source.Style.Color,
+                measurement.ResolvedFont));
 
-            lineWidth += leftSpacing + width + rightSpacing;
+            lineWidth += leftSpacing + measurement.Width + rightSpacing;
         }
 
         return lineRuns;

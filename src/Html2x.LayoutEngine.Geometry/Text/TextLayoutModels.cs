@@ -1,7 +1,7 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -69,6 +69,7 @@ internal sealed record TextLayoutRun(
     float Descent,
     TextDecorations Decorations,
     ColorRgba? Color,
+    ResolvedFont? ResolvedFont = null,
     InlineObjectLayout? InlineObject = null);
 
 /// <summary>

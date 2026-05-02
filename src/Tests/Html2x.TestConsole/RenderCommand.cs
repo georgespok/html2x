@@ -12,11 +12,12 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
     public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
     {
         var runContext = ConsoleRunContext.FromArguments(context.Arguments);
-        if (!string.IsNullOrWhiteSpace(settings.Input))
+        var inputPath = ResolveInputPath(settings);
+        if (!string.IsNullOrWhiteSpace(inputPath))
         {
             return await RunConversionAsync(
                 settings,
-                settings.Input!,
+                inputPath,
                 runContext,
                 interactive: false,
                 selectedSamplePath: null);
@@ -24,6 +25,11 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 
         return await RunInteractiveLoopAsync(settings, runContext, cancellationToken);
     }
+
+    private static string? ResolveInputPath(RenderSettings settings) =>
+        !string.IsNullOrWhiteSpace(settings.InputOption)
+            ? settings.InputOption
+            : settings.Input;
 
     private static async Task<int> RunConversionAsync(
         RenderSettings settings,

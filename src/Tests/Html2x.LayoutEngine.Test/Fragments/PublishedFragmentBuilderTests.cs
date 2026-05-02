@@ -1,13 +1,11 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Fragments;
 
@@ -78,7 +76,7 @@ public sealed class PublishedFragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithPublishedInlineSegment_CopiesLineFactsAndResolvesFonts()
+    public void Build_WithPublishedInlineSegment_CopiesLineFactsAndPreservesResolvedFonts()
     {
         var segment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "alpha"));
         var inlineLayout = PublishedLayoutTestBuilder.InlineLayout(segment);
@@ -208,7 +206,7 @@ public sealed class PublishedFragmentBuilderTests
 
     private static FragmentTree Build(PublishedLayoutTree layout)
     {
-        return new FragmentBuilder().Build(layout, LayoutBuilderFixture.CreateFontSource());
+        return new FragmentBuilder().Build(layout);
     }
 
     private static IEnumerable<string> EnumerateText(LayoutFragment fragment)

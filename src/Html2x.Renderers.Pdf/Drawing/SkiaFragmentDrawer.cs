@@ -1,5 +1,4 @@
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
@@ -15,14 +14,14 @@ internal sealed class SkiaFragmentDrawer
     private readonly SkiaPaintCommandDrawer _commandDrawer;
 
     public SkiaFragmentDrawer(
-        PdfOptions options,
+        PdfRenderSettings settings,
         SkiaFontCache fontCache,
         IDiagnosticsSink? diagnosticsSink = null)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(fontCache);
 
-        _commandDrawer = new SkiaPaintCommandDrawer(options, fontCache, diagnosticsSink);
+        _commandDrawer = new SkiaPaintCommandDrawer(settings, fontCache, diagnosticsSink);
     }
 
     public void DrawPage(SKCanvas canvas, LayoutPage page)

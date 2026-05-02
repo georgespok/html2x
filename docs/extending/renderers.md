@@ -6,7 +6,7 @@ Html2x is designed so renderers consume `HtmlLayout` and fragment contracts with
 
 A new renderer should:
 
-- Reference `Html2x.Abstractions`.
+- Reference `Html2x.RenderModel` and diagnostics contracts as needed.
 - Accept `HtmlLayout` and renderer-specific options.
 - Iterate pages in source order.
 - Dispatch by fragment type.
@@ -35,3 +35,7 @@ public sealed class SvgRenderer
 ## Contract Rule
 
 If the renderer needs data that is not present on fragments, extend the fragment contract and update layout projection. Do not make the renderer inspect DOM, CSS, style, or box objects.
+
+Renderer-specific settings belong with the renderer. Converter facade options
+belong in `Html2x` and should be mapped into renderer-owned settings by the
+facade or composition layer.

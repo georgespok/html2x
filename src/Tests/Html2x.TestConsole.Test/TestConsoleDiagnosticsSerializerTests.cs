@@ -156,7 +156,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             .ShouldContain("consumer");
         policyOwnership.GetProperty("approvedExceptionPaths").EnumerateArray()
             .Select(static item => item.GetString())
-            .ShouldContain("block-formatting:inline-block-descendant-implicit-width");
+            .ShouldBe(["block-formatting:inline-block-descendant-implicit-width"]);
 
         var records = root.GetProperty("diagnosticsReport").GetProperty("records").EnumerateArray().ToList();
         var margin = records.Single(static item => item.GetProperty("name").GetString() == "layout/margin-collapse");

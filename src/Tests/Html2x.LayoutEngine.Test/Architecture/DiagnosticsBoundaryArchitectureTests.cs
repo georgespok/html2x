@@ -15,13 +15,14 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         var source = ReadSource("docs", "architecture", "diagnostics-boundary.md");
 
         source.ShouldContain("Html2x.Diagnostics.Contracts");
-        source.ShouldContain("Html2x.Abstractions -> no diagnostics types");
         source.ShouldContain("`DiagnosticFields` must not accept arbitrary `object`");
         source.ShouldContain("Runtime Flow");
         source.ShouldContain("Runtime Ownership");
-        source.ShouldContain("Abstractions Boundary");
+        source.ShouldContain("Facade Boundary");
         source.ShouldContain("Emission Rule");
         source.ShouldContain("Renderer diagnostics flow through the contracts project boundary");
+        source.ShouldContain("Html2x.LayoutEngine.Pagination -> Html2x.Diagnostics.Contracts");
+        source.ShouldContain("The diagnostics runtime must not reference pagination, layout stages, or producer-local event names");
     }
 
     [Fact]
@@ -117,6 +118,42 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     }
 
     [Fact]
+    public void PaginationProject_ReferencesDiagnosticsContractsWithoutDiagnosticsRuntime()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Pagination",
+            "Html2x.LayoutEngine.Pagination.csproj");
+
+        source.ShouldContain("Html2x.Diagnostics.Contracts.csproj");
+        source.ShouldNotContain("Html2x.Diagnostics.csproj");
+    }
+
+    [Fact]
+    public void PaginationDiagnostics_AreLocalToPaginationProject()
+    {
+        var source = ReadSource(
+            "src",
+            "Html2x.LayoutEngine.Pagination",
+            "PaginationDiagnostics.cs");
+        var oldPath = Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Html2x.LayoutEngine",
+            "Diagnostics",
+            "PaginationDiagnostics.cs");
+
+        File.Exists(oldPath).ShouldBeFalse();
+        source.ShouldContain("namespace Html2x.LayoutEngine.Pagination;");
+        source.ShouldContain("internal static class PaginationDiagnostics");
+        source.ShouldContain("IDiagnosticsSink?");
+        source.ShouldContain("layout/pagination/page-created");
+        source.ShouldContain("layout/pagination/block-moved-next-page");
+        source.ShouldContain("layout/pagination/oversized-block");
+        source.ShouldContain("layout/pagination/empty-document");
+    }
+
+    [Fact]
     public void PipelineBoundaries_AcceptDiagnosticsSink()
     {
         var htmlConverter = ReadSource("src", "Html2x", "HtmlConverter.cs");
@@ -125,7 +162,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         var styleBuilder = ReadSource("src", "Html2x.LayoutEngine.Style", "StyleTreeBuilder.cs");
         var styleBuilderInterface = ReadSource("src", "Html2x.LayoutEngine.Style", "IStyleTreeBuilder.cs");
         var geometryBuilder = ReadSource("src", "Html2x.LayoutEngine.Geometry", "Geometry", "LayoutGeometryBuilder.cs");
-        var paginator = ReadSource("src", "Html2x.LayoutEngine", "Pagination", "BlockPaginator.cs");
+        var paginator = ReadSource("src", "Html2x.LayoutEngine.Pagination", "LayoutPaginator.cs");
         var renderer = ReadSource("src", "Html2x.Renderers.Pdf", "Pipeline", "PdfRenderer.cs");
 
         htmlConverter.ShouldContain("new DiagnosticsCollector(");
@@ -147,6 +184,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         var forbiddenTokens = new[]
         {
             "Html2x.LayoutEngine",
+            "Html2x.LayoutEngine.Pagination",
             "Html2x.Renderers.Pdf",
             "AngleSharp",
             "SkiaSharp"
@@ -170,6 +208,38 @@ public sealed class DiagnosticsBoundaryArchitectureTests
             {
                 source.Contains(token, StringComparison.Ordinal).ShouldBeFalse(
                     $"{relativePath} should keep Html2x.Diagnostics independent from stage, parser, and renderer dependencies.");
+            }
+        }
+    }
+
+    [Fact]
+    public void DiagnosticsRuntime_DoesNotReferencePaginationOrLayoutStageNames()
+    {
+        var sourceDirectory = Path.Combine(FindRepoRoot(), "src", "Html2x.Diagnostics");
+        var forbiddenTokens = new[]
+        {
+            "Html2x.LayoutEngine.Pagination",
+            "stage/pagination",
+            "layout/pagination",
+            "layout/geometry-snapshot",
+            "style/unsupported-declaration",
+            "font/resolve",
+            "image/render"
+        };
+
+        foreach (var file in Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories))
+        {
+            var relativePath = Path.GetRelativePath(sourceDirectory, file);
+            if (IsBuildOutputPath(relativePath))
+            {
+                continue;
+            }
+
+            var source = File.ReadAllText(file);
+            foreach (var token in forbiddenTokens)
+            {
+                source.Contains(token, StringComparison.Ordinal).ShouldBeFalse(
+                    $"{relativePath} should keep Html2x.Diagnostics independent from pagination and producer-local stage names.");
             }
         }
     }
@@ -240,10 +310,11 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void AbstractionsDiagnosticsTypes_AreRemoved()
     {
-        var diagnosticsDirectory = Path.Combine(FindRepoRoot(), "src", "Html2x.Abstractions", "Diagnostics");
+        var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.Abstractions");
+        var solution = ReadSource("src", "Html2x.sln");
 
-        Directory.Exists(diagnosticsDirectory).ShouldBeFalse(
-            "Html2x.Abstractions should not own diagnostics types.");
+        Directory.Exists(directory).ShouldBeFalse("the obsolete options-only module should be deleted.");
+        solution.ShouldNotContain("Html2x.Abstractions");
     }
 
     [Fact]
@@ -261,16 +332,16 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void AbstractionsProject_ContainsNoDiagnosticsTypesAfterMigration()
     {
-        var diagnosticsDirectory = Path.Combine(FindRepoRoot(), "src", "Html2x.Abstractions", "Diagnostics");
+        var directory = Path.Combine(FindRepoRoot(), "src", "Html2x.Abstractions");
 
-        Directory.Exists(diagnosticsDirectory).ShouldBeFalse(
-            "Html2x.Abstractions should not own diagnostics types.");
+        Directory.Exists(directory).ShouldBeFalse("diagnostics cannot leak into a deleted obsolete module.");
     }
 
     private static IReadOnlyList<string> StageProjectPaths() =>
     [
         Path.Combine("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj"),
         Path.Combine("src", "Html2x.LayoutEngine.Geometry", "Html2x.LayoutEngine.Geometry.csproj"),
+        Path.Combine("src", "Html2x.LayoutEngine.Pagination", "Html2x.LayoutEngine.Pagination.csproj"),
         Path.Combine("src", "Html2x.LayoutEngine", "Html2x.LayoutEngine.csproj"),
         Path.Combine("src", "Html2x.Renderers.Pdf", "Html2x.Renderers.Pdf.csproj")
     ];
@@ -282,6 +353,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         {
             Path.Combine(root, "src", "Html2x"),
             Path.Combine(root, "src", "Html2x.LayoutEngine"),
+            Path.Combine(root, "src", "Html2x.LayoutEngine.Pagination"),
             Path.Combine(root, "src", "Html2x.LayoutEngine.Style"),
             Path.Combine(root, "src", "Html2x.LayoutEngine.Geometry"),
             Path.Combine(root, "src", "Html2x.Renderers.Pdf")

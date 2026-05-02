@@ -1,8 +1,6 @@
 using System.Collections.Concurrent;
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
+using Html2x.Text;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;
@@ -18,11 +16,7 @@ namespace Html2x.Renderers.Pdf.Drawing;
 /// relatively expensive and each instance wraps native resources that should be disposed deterministically.
 /// </item>
 /// <item>
-/// Normalize font selection across fragments by mapping a layout <see cref="FontKey"/> to a stable Skia typeface.
-/// </item>
-/// <item>
-/// Consume converter-owned resolved font output when available, and delegate direct renderer-only fallback to
-/// <see cref="RendererFallbackFontResolver"/> when no shared font source exists.
+/// Normalize font selection across fragments by mapping resolved text run font facts to stable Skia typefaces.
 /// </item>
 /// </list>
 ///
@@ -34,51 +28,25 @@ internal sealed class SkiaFontCache : IDisposable
 {
     private readonly IFileDirectory _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
-    private readonly IFontSource? _fontSource;
-    private readonly RendererFallbackFontResolver _fallbackFontResolver;
-    private readonly ConcurrentDictionary<FontKey, ResolvedFont> _resolvedFonts = new();
     private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId = new(StringComparer.OrdinalIgnoreCase);
 
-    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory)
-        : this(fontPath, fileDirectory, typefaceFactory: new SkiaTypefaceFactory(), fontSource: null)
-    {
-    }
-
-    internal SkiaFontCache(string? fontPath, IFileDirectory fileDirectory, IFontSource? fontSource)
-        : this(fontPath, fileDirectory, new SkiaTypefaceFactory(), fontSource)
-    {
-    }
-
     internal SkiaFontCache(
-        string? fontPath,
         IFileDirectory fileDirectory,
-        ISkiaTypefaceFactory typefaceFactory,
-        IFontSource? fontSource = null)
+        ISkiaTypefaceFactory typefaceFactory)
     {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
-        _fontSource = fontSource;
-        _fallbackFontResolver = new RendererFallbackFontResolver(fontPath, _fileDirectory, _typefaceFactory);
-    }
-
-    public SKTypeface GetTypeface(FontKey key)
-    {
-        if (_fontSource is not null)
-        {
-            var resolved = _resolvedFonts.GetOrAdd(key, static (fontKey, source) => source.Resolve(fontKey, nameof(SkiaFontCache)), _fontSource);
-            return _typefacesBySourceId.GetOrAdd(resolved.SourceId, _ => LoadResolvedTypeface(key, resolved));
-        }
-
-        return _fallbackFontResolver.GetTypeface(key);
     }
 
     public SKTypeface GetTypeface(TextRun run)
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        return run.ResolvedFont is null
-            ? GetTypeface(run.Font)
-            : _typefacesBySourceId.GetOrAdd(run.ResolvedFont.SourceId, _ => LoadResolvedTypeface(run.Font, run.ResolvedFont));
+        var resolved = run.ResolvedFont ?? throw CreateMissingResolvedFontException(run);
+
+        return _typefacesBySourceId.GetOrAdd(
+            resolved.SourceId,
+            _ => LoadResolvedTypeface(run.Font, resolved));
     }
 
     private SKTypeface LoadResolvedTypeface(FontKey key, ResolvedFont resolved)
@@ -93,25 +61,25 @@ internal sealed class SkiaFontCache : IDisposable
                 path);
         }
 
-        var typeface = resolved.FaceIndex > 0
-            ? _typefaceFactory.FromFile(path, resolved.FaceIndex)
-            : _typefaceFactory.FromFile(path);
+        var typeface = LoadTypeface(path, resolved.FaceIndex);
 
         return typeface ?? throw CreateFontResolutionException(
-            resolved.FaceIndex > 0
-                ? $"Failed to load font file '{path}' (face {resolved.FaceIndex})."
-                : $"Failed to load font file '{path}'.",
+            CreateFontLoadFailureMessage(path, resolved.FaceIndex),
             key,
             resolved,
             path);
     }
+
+    private SKTypeface? LoadTypeface(string path, int faceIndex) =>
+        faceIndex > 0
+            ? _typefaceFactory.FromFile(path, faceIndex)
+            : _typefaceFactory.FromFile(path);
 
     public void Dispose()
     {
         var disposedHandles = new HashSet<IntPtr>();
 
         DisposeTypefaces(_typefacesBySourceId.Values, disposedHandles);
-        _fallbackFontResolver.Dispose();
     }
 
     private static void DisposeTypefaces(IEnumerable<SKTypeface> typefaces, HashSet<IntPtr> disposedHandles)
@@ -136,6 +104,11 @@ internal sealed class SkiaFontCache : IDisposable
     {
         return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
     }
+
+    private static string CreateFontLoadFailureMessage(string path, int faceIndex) =>
+        faceIndex > 0
+            ? $"Failed to load font file '{path}' (face {faceIndex})."
+            : $"Failed to load font file '{path}'.";
 
     private static InvalidOperationException CreateFontResolutionException(
         string message,
@@ -164,4 +137,15 @@ internal sealed class SkiaFontCache : IDisposable
         return exception;
     }
 
+    private static InvalidOperationException CreateMissingResolvedFontException(TextRun run)
+    {
+        var exception = new InvalidOperationException(
+            "TextRun.ResolvedFont is required before PDF rendering. Build renderer inputs through layout geometry or provide resolved font facts on manually constructed text runs.");
+        exception.Data["DiagnosticsName"] = "ResolvedFont";
+        exception.Data["RequestedFamily"] = run.Font.Family;
+        exception.Data["RequestedWeight"] = run.Font.Weight;
+        exception.Data["RequestedStyle"] = run.Font.Style;
+        exception.Data["Text"] = run.Text;
+        return exception;
+    }
 }

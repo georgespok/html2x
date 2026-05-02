@@ -1,4 +1,4 @@
-namespace Html2x.Abstractions.Utilities.Color;
+namespace Html2x.Renderers.Pdf.Test;
 
 /// <summary>
 ///     Provides standard color constants in hexadecimal format for use throughout the application.

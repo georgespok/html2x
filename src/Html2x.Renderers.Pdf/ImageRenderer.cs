@@ -1,7 +1,6 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Options;
 using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
 
@@ -12,19 +11,19 @@ namespace Html2x.Renderers.Pdf;
 /// </summary>
 internal sealed class ImageRenderer
 {
-    private readonly PdfOptions _options;
     private readonly string _htmlDirectory;
     private readonly IDiagnosticsSink? _diagnosticsSink;
     private const string ImageRenderEvent = "image/render";
 
     public ImageRenderer(
-        PdfOptions options,
+        PdfRenderSettings settings,
         IDiagnosticsSink? diagnosticsSink = null)
     {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-        _htmlDirectory = string.IsNullOrWhiteSpace(options.HtmlDirectory)
+        ArgumentNullException.ThrowIfNull(settings);
+
+        _htmlDirectory = string.IsNullOrWhiteSpace(settings.HtmlDirectory)
             ? Directory.GetCurrentDirectory()
-            : options.HtmlDirectory;
+            : settings.HtmlDirectory;
         _diagnosticsSink = diagnosticsSink;
     }
 

@@ -1,15 +1,12 @@
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -34,7 +31,7 @@ public class LayoutBuilderTests
               </body>
             </html>";
 
-        var layout = await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter });
+        var layout = await CreateBuilder().BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter });
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Margins.Top.ShouldBe(10f);
@@ -47,7 +44,7 @@ public class LayoutBuilderTests
         const string html = "<html><body><p>diagnostics</p></body></html>";
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        await CreateBuilder().BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         foreach (var stageName in LayoutStageNames)
         {
@@ -73,7 +70,7 @@ public class LayoutBuilderTests
             </html>";
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter }, diagnosticsSink);
+        await CreateBuilder().BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter }, diagnosticsSink);
 
         var geometryEvent = diagnosticsSink.Records
             .SingleOrDefault(static e => e.Name == "layout/geometry-snapshot");
@@ -84,8 +81,9 @@ public class LayoutBuilderTests
         snapshot["fragments"].ShouldBeOfType<DiagnosticObject>()["pageCount"].ShouldBe(new DiagnosticNumberValue(1));
         var pagination = snapshot["pagination"].ShouldBeOfType<DiagnosticArray>();
         pagination.Count.ShouldBe(1);
-        pagination[0].ShouldBeOfType<DiagnosticObject>()["placements"].ShouldBeOfType<DiagnosticArray>().Count
-            .ShouldBeGreaterThan(0);
+        var placements = pagination[0].ShouldBeOfType<DiagnosticObject>()["placements"].ShouldBeOfType<DiagnosticArray>();
+        placements.Count.ShouldBeGreaterThan(0);
+        placements[0].ShouldBeOfType<DiagnosticObject>()["decisionKind"].ShouldBe(new DiagnosticStringValue("Placed"));
     }
 
     [Fact]
@@ -106,7 +104,7 @@ public class LayoutBuilderTests
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await CreateBuilder().BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink));
+            await CreateBuilder().BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
         diagnosticsSink.Records.ShouldContain(e =>
             e.Stage == "stage/box-tree" &&
@@ -122,13 +120,11 @@ public class LayoutBuilderTests
 
     private static LayoutBuilder CreateBuilder(
         ITextMeasurer? textMeasurer = null,
-        IFontSource? fontSource = null,
-        IImageProvider? imageProvider = null)
+        IImageMetadataResolver? imageMetadataResolver = null)
     {
         return new LayoutBuilder(
             textMeasurer ?? InlineFlowTestHelpers.CreateLinearMeasurer(6f),
-            fontSource ?? LayoutBuilderFixture.CreateFontSource(),
-            imageProvider ?? new NoopImageProvider());
+            imageMetadataResolver ?? new NoopImageMetadataResolver());
     }
 
     private static IEnumerable<string> EnumerateText(HtmlLayout layout)

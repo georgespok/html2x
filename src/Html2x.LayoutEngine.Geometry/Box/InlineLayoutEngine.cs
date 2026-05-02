@@ -1,9 +1,9 @@
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Box;
 
@@ -319,6 +319,13 @@ internal sealed class InlineLayoutEngine
     {
         private readonly IFontMetricsProvider _metricsProvider = metricsProvider ?? throw new ArgumentNullException(nameof(metricsProvider));
 
+        public TextMeasurement Measure(FontKey font, float sizePt, string text)
+        {
+            var width = MeasureWidth(font, sizePt, text);
+            var (ascent, descent) = GetMetrics(font, sizePt);
+            return TextMeasurement.CreateFallback(font, width, ascent, descent);
+        }
+
         public float MeasureWidth(FontKey font, float sizePt, string text) =>
             _metricsProvider.MeasureTextWidth(font, sizePt, text);
 
@@ -326,4 +333,3 @@ internal sealed class InlineLayoutEngine
             _metricsProvider.GetMetrics(font, sizePt);
     }
 }
-

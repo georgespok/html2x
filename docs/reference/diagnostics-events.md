@@ -30,7 +30,11 @@ Style diagnostics explain applied, ignored, partially applied, and unsupported C
 - `layout/margin-collapse`
 - `layout/unsupported-mode`
 
-Geometry snapshots capture box geometry, fragment geometry, and pagination placements for drift analysis.
+Geometry snapshots capture box geometry, fragment geometry, and pagination
+audit placements for drift analysis. Pagination placement entries include
+`decisionKind`, `isOversized`, placed rectangle fields, and metadata ownership
+facts. `metadataConsumer` uses the stable value `Pagination`; it does not name
+the private clone implementation.
 
 ## Tables
 
@@ -46,6 +50,41 @@ Table diagnostics describe supported table decisions and unsupported structures 
 - `layout/pagination/block-moved-next-page`
 - `layout/pagination/oversized-block`
 - `layout/pagination/empty-document`
+
+Pagination records are emitted by `Html2x.LayoutEngine.Pagination` through
+`IDiagnosticsSink`. Event names, severity, and fields are owned by that module.
+All pagination records use stage `stage/pagination` and structural paths such
+as `page[2]` or `page[2]/fragment[32]`.
+
+Common fields:
+
+- `eventName`
+- `pageNumber`
+- `fragmentId`
+- `reason`
+
+Move and placement fields:
+
+- `fromPage`
+- `toPage`
+- `localY`
+- `remainingSpace`
+- `remainingSpaceBefore`
+- `remainingSpaceAfter`
+- `blockHeight`
+- `pageContentHeight`
+
+Geometry snapshots use `PaginationDecisionKind` values for stable audit
+vocabulary:
+
+- `Placed`
+- `MovedToNextPage`
+- `Oversized`
+- `SplitAcrossPages`
+- `ForcedBreak`
+
+The last two values are reserved vocabulary only; current pagination remains
+block-boundary only.
 
 ## Images
 

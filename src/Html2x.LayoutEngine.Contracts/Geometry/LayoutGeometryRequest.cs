@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Geometry.Images;
 
 namespace Html2x.LayoutEngine.Geometry;
 
@@ -10,7 +10,7 @@ public sealed class LayoutGeometryRequest
 {
     public SizePt PageSize { get; init; } = PaperSizes.Letter;
 
-    public IImageProvider? ImageProvider { get; init; }
+    public IImageMetadataResolver? ImageMetadataResolver { get; init; }
 
     public string HtmlDirectory { get; init; } = Directory.GetCurrentDirectory();
 

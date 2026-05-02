@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -295,7 +295,7 @@ public class InitialBoxTreeBuilderTests
         var builder = new Html2x.LayoutEngine.Style.StyleTreeBuilder();
         return builder.BuildAsync(
             html,
-            new LayoutOptions
+            new StyleBuildSettings
             {
                 UseDefaultUserAgentStyleSheet = false
             });

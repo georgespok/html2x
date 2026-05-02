@@ -1,13 +1,12 @@
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 
@@ -60,7 +59,7 @@ public sealed class BlockContentMeasurementServiceTests
         var originalGeometry = CreateGeometry();
         image.ApplyLayoutGeometry(originalGeometry);
 
-        var measurement = CreateMeasurementService(new FixedImageProvider(new SizePx(40d, 20d)))
+        var measurement = CreateMeasurementService(new FixedImageMetadataResolver(new SizePx(40d, 20d)))
             .Measure(image, 100f, MeasureNoTables);
 
         var imageFacts = measurement.Image.ShouldNotBeNull();
@@ -194,27 +193,27 @@ public sealed class BlockContentMeasurementServiceTests
         measured.BorderBoxHeight.ShouldBe(published.Geometry.Height, 0.01f);
     }
 
-    private BlockContentMeasurementService CreateMeasurementService(IImageProvider? imageProvider = null)
+    private BlockContentMeasurementService CreateMeasurementService(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageProvider);
+        var imageResolver = CreateImageResolver(imageMetadataResolver);
         return new BlockContentMeasurementService(
             CreateInlineEngine(imageResolver),
             new BlockMeasurementService(),
             imageResolver);
     }
 
-    private BlockLayoutEngine CreateBlockLayoutEngine(IImageProvider? imageProvider = null)
+    private BlockLayoutEngine CreateBlockLayoutEngine(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageProvider);
+        var imageResolver = CreateImageResolver(imageMetadataResolver);
         var inlineEngine = CreateInlineEngine(imageResolver);
         return new BlockLayoutEngine(
             inlineEngine,
             new TableLayoutEngine(inlineEngine, imageResolver));
     }
 
-    private TableLayoutEngine CreateTableEngine(IImageProvider? imageProvider = null)
+    private TableLayoutEngine CreateTableEngine(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageProvider);
+        var imageResolver = CreateImageResolver(imageMetadataResolver);
         return new TableLayoutEngine(CreateInlineEngine(imageResolver), imageResolver);
     }
 
@@ -228,13 +227,13 @@ public sealed class BlockContentMeasurementServiceTests
             imageResolver);
     }
 
-    private static ImageLayoutResolver CreateImageResolver(IImageProvider? imageProvider = null)
+    private static ImageLayoutResolver CreateImageResolver(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        return new ImageLayoutResolver(imageProvider is null
+        return new ImageLayoutResolver(imageMetadataResolver is null
             ? null
             : new LayoutGeometryRequest
             {
-                ImageProvider = imageProvider
+                ImageMetadataResolver = imageMetadataResolver
             });
     }
 
@@ -449,14 +448,14 @@ public sealed class BlockContentMeasurementServiceTests
             new Spacing());
     }
 
-    private sealed class FixedImageProvider(SizePx intrinsicSize) : IImageProvider
+    private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
         {
-            return new ImageLoadResult
+            return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageLoadStatus.Ok,
+                Status = ImageMetadataStatus.Ok,
                 IntrinsicSizePx = intrinsicSize
             };
         }

@@ -19,6 +19,20 @@ AngleSharp, or traverse DOM nodes.
 
 `BoxGeometryFactory` owns geometry construction and normalization at layout boundaries. It handles finite-value normalization, non-negative sizes, content rectangle calculation, marker offsets, padding, and borders.
 
+## Helper Ownership
+
+Render fact translation is owned by `Html2x.RenderModel` through
+`RenderGeometryTranslator`. Pagination uses it when translating cloned render
+model rectangles and text run origins to page-local coordinates.
+
+`UsedGeometry` translation remains geometry-owned in
+`Html2x.LayoutEngine.Geometry`. Geometry may translate `UsedGeometry` because it
+has to preserve geometry invariants through `BoxGeometryFactory`.
+
+Page content area calculation is a layout-owned fact in
+`Html2x.LayoutEngine.Contracts`. `PageContentArea` is shared by geometry and
+pagination so page margin normalization has one implementation.
+
 Naming:
 
 - `BorderBoxRect` is the painted border box.

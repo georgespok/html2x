@@ -1,5 +1,4 @@
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Shouldly;
@@ -15,10 +14,9 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         {
             EnableDiagnostics = true
         },
-        Pdf = new PdfOptions
+        Fonts = new FontOptions
         {
-            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf"),
-            EnableDebugging = true
+            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
     };
 

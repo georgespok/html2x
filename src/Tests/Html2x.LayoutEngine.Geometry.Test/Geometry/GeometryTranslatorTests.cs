@@ -1,8 +1,8 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 
@@ -31,6 +31,17 @@ public sealed class GeometryTranslatorTests
     }
 
     [Fact]
+    public void Translate_Rectangle_OffsetsOriginAndPreservesSize()
+    {
+        var translated = RenderGeometryTranslator.Translate(
+            new RectangleF(10f, 20f, 30f, 40f),
+            -2f,
+            5f);
+
+        translated.ShouldBe(new RectangleF(8f, 25f, 30f, 40f));
+    }
+
+    [Fact]
     public void Translate_TextRun_OffsetsOriginAndPreservesMetrics()
     {
         var run = new TextRun(
@@ -44,7 +55,7 @@ public sealed class GeometryTranslatorTests
             TextDecorations.Underline,
             ColorRgba.Black);
 
-        var translated = GeometryTranslator.Translate(run, -2f, 5f);
+        var translated = RenderGeometryTranslator.Translate(run, -2f, 5f);
 
         translated.Origin.ShouldBe(new PointF(8f, 25f));
         translated.Text.ShouldBe(run.Text);

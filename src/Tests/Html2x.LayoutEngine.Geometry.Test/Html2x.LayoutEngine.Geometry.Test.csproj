@@ -25,18 +25,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Geometry\Html2x.LayoutEngine.Geometry.csproj" />
+    <ProjectReference Include="..\..\Html2x.LayoutEngine.Pagination\Html2x.LayoutEngine.Pagination.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Style\Html2x.LayoutEngine.Style.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
+    <ProjectReference Include="..\..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\Html2x.LayoutEngine.Test\Builders\BlockBoxBuilder.cs" Link="Builders\BlockBoxBuilder.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\LayoutBuilderFixture.cs" Link="LayoutBuilderFixture.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\FakeTextMeasurer.cs" Link="TestDoubles\FakeTextMeasurer.cs" />
-    <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\NoopImageProvider.cs" Link="TestDoubles\NoopImageProvider.cs" />
+    <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\NoopImageMetadataResolver.cs" Link="TestDoubles\NoopImageMetadataResolver.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestHelpers\GeometryTestHarness.cs" Link="TestHelpers\GeometryTestHarness.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestHelpers\InlineFlowTestHelpers.cs" Link="TestHelpers\InlineFlowTestHelpers.cs" />
   </ItemGroup>

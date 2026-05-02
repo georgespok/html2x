@@ -1,7 +1,7 @@
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 

@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Layout.Fragments;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using Html2x.RenderModel;
+using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments.Test.Assertions;
 

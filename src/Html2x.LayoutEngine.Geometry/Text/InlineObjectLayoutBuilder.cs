@@ -1,11 +1,10 @@
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -315,4 +314,3 @@ internal sealed class InlineObjectLayoutBuilder(
         return ascent;
     }
 }
-

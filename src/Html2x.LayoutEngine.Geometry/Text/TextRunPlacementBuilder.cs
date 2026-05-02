@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Text;
@@ -147,7 +147,8 @@ internal sealed class TextRunPlacementBuilder
                 source.Ascent,
                 source.Descent,
                 source.Decorations,
-                source.Color);
+                source.Color,
+                source.ResolvedFont);
         }
     }
 }

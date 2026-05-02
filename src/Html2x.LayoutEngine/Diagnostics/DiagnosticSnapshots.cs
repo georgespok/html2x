@@ -1,6 +1,5 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Pagination;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
@@ -179,6 +178,8 @@ internal sealed class PaginationPlacementSnapshot
     public int OrderIndex { get; init; }
 
     public bool IsOversized { get; init; }
+
+    public PaginationDecisionKind DecisionKind { get; init; }
 
     public float X { get; init; }
 

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Shouldly;
 using Xunit.Abstractions;
@@ -15,10 +14,13 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
         {
             EnableDiagnostics = true
         },
-        Pdf = new PdfOptions
+        Fonts = new FontOptions
         {
-            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf"),
-            HtmlDirectory = Path.Combine(GetRepositoryRoot(), "src", "Tests", "Html2x.TestConsole", "html")
+            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+        },
+        Resources = new ResourceOptions
+        {
+            BaseDirectory = Path.Combine(GetRepositoryRoot(), "src", "Tests", "Html2x.TestConsole", "html")
         }
     };
 

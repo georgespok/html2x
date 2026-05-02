@@ -1,13 +1,12 @@
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Files;
-using Html2x.Fonts;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Style;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.Text;
 
 namespace Html2x;
 
@@ -31,42 +30,45 @@ public class HtmlConverter
             diagnosticsSink = collector;
         }
 
-        var fileDirectory = new FileDirectory();
-        var fontPath = options.Pdf.FontPath;
+        var fontPath = options.Fonts.FontPath;
         if (string.IsNullOrWhiteSpace(fontPath))
         {
             throw CreateFontPathException(
-                "PdfOptions.FontPath must be provided before layout can begin.",
+                "HtmlConverterOptions.Fonts.FontPath must be provided before layout can begin.",
                 collector);
         }
 
-        if (!fileDirectory.FileExists(fontPath) && !fileDirectory.DirectoryExists(fontPath))
+        IFontSource fontSource;
+        try
+        {
+            fontSource = new FontPathSource(fontPath);
+        }
+        catch (InvalidOperationException exception) when (IsFontPathException(exception))
         {
             throw CreateFontPathException(
-                $"PdfOptions.FontPath '{fontPath}' does not exist.",
+                $"HtmlConverterOptions.Fonts.FontPath '{fontPath}' does not exist.",
                 collector);
         }
 
-        IFontSource fontSource = new FontPathSource(fontPath, fileDirectory);
         if (diagnosticsSink is not null)
         {
             fontSource = new DiagnosticsFontSource(fontSource, diagnosticsSink);
         }
 
         var measurer = new SkiaTextMeasurer(fontSource);
-        var imageProvider = new FileSystemImageProvider();
+        var imageMetadataResolver = new FileImageProvider();
 
         EmitStageStarted(
             diagnosticsSink,
             "LayoutBuild",
             DiagnosticFields.Create(DiagnosticFields.Field("html", html.Trim())));
 
-        var layoutBuilder = new LayoutBuilder(measurer, fontSource, imageProvider);
+        var layoutBuilder = new LayoutBuilder(measurer, imageMetadataResolver);
 
         HtmlLayout layout;
         try
         {
-            layout = await layoutBuilder.BuildAsync(html, options.Layout, diagnosticsSink);
+            layout = await layoutBuilder.BuildAsync(html, ToLayoutBuildSettings(options), diagnosticsSink);
         }
         catch (Exception exception)
         {
@@ -82,14 +84,14 @@ public class HtmlConverter
             DiagnosticFields.Create(
                 DiagnosticFields.Field("snapshot", LayoutSnapshotMapper.ToDiagnosticObject(layout))));
 
-        var renderer = new PdfRenderer(fileDirectory);
+        var renderer = new PdfRenderer();
 
         EmitStageStarted(diagnosticsSink, "PdfRender");
 
         byte[] pdfBytes;
         try
         {
-            pdfBytes = await renderer.RenderAsync(layout, options.Pdf, fontSource, diagnosticsSink);
+            pdfBytes = await renderer.RenderAsync(layout, ToPdfRenderSettings(options), diagnosticsSink: diagnosticsSink);
         }
         catch (Exception exception)
         {
@@ -110,6 +112,33 @@ public class HtmlConverter
         return new Html2PdfResult(pdfBytes)
         {
             DiagnosticsReport = report
+        };
+    }
+
+    private static LayoutBuildSettings ToLayoutBuildSettings(HtmlConverterOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new LayoutBuildSettings
+        {
+            PageSize = options.Page.Size,
+            HtmlDirectory = options.Resources.BaseDirectory,
+            MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
+            Style = new StyleBuildSettings
+            {
+                UseDefaultUserAgentStyleSheet = options.Css.UseDefaultUserAgentStyleSheet,
+                UserAgentStyleSheet = options.Css.UserAgentStyleSheet
+            }
+        };
+    }
+
+    private static PdfRenderSettings ToPdfRenderSettings(HtmlConverterOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return new PdfRenderSettings
+        {
+            HtmlDirectory = options.Resources.BaseDirectory
         };
     }
 
@@ -143,6 +172,9 @@ public class HtmlConverter
         var endTime = DateTimeOffset.UtcNow;
         return collector?.ToReport(endTime);
     }
+
+    private static bool IsFontPathException(Exception exception) =>
+        exception.Data["DiagnosticsName"] as string == "FontPath";
 
     private static void EmitStageStarted(
         IDiagnosticsSink? diagnosticsSink,
@@ -180,6 +212,3 @@ public class HtmlConverter
             Timestamp: DateTimeOffset.UtcNow));
     }
 }
-
-
-

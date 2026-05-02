@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using Html2x.Abstractions.Layout.Styles;
+using System.Drawing;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;

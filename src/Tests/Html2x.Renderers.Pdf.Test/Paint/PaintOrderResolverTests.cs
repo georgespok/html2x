@@ -1,8 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.Renderers.Pdf.Paint;
 using Shouldly;
 
@@ -179,9 +176,9 @@ public sealed class PaintOrderResolverTests
             Rect = rect,
             Runs =
             [
-                new TextRun(
+                RendererFontTestData.CreateTextRun(
                     text,
-                    new FontKey("Arial", FontWeight.W400, FontStyle.Normal),
+                    RendererFontTestData.CreateFont(),
                     12f,
                     new PointF(rect.X + 1f, rect.Y + 10f),
                     30f,

@@ -19,6 +19,8 @@ geometry algorithms directly.
   the parser-free `StyleTree` handoff.
 - `Html2x.LayoutEngine.Geometry` consumes `StyleTree` and produces published
   layout geometry.
+- `Html2x.LayoutEngine.Pagination` consumes render model fragments and returns
+  `PaginationResult` with final `HtmlLayout` plus pagination audit facts.
 - `Html2x.Renderers.Pdf` consumes `HtmlLayout` only.
 
 ## Primary Entry Points
@@ -29,7 +31,7 @@ geometry algorithms directly.
 - `LayoutGeometryBuilder`
 - `FragmentBuilder`
 - `BoxToFragmentProjector`
-- `BlockPaginator`
+- `LayoutPaginator`
 
 ## Internal Boundaries
 

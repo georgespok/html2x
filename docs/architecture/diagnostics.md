@@ -25,8 +25,8 @@ If layout fails, `PdfRender` is skipped and the diagnostics report is attached t
 
 Generic diagnostics contracts that cross project boundaries belong in
 `Html2x.Diagnostics.Contracts`. JSON export belongs in `Html2x.Diagnostics`.
-`Html2x.Abstractions` owns no diagnostics contracts, collections, report
-models, snapshot DTOs, or serializers.
+Facade options own no diagnostics contracts, collections, report models,
+snapshot DTOs, or serializers.
 
 `Html2x.Diagnostics` owns `DiagnosticsCollector`, `DiagnosticsReport`, and
 `DiagnosticsReportSerializer`. The report serializer is generic over

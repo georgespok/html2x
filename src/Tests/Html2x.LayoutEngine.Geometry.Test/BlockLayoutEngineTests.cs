@@ -1,14 +1,12 @@
-﻿using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.Builders;
-using Html2x.Abstractions.Layout.Text;
 using Html2x.Diagnostics.Contracts;
 using Shouldly;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using System.Drawing;
 using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
 

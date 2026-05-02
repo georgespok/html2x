@@ -1,13 +1,8 @@
 using System.Drawing;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
-using Moq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -223,15 +218,14 @@ public class ImageRenderingTests
 
     private static async Task<(byte[]? Bytes, IReadOnlyList<DiagnosticRecord> Diagnostics)> RenderLayoutAsync(HtmlLayout layout)
     {
-        var pdfOptions = new PdfOptions
+        var pdfOptions = new PdfRenderSettings
         {
             HtmlDirectory = Directory.GetCurrentDirectory()
         };
 
         var diagnostics = new RecordingDiagnosticsSink();
 
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
+        var renderer = new PdfRenderer();
 
         var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnosticsSink: diagnostics);
         return (bytes, diagnostics.Records);

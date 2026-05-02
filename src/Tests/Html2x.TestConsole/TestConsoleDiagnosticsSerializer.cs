@@ -73,8 +73,7 @@ internal sealed record PolicyOwnershipDiagnostics(
         return new PolicyOwnershipDiagnostics(
             ["owner", "consumer", "approved-exception"],
             [
-                "block-formatting:inline-block-descendant-implicit-width",
-                "font-resolution:direct-renderer-local-fallback-without-shared-font-source"
+                "block-formatting:inline-block-descendant-implicit-width"
             ]);
     }
 }

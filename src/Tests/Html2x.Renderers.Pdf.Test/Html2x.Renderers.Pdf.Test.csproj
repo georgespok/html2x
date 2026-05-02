@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Html2x.Renderers.Pdf\Html2x.Renderers.Pdf.csproj" />
+    <ProjectReference Include="..\..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

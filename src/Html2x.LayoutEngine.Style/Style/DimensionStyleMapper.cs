@@ -1,9 +1,9 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Measurements.Dimensions;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Style.Dimensions;
 using Html2x.LayoutEngine.Models;
 
 namespace Html2x.LayoutEngine.Style;

@@ -1,8 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
@@ -40,31 +37,34 @@ public sealed class GeometrySnapshotMapperTests
         layout.Pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), [fragment]));
         var pagination = new PaginationResult
         {
-            Pages =
+            Layout = layout,
+            AuditPages =
             [
-                new PageModel
+                new PaginationPageAudit
                 {
                     PageNumber = 1,
                     PageSize = PaperSizes.A4,
                     Margin = new Spacing(),
-                    ContentTop = 0f,
-                    ContentBottom = PaperSizes.A4.Height,
+                    ContentArea = new RectangleF(0f, 0f, PaperSizes.A4.Width, PaperSizes.A4.Height),
                     Placements =
                     [
-                        new BlockFragmentPlacement
+                        new PaginationPlacementAudit
                         {
                             FragmentId = fragment.FragmentId,
                             PageNumber = 1,
+                            PlacedRect = fragment.Rect,
+                            DecisionKind = PaginationDecisionKind.Placed,
                             IsOversized = false,
                             OrderIndex = 0,
-                            Fragment = fragment
+                            FragmentKind = "Block",
+                            DisplayRole = fragment.DisplayRole
                         }
                     ]
                 }
             ]
         };
 
-        var snapshot = GeometrySnapshotMapper.From(layoutTree, layout, pagination);
+        var snapshot = GeometrySnapshotMapper.From(layoutTree, pagination);
 
         snapshot.Fragments.PageCount.ShouldBe(1);
 
@@ -88,7 +88,9 @@ public sealed class GeometrySnapshotMapperTests
         var placement = snapshot.Pagination.ShouldHaveSingleItem().Placements.ShouldHaveSingleItem();
         placement.FragmentId.ShouldBe(7);
         placement.Kind.ShouldBe("Block");
+        placement.DecisionKind.ShouldBe(PaginationDecisionKind.Placed);
         placement.Size.ShouldBe(new SizePt(120f, 40f));
+        placement.MetadataConsumer.ShouldBe("Pagination");
     }
 
     [Fact]
@@ -107,8 +109,7 @@ public sealed class GeometrySnapshotMapperTests
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new HtmlLayout(),
-            new PaginationResult { Pages = [] });
+            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
 
         snapshot.Boxes[0].SequenceId.ShouldBe(1);
         snapshot.Boxes[0].Children.ShouldHaveSingleItem().SequenceId.ShouldBe(2);
@@ -137,8 +138,7 @@ public sealed class GeometrySnapshotMapperTests
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new HtmlLayout(),
-            new PaginationResult { Pages = [] });
+            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.Path.ShouldBe("layout/section");
@@ -173,8 +173,7 @@ public sealed class GeometrySnapshotMapperTests
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new HtmlLayout(),
-            new PaginationResult { Pages = [] });
+            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.Path.ShouldBe("layout/div/anonymous[0]");
@@ -200,8 +199,7 @@ public sealed class GeometrySnapshotMapperTests
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new HtmlLayout(),
-            new PaginationResult { Pages = [] });
+            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.SourceNodeId.ShouldBeNull();

@@ -1,9 +1,7 @@
-﻿using System.Drawing;
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using System.Drawing;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
@@ -12,6 +10,7 @@ using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 
@@ -238,7 +237,7 @@ public sealed class GeometryContractTests
 
         var imageResolver = new ImageLayoutResolver(new LayoutGeometryRequest
         {
-            ImageProvider = new FixedImageProvider(new SizePx(40d, 20d))
+            ImageMetadataResolver = new FixedImageMetadataResolver(new SizePx(40d, 20d))
         });
         var engine = new InlineLayoutEngine(
             new FontMetricsProvider(),
@@ -325,7 +324,7 @@ public sealed class GeometryContractTests
         float ascent,
         float descent)
     {
-        var font = new FontKey("Arial", FontWeight.W400, Abstractions.Layout.Styles.FontStyle.Normal);
+        var font = new FontKey("Arial", FontWeight.W400, FontStyle.Normal);
 
         Should.Throw<ArgumentOutOfRangeException>(() => new TextRun(
             "x",
@@ -384,20 +383,23 @@ public sealed class GeometryContractTests
     [Fact]
     public void Paginate_NegativePageMargins_NormalizesContentBounds()
     {
-        var result = new BlockPaginator().Paginate(
+        var result = new LayoutPaginator().Paginate(
             [],
-            new SizePt(100f, 200f),
-            new Spacing(-5f, -10f, -15f, -20f));
+            new PaginationOptions
+            {
+                PageSize = new SizePt(100f, 200f),
+                Margin = new Spacing(-5f, -10f, -15f, -20f)
+            });
 
-        var page = result.Pages.ShouldHaveSingleItem();
+        var page = result.AuditPages.ShouldHaveSingleItem();
         page.ContentTop.ShouldBe(0f);
         page.ContentBottom.ShouldBe(200f);
     }
 
     [Fact]
-    public async Task Build_NestedInlineBlockImage_UsesConfiguredImageProvider()
+    public async Task Build_NestedInlineBlockImage_UsesConfiguredImageMetadataResolver()
     {
-        var imageProvider = new FixedImageProvider(new SizePx(32d, 16d));
+        var imageMetadataResolver = new FixedImageMetadataResolver(new SizePx(32d, 16d));
         var layout = await new LayoutBuilderFixture().BuildLayoutAsync(
             """
             <html>
@@ -413,8 +415,8 @@ public sealed class GeometryContractTests
             </html>
             """,
             GeometryTestHarness.CreateTextMeasurer(),
-            new LayoutOptions { PageSize = PaperSizes.A4 },
-            imageProvider);
+            new LayoutBuildSettings { PageSize = PaperSizes.A4 },
+            imageMetadataResolver);
 
         var image = layout.Pages
             .SelectMany(static page => page.Children)
@@ -502,8 +504,8 @@ public sealed class GeometryContractTests
         return 0f;
     }
 
-    private static IEnumerable<Abstractions.Layout.Fragments.Fragment> EnumerateFragments(
-        Abstractions.Layout.Fragments.Fragment fragment)
+    private static IEnumerable<Fragment> EnumerateFragments(
+        Fragment fragment)
     {
         yield return fragment;
 
@@ -521,7 +523,7 @@ public sealed class GeometryContractTests
         }
     }
 
-    private static bool ContainsText(Abstractions.Layout.Fragments.Fragment fragment, string expected)
+    private static bool ContainsText(Fragment fragment, string expected)
     {
         return EnumerateFragments(fragment)
             .OfType<LineBoxFragment>()
@@ -532,14 +534,14 @@ public sealed class GeometryContractTests
     /// <summary>
     /// Provides deterministic intrinsic dimensions for image geometry tests.
     /// </summary>
-    private sealed class FixedImageProvider(SizePx intrinsicSize) : IImageProvider
+    private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
         {
-            return new ImageLoadResult
+            return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageLoadStatus.Ok,
+                Status = ImageMetadataStatus.Ok,
                 IntrinsicSizePx = intrinsicSize
             };
         }

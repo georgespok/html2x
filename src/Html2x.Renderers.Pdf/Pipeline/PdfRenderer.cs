@@ -1,10 +1,9 @@
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.Text;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Pipeline;
@@ -16,29 +15,34 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 public class PdfRenderer
 {
     private readonly IFileDirectory _fileDirectory;
+    private readonly ISkiaTypefaceFactory _typefaceFactory;
 
-    public PdfRenderer(IFileDirectory fileDirectory)
+    public PdfRenderer()
+        : this(new FileDirectory(), new SkiaTypefaceFactory())
+    {
+    }
+
+    internal PdfRenderer(IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
     {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+        _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
     }
 
     public Task<byte[]> RenderAsync(
         HtmlLayout htmlLayout,
-        PdfOptions? options = null,
-        IFontSource? fontSource = null,
+        PdfRenderSettings? settings = null,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
-        options ??= new PdfOptions();
+        settings ??= new PdfRenderSettings();
 
-        var bytes = RenderWithSkia(htmlLayout, options, fontSource, diagnosticsSink);
+        var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink);
         return Task.FromResult(bytes);
     }
 
     private byte[] RenderWithSkia(
         HtmlLayout layout,
-        PdfOptions options,
-        IFontSource? fontSource,
+        PdfRenderSettings settings,
         IDiagnosticsSink? diagnosticsSink)
     {
         using var stream = new MemoryStream();
@@ -48,9 +52,9 @@ public class PdfRenderer
             throw new InvalidOperationException("Failed to create Skia PDF document.");
         }
 
-        using var fontCache = new SkiaFontCache(options.FontPath, _fileDirectory, fontSource);
+        using var fontCache = new SkiaFontCache(_fileDirectory, _typefaceFactory);
         var paintOrder = new PaintOrderResolver();
-        var drawer = new SkiaPaintCommandDrawer(options, fontCache, diagnosticsSink);
+        var drawer = new SkiaPaintCommandDrawer(settings, fontCache, diagnosticsSink);
 
         foreach (var page in layout.Pages)
         {

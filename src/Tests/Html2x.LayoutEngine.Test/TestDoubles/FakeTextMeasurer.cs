@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
+using Html2x.RenderModel;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.TestDoubles;
 
@@ -8,6 +8,15 @@ namespace Html2x.LayoutEngine.Test.TestDoubles;
 /// </summary>
 public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float descent) : ITextMeasurer
 {
+    public TextMeasurement Measure(FontKey font, float sizePt, string text)
+    {
+        return TextMeasurement.CreateFallback(
+            font,
+            MeasureWidth(font, sizePt, text),
+            ascent,
+            descent);
+    }
+
     public float MeasureWidth(FontKey font, float sizePt, string text)
     {
         if (string.IsNullOrEmpty(text))

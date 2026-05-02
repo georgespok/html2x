@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 
 namespace Html2x.LayoutEngine.Models;
 

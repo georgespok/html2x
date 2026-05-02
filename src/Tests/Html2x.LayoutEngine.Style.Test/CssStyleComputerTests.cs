@@ -1,8 +1,8 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.LayoutEngine.Models;
@@ -488,7 +488,7 @@ public class CssStyleComputerTests
     {
         const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
 
-        var options = new LayoutOptions
+        var options = new StyleBuildSettings
         {
             UseDefaultUserAgentStyleSheet = true
         };
@@ -514,7 +514,7 @@ public class CssStyleComputerTests
     {
         const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
 
-        var options = new LayoutOptions
+        var options = new StyleBuildSettings
         {
             UseDefaultUserAgentStyleSheet = true,
             UserAgentStyleSheet = "h1 { font-size: 22pt; } p { margin: 2pt 0; }"
@@ -540,7 +540,7 @@ public class CssStyleComputerTests
     {
         const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
 
-        var options = new LayoutOptions
+        var options = new StyleBuildSettings
         {
             UseDefaultUserAgentStyleSheet = false
         };
@@ -567,7 +567,7 @@ public class CssStyleComputerTests
         return document;
     }
 
-    private static async Task<StyleSnapshot> ComputeStyleTreeAsync(string html, LayoutOptions options)
+    private static async Task<StyleSnapshot> ComputeStyleTreeAsync(string html, StyleBuildSettings options)
     {
         var config = Configuration.Default.WithCss();
         var domProvider = new AngleSharpDomProvider(config);

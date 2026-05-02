@@ -1,7 +1,7 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box.Publishing;
+using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry.Published;
@@ -917,4 +917,3 @@ internal sealed class BlockLayoutEngine
         IReadOnlyList<PublishedBlockFlowItem> PublishedFlow);
 
 }
-

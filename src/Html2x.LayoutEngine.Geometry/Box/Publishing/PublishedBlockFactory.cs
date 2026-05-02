@@ -1,7 +1,7 @@
 namespace Html2x.LayoutEngine.Box.Publishing;
 
 using System.Text;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;

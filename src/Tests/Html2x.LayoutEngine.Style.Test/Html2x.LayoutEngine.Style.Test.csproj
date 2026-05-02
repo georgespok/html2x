@@ -26,9 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Html2x.Abstractions\Html2x.Abstractions.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Style\Html2x.LayoutEngine.Style.csproj" />
+    <ProjectReference Include="..\..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

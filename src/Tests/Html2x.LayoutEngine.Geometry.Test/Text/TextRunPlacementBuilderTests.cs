@@ -1,8 +1,8 @@
-﻿using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Text;
 
@@ -12,10 +12,11 @@ public sealed class TextRunPlacementBuilderTests
     public void Build_TextRuns_GroupsSequentialRunsIntoOneTextItem()
     {
         var source = new InlineBox(BoxRole.Inline);
+        var resolvedFont = new ResolvedFont("Arial", FontWeight.W400, FontStyle.Normal, "test://arial");
         var line = new TextLayoutLine(
             [
-                CreateRun(source, "A", width: 5f, leftSpacing: 1f, rightSpacing: 2f),
-                CreateRun(source, "B", width: 6f, leftSpacing: 3f, rightSpacing: 4f)
+                CreateRun(source, "A", width: 5f, leftSpacing: 1f, rightSpacing: 2f, resolvedFont),
+                CreateRun(source, "B", width: 6f, leftSpacing: 3f, rightSpacing: 4f, resolvedFont)
             ],
             LineWidth: 21f,
             LineHeight: 12f);
@@ -38,8 +39,10 @@ public sealed class TextRunPlacementBuilderTests
         item.Runs[0].Text.ShouldBe("A");
         item.Runs[0].Origin.X.ShouldBe(11f);
         item.Runs[0].Origin.Y.ShouldBe(29f);
+        item.Runs[0].ResolvedFont.ShouldBe(resolvedFont);
         item.Runs[1].Text.ShouldBe("B");
         item.Runs[1].Origin.X.ShouldBe(21f);
+        item.Runs[1].ResolvedFont.ShouldBe(resolvedFont);
         item.Sources.ShouldHaveSingleItem().ShouldBeSameAs(source);
     }
 
@@ -48,7 +51,8 @@ public sealed class TextRunPlacementBuilderTests
         string text,
         float width,
         float leftSpacing,
-        float rightSpacing)
+        float rightSpacing,
+        ResolvedFont? resolvedFont = null)
     {
         return new TextLayoutRun(
             source,
@@ -61,6 +65,7 @@ public sealed class TextRunPlacementBuilderTests
             9f,
             3f,
             TextDecorations.None,
-            ColorRgba.Black);
+            ColorRgba.Black,
+            resolvedFont);
     }
 }

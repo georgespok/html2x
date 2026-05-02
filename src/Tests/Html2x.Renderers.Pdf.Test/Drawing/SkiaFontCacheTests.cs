@@ -1,10 +1,8 @@
 using System.Drawing;
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.Renderers.Pdf.Test;
+using Html2x.Text;
+using Html2x.RenderModel;
 using Html2x.Renderers.Pdf.Drawing;
-using Moq;
 using Shouldly;
 using SkiaSharp;
 
@@ -15,37 +13,43 @@ public sealed class SkiaFontCacheTests
     [Fact]
     public void Build_SkipsNonFontFilesAndDisposesNonDefaultTypefaces()
     {
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
-
-        fileDirectory.Setup(x => x.DirectoryExists("fonts")).Returns(true);
-        fileDirectory.Setup(x => x.EnumerateFiles("fonts", "*.*", true)).Returns(new[]
-        {
-            "fonts\\a.ttf",
-            "fonts\\b.otf",
-            "fonts\\c.ttc",
-            "fonts\\readme.txt"
-        });
-        fileDirectory.Setup(x => x.GetExtension(It.IsAny<string>()))
-            .Returns((string path) => Path.GetExtension(path));
+        var fileDirectory = new TestFileDirectory()
+            .AddDirectory("fonts")
+            .AddEnumeration(
+                "fonts",
+                "*.*",
+                recursive: true,
+                [
+                    "fonts\\a.ttf",
+                    "fonts\\b.otf",
+                    "fonts\\c.ttc",
+                    "fonts\\readme.txt"
+                ]);
 
         using var aTypeface = SKTypeface.FromFamilyName("Inter");
         using var bTypeface = SKTypeface.FromFamilyName("Inter");
         using var cTypeface = SKTypeface.FromFamilyName("Inter");
 
-        typefaceFactory.Setup(x => x.FromFile("fonts\\a.ttf")).Returns(aTypeface);
-        typefaceFactory.Setup(x => x.FromFile("fonts\\b.otf")).Returns(bTypeface);
-        typefaceFactory.Setup(x => x.FromFile("fonts\\c.ttc", 0)).Returns(cTypeface);
-        typefaceFactory.Setup(x => x.FromFile("fonts\\c.ttc", 1)).Returns((SKTypeface?)null);
+        var typefaceFactory = new TestSkiaTypefaceFactory()
+            .AddFileTypeface("fonts\\a.ttf", aTypeface)
+            .AddFileTypeface("fonts\\b.otf", bTypeface)
+            .AddFileTypeface("fonts\\c.ttc", 0, cTypeface)
+            .AddFileTypeface("fonts\\c.ttc", 1, null);
 
-        var faces = FontDirectoryIndex.Build(fileDirectory.Object, typefaceFactory.Object, "fonts");
+        var faces = FontDirectoryIndex.Build(fileDirectory, typefaceFactory, "fonts");
 
         faces.Count.ShouldBe(3);
         faces.Select(face => face.Path).ShouldBe(new[] { "fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc" }, ignoreOrder: true);
-
-        fileDirectory.VerifyAll();
-        typefaceFactory.VerifyAll();
+        fileDirectory.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
+        fileDirectory.EnumerateFilesCalls.ShouldBe([new TestFileDirectory.FileEnumerationKey("fonts", "*.*", true)]);
+        typefaceFactory.FromFileCalls.ShouldBe(["fonts\\a.ttf", "fonts\\b.otf"]);
+        typefaceFactory.FromFileWithFaceIndexCalls.ShouldBe(
+            [
+                new TestSkiaTypefaceFactory.FileFaceKey("fonts\\c.ttc", 0),
+                new TestSkiaTypefaceFactory.FileFaceKey("fonts\\c.ttc", 1)
+            ]);
     }
+
     public static IEnumerable<object[]> BestMatchCases()
     {
         yield return
@@ -151,162 +155,6 @@ public sealed class SkiaFontCacheTests
         best.FaceIndex.ShouldBe(expectedFaceIndex);
     }
 
-    public static IEnumerable<object[]> GetTypefaceBranchCases()
-    {
-        // Existing file path branch.
-        yield return ["existing-file.ttf", true, false, Array.Empty<string>()];
-
-        // Directory path branch.
-        yield return ["fonts-dir", false, true, new[] { "fonts-dir\\a.ttf", "fonts-dir\\b.otf", "fonts-dir\\c.ttc" }];
-
-        // No path match: system fallback branch.
-        yield return ["missing", false, false, Array.Empty<string>()];
-    }
-
-    [Theory]
-    [MemberData(nameof(GetTypefaceBranchCases))]
-    public void GetTypeface_UsesExpectedPathBranchAndCachesResults(
-        string fontPath,
-        bool fileExists,
-        bool directoryExists,
-        string[] enumeratedFiles)
-    {
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        fileDirectory.Setup(x => x.FileExists(fontPath)).Returns(fileExists);
-
-        if (!fileExists)
-        {
-            fileDirectory.Setup(x => x.DirectoryExists(fontPath)).Returns(directoryExists);
-        }
-
-        if (!fileExists && directoryExists)
-        {
-            fileDirectory.Setup(x => x.EnumerateFiles(fontPath, "*.*", true)).Returns(enumeratedFiles);
-            fileDirectory.Setup(x => x.GetExtension(It.IsAny<string>())).Returns((string p) => Path.GetExtension(p));
-        }
-
-        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
-
-        if (fileExists)
-        {
-            typefaceFactory.Setup(x => x.FromFile(fontPath)).Returns(SKTypeface.Default);
-        }
-        else if (directoryExists)
-        {
-            foreach (var file in enumeratedFiles.Where(f => !f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
-            {
-                typefaceFactory.Setup(x => x.FromFile(file)).Returns(SKTypeface.Default);
-            }
-
-            foreach (var ttc in enumeratedFiles.Where(f => f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
-            {
-                typefaceFactory.Setup(x => x.FromFile(ttc, 0)).Returns((SKTypeface?)null);
-            }
-        }
-        else
-        {
-            typefaceFactory.Setup(x => x.FromFamilyName(It.IsAny<string>(), It.IsAny<SKFontStyle>())).Returns(SKTypeface.Default);
-        }
-
-        using var cache = new SkiaFontCache(fontPath, fileDirectory.Object, typefaceFactory.Object);
-
-        var keyFamily = directoryExists ? SKTypeface.Default.FamilyName : "Inter";
-        var key = new FontKey(keyFamily, FontWeight.W700, FontStyle.Normal);
-        var first = cache.GetTypeface(key);
-        var second = cache.GetTypeface(key);
-
-        first.ShouldNotBeNull();
-        second.ShouldBeSameAs(first);
-
-        if (fileExists)
-        {
-            fileDirectory.Verify(x => x.DirectoryExists(It.IsAny<string>()), Times.Never);
-            fileDirectory.Verify(x => x.EnumerateFiles(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
-            typefaceFactory.Verify(x => x.FromFile(fontPath), Times.Once);
-        }
-        else if (directoryExists)
-        {
-            fileDirectory.Verify(x => x.EnumerateFiles(fontPath, "*.*", true), Times.Once);
-            foreach (var file in enumeratedFiles.Where(f => !f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
-            {
-                typefaceFactory.Verify(x => x.FromFile(file), Times.AtLeastOnce);
-            }
-
-            foreach (var ttc in enumeratedFiles.Where(f => f.EndsWith(".ttc", StringComparison.OrdinalIgnoreCase)))
-            {
-                typefaceFactory.Verify(x => x.FromFile(ttc, 0), Times.Once);
-            }
-        }
-        else
-        {
-            typefaceFactory.Verify(x => x.FromFamilyName(It.IsAny<string>(), It.IsAny<SKFontStyle>()), Times.AtLeastOnce);
-        }
-
-        fileDirectory.VerifyAll();
-        typefaceFactory.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public void GetTypeface_FallsBackToDefaultFamilyWhenCandidatesFail()
-    {
-        var defaultFamily = SKTypeface.Default.FamilyName;
-        defaultFamily.ShouldNotBeNullOrWhiteSpace();
-
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        fileDirectory.Setup(x => x.FileExists(It.IsAny<string>())).Returns(false);
-        fileDirectory.Setup(x => x.DirectoryExists(It.IsAny<string>())).Returns(false);
-
-        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
-        typefaceFactory.Setup(x => x.FromFamilyName(It.Is<string>(s => s != defaultFamily), It.IsAny<SKFontStyle>()))
-            .Returns((SKTypeface?)null);
-        typefaceFactory.SetupSequence(x => x.FromFamilyName(defaultFamily, It.IsAny<SKFontStyle>()))
-            .Returns((SKTypeface?)null)
-            .Returns(SKTypeface.Default);
-
-        using var cache = new SkiaFontCache("missing", fileDirectory.Object, typefaceFactory.Object);
-        var key = new FontKey("MissingFamily", FontWeight.W700, FontStyle.Italic);
-
-        var typeface = cache.GetTypeface(key);
-
-        typeface.ShouldBeSameAs(SKTypeface.Default);
-        typefaceFactory.Verify(x => x.FromFamilyName(defaultFamily, It.IsAny<SKFontStyle>()), Times.Exactly(2));
-    }
-
-    [Fact]
-    public void GetTypeface_AuthoritativeFontSource_UsesResolvedFontOutcomeAndCachesIt()
-    {
-        const string resolvedPath = "fonts\\inter-regular.ttf";
-        var key = new FontKey("Inter", FontWeight.W700, FontStyle.Italic);
-
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        fileDirectory.Setup(x => x.FileExists(resolvedPath)).Returns(true);
-
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
-        fontSource.Setup(x => x.Resolve(key, nameof(SkiaFontCache)))
-            .Returns(new ResolvedFont(
-                "Inter",
-                FontWeight.W400,
-                FontStyle.Normal,
-                $"{resolvedPath}#1",
-                FilePath: resolvedPath,
-                FaceIndex: 1,
-                ConfiguredPath: "fonts"));
-
-        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
-        typefaceFactory.Setup(x => x.FromFile(resolvedPath, 1)).Returns(SKTypeface.Default);
-
-        using var cache = new SkiaFontCache("ignored", fileDirectory.Object, typefaceFactory.Object, fontSource.Object);
-
-        var first = cache.GetTypeface(key);
-        var second = cache.GetTypeface(key);
-
-        first.ShouldBeSameAs(SKTypeface.Default);
-        second.ShouldBeSameAs(first);
-        fontSource.Verify(x => x.Resolve(key, nameof(SkiaFontCache)), Times.Once);
-        typefaceFactory.Verify(x => x.FromFile(resolvedPath, 1), Times.Once);
-        typefaceFactory.Verify(x => x.FromFamilyName(It.IsAny<string>(), It.IsAny<SKFontStyle>()), Times.Never);
-    }
-
     [Fact]
     public void GetTypeface_ResolvedTextRun_UsesAuthoritativeOutcome()
     {
@@ -329,22 +177,50 @@ public sealed class SkiaFontCacheTests
             3f,
             ResolvedFont: resolved);
 
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        fileDirectory.Setup(x => x.FileExists(resolvedPath)).Returns(true);
+        var fileDirectory = new TestFileDirectory()
+            .AddFile(resolvedPath);
 
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
-        var typefaceFactory = new Mock<ISkiaTypefaceFactory>(MockBehavior.Strict);
-        typefaceFactory.Setup(x => x.FromFile(resolvedPath)).Returns(SKTypeface.Default);
+        var typefaceFactory = new TestSkiaTypefaceFactory()
+            .AddFileTypeface(resolvedPath, SKTypeface.Default);
 
-        using var cache = new SkiaFontCache("different-font-source", fileDirectory.Object, typefaceFactory.Object, fontSource.Object);
+        using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
 
         var first = cache.GetTypeface(run);
         var second = cache.GetTypeface(run);
 
         first.ShouldBeSameAs(SKTypeface.Default);
         second.ShouldBeSameAs(first);
-        fontSource.Verify(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()), Times.Never);
-        typefaceFactory.Verify(x => x.FromFile(resolvedPath), Times.Once);
-        typefaceFactory.Verify(x => x.FromFamilyName(It.IsAny<string>(), It.IsAny<SKFontStyle>()), Times.Never);
+        fileDirectory.FileExistsCalls.ShouldBe([resolvedPath]);
+        typefaceFactory.FromFileCalls.ShouldBe([resolvedPath]);
+        typefaceFactory.FromFamilyNameCalls.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void GetTypeface_TextRunWithoutResolvedFont_ThrowsClearException()
+    {
+        var requested = new FontKey("PolicyFamily", FontWeight.W700, FontStyle.Normal);
+        var run = new TextRun(
+            "Trace",
+            requested,
+            12f,
+            PointF.Empty,
+            24f,
+            9f,
+            3f);
+        var fileDirectory = new TestFileDirectory();
+        var typefaceFactory = new TestSkiaTypefaceFactory();
+        using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
+
+        var exception = Should.Throw<InvalidOperationException>(() => cache.GetTypeface(run));
+
+        exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
+        exception.Data["DiagnosticsName"].ShouldBe("ResolvedFont");
+        exception.Data["RequestedFamily"].ShouldBe("PolicyFamily");
+        typefaceFactory.FromFileCalls.ShouldBeEmpty();
+        typefaceFactory.FromFileWithFaceIndexCalls.ShouldBeEmpty();
+        typefaceFactory.FromFamilyNameCalls.ShouldBeEmpty();
+        fileDirectory.FileExistsCalls.ShouldBeEmpty();
+        fileDirectory.DirectoryExistsCalls.ShouldBeEmpty();
+        fileDirectory.EnumerateFilesCalls.ShouldBeEmpty();
     }
 }

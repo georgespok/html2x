@@ -13,6 +13,14 @@ internal sealed class RenderSettings : CommandSettings
     [Description("Path for the generated PDF (defaults to output.pdf).")]
     public string? Output { get; init; }
 
+    [CommandOption("--input <PATH>")]
+    [Description("Path to the HTML file to convert.")]
+    public string? InputOption { get; init; }
+
+    [CommandOption("--output <PATH>")]
+    [Description("Path for the generated PDF.")]
+    public string? OutputOption { get; init; }
+
     [CommandOption("--diagnostics")]
     [Description("Enable diagnostic logging and overlays.")]
     public bool Diagnostics { get; init; }

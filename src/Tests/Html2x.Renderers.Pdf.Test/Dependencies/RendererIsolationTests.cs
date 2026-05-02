@@ -7,6 +7,7 @@ public sealed class RendererIsolationTests
 {
     private static readonly string[] ForbiddenReferences =
     [
+        "Html2x.Abstractions",
         "Html2x.LayoutEngine",
         "Html2x.LayoutEngine.Style",
         "Html2x.LayoutEngine.Models"
@@ -24,7 +25,10 @@ public sealed class RendererIsolationTests
             .Select(Path.GetFileNameWithoutExtension)
             .ToArray();
 
-        references.ShouldContain("Html2x.Abstractions");
+        references.ShouldContain("Html2x.Diagnostics.Contracts");
+        references.ShouldContain("Html2x.RenderModel");
+        references.ShouldContain("Html2x.Text");
+        references.ShouldNotContain("Html2x.Abstractions");
         references.ShouldNotContain("Html2x.LayoutEngine");
     }
 

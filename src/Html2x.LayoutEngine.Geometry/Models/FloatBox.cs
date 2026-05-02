@@ -1,4 +1,4 @@
-﻿namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Models;
 
 /// <summary>
 /// Represents parsed floated content while float layout remains unsupported and diagnostic-only.

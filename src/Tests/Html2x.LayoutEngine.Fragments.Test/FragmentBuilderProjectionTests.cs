@@ -1,12 +1,8 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments.Test.Assertions;
 using Html2x.LayoutEngine.Fragments.Test.Builders;
 using Html2x.LayoutEngine.Geometry.Published;
-using Moq;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Fragments.Test;
@@ -16,17 +12,10 @@ public sealed class FragmentBuilderProjectionTests
     [Fact]
     public void Build_EmptyLayout_ReturnsNoRootFragments()
     {
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
-
-        var fragments = new FragmentBuilder().Build(
-            PublishedLayoutFragmentTestBuilder.Tree(),
-            fontSource.Object);
+        var fragments = new FragmentBuilder().Build(PublishedLayoutFragmentTestBuilder.Tree());
 
         fragments.ShouldNotBeNull();
         fragments.Blocks.ShouldBeEmpty();
-        fontSource.Verify(
-            static source => source.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()),
-            Times.Never);
     }
 
     [Fact]
@@ -134,17 +123,16 @@ public sealed class FragmentBuilderProjectionTests
     }
 
     [Fact]
-    public void Build_TextRuns_ResolveFontsThroughFontSource()
+    public void Build_TextRuns_PreservesResolvedFontFromPublishedLayout()
     {
         var font = new FontKey("Inter", FontWeight.W700, FontStyle.Italic);
         var resolvedFont = new ResolvedFont("Inter", FontWeight.W700, FontStyle.Italic, "font://inter");
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
-        fontSource.Setup(source => source.Resolve(
-                It.Is<FontKey>(key => key == font),
-                nameof(FragmentBuilder)))
-            .Returns(resolvedFont);
         var segment = PublishedLayoutFragmentTestBuilder.Segment(
-            PublishedLayoutFragmentTestBuilder.TextItem(0, "alpha", font: font));
+            PublishedLayoutFragmentTestBuilder.TextItem(
+                0,
+                "alpha",
+                font: font,
+                resolvedFont: resolvedFont));
         var inlineLayout = PublishedLayoutFragmentTestBuilder.InlineLayout(segment);
         var block = PublishedLayoutFragmentTestBuilder.Block(
             inlineLayout: inlineLayout,
@@ -153,9 +141,7 @@ public sealed class FragmentBuilderProjectionTests
                 new PublishedInlineFlowSegmentItem(0, segment)
             ]);
 
-        var fragments = new FragmentBuilder().Build(
-            PublishedLayoutFragmentTestBuilder.Tree(block),
-            fontSource.Object);
+        var fragments = new FragmentBuilder().Build(PublishedLayoutFragmentTestBuilder.Tree(block));
 
         var run = fragments.Blocks.ShouldHaveSingleItem()
             .Children
@@ -164,16 +150,11 @@ public sealed class FragmentBuilderProjectionTests
             .Runs
             .ShouldHaveSingleItem();
         run.ResolvedFont.ShouldBe(resolvedFont);
-        fontSource.Verify(source => source.Resolve(
-                It.Is<FontKey>(key => key == font),
-                nameof(FragmentBuilder)),
-            Times.Once);
     }
 
     [Fact]
     public void Build_TextItemWithNoRuns_EmitsNoLineFragment()
     {
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
         var segment = PublishedLayoutFragmentTestBuilder.Segment(
             PublishedLayoutFragmentTestBuilder.EmptyTextItem(0));
         var inlineLayout = PublishedLayoutFragmentTestBuilder.InlineLayout(segment);
@@ -184,14 +165,9 @@ public sealed class FragmentBuilderProjectionTests
                 new PublishedInlineFlowSegmentItem(0, segment)
             ]);
 
-        var fragments = new FragmentBuilder().Build(
-            PublishedLayoutFragmentTestBuilder.Tree(block),
-            fontSource.Object);
+        var fragments = new FragmentBuilder().Build(PublishedLayoutFragmentTestBuilder.Tree(block));
 
         fragments.Blocks.ShouldHaveSingleItem().Children.ShouldBeEmpty();
-        fontSource.Verify(
-            static source => source.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()),
-            Times.Never);
     }
 
     [Fact]
@@ -360,15 +336,6 @@ public sealed class FragmentBuilderProjectionTests
 
     private static FragmentTree Build(PublishedLayoutTree layout)
     {
-        return new FragmentBuilder().Build(layout, CreateFontSource().Object);
-    }
-
-    private static Mock<IFontSource> CreateFontSource()
-    {
-        var fontSource = new Mock<IFontSource>(MockBehavior.Strict);
-        fontSource.Setup(static source => source.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
-            .Returns(new ResolvedFont("Test", FontWeight.W400, FontStyle.Normal, "test://font"));
-
-        return fontSource;
+        return new FragmentBuilder().Build(layout);
     }
 }

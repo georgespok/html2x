@@ -1,5 +1,4 @@
 using System.Text;
-using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Xunit.Abstractions;
@@ -11,7 +10,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     private readonly HtmlConverter _htmlConverter;
     private readonly HtmlConverterOptions _options = new()
     {
-        Pdf = new PdfOptions
+        Fonts = new FontOptions
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -56,7 +55,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     {
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions { FontPath = string.Empty },
+            Fonts = new FontOptions { FontPath = string.Empty },
             Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
         };
 
@@ -76,7 +75,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             e.Stage == "LayoutBuild" &&
             e.Name == "stage/failed" &&
             e.Severity == DiagnosticSeverity.Error &&
-            e.Message == "PdfOptions.FontPath must be provided before layout can begin.");
+            e.Message == "HtmlConverterOptions.Fonts.FontPath must be provided before layout can begin.");
         Assert.Contains(diagnostics.Records, e =>
             e.Stage == "PdfRender" &&
             e.Name == "stage/skipped" &&
@@ -88,7 +87,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     {
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions { FontPath = Path.Combine(Path.GetTempPath(), "missing-fonts") },
+            Fonts = new FontOptions { FontPath = Path.Combine(Path.GetTempPath(), "missing-fonts") },
             Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
         };
 
@@ -121,7 +120,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         const string html = "<html><body><p>Hello diagnostics</p></body></html>";
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions
+            Fonts = new FontOptions
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
@@ -149,12 +148,59 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ToPdfAsync_ResourceOptionsApplySingleImageSizePolicy()
+    {
+        var tempDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            await File.WriteAllBytesAsync(
+                Path.Combine(tempDirectory.FullName, "oversize.png"),
+                new byte[] { 1, 2 });
+            const string html = """
+                <html>
+                  <body>
+                    <img src="oversize.png" width="16" height="16" />
+                  </body>
+                </html>
+                """;
+            var options = new HtmlConverterOptions
+            {
+                Fonts = new FontOptions
+                {
+                    FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
+                },
+                Resources = new ResourceOptions
+                {
+                    BaseDirectory = tempDirectory.FullName,
+                    MaxImageSizeBytes = 1
+                },
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableDiagnostics = true
+                }
+            };
+
+            var result = await _htmlConverter.ToPdfAsync(html, options);
+
+            Assert.NotNull(result.DiagnosticsReport);
+            var imageRecord = Assert.Single(
+                result.DiagnosticsReport.Records,
+                static record => record.Name == "image/render");
+            Assert.Equal("Oversize", StringField(imageRecord, "status"));
+        }
+        finally
+        {
+            tempDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ToPdfAsync_DiagnosticsAreEnabled_ExposesSerializableDiagnosticsReport()
     {
         const string html = "<html><body><p>Hello diagnostics report</p></body></html>";
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions
+            Fonts = new FontOptions
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
@@ -227,7 +273,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
 
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions
+            Fonts = new FontOptions
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
@@ -241,37 +287,23 @@ public sealed class HtmlConverterTests : IntegrationTestBase
 
         Assert.NotNull(result.DiagnosticsReport);
 
-        var fontEvents = result.DiagnosticsReport.Records
+        var resolvedFontEvents = result.DiagnosticsReport.Records
             .Where(static x => x.Name == "font/resolve")
             .Where(static x => x.Fields["outcome"] is DiagnosticStringValue { Value: "Resolved" })
             .ToList();
 
-        var measurement = Assert.Single(fontEvents, static x => StringField(x, "consumer") == "SkiaTextMeasurer");
-        var fragmentStage = Assert.Single(fontEvents, static x => StringField(x, "consumer") == "FragmentBuilder");
-
-        Assert.Equal("FontPathSource", StringField(measurement, "owner"));
-        Assert.Equal(StringField(measurement, "sourceId"), StringField(fragmentStage, "sourceId"));
-        Assert.Equal(StringField(measurement, "filePath"), StringField(fragmentStage, "filePath"));
-        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), StringField(measurement, "configuredPath"));
-        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), StringField(fragmentStage, "configuredPath"));
-        Assert.DoesNotContain(fontEvents, static x => StringField(x, "consumer") == "SkiaFontCache");
-
-        Assert.NotNull(result.DiagnosticsReport);
         var fontRecord = Assert.Single(
-            result.DiagnosticsReport.Records,
-            static x => x.Name == "font/resolve" &&
-                        x.Fields.TryGetValue("consumer", out var consumer) &&
-                        consumer is global::Html2x.Diagnostics.Contracts.DiagnosticStringValue { Value: "SkiaTextMeasurer" });
+            resolvedFontEvents,
+            static x => StringField(x, "consumer") == "SkiaTextMeasurer");
+
         Assert.Equal("stage/font", fontRecord.Stage);
-        Assert.Equal(
-            new global::Html2x.Diagnostics.Contracts.DiagnosticStringValue("Resolved"),
-            fontRecord.Fields["outcome"]);
-        Assert.Equal(
-            new global::Html2x.Diagnostics.Contracts.DiagnosticStringValue("FontPathSource"),
-            fontRecord.Fields["owner"]);
+        Assert.Equal("Resolved", StringField(fontRecord, "outcome"));
+        Assert.Equal("FontPathSource", StringField(fontRecord, "owner"));
+        Assert.Equal(Path.Combine("Fonts", "Inter-Regular.ttf"), StringField(fontRecord, "configuredPath"));
+        Assert.DoesNotContain(resolvedFontEvents, static x => StringField(x, "consumer") == "FragmentBuilder");
+        Assert.DoesNotContain(resolvedFontEvents, static x => StringField(x, "consumer") == "SkiaFontCache");
     }
 
     private static string StringField(DiagnosticRecord record, string fieldName) =>
         Assert.IsType<DiagnosticStringValue>(record.Fields[fieldName]).Value;
 }
-

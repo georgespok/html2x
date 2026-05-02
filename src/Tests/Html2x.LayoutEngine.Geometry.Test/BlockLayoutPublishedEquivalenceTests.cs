@@ -1,7 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Formatting;
@@ -9,6 +6,7 @@ using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -215,7 +213,7 @@ public sealed class BlockLayoutPublishedEquivalenceTests
         _ = caseName;
         var createRoot = createRootFactory.ShouldBeOfType<Func<BlockBox>>();
         var published = CreateEngine().LayoutPublished(createRoot(), DefaultPage());
-        var fragments = new FragmentBuilder().Build(published, LayoutBuilderFixture.CreateFontSource());
+        var fragments = new FragmentBuilder().Build(published);
 
         AssertPublishedFragments(published, fragments);
     }
@@ -677,8 +675,8 @@ public sealed class BlockLayoutPublishedEquivalenceTests
     }
 
     private static void AssertFragmentEquivalent(
-        Html2x.Abstractions.Layout.Fragments.Fragment actual,
-        Html2x.Abstractions.Layout.Fragments.Fragment expected)
+        Html2x.RenderModel.Fragment actual,
+        Html2x.RenderModel.Fragment expected)
     {
         actual.GetType().ShouldBe(expected.GetType());
         actual.PageNumber.ShouldBe(expected.PageNumber);

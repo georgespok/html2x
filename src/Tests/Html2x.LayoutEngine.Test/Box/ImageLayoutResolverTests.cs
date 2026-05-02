@@ -1,6 +1,5 @@
-﻿using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Models;
@@ -77,7 +76,7 @@ public sealed class ImageLayoutResolverTests
     {
         return new ImageLayoutResolver(new LayoutGeometryRequest
         {
-            ImageProvider = new FixedImageProvider(intrinsicSize)
+            ImageMetadataResolver = new FixedImageMetadataResolver(intrinsicSize)
         });
     }
 
@@ -90,14 +89,14 @@ public sealed class ImageLayoutResolverTests
         };
     }
 
-    private sealed class FixedImageProvider(SizePx intrinsicSize) : IImageProvider
+    private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
         {
-            return new ImageLoadResult
+            return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageLoadStatus.Ok,
+                Status = ImageMetadataStatus.Ok,
                 IntrinsicSizePx = intrinsicSize
             };
         }

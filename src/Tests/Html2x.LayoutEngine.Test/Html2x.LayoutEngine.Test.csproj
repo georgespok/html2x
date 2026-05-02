@@ -27,8 +27,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Geometry\Html2x.LayoutEngine.Geometry.csproj" />
+    <ProjectReference Include="..\..\Html2x.LayoutEngine.Pagination\Html2x.LayoutEngine.Pagination.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine.Style\Html2x.LayoutEngine.Style.csproj" />
     <ProjectReference Include="..\..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
+    <ProjectReference Include="..\..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

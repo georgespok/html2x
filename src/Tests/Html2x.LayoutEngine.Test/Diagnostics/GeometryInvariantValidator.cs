@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
@@ -7,7 +7,7 @@ using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -64,6 +64,10 @@ internal static class GeometryInvariantValidator
 
         var sourceFragments = EnumerateFragments(result.Fragments.Blocks)
             .ToDictionary(static fragment => fragment.FragmentId);
+        var placedFragments = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .ToDictionary(static fragment => fragment.FragmentId);
 
         foreach (var snapshot in result.Snapshot.Fragments.Pages.SelectMany(static page => FlattenSnapshots(page.Fragments)))
         {
@@ -76,19 +80,20 @@ internal static class GeometryInvariantValidator
             snapshot.MetadataConsumer.ShouldBe("LayoutSnapshotMapper", snapshotText);
         }
 
-        foreach (var page in result.Pagination.Pages)
+        foreach (var page in result.Pagination.AuditPages)
         {
             foreach (var placement in page.Placements)
             {
                 placement.PageNumber.ShouldBe(page.PageNumber, snapshotText);
-                placement.Fragment.PageNumber.ShouldBe(page.PageNumber, snapshotText);
-                Math.Abs(placement.Width - placement.Fragment.Rect.Width).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
-                Math.Abs(placement.Height - placement.Fragment.Rect.Height).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
-                Math.Abs(placement.PageX - placement.Fragment.Rect.X).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
-                Math.Abs(placement.PageY - placement.Fragment.Rect.Y).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                placedFragments.TryGetValue(placement.FragmentId, out var placedFragment).ShouldBeTrue(snapshotText);
+                placedFragment!.PageNumber.ShouldBe(page.PageNumber, snapshotText);
+                Math.Abs(placement.Width - placedFragment.Rect.Width).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                Math.Abs(placement.Height - placedFragment.Rect.Height).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                Math.Abs(placement.PageX - placedFragment.Rect.X).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
+                Math.Abs(placement.PageY - placedFragment.Rect.Y).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
 
                 sourceFragments.TryGetValue(placement.FragmentId, out var sourceFragment).ShouldBeTrue(snapshotText);
-                AssertTranslatedFragment(sourceFragment!, placement.Fragment, page.PageNumber, null, null, snapshotText);
+                AssertTranslatedFragment(sourceFragment!, placedFragment, page.PageNumber, null, null, snapshotText);
             }
         }
     }

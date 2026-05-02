@@ -1,9 +1,6 @@
 using System.Text;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
@@ -12,10 +9,10 @@ using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
-using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.TestHelpers;
 
@@ -23,27 +20,26 @@ internal static class GeometryTestHarness
 {
     public static async Task<GeometryPipelineResult> BuildAsync(
         string html,
-        LayoutOptions? options = null)
+        LayoutBuildSettings? options = null)
     {
-        options ??= new LayoutOptions
+        options ??= new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
 
         var diagnosticsSink = new HarnessDiagnosticsSink();
         var textMeasurer = CreateTextMeasurer();
-        var fontSource = LayoutBuilderFixture.CreateFontSource();
-        var imageProvider = new NoopImageProvider();
+        var imageMetadataResolver = new NoopImageMetadataResolver();
         var styleTreeBuilder = new StyleTreeBuilder();
         var boxBuilder = new BoxTreeBuilder(textMeasurer);
         var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
 
-        var styleTree = await styleTreeBuilder.BuildAsync(html, options, diagnosticsSink: diagnosticsSink);
+        var styleTree = await styleTreeBuilder.BuildAsync(html, options.Style, diagnosticsSink: diagnosticsSink);
         var geometryRequest = new LayoutGeometryRequest
         {
             PageSize = options.PageSize,
-            ImageProvider = imageProvider,
+            ImageMetadataResolver = imageMetadataResolver,
             HtmlDirectory = Directory.GetCurrentDirectory(),
             MaxImageSizeBytes = 10 * 1024 * 1024
         };
@@ -52,20 +48,22 @@ internal static class GeometryTestHarness
             styleTree,
             geometryRequest,
             diagnosticsSink);
-        var fragments = fragmentBuilder.Build(publishedLayout, fontSource);
-        var pagination = new BlockPaginator().Paginate(
+        var fragments = fragmentBuilder.Build(publishedLayout);
+        var pagination = new LayoutPaginator().Paginate(
             fragments.Blocks,
-            options.PageSize,
-            publishedLayout.Page.Margin,
+            new PaginationOptions
+            {
+                PageSize = options.PageSize,
+                Margin = publishedLayout.Page.Margin
+            },
             diagnosticsSink);
-        var layout = CreateLayout(pagination);
-        var snapshot = GeometrySnapshotMapper.From(publishedLayout, layout, pagination);
+        var snapshot = GeometrySnapshotMapper.From(publishedLayout, pagination);
 
         return new GeometryPipelineResult(
             boxTree,
             publishedLayout,
             fragments,
-            layout,
+            pagination.Layout,
             pagination,
             snapshot,
             diagnosticsSink.Records);
@@ -102,7 +100,7 @@ internal static class GeometryTestHarness
             foreach (var placement in page.Placements)
             {
                 builder.AppendLine(
-                    $"  placement order={placement.OrderIndex} fragment={placement.FragmentId} kind={placement.Kind} oversized={placement.IsOversized.ToString().ToLowerInvariant()} rect={FormatRect(placement.X, placement.Y, placement.Size)}");
+                    $"  placement order={placement.OrderIndex} fragment={placement.FragmentId} kind={placement.Kind} decision={placement.DecisionKind} oversized={placement.IsOversized.ToString().ToLowerInvariant()} rect={FormatRect(placement.X, placement.Y, placement.Size)}");
             }
         }
 
@@ -117,27 +115,13 @@ internal static class GeometryTestHarness
     public static ITextMeasurer CreateTextMeasurer()
     {
         var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns((FontKey font, float _, string _) => TextMeasurement.CreateFallback(font, 10f, 9f, 3f));
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns(10f);
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
             .Returns((9f, 3f));
         return textMeasurer.Object;
-    }
-
-    private static HtmlLayout CreateLayout(PaginationResult pagination)
-    {
-        var layout = new HtmlLayout();
-
-        foreach (var page in pagination.Pages)
-        {
-            layout.Pages.Add(new LayoutPage(
-                page.PageSize,
-                page.Margin,
-                page.Placements.Select(static placement => (LayoutFragment)placement.Fragment).ToList(),
-                page.PageNumber));
-        }
-
-        return layout;
     }
 
     private static void AppendBox(StringBuilder builder, BoxGeometrySnapshot box, int depth)

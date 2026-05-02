@@ -2,22 +2,22 @@ using System.Reflection;
 using AngleSharp;
 using AngleSharp.Css;
 using AngleSharp.Dom;
-using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine.Dom;
 
 public sealed class AngleSharpDomProvider(IConfiguration config)
 {
-    public async Task<IDocument> LoadAsync(string html, LayoutOptions options)
+    public async Task<IDocument> LoadAsync(string html, StyleBuildSettings settings)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
 
         var context = BrowsingContext.New(config);
-        ConfigureUserAgentStyleSheet(context, options);
+        ConfigureUserAgentStyleSheet(context, settings);
         return await context.OpenAsync(req => req.Content(html));
     }
 
-    private static void ConfigureUserAgentStyleSheet(IBrowsingContext context, LayoutOptions options)
+    private static void ConfigureUserAgentStyleSheet(IBrowsingContext context, StyleBuildSettings settings)
     {
         var provider = context.GetService<ICssDefaultStyleSheetProvider>();
         if (provider is null)
@@ -25,13 +25,13 @@ public sealed class AngleSharpDomProvider(IConfiguration config)
             throw new InvalidOperationException("ICssDefaultStyleSheetProvider is not available.");
         }
 
-        if (!string.IsNullOrWhiteSpace(options.UserAgentStyleSheet))
+        if (!string.IsNullOrWhiteSpace(settings.UserAgentStyleSheet))
         {
-            provider.SetDefault(options.UserAgentStyleSheet!);
+            provider.SetDefault(settings.UserAgentStyleSheet!);
             return;
         }
 
-        if (options.UseDefaultUserAgentStyleSheet)
+        if (settings.UseDefaultUserAgentStyleSheet)
         {
             provider.SetDefault(DefaultUserAgentStyleSheet.Load());
             return;

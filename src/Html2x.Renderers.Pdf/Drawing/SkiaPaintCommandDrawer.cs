@@ -1,6 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Paint;
 using SkiaSharp;
@@ -17,13 +15,13 @@ internal sealed class SkiaPaintCommandDrawer
     private readonly BorderShapeDrawer _borderShapeDrawer = new();
 
     public SkiaPaintCommandDrawer(
-        PdfOptions options,
+        PdfRenderSettings settings,
         SkiaFontCache fontCache,
         IDiagnosticsSink? diagnosticsSink = null)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
         _fontCache = fontCache ?? throw new ArgumentNullException(nameof(fontCache));
-        _imageRenderer = new ImageRenderer(options, diagnosticsSink);
+        _imageRenderer = new ImageRenderer(settings, diagnosticsSink);
     }
 
     public void Draw(SKCanvas canvas, IReadOnlyList<PaintCommand> commands)

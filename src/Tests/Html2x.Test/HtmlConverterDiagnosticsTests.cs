@@ -1,4 +1,3 @@
-using Html2x.Abstractions.Options;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Shouldly;
@@ -13,7 +12,7 @@ public sealed class HtmlConverterDiagnosticsTests
         {
             EnableDiagnostics = true
         },
-        Pdf = new PdfOptions
+        Fonts = new FontOptions
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -83,7 +82,7 @@ public sealed class HtmlConverterDiagnosticsTests
                 {
                     EnableDiagnostics = true
                 },
-                Pdf = new PdfOptions
+                Fonts = new FontOptions
                 {
                     FontPath = tempDirectory.FullName
                 }
@@ -126,7 +125,7 @@ public sealed class HtmlConverterDiagnosticsTests
                 {
                     EnableDiagnostics = true
                 },
-                Pdf = new PdfOptions
+                Fonts = new FontOptions
                 {
                     FontPath = invalidFontPath
                 }

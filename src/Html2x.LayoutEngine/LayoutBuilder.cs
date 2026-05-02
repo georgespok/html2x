@@ -1,16 +1,14 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine;
 
@@ -23,99 +21,75 @@ public class LayoutBuilder
     private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
     private readonly FragmentBuilder _fragmentBuilder;
     private readonly IStyleTreeBuilder _styleTreeBuilder;
-    private readonly IImageProvider _imageProvider;
-    private readonly IFontSource _fontSource;
+    private readonly IImageMetadataResolver _imageMetadataResolver;
 
     public LayoutBuilder(
         ITextMeasurer textMeasurer,
-        IFontSource fontSource,
-        IImageProvider imageProvider)
+        IImageMetadataResolver imageMetadataResolver)
     {
         ArgumentNullException.ThrowIfNull(textMeasurer);
-        ArgumentNullException.ThrowIfNull(fontSource);
-        ArgumentNullException.ThrowIfNull(imageProvider);
+        ArgumentNullException.ThrowIfNull(imageMetadataResolver);
 
         var blockFormattingContext = new BlockFormattingContext();
 
         _styleTreeBuilder = new StyleTreeBuilder();
         _layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer, blockFormattingContext);
         _fragmentBuilder = new FragmentBuilder();
-        _imageProvider = imageProvider;
-        _fontSource = fontSource;
+        _imageMetadataResolver = imageMetadataResolver;
     }
 
     public async Task<HtmlLayout> BuildAsync(
         string html,
-        LayoutOptions options,
+        LayoutBuildSettings settings,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(html);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
 
-        var styleTree = await _styleTreeBuilder.BuildAsync(html, options, diagnosticsSink: diagnosticsSink);
+        var styleTree = await _styleTreeBuilder.BuildAsync(html, settings.Style, diagnosticsSink: diagnosticsSink);
 
         var publishedLayout = RunStage("stage/box-tree", () => _layoutGeometryBuilder.Build(
             styleTree,
             new LayoutGeometryRequest
             {
-                PageSize = options.PageSize,
-                ImageProvider = _imageProvider,
-                HtmlDirectory = options.HtmlDirectory,
-                MaxImageSizeBytes = options.MaxImageSizeBytes
+                PageSize = settings.PageSize,
+                ImageMetadataResolver = _imageMetadataResolver,
+                HtmlDirectory = settings.HtmlDirectory,
+                MaxImageSizeBytes = settings.MaxImageSizeBytes
             },
             diagnosticsSink), diagnosticsSink);
-        var fragments = RunStage("stage/fragment-tree", () => _fragmentBuilder.Build(
-            publishedLayout,
-            _fontSource), diagnosticsSink);
+        var fragments = RunStage(
+            "stage/fragment-tree",
+            () => _fragmentBuilder.Build(publishedLayout),
+            diagnosticsSink);
         
         return RunStage(
             "stage/pagination",
-            () => CreateHtmlLayout(options, publishedLayout, fragments, diagnosticsSink),
+            () => CreateHtmlLayout(settings, publishedLayout, fragments, diagnosticsSink),
             diagnosticsSink);
     }
 
     private static HtmlLayout CreateHtmlLayout(
-        LayoutOptions options,
+        LayoutBuildSettings settings,
         PublishedLayoutTree publishedLayout,
         FragmentTree fragments,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var paginator = new BlockPaginator();
+        var paginator = new LayoutPaginator();
         var pagination = paginator.Paginate(
             fragments.Blocks,
-            options.PageSize,
-            publishedLayout.Page.Margin,
+            new PaginationOptions
+            {
+                PageSize = settings.PageSize,
+                Margin = publishedLayout.Page.Margin
+            },
             diagnosticsSink);
-        var layout = CreateHtmlLayout(pagination);
-        PublishGeometrySnapshot(publishedLayout, layout, pagination, diagnosticsSink);
-        return layout;
-    }
-
-    private static HtmlLayout CreateHtmlLayout(PaginationResult pagination)
-    {
-        var layout = new HtmlLayout();
-        foreach (var page in pagination.Pages)
-        {
-            layout.Pages.Add(new LayoutPage(
-                page.PageSize,
-                page.Margin,
-                CreateLayoutPageChildren(page),
-                page.PageNumber));
-        }
-
-        return layout;
-    }
-
-    private static IReadOnlyList<Html2x.Abstractions.Layout.Fragments.Fragment> CreateLayoutPageChildren(PageModel page)
-    {
-        return page.Placements
-            .Select(static placement => (Html2x.Abstractions.Layout.Fragments.Fragment)placement.Fragment)
-            .ToList();
+        PublishGeometrySnapshot(publishedLayout, pagination, diagnosticsSink);
+        return pagination.Layout;
     }
 
     private static void PublishGeometrySnapshot(
         PublishedLayoutTree publishedLayout,
-        HtmlLayout layout,
         PaginationResult pagination,
         IDiagnosticsSink? diagnosticsSink)
     {
@@ -128,7 +102,7 @@ public class LayoutBuilder
             Fields: DiagnosticFields.Create(
                 DiagnosticFields.Field(
                     "snapshot",
-                    GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, layout, pagination))),
+                    GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 
@@ -190,5 +164,3 @@ public class LayoutBuilder
     }
 
 }
-
-

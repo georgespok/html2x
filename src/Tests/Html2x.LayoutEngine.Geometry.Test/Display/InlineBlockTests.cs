@@ -1,7 +1,5 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
@@ -9,7 +7,8 @@ using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.Diagnostics.Contracts;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Display;
 
@@ -562,7 +561,7 @@ public class InlineBlockTests
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink));
+            await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
         diagnosticsSink.Records
             .Any(e => e.Name == "layout/inline-block/unsupported-structure" &&
@@ -599,8 +598,8 @@ public class InlineBlockTests
         var inlineBlockDiagnostics = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
-        var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutOptions { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
-        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new LayoutOptions { PageSize = PaperSizes.A4 }, inlineBlockDiagnostics);
+        var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
+        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, inlineBlockDiagnostics);
 
         var topLevelContainer = FindContainerWithDirectChildren(
             (BlockFragment)topLevelLayout.Pages[0].Children[0],
@@ -666,8 +665,7 @@ public class InlineBlockTests
     {
         return new LayoutBuilder(
             textMeasurer,
-            LayoutBuilderFixture.CreateFontSource(),
-            new NoopImageProvider());
+            new NoopImageMetadataResolver());
     }
 
     private static bool ContainsLineText(BlockFragment fragment, string text)

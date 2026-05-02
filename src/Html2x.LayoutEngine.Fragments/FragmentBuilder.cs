@@ -1,7 +1,6 @@
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry.Published;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments;
 
@@ -26,17 +25,16 @@ public sealed class FragmentBuilder
         _projector = projector ?? throw new ArgumentNullException(nameof(projector));
     }
 
-    internal FragmentTree Build(PublishedLayoutTree layout, IFontSource fontSource)
+    internal FragmentTree Build(PublishedLayoutTree layout)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        ArgumentNullException.ThrowIfNull(fontSource);
 
         var fragments = new FragmentTree();
         var pageNumber = 1;
         var nextFragmentId = 1;
 
         var blockBindings = CreateBlockFragments(layout, fragments, pageNumber, ref nextFragmentId);
-        AppendFlowFragments(layout, blockBindings, fontSource, pageNumber, ref nextFragmentId);
+        AppendFlowFragments(layout, blockBindings, pageNumber, ref nextFragmentId);
         AppendSpecialFragments(blockBindings, pageNumber, ref nextFragmentId);
 
         return fragments;
@@ -80,7 +78,6 @@ public sealed class FragmentBuilder
     private void AppendFlowFragments(
         PublishedLayoutTree layout,
         IReadOnlyList<PublishedBlockFragmentBinding> blockBindings,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -107,7 +104,6 @@ public sealed class FragmentBuilder
                 fragment,
                 lookup,
                 visited,
-                fontSource,
                 pageNumber,
                 ref nextFragmentId);
         }
@@ -118,7 +114,6 @@ public sealed class FragmentBuilder
         BlockFragment fragment,
         IReadOnlyDictionary<PublishedBlock, BlockFragment> lookup,
         ISet<PublishedBlock> visited,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -132,7 +127,7 @@ public sealed class FragmentBuilder
             switch (item)
             {
                 case PublishedInlineFlowSegmentItem inlineSegment:
-                    EmitSegment(fragment, inlineSegment.Segment, fontSource, pageNumber, ref nextFragmentId);
+                    EmitSegment(fragment, inlineSegment.Segment, pageNumber, ref nextFragmentId);
                     break;
                 case PublishedChildBlockItem childBlock when lookup.TryGetValue(childBlock.Block, out var childFragment):
                     fragment.AddChild(childFragment);
@@ -141,7 +136,6 @@ public sealed class FragmentBuilder
                         childFragment,
                         lookup,
                         visited,
-                        fontSource,
                         pageNumber,
                         ref nextFragmentId);
                     break;
@@ -211,7 +205,6 @@ public sealed class FragmentBuilder
 
     private BlockFragment CreateInlineObjectBlockFragment(
         PublishedBlock block,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -232,12 +225,11 @@ public sealed class FragmentBuilder
             switch (item)
             {
                 case PublishedInlineFlowSegmentItem inlineSegment:
-                    EmitSegment(fragment, inlineSegment.Segment, fontSource, pageNumber, ref nextFragmentId);
+                    EmitSegment(fragment, inlineSegment.Segment, pageNumber, ref nextFragmentId);
                     break;
                 case PublishedChildBlockItem childBlock:
                     fragment.AddChild(CreateInlineObjectFragment(
                         childBlock.Block,
-                        fontSource,
                         pageNumber,
                         ref nextFragmentId));
                     break;
@@ -250,7 +242,6 @@ public sealed class FragmentBuilder
     private void EmitSegment(
         BlockFragment parentFragment,
         PublishedInlineFlowSegment segment,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -261,11 +252,11 @@ public sealed class FragmentBuilder
                 switch (item)
                 {
                     case PublishedInlineTextItem textItem:
-                        EmitTextItem(parentFragment, line, textItem, fontSource, pageNumber, ref nextFragmentId);
+                        EmitTextItem(parentFragment, line, textItem, pageNumber, ref nextFragmentId);
                         break;
                     case PublishedInlineObjectItem objectItem:
                         parentFragment.AddChild(
-                            CreateInlineObjectFragment(objectItem.Content, fontSource, pageNumber, ref nextFragmentId));
+                            CreateInlineObjectFragment(objectItem.Content, pageNumber, ref nextFragmentId));
                         break;
                 }
             }
@@ -276,7 +267,6 @@ public sealed class FragmentBuilder
         BlockFragment parentFragment,
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -293,7 +283,7 @@ public sealed class FragmentBuilder
             OccupiedRect = textItem.Rect,
             BaselineY = line.BaselineY,
             LineHeight = line.LineHeight,
-            Runs = ResolveTextRuns(fontSource, textItem.Runs),
+            Runs = textItem.Runs.ToList(),
             TextAlign = line.TextAlign
         };
 
@@ -302,7 +292,6 @@ public sealed class FragmentBuilder
 
     private LayoutFragment CreateInlineObjectFragment(
         PublishedBlock content,
-        IFontSource fontSource,
         int pageNumber,
         ref int nextFragmentId)
     {
@@ -316,18 +305,7 @@ public sealed class FragmentBuilder
             return specialFragment;
         }
 
-        return CreateInlineObjectBlockFragment(content, fontSource, pageNumber, ref nextFragmentId);
-    }
-
-    private static List<TextRun> ResolveTextRuns(IFontSource fontSource, IReadOnlyList<TextRun> runs)
-    {
-        var resolved = new List<TextRun>(runs.Count);
-        foreach (var run in runs)
-        {
-            resolved.Add(run with { ResolvedFont = fontSource.Resolve(run.Font, nameof(FragmentBuilder)) });
-        }
-
-        return resolved;
+        return CreateInlineObjectBlockFragment(content, pageNumber, ref nextFragmentId);
     }
 
     private static bool HasSpecialFragment(PublishedBlock block)

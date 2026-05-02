@@ -1,4 +1,3 @@
-using Html2x.Abstractions.Options;
 using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;
@@ -77,15 +76,13 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
 
         var options = new HtmlConverterOptions
         {
-            Pdf = new PdfOptions
+            Fonts = new FontOptions
             {
-                FontPath = fontPath,
-                EnableDebugging = consoleOptions.EnableDebugging,
-                HtmlDirectory = htmlDirectory
+                FontPath = fontPath
             },
-            Layout = new LayoutOptions
+            Resources = new ResourceOptions
             {
-                HtmlDirectory = htmlDirectory,
+                BaseDirectory = htmlDirectory,
                 MaxImageSizeBytes = (long)(10 * 1024 * 1024)
             },
             Diagnostics = new DiagnosticsOptions

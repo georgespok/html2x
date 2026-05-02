@@ -1,4 +1,4 @@
-﻿namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Models;
 
 internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
 {

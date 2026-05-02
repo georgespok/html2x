@@ -1,5 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 
 namespace Html2x.LayoutEngine.Geometry;
 
@@ -123,11 +123,7 @@ public readonly record struct UsedGeometry
         GuardFinite(nameof(deltaX), deltaX);
         GuardFinite(nameof(deltaY), deltaY);
 
-        return new RectangleF(
-            rect.X + deltaX,
-            rect.Y + deltaY,
-            rect.Width,
-            rect.Height);
+        return RenderGeometryTranslator.Translate(rect, deltaX, deltaY);
     }
 
     private static RectangleF Inset(RectangleF rect, Spacing inset)

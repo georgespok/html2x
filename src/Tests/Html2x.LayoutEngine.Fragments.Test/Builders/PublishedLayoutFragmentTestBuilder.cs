@@ -1,7 +1,5 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
@@ -102,12 +100,13 @@ internal static class PublishedLayoutFragmentTestBuilder
         int order,
         string text,
         RectangleF? rect = null,
-        FontKey? font = null)
+        FontKey? font = null,
+        ResolvedFont? resolvedFont = null)
     {
         return new PublishedInlineTextItem(
             order,
             rect ?? new RectangleF(order * 20f, 0f, 20f, 12f),
-            [CreateRun(text, font)],
+            [CreateRun(text, font, resolvedFont)],
             [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
     }
 
@@ -131,15 +130,22 @@ internal static class PublishedLayoutFragmentTestBuilder
             content);
     }
 
-    private static TextRun CreateRun(string text, FontKey? font)
+    private static TextRun CreateRun(string text, FontKey? font, ResolvedFont? resolvedFont)
     {
+        var fontKey = font ?? new FontKey("Test", FontWeight.W400, FontStyle.Normal);
+
         return new TextRun(
             text,
-            font ?? new FontKey("Test", FontWeight.W400, FontStyle.Normal),
+            fontKey,
             12f,
             new PointF(0f, 9f),
             20f,
             8f,
-            3f);
+            3f,
+            ResolvedFont: resolvedFont ?? new ResolvedFont(
+                fontKey.Family,
+                fontKey.Weight,
+                fontKey.Style,
+                "test://font"));
     }
 }

@@ -1,6 +1,8 @@
 # Pagination
 
-Html2x paginates after block measurement. Layout computes measured fragments first, then pagination distributes block fragments across pages without remeasuring content.
+Html2x paginates after block measurement. Layout computes measured fragments
+first, then `Html2x.LayoutEngine.Pagination` distributes block fragments across
+pages without remeasuring content.
 
 ## Current Behavior
 
@@ -17,16 +19,47 @@ DOM/CSSOM
   -> style tree
   -> box tree
   -> fragment tree
-  -> BlockPaginator
-  -> HtmlLayout.Pages
+  -> LayoutPaginator
+  -> PaginationResult
+       -> HtmlLayout
+       -> pagination audit facts
 ```
 
-## Extension Points
+## Module Seam
 
-- `BlockPaginator`: fit policy, new-page decisions, placement strategy.
+- `LayoutPaginator`: public pagination module seam.
+- `PaginationOptions`: page size and page margin input facts.
+- `PaginationResult`: final `HtmlLayout` plus stable audit facts.
+- `PaginationDecisionKind`: stable decision vocabulary for audit records.
+
+`LayoutPaginator.Paginate` accepts measured render model block fragments. It
+does not remeasure content and does not repair source geometry. Callers receive
+one `PaginationResult`:
+
+- `Layout`: final `HtmlLayout` with `LayoutPage` values and page-local cloned
+  fragments.
+- `AuditPages`: page content area, page margin, and placement facts for
+  diagnostics and drift analysis.
+- `TotalPages` and `TotalPlacements`: convenience counts derived from audit
+  facts.
+
+`PaginationPlacementAudit` records fragment ID, page number, placed rectangle,
+source order index, decision kind, oversized status, fragment kind, and copied
+metadata facts such as display role, formatting context, table indices, and
+marker offset.
+
+Internal implementation details:
+
+- `BlockPaginator`: current first-fit block-boundary algorithm.
 - `FragmentPlacementCloner`: cloned translated fragment creation.
-- `PaginationDiagnostics`: pagination trace events.
-- `PaginationTracePayload`: diagnostics contract.
+- `PaginationDiagnostics`: pagination trace event emission.
+
+The public result does not expose `FragmentPlacementCloner` or internal block
+placement models.
+
+The current algorithm is intentionally block-boundary only. It may move a whole
+block fragment to the next page and may mark a block as oversized, but it does
+not split text lines, images, table rows, or paragraphs internally.
 
 ## Diagnostics Events
 
@@ -35,6 +68,14 @@ DOM/CSSOM
 - `layout/pagination/block-moved-next-page`
 - `layout/pagination/oversized-block`
 - `layout/pagination/empty-document`
+
+Pagination emits these events through `IDiagnosticsSink` and depends only on
+`Html2x.Diagnostics.Contracts`, not the diagnostics runtime.
+
+Geometry snapshots consume `PaginationResult.AuditPages`. Placement metadata
+uses `metadataConsumer = "Pagination"` as stable vocabulary. Fragment metadata
+ownership may still identify `FragmentBuilder` because fragment metadata is
+created before pagination.
 
 ## Guardrails
 

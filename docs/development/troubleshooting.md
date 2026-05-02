@@ -2,7 +2,7 @@
 
 This page lists common local failures and the fastest recovery path.
 
-## `PdfOptions.FontPath` Does Not Exist
+## `HtmlConverterOptions.Fonts.FontPath` Does Not Exist
 
 Cause: the converter requires a font file or directory before layout begins.
 

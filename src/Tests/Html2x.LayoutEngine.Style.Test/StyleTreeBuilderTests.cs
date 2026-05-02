@@ -1,5 +1,5 @@
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 using Shouldly;
@@ -23,7 +23,7 @@ public sealed class StyleTreeBuilderTests
     {
         var tree = await BuildAsync(
             "<html><body><h1>Title</h1><p>Text</p></body></html>",
-            new LayoutOptions { UseDefaultUserAgentStyleSheet = true });
+            new StyleBuildSettings { UseDefaultUserAgentStyleSheet = true });
 
         var heading = tree.Root!.Children[0];
         var paragraph = tree.Root.Children[1];
@@ -38,7 +38,7 @@ public sealed class StyleTreeBuilderTests
     {
         var tree = await BuildAsync(
             "<html><body><h1>Title</h1><p>Text</p></body></html>",
-            new LayoutOptions
+            new StyleBuildSettings
             {
                 UseDefaultUserAgentStyleSheet = true,
                 UserAgentStyleSheet = "h1 { font-size: 22pt; } p { margin: 2pt 0; }"
@@ -353,16 +353,16 @@ public sealed class StyleTreeBuilderTests
 
     private static Task<StyleTree> BuildAsync(
         string html,
-        LayoutOptions options,
+        StyleBuildSettings options,
         IDiagnosticsSink? diagnostics = null)
     {
         return new Html2x.LayoutEngine.Style.StyleTreeBuilder()
             .BuildAsync(html, options, diagnosticsSink: diagnostics);
     }
 
-    private static LayoutOptions DefaultOptions()
+    private static StyleBuildSettings DefaultOptions()
     {
-        return new LayoutOptions
+        return new StyleBuildSettings
         {
             UseDefaultUserAgentStyleSheet = false
         };

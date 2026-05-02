@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
 using Shouldly;
 
@@ -15,7 +15,7 @@ internal sealed class FragmentTreeAssertion(FragmentTree tree)
     public BlockFragment GetBlock(int index) => tree.Blocks[index];
 }
 
-internal sealed class FragmentAssertion(Abstractions.Layout.Fragments.Fragment fragment)
+internal sealed class FragmentAssertion(Fragment fragment)
 {
     public FragmentAssertion HasChildCount(int expected)
     {
@@ -26,7 +26,7 @@ internal sealed class FragmentAssertion(Abstractions.Layout.Fragments.Fragment f
         return this;
     }
 
-    public T GetChild<T>(int index) where T : Abstractions.Layout.Fragments.Fragment
+    public T GetChild<T>(int index) where T : Fragment
     {
         if (fragment is not BlockFragment block)
         {

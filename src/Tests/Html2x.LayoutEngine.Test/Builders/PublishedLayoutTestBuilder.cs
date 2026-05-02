@@ -1,10 +1,9 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Builders;
 
@@ -99,13 +98,16 @@ internal static class PublishedLayoutTestBuilder
 
     private static TextRun CreateRun(string text)
     {
+        var font = new FontKey("Test", FontWeight.W400, FontStyle.Normal);
+
         return new TextRun(
             text,
-            new FontKey("Test", FontWeight.W400, FontStyle.Normal),
+            font,
             12f,
             new PointF(0f, 9f),
             20f,
             8f,
-            3f);
+            3f,
+            ResolvedFont: TextMeasurement.CreateFallback(font, 20f, 8f, 3f).ResolvedFont);
     }
 }

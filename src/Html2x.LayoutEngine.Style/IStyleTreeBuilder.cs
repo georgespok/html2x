@@ -1,4 +1,3 @@
-using Html2x.Abstractions.Options;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Models;
 
@@ -8,7 +7,7 @@ public interface IStyleTreeBuilder
 {
     Task<StyleTree> BuildAsync(
         string html,
-        LayoutOptions options,
+        StyleBuildSettings settings,
         CancellationToken cancellationToken = default,
         IDiagnosticsSink? diagnosticsSink = null);
 }

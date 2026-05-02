@@ -1,12 +1,11 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -68,7 +67,7 @@ public sealed class GeometryDriftTests
             .First(static item => item.Kind == "Table");
 
         placement.MetadataOwner.ShouldBe("FragmentBuilder");
-        placement.MetadataConsumer.ShouldBe("FragmentPlacementCloner");
+        placement.MetadataConsumer.ShouldBe("Pagination");
         placement.DisplayRole.ShouldBe(FragmentDisplayRole.Table);
         placement.FormattingContext.ShouldBe(FormattingContextKind.Block);
         placement.DerivedColumnCount.ShouldBe(2);
@@ -104,7 +103,7 @@ public sealed class GeometryDriftTests
             BackgroundColor: new ColorRgba(240, 240, 240, 255),
             Borders: BorderEdges.Uniform(new BorderSide(1f, ColorRgba.Black, BorderLineStyle.Solid)),
             Padding: new Spacing(1f, 2f, 3f, 4f));
-        var font = new FontKey("Arial", FontWeight.W400, Abstractions.Layout.Styles.FontStyle.Normal);
+        var font = new FontKey("Arial", FontWeight.W400, FontStyle.Normal);
         var line = new LineBoxFragment
         {
             FragmentId = 500,
@@ -200,7 +199,7 @@ public sealed class GeometryDriftTests
             MarkerOffset = 4f
         };
 
-        var pagination = new BlockPaginator().Paginate(
+        var pagination = new LayoutPaginator().Paginate(
             [
                 new BlockFragment
                 {
@@ -209,10 +208,13 @@ public sealed class GeometryDriftTests
                 },
                 sourceBlock
             ],
-            new SizePt(200f, 100f),
-            new Spacing(10f, 10f, 10f, 10f));
+            new PaginationOptions
+            {
+                PageSize = new SizePt(200f, 100f),
+                Margin = new Spacing(10f, 10f, 10f, 10f)
+            });
 
-        var movedBlock = pagination.Pages[1].Placements.ShouldHaveSingleItem().Fragment;
+        var movedBlock = pagination.Layout.Pages[1].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
         var deltaX = movedBlock.Rect.X - sourceBlock.Rect.X;
         var deltaY = movedBlock.Rect.Y - sourceBlock.Rect.Y;
         var movedTable = movedBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
@@ -390,7 +392,7 @@ public sealed class GeometryDriftTests
                   4:line rect=0,14.4,612,14.4 text="Beta" occupied=0,14.4,10,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,28.8
+              placement order=0 fragment=1 kind=Block decision=Placed oversized=false rect=0,0,612,28.8
             """
         ];
 
@@ -421,7 +423,7 @@ public sealed class GeometryDriftTests
                   5:line rect=12,14.4,600,14.4 text="• Two" occupied=12,14.4,20,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,28.8
+              placement order=0 fragment=1 kind=Block decision=Placed oversized=false rect=0,0,612,28.8
             """
         ];
 
@@ -468,7 +470,7 @@ public sealed class GeometryDriftTests
                     11:line rect=60,20,60,14.4 text="D" occupied=60,20,10,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Table oversized=false rect=0,0,120,40
+              placement order=0 fragment=1 kind=Table decision=Placed oversized=false rect=0,0,120,40
             """
         ];
 
@@ -493,7 +495,7 @@ public sealed class GeometryDriftTests
                 2:image rect=0,0,39,24
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,24
+              placement order=0 fragment=1 kind=Block decision=Placed oversized=false rect=0,0,612,24
             """
         ];
 
@@ -523,7 +525,7 @@ public sealed class GeometryDriftTests
                 5:line rect=0,0,612,16.5 text=" after" occupied=41.5,0,10,16.5
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,16.5
+              placement order=0 fragment=1 kind=Block decision=Placed oversized=false rect=0,0,612,16.5
             """
         ];
 
@@ -551,9 +553,9 @@ public sealed class GeometryDriftTests
                 4:line rect=0,0,612,14.4 text="Block 2" occupied=0,0,10,14.4
             pagination
             page 1 content=0..792
-              placement order=0 fragment=1 kind=Block oversized=false rect=0,0,612,645
+              placement order=0 fragment=1 kind=Block decision=Placed oversized=false rect=0,0,612,645
             page 2 content=0..792
-              placement order=1 fragment=2 kind=Block oversized=false rect=0,0,612,225
+              placement order=1 fragment=2 kind=Block decision=MovedToNextPage oversized=false rect=0,0,612,225
             """
         ];
     }
@@ -615,7 +617,7 @@ public sealed class GeometryDriftTests
         }
     }
 
-    private static IEnumerable<Abstractions.Layout.Fragments.Fragment> EnumerateFragments(Abstractions.Layout.Fragments.Fragment fragment)
+    private static IEnumerable<Fragment> EnumerateFragments(Fragment fragment)
     {
         yield return fragment;
 
@@ -642,8 +644,8 @@ public sealed class GeometryDriftTests
     }
 
     private static void AssertCommonTranslation(
-        Abstractions.Layout.Fragments.Fragment source,
-        Abstractions.Layout.Fragments.Fragment moved,
+        Fragment source,
+        Fragment moved,
         float deltaX,
         float deltaY,
         int expectedPageNumber)

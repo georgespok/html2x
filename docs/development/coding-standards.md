@@ -7,16 +7,20 @@ These standards keep Html2x maintainable as layout and rendering support expands
 Cross-layer dependencies flow forward:
 
 ```text
-Html2x.Abstractions
+Html2x.RenderModel
+  -> Html2x.LayoutEngine.Contracts
   -> Html2x.LayoutEngine
   -> Html2x.Renderers.Pdf
-  -> Html2x
+
+Html2x
+  -> stage-owned settings and requests
 ```
 
-The facade wires services together. Layout owns HTML/CSS interpretation.
-Renderers consume fragments and pages. Diagnostics contracts live in
-`Html2x.Diagnostics.Contracts`, while collection and JSON serialization live in
-`Html2x.Diagnostics`.
+The facade owns public options and service wiring. Internal stages consume
+stage-owned settings and requests, not facade option objects. Layout owns
+HTML/CSS interpretation. Renderers consume fragments and pages. Diagnostics
+contracts live in `Html2x.Diagnostics.Contracts`, while collection and JSON
+serialization live in `Html2x.Diagnostics`.
 
 ## Implementation Conventions
 

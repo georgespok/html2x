@@ -1,13 +1,9 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.File;
+using Html2x.RenderModel;
+using Html2x.Text;
 using Shouldly;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
-using Moq;
 using UglyToad.PdfPig;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -19,9 +15,8 @@ public class PdfRendererTests
     {
         // Arrange
         var layout = CreateSimpleLayout();
-        var options = new PdfOptions { FontPath = string.Empty };
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
+        var options = new PdfRenderSettings();
+        var renderer = new PdfRenderer();
 
         // Act
         var pdfBytes = await renderer.RenderAsync(layout, options);
@@ -40,9 +35,8 @@ public class PdfRendererTests
     {
         // Arrange
         var layout = CreateLayoutWithOffsetBlock();
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
-        var options = new PdfOptions { FontPath = string.Empty };
+        var renderer = new PdfRenderer();
+        var options = new PdfRenderSettings();
 
         // Act
         var pdfBytes = await renderer.RenderAsync(layout, options);
@@ -77,9 +71,8 @@ public class PdfRendererTests
             new List<Fragment> { block },
             1,
             new ColorRgba(255, 255, 255, 255)));
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
-        var options = new PdfOptions { FontPath = string.Empty };
+        var renderer = new PdfRenderer();
+        var options = new PdfRenderSettings();
         var originalBlockRect = block.Rect;
         var originalLineRect = line.Rect;
         var originalRunOrigin = line.Runs.ShouldHaveSingleItem().Origin;
@@ -91,6 +84,44 @@ public class PdfRendererTests
         block.Rect.ShouldBe(originalBlockRect);
         line.Rect.ShouldBe(originalLineRect);
         line.Runs.ShouldHaveSingleItem().Origin.ShouldBe(originalRunOrigin);
+    }
+
+    [Fact]
+    public async Task RenderAsync_TextRunWithoutResolvedFont_ThrowsClearException()
+    {
+        var layout = new HtmlLayout();
+        layout.Pages.Add(new LayoutPage(
+            new SizePt(300, 300),
+            new Spacing(),
+            [
+                new LineBoxFragment
+                {
+                    Rect = new RectangleF(0, 0, 120, 20),
+                    BaselineY = 15f,
+                    LineHeight = 20f,
+                    Runs =
+                    [
+                        new TextRun(
+                            "Missing",
+                            RendererFontTestData.CreateFont(),
+                            12f,
+                            new PointF(0, 15),
+                            60f,
+                            9f,
+                            3f)
+                    ]
+                }
+            ],
+            1,
+            new ColorRgba(255, 255, 255, 255)));
+        var renderer = new PdfRenderer();
+
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => renderer.RenderAsync(layout, new PdfRenderSettings()));
+
+        exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
+        exception.Data["DiagnosticsName"].ShouldBe("ResolvedFont");
+        exception.Data["RequestedFamily"].ShouldBe("Inter");
     }
 
     private static HtmlLayout CreateSimpleLayout()
@@ -113,15 +144,14 @@ public class PdfRendererTests
     {
         var fragments = new List<Fragment>();
 
-        var textRun = new TextRun(
+        var textRun = RendererFontTestData.CreateTextRun(
             "Hello, Html2x!",
-            new FontKey("Arial", FontWeight.W700, FontStyle.Normal),
+            RendererFontTestData.CreateFont(weight: FontWeight.W700),
             12f,
             new PointF(0, 0),
             80f,
             10f,
-            3f
-        );
+            3f);
 
         var lineBox = new LineBoxFragment
         {
@@ -163,9 +193,9 @@ public class PdfRendererTests
 
     private static LineBoxFragment CreateLineFragment(string text, float x, float y, float width, float height)
     {
-        var run = new TextRun(
+        var run = RendererFontTestData.CreateTextRun(
             text,
-            new FontKey("Arial", FontWeight.W400, FontStyle.Normal),
+            RendererFontTestData.CreateFont(),
             12f,
             new PointF(x, y),
             width - 10f,
@@ -183,4 +213,3 @@ public class PdfRendererTests
         };
     }
 }
-

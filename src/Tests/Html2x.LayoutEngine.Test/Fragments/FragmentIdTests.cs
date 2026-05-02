@@ -1,12 +1,9 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Test.Builders;
-using Moq;
 using Shouldly;
-using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using CoreFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Fragments;
 
@@ -38,9 +35,8 @@ public class FragmentIdTests
                 new PublishedChildBlockItem(1, nestedBlock)
             ]);
         var builder = new FragmentBuilder();
-        var fontSource = CreateFontSource();
 
-        var fragments = builder.Build(PublishedLayoutTestBuilder.Tree(root), fontSource);
+        var fragments = builder.Build(PublishedLayoutTestBuilder.Tree(root));
 
         var all = new List<CoreFragment>();
         foreach (var block in fragments.Blocks)
@@ -71,12 +67,4 @@ public class FragmentIdTests
         }
     }
 
-    private static IFontSource CreateFontSource()
-    {
-        var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
-            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
-
-        return fontSource.Object;
-    }
 }

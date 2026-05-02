@@ -1,6 +1,4 @@
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Published;
@@ -13,29 +11,26 @@ internal static class GeometrySnapshotMapper
 {
     public static GeometrySnapshot From(
         PublishedLayoutTree layoutTree,
-        HtmlLayout layout,
         PaginationResult pagination)
     {
         ArgumentNullException.ThrowIfNull(layoutTree);
-        ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(pagination);
 
         var boxMapper = new PublishedGeometrySnapshotMapper();
 
         return new GeometrySnapshot
         {
-            Fragments = LayoutSnapshotMapper.From(layout),
+            Fragments = LayoutSnapshotMapper.From(pagination.Layout),
             Boxes = boxMapper.MapBoxes(layoutTree.Blocks),
-            Pagination = pagination.Pages.Select(MapPage).ToList()
+            Pagination = pagination.AuditPages.Select(MapPage).ToList()
         };
     }
 
     public static DiagnosticObject ToDiagnosticObject(
         PublishedLayoutTree layoutTree,
-        HtmlLayout layout,
         PaginationResult pagination)
     {
-        return MapGeometrySnapshot(From(layoutTree, layout, pagination));
+        return MapGeometrySnapshot(From(layoutTree, pagination));
     }
 
     private static DiagnosticObject MapGeometrySnapshot(GeometrySnapshot snapshot)
@@ -65,6 +60,7 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field("pageNumber", placement.PageNumber),
             DiagnosticObject.Field("orderIndex", placement.OrderIndex),
             DiagnosticObject.Field("isOversized", placement.IsOversized),
+            DiagnosticObject.Field("decisionKind", DiagnosticValue.FromEnum(placement.DecisionKind)),
             DiagnosticObject.Field("x", placement.X),
             DiagnosticObject.Field("y", placement.Y),
             DiagnosticObject.Field("size", LayoutSnapshotMapper.MapSize(placement.Size)),
@@ -128,7 +124,7 @@ internal static class GeometrySnapshotMapper
         where TEnum : struct, Enum =>
         value.HasValue ? DiagnosticValue.FromEnum(value.Value) : null;
 
-    private static PaginationPageSnapshot MapPage(PageModel page)
+    private static PaginationPageSnapshot MapPage(PaginationPageAudit page)
     {
         return new PaginationPageSnapshot
         {
@@ -141,29 +137,28 @@ internal static class GeometrySnapshotMapper
         };
     }
 
-    private static PaginationPlacementSnapshot MapPlacement(BlockFragmentPlacement placement)
+    private static PaginationPlacementSnapshot MapPlacement(PaginationPlacementAudit placement)
     {
-        var fragment = placement.Fragment;
-
         return new PaginationPlacementSnapshot
         {
             FragmentId = placement.FragmentId,
-            Kind = fragment.DisplayRole?.ToString() ?? fragment.GetType().Name,
+            Kind = placement.FragmentKind,
             PageNumber = placement.PageNumber,
             OrderIndex = placement.OrderIndex,
             IsOversized = placement.IsOversized,
+            DecisionKind = placement.DecisionKind,
             X = placement.PageX,
             Y = placement.PageY,
             Size = new SizePt(placement.Width, placement.Height),
-            DisplayRole = fragment.DisplayRole,
-            FormattingContext = fragment.FormattingContext,
-            MarkerOffset = fragment.MarkerOffset,
-            DerivedColumnCount = fragment is TableFragment table ? table.DerivedColumnCount : null,
-            RowIndex = fragment is TableRowFragment row ? row.RowIndex : null,
-            ColumnIndex = fragment is TableCellFragment cell ? cell.ColumnIndex : null,
-            IsHeader = fragment is TableCellFragment headerCell ? headerCell.IsHeader : null,
+            DisplayRole = placement.DisplayRole,
+            FormattingContext = placement.FormattingContext,
+            MarkerOffset = placement.MarkerOffset,
+            DerivedColumnCount = placement.DerivedColumnCount,
+            RowIndex = placement.RowIndex,
+            ColumnIndex = placement.ColumnIndex,
+            IsHeader = placement.IsHeader,
             MetadataOwner = PublishedLayoutToFragmentProjector.MetadataOwnerName,
-            MetadataConsumer = nameof(FragmentPlacementCloner)
+            MetadataConsumer = "Pagination"
         };
     }
 

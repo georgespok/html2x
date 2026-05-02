@@ -1,13 +1,8 @@
 using System.Drawing;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
-using Moq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -19,9 +14,8 @@ public class SkiaDiagnosticsTests
     {
         var sink = new RecordingDiagnosticsSink();
         var layout = CreateLayoutWithMissingImage();
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
-        var options = new PdfOptions { FontPath = string.Empty, HtmlDirectory = "." };
+        var renderer = new PdfRenderer();
+        var options = new PdfRenderSettings { HtmlDirectory = "." };
 
         var pdf = await renderer.RenderAsync(layout, options, diagnosticsSink: sink);
 

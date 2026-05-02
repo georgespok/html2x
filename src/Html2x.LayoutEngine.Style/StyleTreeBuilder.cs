@@ -1,5 +1,4 @@
 using AngleSharp;
-using Html2x.Abstractions.Options;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Models;
@@ -24,19 +23,19 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
 
     public async Task<StyleTree> BuildAsync(
         string html,
-        LayoutOptions options,
+        StyleBuildSettings settings,
         CancellationToken cancellationToken = default,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(html);
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(settings);
 
         var document = await RunStageAsync(
             "stage/dom",
             async () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var loaded = await _domProvider.LoadAsync(html, options);
+                var loaded = await _domProvider.LoadAsync(html, settings);
                 cancellationToken.ThrowIfCancellationRequested();
                 return loaded;
             },

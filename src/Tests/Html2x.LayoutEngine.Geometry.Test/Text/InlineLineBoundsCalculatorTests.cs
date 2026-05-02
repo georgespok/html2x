@@ -1,9 +1,9 @@
-﻿using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using System.Drawing;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Text;
 

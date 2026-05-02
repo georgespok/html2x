@@ -1,5 +1,4 @@
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Models;
@@ -130,4 +129,3 @@ internal readonly record struct BlockMeasurementBasis(
     Spacing Border,
     float BorderBoxWidth,
     float ContentFlowWidth);
-

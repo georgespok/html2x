@@ -1,4 +1,4 @@
-﻿namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Models;
 
 internal static class BoxNodeTraversal
 {

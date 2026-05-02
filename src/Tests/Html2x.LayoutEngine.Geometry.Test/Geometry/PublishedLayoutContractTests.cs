@@ -1,12 +1,12 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box.Publishing;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Published;
 using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 
@@ -231,6 +231,25 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
+    public async Task Build_InlineText_PublishedRunsIncludeResolvedFont()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <p style='margin: 0;'>alpha</p>
+              </body>
+            </html>
+            """);
+
+        var run = EnumeratePublishedTextRuns(result.PublishedLayout.Blocks)
+            .Single(static candidate => candidate.Text == "alpha");
+
+        run.ResolvedFont.ShouldNotBeNull();
+        run.ResolvedFont.SourceId.ShouldStartWith("fallback://");
+    }
+
+    [Fact]
     public void PublishedBlock_WithNullChild_ThrowsArgumentException()
     {
         var children = new List<PublishedBlock> { null! };
@@ -312,6 +331,34 @@ public sealed class PublishedLayoutContractTests
             30f,
             8f,
             3f);
+    }
+
+    private static IEnumerable<TextRun> EnumeratePublishedTextRuns(IEnumerable<PublishedBlock> blocks)
+    {
+        foreach (var block in blocks)
+        {
+            if (block.InlineLayout is not null)
+            {
+                foreach (var segment in block.InlineLayout.Segments)
+                {
+                    foreach (var line in segment.Lines)
+                    {
+                        foreach (var item in line.Items.OfType<PublishedInlineTextItem>())
+                        {
+                            foreach (var run in item.Runs)
+                            {
+                                yield return run;
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var childRun in EnumeratePublishedTextRuns(block.Children))
+            {
+                yield return childRun;
+            }
+        }
     }
 
     private static GeometrySourceIdentity CreateSourceIdentity(

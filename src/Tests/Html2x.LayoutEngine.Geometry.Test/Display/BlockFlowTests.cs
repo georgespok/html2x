@@ -1,9 +1,5 @@
-﻿using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
@@ -11,7 +7,8 @@ using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
-using LayoutFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Display;
 
@@ -103,7 +100,7 @@ public class BlockFlowTests
         var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        _ = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        _ = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         var marginEvents = diagnosticsSink.Records
             .Where(e => e.Name == "layout/margin-collapse")
@@ -389,7 +386,7 @@ public class BlockFlowTests
         var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        var layout = await layoutBuilder.BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        var layout = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         layout.Pages.Count.ShouldBe(1);
         diagnosticsSink.Records
@@ -532,7 +529,7 @@ public class BlockFlowTests
 
     private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
     {
-        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutOptions
+        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         });
@@ -542,13 +539,14 @@ public class BlockFlowTests
     {
         return new LayoutBuilder(
             textMeasurer,
-            LayoutBuilderFixture.CreateFontSource(),
-            new NoopImageProvider());
+            new NoopImageMetadataResolver());
     }
 
     private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
     {
         var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns((FontKey font, float _, string text) => TextMeasurement.CreateFallback(font, text.Length * widthPerChar, 8f, 2f));
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns((FontKey _, float _, string text) => text.Length * widthPerChar);
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))

@@ -1,5 +1,4 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.Abstractions.Options;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -13,10 +12,9 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         {
             EnableDiagnostics = true
         },
-        Pdf = new PdfOptions
+        Fonts = new FontOptions
         {
-            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf"),
-            EnableDebugging = true
+            FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
     };
 

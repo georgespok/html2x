@@ -9,9 +9,10 @@ fragments, diagnostics, PDF validity, extracted text, and public API results.
 | --- | --- |
 | `Html2x.LayoutEngine.Contracts` | Internal pipeline handoff contracts shared by style, geometry, composition, diagnostics, and fragment projection. |
 | `Html2x.LayoutEngine.Style.Test` | CSS computation, `StyleTreeBuilder`, parser-backed style behavior, user agent stylesheet behavior, style diagnostics, and the parser-free `StyleTree` handoff contract. |
-| `Html2x.LayoutEngine.Test` | Pipeline integration, box role behavior, initial box construction, pagination, diagnostics snapshots, and architecture guardrails. |
+| `Html2x.LayoutEngine.Test` | Pipeline integration, composition behavior, diagnostics snapshots, and architecture guardrails. |
 | `Html2x.LayoutEngine.Geometry.Test` | Geometry algorithms, published layout output, table layout, image layout, block and inline geometry, and parser-free `StyleTree` inputs. |
 | `Html2x.LayoutEngine.Fragments.Test` | Fragment projection from `PublishedLayoutTree` to renderer-facing `FragmentTree` models. |
+| `Html2x.LayoutEngine.Pagination.Test` | Focused pagination behavior through `LayoutPaginator`, translated fragment clone coverage, pagination diagnostics, and audit facts. |
 | `Html2x.Renderers.Pdf.Test` | PDF renderer behavior, drawing helpers, fonts, images, borders, table rendering, and PDF validation helpers. |
 | `Html2x.Test` | End-to-end `HtmlConverter` scenarios and diagnostics behavior. |
 | `Html2x.TestConsole.Test` | Manual harness parsing and diagnostics envelope behavior. |
@@ -45,24 +46,46 @@ algorithms and reserve parser-backed traversal for Style.Test.
 Fragment projection tests belong in `Html2x.LayoutEngine.Fragments.Test` when
 they exercise `FragmentBuilder`, `FragmentTree`, fragment IDs, flow ordering,
 inline text projection, image fragments, rule fragments, or table fragments.
-Fragment projection tests build PublishedLayoutTree inputs directly and use Moq
-for `IFontSource` when font resolution is part of the behavior.
+Fragment projection tests build PublishedLayoutTree inputs directly and assert
+that published text run facts are preserved. Font resolution behavior belongs in
+text or geometry tests, not fragment projection tests.
 
 Fragment projection tests must not construct mutable boxes or reference
 `Html2x.LayoutEngine`, `Html2x.LayoutEngine.Geometry`,
 `Html2x.LayoutEngine.Style`, renderers, AngleSharp, AngleSharp.Css, or
-SkiaSharp. Pagination tests remain in `Html2x.LayoutEngine.Test`. Renderer
-tests remain renderer-owned.
+SkiaSharp. Renderer tests remain renderer-owned.
+
+Pagination tests belong in `Html2x.LayoutEngine.Pagination.Test` when they
+exercise `LayoutPaginator`, page placement, cloned translated fragments,
+pagination diagnostics, `PaginationResult`, `PaginationPageAudit`, or
+`PaginationPlacementAudit`. Pagination tests should build render model
+fragments directly. They must not reference style, geometry implementation,
+fragment projection, text runtime seams, parser packages, renderers, or
+SkiaSharp.
 
 Pipeline tests belong in `Html2x.LayoutEngine.Test` when they exercise
-`LayoutBuilder`, diagnostics flow, pagination, or architecture
-guardrails. Pipeline tests should use the public or intended module facades, not
-direct parser or style implementation construction.
+`LayoutBuilder`, diagnostics flow, or architecture guardrails. Pipeline tests
+may assert that composition calls pagination and returns the final layout, but
+focused pagination behavior belongs in `Html2x.LayoutEngine.Pagination.Test`.
+Pipeline tests should use the public or intended module facades, not direct
+parser or style implementation construction.
 
-LayoutEngine.Test owns orchestration, diagnostics, pagination, and
+LayoutEngine.Test owns orchestration, diagnostics integration, and
 architecture guardrails. It may inspect contract handoff facts, but it must not
 construct parser providers or mutable geometry internals outside focused helper
 coverage.
+
+Text and font tests belong to the stage that owns the behavior:
+
+- Fake text measurers must implement `Measure` and return `TextMeasurement`
+  with deterministic `ResolvedFont` facts.
+- Geometry tests that create text through layout should assert resolved font
+  facts on published `TextRun` values when font behavior matters.
+- Fragment tests should assert that resolved font facts are preserved, not
+  resolved.
+- Renderer tests that manually construct `TextRun` values must include
+  `ResolvedFont`, except for explicit negative tests that verify the renderer
+  fails clearly when the fact is missing.
 
 ## Practices
 
@@ -165,6 +188,7 @@ dotnet build src\Html2x.sln -c Release --no-restore
 dotnet test src\Tests\Html2x.LayoutEngine.Style.Test\Html2x.LayoutEngine.Style.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Geometry.Test\Html2x.LayoutEngine.Geometry.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Fragments.Test\Html2x.LayoutEngine.Fragments.Test.csproj -c Release --no-build
+dotnet test src\Tests\Html2x.LayoutEngine.Pagination.Test\Html2x.LayoutEngine.Pagination.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build
 dotnet test src\Html2x.sln -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build --filter FullyQualifiedName~Architecture

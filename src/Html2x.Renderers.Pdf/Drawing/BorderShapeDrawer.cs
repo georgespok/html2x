@@ -1,4 +1,4 @@
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;

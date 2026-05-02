@@ -1,9 +1,8 @@
-using Html2x.Abstractions.Layout.Styles;
+using Html2x.RenderModel;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
-using Html2x.Abstractions.Utilities.Color;
 namespace Html2x.Renderers.Pdf.Test;
 
 /// <summary>

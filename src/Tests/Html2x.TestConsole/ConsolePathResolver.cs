@@ -4,33 +4,40 @@ internal static class ConsolePathResolver
 {
     public static ConsolePaths Resolve(RenderSettings settings, string inputPath, string? selectedSamplePath)
     {
-        var requestedOutputPath = ResolveRequestedOutputPath(settings, inputPath);
+        var output = ResolveRequestedOutputPath(settings, inputPath);
         return new ConsolePaths(
             Path.GetFullPath(inputPath),
-            ResolveActualOutputPath(requestedOutputPath),
+            ResolveActualOutputPath(output.Path, output.WasExplicit),
             string.IsNullOrWhiteSpace(selectedSamplePath) ? null : Path.GetFullPath(selectedSamplePath));
     }
 
-    private static string ResolveRequestedOutputPath(RenderSettings settings, string? inputPath)
+    private static (string Path, bool WasExplicit) ResolveRequestedOutputPath(RenderSettings settings, string? inputPath)
     {
+        if (!string.IsNullOrWhiteSpace(settings.OutputOption))
+        {
+            return (settings.OutputOption, true);
+        }
+
         if (!string.IsNullOrWhiteSpace(settings.Output))
         {
-            return settings.Output;
+            return (settings.Output, true);
         }
 
         var fileName = Path.GetFileNameWithoutExtension(inputPath);
         var safeName = string.IsNullOrWhiteSpace(fileName) ? "output" : fileName;
-        return $"{safeName}.pdf";
+        return ($"{safeName}.pdf", false);
     }
 
-    private static string ResolveActualOutputPath(string requestedPath)
+    private static string ResolveActualOutputPath(string requestedPath, bool wasExplicit)
     {
         if (Path.IsPathRooted(requestedPath))
         {
             return requestedPath;
         }
 
-        return Path.Combine(Path.GetTempPath(), requestedPath);
+        return wasExplicit
+            ? Path.GetFullPath(requestedPath)
+            : Path.Combine(Path.GetTempPath(), requestedPath);
     }
 }
 

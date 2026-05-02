@@ -1,12 +1,8 @@
 using System.Drawing;
-using Html2x.Abstractions.Layout.Documents;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.File;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.RenderModel;
+using Html2x.Text;
+using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
-using Moq;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -18,9 +14,8 @@ public class SkiaDeterminismTests
     {
         var layout1 = CreateSimpleLayout();
         var layout2 = CreateSimpleLayout();
-        var options = new PdfOptions { FontPath = string.Empty };
-        var fileDirectory = new Mock<IFileDirectory>(MockBehavior.Strict);
-        var renderer = new PdfRenderer(fileDirectory.Object);
+        var options = new PdfRenderSettings();
+        var renderer = new PdfRenderer();
 
         // Warm up renderer/font caches to avoid first-render variance.
         await renderer.RenderAsync(CreateSimpleLayout(), options);
@@ -63,18 +58,18 @@ public class SkiaDeterminismTests
     {
         var fragments = new List<Fragment>();
 
-        var hello = new TextRun(
+        var hello = RendererFontTestData.CreateTextRun(
             "Hello,",
-            new FontKey("Arial", FontWeight.W700, FontStyle.Normal),
+            RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
             new PointF(60, 100),
             40f,
             11f,
             3f);
 
-        var world = new TextRun(
+        var world = RendererFontTestData.CreateTextRun(
             "Skia!",
-            new FontKey("Arial", FontWeight.W700, FontStyle.Normal),
+            RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
             new PointF(110, 100),
             40f,

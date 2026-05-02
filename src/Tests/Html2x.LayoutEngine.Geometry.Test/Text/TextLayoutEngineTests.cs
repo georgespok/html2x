@@ -1,11 +1,11 @@
-using Html2x.Abstractions.Options;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Measurements.Units;
+using Html2x.LayoutEngine.Style;
+using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Models;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Text;
 
@@ -113,6 +113,29 @@ public class TextLayoutEngineTests
     }
 
     [Fact]
+    public void Layout_RepeatedRunsWithSameFont_ReusesResolvedFontPath()
+    {
+        var measurer = new CachingResolvedFontMeasurer(10f, 9f, 3f);
+        var font = new FontKey("Inter", FontWeight.W400, FontStyle.Normal);
+        var engine = new TextLayoutEngine(measurer);
+        var input = BuildInput(
+            500f,
+            12f,
+            Run(1, "alpha", font),
+            Run(2, "beta", font));
+
+        var result = engine.Layout(input);
+
+        var resolvedSourceIds = result.Lines
+            .SelectMany(static line => line.Runs)
+            .Select(static run => run.ResolvedFont.ShouldNotBeNull().SourceId)
+            .Distinct()
+            .ToList();
+        resolvedSourceIds.ShouldHaveSingleItem().ShouldBe("test://Inter/W400/Normal");
+        measurer.ResolutionCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task SnapshotFragmentOrdering_RepeatedRuns_PreservesOrderAndIds()
     {
         const string html = @"
@@ -132,7 +155,7 @@ public class TextLayoutEngineTests
             var layout = await Fixture.BuildLayoutAsync(
                 html,
                 new FakeTextMeasurer(10f, 9f, 3f),
-                new LayoutOptions { PageSize = PaperSizes.A4 });
+                new LayoutBuildSettings { PageSize = PaperSizes.A4 });
             var snapshot = LayoutSnapshotMapper.From(layout);
             snapshots.Add(snapshot);
             var signatures = Flatten(snapshot.Pages[0].Fragments).ToList();
@@ -149,14 +172,14 @@ public class TextLayoutEngineTests
         return new TextLayoutInput(runs, width, lineHeight);
     }
 
-    private static TextRunInput Run(int runId, string text)
+    private static TextRunInput Run(int runId, string text, FontKey? font = null)
     {
         var style = new ComputedStyle { FontSizePt = 12 };
         return new TextRunInput(
             runId,
             new InlineBox(BoxRole.Inline) { TextContent = text, Style = style },
             text,
-            new FontKey("Default", FontWeight.W400, FontStyle.Normal),
+            font ?? new FontKey("Default", FontWeight.W400, FontStyle.Normal),
             12f,
             style,
             PaddingLeft: 0f,
@@ -215,6 +238,43 @@ public class TextLayoutEngineTests
             {
                 yield return child;
             }
+        }
+    }
+
+    private sealed class CachingResolvedFontMeasurer(float widthPerChar, float ascent, float descent) : ITextMeasurer
+    {
+        private readonly Dictionary<FontKey, ResolvedFont> _resolvedFonts = [];
+
+        public int ResolutionCount { get; private set; }
+
+        public TextMeasurement Measure(FontKey font, float sizePt, string text)
+        {
+            if (!_resolvedFonts.TryGetValue(font, out var resolvedFont))
+            {
+                resolvedFont = new ResolvedFont(
+                    font.Family,
+                    font.Weight,
+                    font.Style,
+                    $"test://{font.Family}/{font.Weight}/{font.Style}");
+                _resolvedFonts.Add(font, resolvedFont);
+                ResolutionCount++;
+            }
+
+            return new TextMeasurement(
+                MeasureWidth(font, sizePt, text),
+                ascent,
+                descent,
+                resolvedFont);
+        }
+
+        public float MeasureWidth(FontKey font, float sizePt, string text)
+        {
+            return string.IsNullOrEmpty(text) ? 0f : text.Length * widthPerChar;
+        }
+
+        public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt)
+        {
+            return (ascent, descent);
         }
     }
 }

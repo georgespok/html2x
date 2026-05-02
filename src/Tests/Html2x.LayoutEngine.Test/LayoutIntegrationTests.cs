@@ -1,16 +1,13 @@
-using Html2x.Abstractions.Images;
-using Html2x.Abstractions.Layout.Styles;
-using Html2x.Abstractions.Layout.Fragments;
-using Html2x.Abstractions.Layout.Fonts;
-using Html2x.Abstractions.Layout.Text;
-using Html2x.Abstractions.Measurements.Units;
-using Html2x.Abstractions.Options;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Moq;
 using Shouldly;
-using CoreFragment = Html2x.Abstractions.Layout.Fragments.Fragment;
+using CoreFragment = Html2x.RenderModel.Fragment;
+using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -28,7 +25,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -60,7 +57,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -90,22 +87,22 @@ public class LayoutIntegrationTests
         var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
         var builder = CreateLayoutBuilder();
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
 
-        var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions);
+        var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions.Style);
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
             new LayoutGeometryRequest
             {
                 PageSize = layoutOptions.PageSize,
-                ImageProvider = new NoopImageProvider(),
+                ImageMetadataResolver = new NoopImageMetadataResolver(),
                 HtmlDirectory = Directory.GetCurrentDirectory(),
                 MaxImageSizeBytes = layoutOptions.MaxImageSizeBytes
             });
-        var fragmentTree = fragmentBuilder.Build(publishedLayout, CreateFontSource());
+        var fragmentTree = fragmentBuilder.Build(publishedLayout);
         var layout = await builder.BuildAsync(html, layoutOptions);
 
         var textRuns = CollectTextRuns(fragmentTree.Blocks).ToList();
@@ -144,7 +141,7 @@ public class LayoutIntegrationTests
                 <h6>H6</h6>                
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -181,7 +178,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -228,7 +225,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -262,7 +259,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -295,7 +292,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -327,11 +324,11 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layout = await CreateLayoutBuilder(new FixedImageProvider(src =>
+        var layout = await CreateLayoutBuilder(new FixedImageMetadataResolver(src =>
             string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
                 ? new SizePx(400d, 200d)
                 : new SizePx(80d, 40d)))
-            .BuildAsync(html, new LayoutOptions { PageSize = PaperSizes.Letter });
+            .BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter });
 
         var container = layout.Pages[0].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
         var images = EnumerateLayoutFragments(container)
@@ -363,7 +360,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -390,7 +387,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -412,7 +409,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions { PageSize = PaperSizes.Letter };
+        var layoutOptions = new LayoutBuildSettings { PageSize = PaperSizes.Letter };
 
         var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
 
@@ -433,7 +430,7 @@ public class LayoutIntegrationTests
             .Select(static i => $"<div style='height: 120px;'>Block {i}</div>");
         var html = $"<html><body style='margin: 0;'>{string.Join(string.Empty, blocks)}</body></html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -471,7 +468,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.Letter
         };
@@ -515,7 +512,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-       var layoutOptions = new LayoutOptions
+       var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -543,7 +540,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -571,7 +568,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -602,7 +599,7 @@ public class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -626,7 +623,7 @@ public class LayoutIntegrationTests
               <p>first line<br/>second line</p>
             </html>";
 
-        var layoutOptions = new LayoutOptions
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -740,18 +737,11 @@ public class LayoutIntegrationTests
         }
     }
 
-    private static IFontSource CreateFontSource()
-    {
-        var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
-            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
-
-        return fontSource.Object;
-    }
-
     private static ITextMeasurer CreateTextMeasurer()
     {
         var textMeasurer = new Mock<ITextMeasurer>();
+        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
+            .Returns((FontKey font, float _, string _) => TextMeasurement.CreateFallback(font, 10f, 9f, 3f));
         textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
             .Returns(10f);
         textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
@@ -761,28 +751,24 @@ public class LayoutIntegrationTests
 
     private static LayoutBuilder CreateLayoutBuilder()
     {
-        return CreateLayoutBuilder(new NoopImageProvider());
+        return CreateLayoutBuilder(new NoopImageMetadataResolver());
     }
 
-    private static LayoutBuilder CreateLayoutBuilder(IImageProvider imageProvider)
+    private static LayoutBuilder CreateLayoutBuilder(IImageMetadataResolver imageMetadataResolver)
     {
-        var fontSource = new Mock<IFontSource>();
-        fontSource.Setup(x => x.Resolve(It.IsAny<FontKey>(), It.IsAny<string>()))
-            .Returns(new ResolvedFont("Default", FontWeight.W400, FontStyle.Normal, "test"));
-
-        return new LayoutBuilder(CreateTextMeasurer(), fontSource.Object, imageProvider);
+        return new LayoutBuilder(CreateTextMeasurer(), imageMetadataResolver);
     }
 
-    private sealed class FixedImageProvider(Func<string, SizePx> resolveSize) : IImageProvider
+    private sealed class FixedImageMetadataResolver(Func<string, SizePx> resolveSize) : IImageMetadataResolver
     {
         private readonly Func<string, SizePx> _resolveSize = resolveSize;
 
-        public ImageLoadResult Load(string src, string baseDirectory, long maxBytes)
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
         {
-            return new ImageLoadResult
+            return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageLoadStatus.Ok,
+                Status = ImageMetadataStatus.Ok,
                 IntrinsicSizePx = _resolveSize(src)
             };
         }

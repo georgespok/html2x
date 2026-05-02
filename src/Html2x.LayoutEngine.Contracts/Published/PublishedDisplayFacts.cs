@@ -1,6 +1,6 @@
 namespace Html2x.LayoutEngine.Geometry.Published;
 
-using Html2x.Abstractions.Layout.Fragments;
+using Html2x.RenderModel;
 
 internal sealed record PublishedDisplayFacts
 {
