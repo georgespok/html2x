@@ -1,18 +1,11 @@
 using System.Globalization;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Box;
 
-/// <summary>
-/// Resolves image layout dimensions from authored, intrinsic, and available sizes.
-/// </summary>
-internal interface IImageLayoutResolver
-{
-    ImageLayoutResolution Resolve(ImageBox imageBox, float availableWidth);
-}
 
 /// <summary>
 /// Resolves image content and border-box dimensions for layout.
@@ -26,7 +19,9 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
     public ImageLayoutResolver(LayoutGeometryRequest? request = null)
     {
         _imageMetadataResolver = request?.ImageMetadataResolver ?? new NullImageMetadataResolver();
-        _htmlDirectory = request?.HtmlDirectory ?? Directory.GetCurrentDirectory();
+        _htmlDirectory = string.IsNullOrWhiteSpace(request?.HtmlDirectory)
+            ? AppContext.BaseDirectory
+            : request.HtmlDirectory;
         _maxImageSizeBytes = request?.MaxImageSizeBytes ?? (long)(10 * 1024 * 1024);
     }
 
@@ -43,6 +38,7 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
         var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize);
         var loadResult = _imageMetadataResolver.Resolve(src, _htmlDirectory, _maxImageSizeBytes);
+        var loadStatus = ToImageLoadStatus(loadResult.Status);
         var intrinsicLayoutSize = ToLayoutSize(loadResult.IntrinsicSizePx);
         var contentSize = ResolveLayoutSize(authoredLayoutSize, intrinsicLayoutSize)
             .Safe()
@@ -62,13 +58,28 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             src,
             authoredSize,
             loadResult.IntrinsicSizePx,
-            loadResult.Status == ImageMetadataStatus.Missing,
-            loadResult.Status == ImageMetadataStatus.Oversize,
+            loadStatus,
+            IsMissing(loadStatus),
+            loadStatus == ImageLoadStatus.Oversize,
             contentSize.Width,
             contentSize.Height,
             totalSize.Width,
             totalSize.Height);
     }
+
+    private static ImageLoadStatus ToImageLoadStatus(ImageMetadataStatus status) =>
+        status switch
+        {
+            ImageMetadataStatus.Ok => ImageLoadStatus.Ok,
+            ImageMetadataStatus.Oversize => ImageLoadStatus.Oversize,
+            ImageMetadataStatus.InvalidDataUri => ImageLoadStatus.InvalidDataUri,
+            ImageMetadataStatus.DecodeFailed => ImageLoadStatus.DecodeFailed,
+            ImageMetadataStatus.OutOfScope => ImageLoadStatus.OutOfScope,
+            _ => ImageLoadStatus.Missing
+        };
+
+    private static bool IsMissing(ImageLoadStatus status) =>
+        status is not ImageLoadStatus.Ok and not ImageLoadStatus.Oversize;
 
     private static SizePx ResolveAuthoredMetadataSize(ImageBox imageBox, SizePx htmlAuthoredSize)
     {
@@ -186,17 +197,3 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         public bool HasHeight => Height.HasValue;
     }
 }
-
-/// <summary>
-/// Carries resolved image dimensions and load status for layout consumers.
-/// </summary>
-internal readonly record struct ImageLayoutResolution(
-    string Src,
-    SizePx AuthoredSizePx,
-    SizePx IntrinsicSizePx,
-    bool IsMissing,
-    bool IsOversize,
-    float ContentWidth,
-    float ContentHeight,
-    float TotalWidth,
-    float TotalHeight);

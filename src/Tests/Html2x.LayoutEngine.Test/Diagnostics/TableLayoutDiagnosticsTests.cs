@@ -151,7 +151,7 @@ public class TableLayoutDiagnosticsTests
     }
 
     [Fact]
-    public void EmitUnsupportedTable_DiagnosticsSink_FlattensUnsupportedReasonAndTableOutcome()
+    public void EmitUnsupportedTable_DiagnosticsSink_FlattensOutcome()
     {
         var sink = new RecordingDiagnosticsSink();
 

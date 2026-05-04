@@ -39,3 +39,18 @@ If the renderer needs data that is not present on fragments, extend the fragment
 Renderer-specific settings belong with the renderer. Converter facade options
 belong in `Html2x` and should be mapped into renderer-owned settings by the
 facade or composition layer.
+
+## Fragment Policy
+
+The render model fragment set is closed and repo-owned. Built-in pagination,
+diagnostics snapshots, paint command resolution, and PDF rendering dispatch over
+the known fragment types. Custom fragment subclasses are not a supported
+extension model for the built-in pipeline.
+
+Adding a fragment kind requires coordinated updates to:
+
+- Fragment projection from published layout facts.
+- Pagination clone and placement behavior.
+- Diagnostics snapshot mapping.
+- Renderer paint command resolution and drawing.
+- Architecture and behavior tests for unsupported fragment handling.

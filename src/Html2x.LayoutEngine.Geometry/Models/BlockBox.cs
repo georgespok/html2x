@@ -2,7 +2,7 @@ using Html2x.RenderModel;
 
 using Html2x.LayoutEngine.Geometry;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Geometry.Models;
 
 /// <summary>
 /// Represents mutable block-level layout state while geometry and inline flow are resolved.
@@ -23,7 +23,7 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     /// <summary>
     /// Gets or sets the margin resolved for the current layout pass.
     /// </summary>
-    public Spacing Margin { get; set; } = new();
+    public Spacing Margin { get; internal set; } = new();
 
     /// <summary>
     /// Gets or sets the padding resolved for the current layout pass.
@@ -31,13 +31,13 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     public Spacing Padding
     {
         get => _padding;
-        set => _padding = value;
+        internal set => _padding = value;
     }
 
     /// <summary>
     /// Gets or sets the text alignment resolved for inline layout.
     /// </summary>
-    public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
+    public string TextAlign { get; internal set; } = HtmlCssConstants.Defaults.TextAlign;
 
     public bool IsAnonymous { get; init; }
 
@@ -63,12 +63,12 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     /// <remarks>
     /// Layout owns this value. Measurement paths must not assign temporary inline layout here.
     /// </remarks>
-    public InlineLayoutResult? InlineLayout { get; set; }
+    public InlineLayoutResult? InlineLayout { get; internal set; }
 
     /// <summary>
     /// Gets or sets whether this block is the content box for an inline-block formatting context.
     /// </summary>
-    public bool IsInlineBlockContext { get; set; }
+    public bool IsInlineBlockContext { get; internal set; }
 
     protected override BoxNode CloneShallowForParent(BoxNode parent)
     {

@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
@@ -6,9 +6,9 @@ using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
 
-public sealed class LayoutBuilderFixture
+internal sealed class LayoutBuilderFixture
 {
-    public Task<HtmlLayout> BuildLayoutAsync(
+    internal Task<HtmlLayout> BuildLayoutAsync(
         string html,
         ITextMeasurer textMeasurer,
         LayoutBuildSettings? options = null,

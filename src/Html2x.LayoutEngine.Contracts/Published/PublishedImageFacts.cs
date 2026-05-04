@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 using Html2x.RenderModel;
 
@@ -9,7 +9,8 @@ internal sealed record PublishedImageFacts
         SizePx authoredSizePx,
         SizePx intrinsicSizePx,
         bool isMissing,
-        bool isOversize)
+        bool isOversize,
+        ImageLoadStatus status = ImageLoadStatus.Ok)
     {
         ArgumentNullException.ThrowIfNull(src);
 
@@ -18,6 +19,7 @@ internal sealed record PublishedImageFacts
         IntrinsicSizePx = intrinsicSizePx;
         IsMissing = isMissing;
         IsOversize = isOversize;
+        Status = NormalizeStatus(status, isMissing, isOversize);
     }
 
     public string Src { get; }
@@ -26,7 +28,21 @@ internal sealed record PublishedImageFacts
 
     public SizePx IntrinsicSizePx { get; }
 
+    public ImageLoadStatus Status { get; }
+
     public bool IsMissing { get; }
 
     public bool IsOversize { get; }
+
+    private static ImageLoadStatus NormalizeStatus(ImageLoadStatus status, bool isMissing, bool isOversize)
+    {
+        if (status != ImageLoadStatus.Ok)
+        {
+            return status;
+        }
+
+        return isOversize
+            ? ImageLoadStatus.Oversize
+            : isMissing ? ImageLoadStatus.Missing : ImageLoadStatus.Ok;
+    }
 }

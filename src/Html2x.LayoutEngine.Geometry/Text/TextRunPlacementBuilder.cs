@@ -1,6 +1,5 @@
-using System.Drawing;
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -142,7 +141,7 @@ internal sealed class TextRunPlacementBuilder
                 text,
                 source.Font,
                 source.FontSizePt,
-                new PointF(originX, baselineY),
+                new PointPt(originX, baselineY),
                 width,
                 source.Ascent,
                 source.Descent,

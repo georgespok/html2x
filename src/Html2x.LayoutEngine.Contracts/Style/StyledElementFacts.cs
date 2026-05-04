@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public sealed class StyledElementFacts
+internal sealed class StyledElementFacts
 {
     private readonly IReadOnlyDictionary<string, string> _attributes;
 

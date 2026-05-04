@@ -1,10 +1,9 @@
-using System.Drawing;
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Text;
+namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 /// <summary>
 /// Verifies inline object placement publishes geometry and nested inline layout.
@@ -52,7 +51,7 @@ public sealed class InlineObjectPlacementBuilderTests
 
         var rect = builder.Place(inlineObject, left: 30f, baselineY: 50f);
 
-        rect.ShouldBe(new RectangleF(30f, 43f, 20f, 10f));
+        rect.ShouldBe(new RectPt(30f, 43f, 20f, 10f));
         contentBox.UsedGeometry.ShouldNotBeNull();
         contentBox.UsedGeometry.Value.BorderBoxRect.ShouldBe(rect);
         contentBox.Padding.ShouldBe(contentBox.Style.Padding);

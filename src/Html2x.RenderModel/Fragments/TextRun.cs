@@ -1,6 +1,5 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
+
 
 /// <summary>
 /// Represents a measured run of text with absolute baseline origin and resolved font data.
@@ -9,7 +8,7 @@ public sealed record TextRun(
     string Text, // exact substring for this run (post line-wrapping)
     FontKey Font,
     float FontSizePt,
-    PointF Origin, // baseline origin (absolute)
+    PointPt Origin, // baseline origin (absolute)
     float AdvanceWidth, // measured width used during line-breaking
     float Ascent, // font metrics for baseline alignment
     float Descent,
@@ -20,7 +19,7 @@ public sealed record TextRun(
     private readonly string _text = Text ?? throw new ArgumentNullException(nameof(Text));
     private readonly FontKey _font = Font ?? throw new ArgumentNullException(nameof(Font));
     private readonly float _fontSizePt = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(FontSizePt), FontSizePt);
-    private readonly PointF _origin = FragmentGeometryGuard.RequirePoint(nameof(Origin), Origin);
+    private readonly PointPt _origin = FragmentGeometryGuard.RequirePoint(nameof(Origin), Origin);
     private readonly float _advanceWidth = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(AdvanceWidth), AdvanceWidth);
     private readonly float _ascent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Ascent), Ascent);
     private readonly float _descent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Descent), Descent);
@@ -43,7 +42,7 @@ public sealed record TextRun(
         init => _fontSizePt = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(FontSizePt), value);
     }
 
-    public PointF Origin
+    public PointPt Origin
     {
         get => _origin;
         init => _origin = FragmentGeometryGuard.RequirePoint(nameof(Origin), value);
@@ -66,16 +65,4 @@ public sealed record TextRun(
         get => _descent;
         init => _descent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Descent), value);
     }
-}
-
-/// <summary>
-/// Defines text decoration flags used when painting a text run.
-/// </summary>
-[Flags]
-public enum TextDecorations
-{
-    None = 0,
-    Underline = 1,
-    Overline = 2,
-    LineThrough = 4
 }

@@ -1,10 +1,10 @@
-using System.Drawing;
+using Html2x.RenderModel;
 
 namespace Html2x.LayoutEngine.Geometry;
 
 internal static class GeometryGuard
 {
-    public static RectangleF RequireRect(string name, RectangleF rect)
+    public static RectPt RequireRect(string name, RectPt rect)
     {
         RequireFinite($"{name}.X", rect.X);
         RequireFinite($"{name}.Y", rect.Y);
@@ -13,7 +13,7 @@ internal static class GeometryGuard
         return rect;
     }
 
-    public static PointF RequirePoint(string name, PointF point)
+    public static PointPt RequirePoint(string name, PointPt point)
     {
         RequireFinite($"{name}.X", point.X);
         RequireFinite($"{name}.Y", point.Y);

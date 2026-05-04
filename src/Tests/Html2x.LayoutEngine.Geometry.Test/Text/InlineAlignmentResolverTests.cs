@@ -1,7 +1,7 @@
 using Html2x.LayoutEngine.Text;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Text;
+namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 public sealed class InlineAlignmentResolverTests
 {

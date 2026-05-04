@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 
 namespace Html2x.Test.Scenarios;
 
+[Trait("Category", "Integration")]
 public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     private HtmlConverterOptions DefaultOptions => new()

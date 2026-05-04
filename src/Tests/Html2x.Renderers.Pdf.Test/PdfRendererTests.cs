@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Text;
 using Shouldly;
@@ -8,6 +7,7 @@ using UglyToad.PdfPig;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public class PdfRendererTests
 {
     [Fact]
@@ -61,11 +61,11 @@ public class PdfRendererTests
         var line = CreateLineFragment("Stable", 24, 40, 120, 18);
         var block = new BlockFragment([line])
         {
-            Rect = new RectangleF(20, 30, 180, 80),
+            Rect = new RectPt(20, 30, 180, 80),
             Style = new VisualStyle()
         };
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(300, 300),
             new Spacing(0, 0, 0, 0),
             new List<Fragment> { block },
@@ -90,13 +90,13 @@ public class PdfRendererTests
     public async Task RenderAsync_TextRunWithoutResolvedFont_ThrowsClearException()
     {
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(300, 300),
             new Spacing(),
             [
                 new LineBoxFragment
                 {
-                    Rect = new RectangleF(0, 0, 120, 20),
+                    Rect = new RectPt(0, 0, 120, 20),
                     BaselineY = 15f,
                     LineHeight = 20f,
                     Runs =
@@ -105,7 +105,7 @@ public class PdfRendererTests
                             "Missing",
                             RendererFontTestData.CreateFont(),
                             12f,
-                            new PointF(0, 15),
+                            new PointPt(0, 15),
                             60f,
                             9f,
                             3f)
@@ -116,12 +116,12 @@ public class PdfRendererTests
             new ColorRgba(255, 255, 255, 255)));
         var renderer = new PdfRenderer();
 
-        var exception = await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<FontResolutionException>(
             () => renderer.RenderAsync(layout, new PdfRenderSettings()));
 
         exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
-        exception.Data["DiagnosticsName"].ShouldBe("ResolvedFont");
-        exception.Data["RequestedFamily"].ShouldBe("Inter");
+        exception.RequestedFont.ShouldNotBeNull().Family.ShouldBe("Inter");
+        exception.Text.ShouldBe("Missing");
     }
 
     private static HtmlLayout CreateSimpleLayout()
@@ -136,7 +136,7 @@ public class PdfRendererTests
             new ColorRgba(255, 255, 255, 255)
         );
 
-        layout.Pages.Add(page);
+        layout.AddPage(page);
         return layout;
     }
 
@@ -148,14 +148,14 @@ public class PdfRendererTests
             "Hello, Html2x!",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             12f,
-            new PointF(0, 0),
+            new PointPt(0, 0),
             80f,
             10f,
             3f);
 
         var lineBox = new LineBoxFragment
         {
-            Rect = new RectangleF(0, 0, 400, 20),
+            Rect = new RectPt(0, 0, 400, 20),
             ZOrder = 1,
             Style = new VisualStyle(),
             BaselineY = 15f,
@@ -176,7 +176,7 @@ public class PdfRendererTests
             CreateLineFragment("Padding", 50, 130, 140, 18)
         ])
         {
-            Rect = new RectangleF(50, 100, 200, 120),
+            Rect = new RectPt(50, 100, 200, 120),
             Style = new VisualStyle()
         };
 
@@ -187,7 +187,7 @@ public class PdfRendererTests
             1,
             new ColorRgba(255, 255, 255, 255));
 
-        layout.Pages.Add(page);
+        layout.AddPage(page);
         return layout;
     }
 
@@ -197,14 +197,14 @@ public class PdfRendererTests
             text,
             RendererFontTestData.CreateFont(),
             12f,
-            new PointF(x, y),
+            new PointPt(x, y),
             width - 10f,
             9f,
             3f);
 
         return new LineBoxFragment
         {
-            Rect = new RectangleF(x, y, width, height),
+            Rect = new RectPt(x, y, width, height),
             ZOrder = 1,
             Style = new VisualStyle(),
             BaselineY = y + height - 6f,

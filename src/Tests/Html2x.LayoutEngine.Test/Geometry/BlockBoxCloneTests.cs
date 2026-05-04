@@ -1,7 +1,6 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
@@ -31,7 +30,7 @@ public sealed class BlockBoxCloneTests
         var source = createBlock(sourceIdentity);
         var style = new ComputedStyle { FontSizePt = 16f };
         var geometry = BoxGeometryFactory.FromBorderBox(
-            new RectangleF(10f, 20f, 120f, 40f),
+            new RectPt(10f, 20f, 120f, 40f),
             new Spacing(3f, 4f, 5f, 6f),
             new Spacing(1f, 2f, 3f, 4f),
             baseline: 34f,

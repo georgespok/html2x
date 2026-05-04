@@ -1,12 +1,13 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Drawing;
+using Html2x.Renderers.Pdf.Paint;
 using Shouldly;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public sealed class TableFragmentRenderingTests
 {
     [Fact]
@@ -20,24 +21,24 @@ public sealed class TableFragmentRenderingTests
                 new TableRowFragment([
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(20, 20, 80, 60),
+                        Rect = new RectPt(20, 20, 80, 60),
                         ColumnIndex = 0,
                         Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, cellBorder, BorderLineStyle.Solid)))
                     },
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(100, 20, 80, 60),
+                        Rect = new RectPt(100, 20, 80, 60),
                         ColumnIndex = 1,
                         Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, cellBorder, BorderLineStyle.Solid)))
                     }
                 ])
                 {
-                    Rect = new RectangleF(20, 20, 160, 60),
+                    Rect = new RectPt(20, 20, 160, 60),
                     RowIndex = 0
                 }
             ])
             {
-                Rect = new RectangleF(20, 20, 160, 80),
+                Rect = new RectPt(20, 20, 160, 80),
                 Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, tableBorder, BorderLineStyle.Solid))),
                 DerivedColumnCount = 2
             });
@@ -59,23 +60,23 @@ public sealed class TableFragmentRenderingTests
                 new TableRowFragment([
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(20, 20, 80, 80),
+                        Rect = new RectPt(20, 20, 80, 80),
                         ColumnIndex = 0,
                         Style = new VisualStyle(BackgroundColor: cellBackground)
                     },
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(100, 20, 80, 80),
+                        Rect = new RectPt(100, 20, 80, 80),
                         ColumnIndex = 1
                     }
                 ])
                 {
-                    Rect = new RectangleF(20, 20, 160, 80),
+                    Rect = new RectPt(20, 20, 160, 80),
                     RowIndex = 0
                 }
             ])
             {
-                Rect = new RectangleF(20, 20, 160, 80),
+                Rect = new RectPt(20, 20, 160, 80),
                 Style = new VisualStyle(BackgroundColor: tableBackground),
                 DerivedColumnCount = 2
             });
@@ -98,7 +99,7 @@ public sealed class TableFragmentRenderingTests
                 new TableRowFragment([
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(20, 20, 80, 80),
+                        Rect = new RectPt(20, 20, 80, 80),
                         ColumnIndex = 0,
                         Style = new VisualStyle(
                             BackgroundColor: cellBackground,
@@ -106,20 +107,20 @@ public sealed class TableFragmentRenderingTests
                     },
                     new TableCellFragment
                     {
-                        Rect = new RectangleF(100, 20, 80, 80),
+                        Rect = new RectPt(100, 20, 80, 80),
                         ColumnIndex = 1,
                         Style = new VisualStyle(
                             Borders: BorderEdges.Uniform(new BorderSide(2, borderColor, BorderLineStyle.Solid)))
                     }
                 ])
                 {
-                    Rect = new RectangleF(20, 20, 160, 80),
+                    Rect = new RectPt(20, 20, 160, 80),
                     RowIndex = 0,
                     Style = new VisualStyle(BackgroundColor: rowBackground)
                 }
             ])
             {
-                Rect = new RectangleF(20, 20, 160, 80),
+                Rect = new RectPt(20, 20, 160, 80),
                 DerivedColumnCount = 2
             });
 
@@ -144,10 +145,11 @@ public sealed class TableFragmentRenderingTests
     {
         var options = new PdfRenderSettings();
         using var fontCache = new SkiaFontCache(new TestFileDirectory(), new TestSkiaTypefaceFactory());
-        var drawer = new SkiaFragmentDrawer(options, fontCache);
+        var commands = new PaintOrderResolver().Resolve(page);
+        var drawer = new SkiaPaintCommandDrawer(options, fontCache);
 
         using var surface = SKSurface.Create(new SKImageInfo(200, 200, SKColorType.Bgra8888, SKAlphaType.Premul));
-        drawer.DrawPage(surface.Canvas, page);
+        drawer.Draw(surface.Canvas, commands);
 
         using var image = surface.Snapshot();
         var bitmap = new SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType);

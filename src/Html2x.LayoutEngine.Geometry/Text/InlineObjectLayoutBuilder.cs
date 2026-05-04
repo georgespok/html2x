@@ -3,7 +3,7 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Text;

@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Text;
 
@@ -31,7 +30,7 @@ internal static class RendererFontTestData
         string text,
         FontKey font,
         float sizePt,
-        PointF origin,
+        PointPt origin,
         float advanceWidth,
         float ascent,
         float descent)

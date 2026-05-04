@@ -1,11 +1,10 @@
-using System.Drawing;
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Text;
+namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 /// <summary>
 /// Verifies inline line and text item bounds calculations.
@@ -19,7 +18,7 @@ public sealed class InlineLineBoundsCalculatorTests
     {
         var rect = _calculator.CreateLineSlotRect([], contentLeft: 10f, contentWidth: 80f, topY: 20f, lineHeight: 12f);
 
-        rect.ShouldBe(new RectangleF(10f, 20f, 80f, 12f));
+        rect.ShouldBe(new RectPt(10f, 20f, 80f, 12f));
     }
 
     [Fact]
@@ -27,13 +26,13 @@ public sealed class InlineLineBoundsCalculatorTests
     {
         var items = new InlineLineItemLayout[]
         {
-            new InlineTextItemLayout(0, new RectangleF(15f, 20f, 20f, 12f), [], []),
-            new InlineObjectItemLayout(1, new RectangleF(50f, 20f, 10f, 12f), new BlockBox(BoxRole.Block))
+            new InlineTextItemLayout(0, new RectPt(15f, 20f, 20f, 12f), [], []),
+            new InlineObjectItemLayout(1, new RectPt(50f, 20f, 10f, 12f), new BlockBox(BoxRole.Block))
         };
 
         var rect = _calculator.CreateLineOccupiedRect(items, contentLeft: 10f, topY: 20f, lineHeight: 12f);
 
-        rect.ShouldBe(new RectangleF(15f, 20f, 45f, 12f));
+        rect.ShouldBe(new RectPt(15f, 20f, 45f, 12f));
     }
 
     [Fact]
@@ -47,7 +46,7 @@ public sealed class InlineLineBoundsCalculatorTests
 
         var rect = _calculator.CreateTextItemRect(runs, contentLeft: 10f, topY: 5f, lineHeight: 14f);
 
-        rect.ShouldBe(new RectangleF(20f, 5f, 45f, 14f));
+        rect.ShouldBe(new RectPt(20f, 5f, 45f, 14f));
     }
 
     private static TextRun CreateRun(float x, float width)
@@ -56,7 +55,7 @@ public sealed class InlineLineBoundsCalculatorTests
             "x",
             new FontKey("Arial", FontWeight.W400, FontStyle.Normal),
             12f,
-            new PointF(x, 10f),
+            new PointPt(x, 10f),
             width,
             9f,
             3f);

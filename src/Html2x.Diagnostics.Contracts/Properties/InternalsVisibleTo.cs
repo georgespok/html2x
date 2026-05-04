@@ -1,0 +1,4 @@
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Html2x.LayoutEngine")]
+[assembly: InternalsVisibleTo("Html2x.LayoutEngine.Style")]

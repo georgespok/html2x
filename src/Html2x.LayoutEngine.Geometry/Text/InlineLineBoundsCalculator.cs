@@ -1,6 +1,5 @@
-using System.Drawing;
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -9,7 +8,7 @@ namespace Html2x.LayoutEngine.Text;
 /// </summary>
 internal sealed class InlineLineBoundsCalculator
 {
-    public RectangleF CreateLineSlotRect(
+    public RectPt CreateLineSlotRect(
         IReadOnlyList<InlineLineItemLayout> items,
         float contentLeft,
         float contentWidth,
@@ -21,10 +20,10 @@ internal sealed class InlineLineBoundsCalculator
             ? Math.Max(0f, contentWidth)
             : occupiedRect.Width;
 
-        return new RectangleF(contentLeft, topY, slotWidth, lineHeight);
+        return new RectPt(contentLeft, topY, slotWidth, lineHeight);
     }
 
-    public RectangleF CreateLineOccupiedRect(
+    public RectPt CreateLineOccupiedRect(
         IReadOnlyList<InlineLineItemLayout> items,
         float contentLeft,
         float topY,
@@ -32,15 +31,15 @@ internal sealed class InlineLineBoundsCalculator
     {
         if (items.Count == 0)
         {
-            return new RectangleF(contentLeft, topY, 0f, lineHeight);
+            return new RectPt(contentLeft, topY, 0f, lineHeight);
         }
 
         var minX = items.Min(static item => item.Rect.X);
         var maxX = items.Max(static item => item.Rect.Right);
-        return new RectangleF(minX, topY, Math.Max(0f, maxX - minX), lineHeight);
+        return new RectPt(minX, topY, Math.Max(0f, maxX - minX), lineHeight);
     }
 
-    public RectangleF CreateTextItemRect(
+    public RectPt CreateTextItemRect(
         IReadOnlyList<TextRun> runs,
         float contentLeft,
         float topY,
@@ -48,6 +47,6 @@ internal sealed class InlineLineBoundsCalculator
     {
         var minX = runs.Min(static run => run.Origin.X);
         var maxX = runs.Max(static run => run.Origin.X + run.AdvanceWidth);
-        return new RectangleF(minX, topY, Math.Max(0f, maxX - minX), lineHeight);
+        return new RectPt(minX, topY, Math.Max(0f, maxX - minX), lineHeight);
     }
 }

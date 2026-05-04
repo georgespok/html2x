@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public sealed class StyleTree
+internal sealed class StyleTree
 {
     public StyleNode? Root { get; set; }
     public PageStyle Page { get; init; } = new();

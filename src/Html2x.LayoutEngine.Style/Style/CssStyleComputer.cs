@@ -3,21 +3,21 @@ using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Style;
 
 /// <summary>
 /// Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
 /// </summary>
-public sealed class CssStyleComputer
+internal sealed class CssStyleComputer
 {
     private readonly StyleTraversal _traversal;
     private readonly CssValueConverter _converter;
     private readonly DimensionStyleMapper _dimensionMapper;
     private readonly SpacingStyleMapper _spacingMapper;
     private readonly BorderStyleMapper _borderMapper;
-    
+
     public CssStyleComputer()
         : this(new StyleTraversal(), new CssValueConverter())
     {

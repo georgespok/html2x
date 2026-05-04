@@ -1,5 +1,5 @@
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Test.Builders;
@@ -33,15 +33,6 @@ internal sealed class BlockBoxBuilder
         };
         return this;
     }
-
-    // Compatibility wrappers
-    public BlockBoxBuilder AddInline(string textContent, ComputedStyle? style = null) => Inline(textContent, style);
-    public BlockBoxBuilder AddBlockChild(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null) =>
-        Block(x, y, width, height, fontSize, style);
-    public BlockBoxBuilder AddBlockChild(ComputedStyle? style = null) => Block(style);
-    public BlockBoxBuilder AddBlock(float x, float y, float width, float height, float fontSize = 12, ComputedStyle? style = null) =>
-        Block(x, y, width, height, fontSize, style);
-    public BlockBoxBuilder AddBlock(ComputedStyle? style = null) => Block(style);
 
     public BlockBoxBuilder WithMargin(float top = 0, float right = 0, float bottom = 0, float left = 0)
     {
@@ -89,7 +80,7 @@ internal sealed class BlockBoxBuilder
             Parent = _block
         };
         block.UsedGeometry = BoxGeometryFactory.FromBorderBox(
-            new System.Drawing.RectangleF(x, y, width, height),
+            new RectPt(x, y, width, height),
             resolvedStyle.Padding.Safe(),
             Spacing.FromBorderEdges(resolvedStyle.Borders).Safe(),
             markerOffset: block.MarkerOffset);

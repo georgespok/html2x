@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
 
 public readonly record struct Spacing(float Top, float Right, float Bottom, float Left)
@@ -13,12 +11,8 @@ public readonly record struct Spacing(float Top, float Right, float Bottom, floa
     public Spacing Safe()
         => new(SafeValue(Top), SafeValue(Right), SafeValue(Bottom), SafeValue(Left));
 
-    public RectangleF Inset(RectangleF rect)
-        => new(
-            rect.X + Left,
-            rect.Y + Top,
-            Math.Max(0f, rect.Width - Horizontal),
-            Math.Max(0f, rect.Height - Vertical));
+    public RectPt Inset(RectPt rect)
+        => rect.Inset(this);
 
     public static Spacing FromBorderEdges(BorderEdges? edges)
         => new(

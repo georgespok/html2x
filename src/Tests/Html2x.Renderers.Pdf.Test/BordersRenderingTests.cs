@@ -1,12 +1,13 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Drawing;
+using Html2x.Renderers.Pdf.Paint;
 using Shouldly;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public sealed class BordersRenderingTests
 {
     [Fact]
@@ -22,7 +23,7 @@ public sealed class BordersRenderingTests
 
         var block = new BlockFragment
         {
-            Rect = new RectangleF(20, 20, 160, 100),
+            Rect = new RectPt(20, 20, 160, 100),
             Style = new VisualStyle(Borders: borders)
         };
 
@@ -35,11 +36,12 @@ public sealed class BordersRenderingTests
 
         var options = new PdfRenderSettings();
         using var fontCache = new SkiaFontCache(new TestFileDirectory(), new TestSkiaTypefaceFactory());
-        var drawer = new SkiaFragmentDrawer(options, fontCache);
+        var commands = new PaintOrderResolver().Resolve(page);
+        var drawer = new SkiaPaintCommandDrawer(options, fontCache);
 
         using var surface = SKSurface.Create(new SKImageInfo(200, 200, SKColorType.Bgra8888, SKAlphaType.Premul));
         var canvas = surface.Canvas;
-        drawer.DrawPage(canvas, page);
+        drawer.Draw(canvas, commands);
 
         using var image = surface.Snapshot();
         using var bitmap = new SKBitmap(image.Width, image.Height, image.ColorType, image.AlphaType);

@@ -10,6 +10,7 @@ is for developers changing the codebase, not a public API contract.
 | Public Facade | `Html2x` | Consumer configuration consumed by the converter facade | Option contracts and mapping to stage-owned settings | `HtmlConverterOptions`, page options, resource options, CSS options, font options, diagnostics options, and facade mapping | Layout algorithms, renderer algorithms, runtime adapters, documents, fragments, layout contracts, geometry guards, diagnostics runtime, internal stage request models |
 | Render Model | `Html2x.RenderModel` | None | Pure render facts | Units, style value facts, font request facts, resolved font facts, documents, and fragments | Runtime adapters, parser traversal, CSS computation, mutable boxes, layout algorithms, pagination algorithms, renderer state |
 | Contracts | `Html2x.LayoutEngine.Contracts` | None | Internal pipeline handoff contracts | Immutable contract facts and validation helpers | Parser traversal, CSS computation, mutable boxes, layout algorithms, fragments, pagination pages, renderer state |
+| Resources | `Html2x.Resources` | Image source, base directory, and byte size limit | Loaded image bytes, load status, and intrinsic image size | Scoped path resolution, data URI parsing, byte limit checks, and intrinsic image dimension decoding | Layout geometry, PDF drawing, diagnostics collection, public converter options |
 | Text | `Html2x.Text` | Font requests, text measurement requests, file directory access, and diagnostics sink | Text measurement contracts and font resolution contracts | Text measurement seams, Skia-backed text measurement, font path resolution, font diagnostics, directory font matching, and typeface factory seams | Parser traversal, CSS computation, mutable boxes, layout engine implementation projects, fragment projection, pagination pages, renderer state |
 | Style | `Html2x.LayoutEngine.Style` | Raw HTML, `StyleBuildSettings`, optional diagnostics sink | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, CSS dimension request and resolution facts, style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
 | Layout Geometry | `Html2x.LayoutEngine.Geometry` | Contract `StyleTree`, layout geometry request, and image metadata resolver | Contract `PublishedLayoutTree` and internal box geometry | Box roles, text runs with resolved font facts, list markers, unsupported mode diagnostics, image metadata resolution, image layout facts, table placements, `UsedGeometry` | CSS parsing, DOM traversal, parser objects, fragments, pagination pages, renderer state |
@@ -43,6 +44,10 @@ base directory and image size limit have one public owner under
 `HtmlConverterOptions.Resources`. Font path has one public owner under
 `HtmlConverterOptions.Fonts`.
 
+When resource base directory is omitted, the facade resolves it to
+`AppContext.BaseDirectory`. Runtime stages must not use the process current
+directory as an implicit resource source.
+
 Html2x must not pass public option objects into style, layout, pagination, or
 PDF rendering. Internal stages consume `StyleBuildSettings`,
 `LayoutBuildSettings`, `LayoutGeometryRequest`, `PaginationOptions`, and
@@ -58,6 +63,25 @@ not a public consumer API surface. It carries the parser-free style input,
 layout geometry request, image metadata contracts, shared source identity
 records, final used geometry value, and published layout facts that later
 internal stages consume.
+
+Contract namespaces mirror the ownership folders:
+
+- `Html2x.LayoutEngine.Contracts.Style` owns `StyleTree`, `ComputedStyle`,
+  `HtmlCssConstants`, style source identity, content identity, and style
+  content facts.
+- `Html2x.LayoutEngine.Contracts.Geometry` owns `LayoutGeometryRequest`,
+  `UsedGeometry`, `PageContentArea`, and geometry source identity facts.
+- `Html2x.LayoutEngine.Contracts.Geometry.Images` owns
+  `IImageMetadataResolver`, `ImageMetadataResult`, and
+  `ImageMetadataStatus`.
+- `Html2x.LayoutEngine.Contracts.Published` owns `PublishedLayoutTree` and
+  the published block, inline, image, rule, table, display, and page facts.
+
+Contract code must not use the deferred `Html2x.LayoutEngine.Models`,
+`Html2x.LayoutEngine.Geometry.Published`, or
+`Html2x.LayoutEngine.Geometry.Images` namespaces. Mutable box types are
+geometry implementation state under `Html2x.LayoutEngine.Geometry.Models`,
+not contract facts.
 
 Contracts may reference `Html2x.RenderModel` for pure value, document, and
 fragment facts. It must not reference AngleSharp, AngleSharp.Css,
@@ -105,9 +129,8 @@ text infrastructure.
 The style stage owns AngleSharp and CSS computation. AngleSharp and
 AngleSharp.Css belong inside `Html2x.LayoutEngine.Style`.
 
-The style stage receives raw HTML and `StyleBuildSettings` through
-`IStyleTreeBuilder` or `StyleTreeBuilder`, then returns a parser-free contract
-`StyleTree`.
+The style stage receives raw HTML and internal `StyleBuildSettings` through
+the internal style module seam, then returns a parser-free contract `StyleTree`.
 
 The `StyleTree` handoff contract is:
 
@@ -150,14 +173,23 @@ Geometry publishes contract `PublishedLayoutTree` instead of exposing mutable
 box internals to later stages. Mutable box types remain internal implementation
 details and compatibility surfaces for focused tests.
 
+Block kind dispatch and publication orchestration are owned by
+`BlockLayoutEngine`. Normal block-flow sequencing is owned by
+`BlockFlowLayoutExecutor`, and non-mutating stacked block measurement is owned
+by `BlockFlowMeasurementExecutor` so layout and measurement share block-flow
+policy. Image block placement, table placement and diagnostics, published
+layout caching, inline publishing, and shared compatibility-state writes belong
+in focused internal modules rather than accumulating in the orchestrator.
+
 Geometry measures normal inline text through `Html2x.Text` and publishes the
 resulting resolved font facts on each normal pipeline `TextRun`. Fragment
 projection and rendering must treat those resolved facts as input.
 
-Geometry owns image metadata resolution as a layout input. It consumes
+Geometry owns image metadata consumption as a layout input. It consumes
 `IImageMetadataResolver` through `LayoutGeometryRequest` and uses only status
-and intrinsic size. Rendering separately loads image bytes through renderer
-infrastructure.
+and intrinsic size. `Html2x.Resources` owns data URI parsing, path scope, byte
+limits, and intrinsic dimension decoding. Rendering uses that same module for
+image bytes and does not duplicate resource policy.
 
 Published identity keeps two concepts separate:
 
@@ -168,7 +200,8 @@ Published identity keeps two concepts separate:
 
 Html2x.LayoutEngine.Fragments owns published layout traversal, fragment ID
 allocation, style-to-`VisualStyle` conversion, and specialized image, rule, and
-table fragment projection.
+table fragment projection. Its implementation types are internal composition
+surface, not consumer API surface.
 
 The fragment stage consumes `PublishedLayoutTree` from Contracts. It copies
 geometry and published text run facts forward into render model fragments and
@@ -178,13 +211,15 @@ pagination pages, or renderer state.
 
 Renderers do not reference fragment projection. They consume `HtmlLayout` and
 renderer-facing fragments after composition and pagination have finished.
+`HtmlLayout.Pages` is a read-only page list at the rendering seam.
 
 ## Pagination Stage
 
-Html2x.LayoutEngine.Pagination owns the page placement module. Its public entry
-point is `LayoutPaginator`, not `BlockPaginator`. `LayoutPaginator` consumes
-already measured render model block fragments and `PaginationOptions`, then
-returns `PaginationResult` with the final `HtmlLayout` plus stable audit facts.
+Html2x.LayoutEngine.Pagination owns the page placement module. Its internal
+entry point is `LayoutPaginator`, not `BlockPaginator`. `LayoutPaginator`
+consumes already measured render model block fragments and `PaginationOptions`,
+then returns `PaginationResult` with the final `HtmlLayout` plus stable audit
+facts.
 
 Pagination may clone and translate render model fragment subtrees to produce
 page-local coordinates. It may assemble `LayoutPage` values and emit
@@ -230,16 +265,17 @@ Paint owns drawing only.
 ## Current Compatibility Surfaces
 
 Some older mutable surfaces still exist and should be treated as compatibility
-mirrors:
+state:
 
-- `BlockBox.X`, `Y`, `Width`, `Height`, and `MarkerOffset` mirror
-  `UsedGeometry`.
-- Table row and cell scalar fields mirror applied table geometry.
-- `BlockBox.InlineLayout` is layout-stage output. Measurement paths must
-  preserve prior state.
+- `BlockBox.Margin`, `Padding`, `TextAlign`, `MarkerOffset`, and
+  `InlineLayout` are mutable layout-stage facts.
+- `BlockBox.UsedGeometry` is written by layout and read while publishing.
+- Table row and cell scalar metadata is written for fragment projection.
+- `InlineBox.Width`, `Height`, `BaselineOffset`, and `Fragment` are inline
+  layout facts.
 
 New code should consume the owned stage output rather than treating these
-mirrors as independent state.
+mutable fields as independent state.
 
 Display roles are not a separate tree. They are carried as `BoxRole` during box
 construction and copied into published layout or fragment metadata when later

@@ -22,6 +22,8 @@ var result = await converter.ToPdfAsync(
 await File.WriteAllBytesAsync("output.pdf", result.PdfBytes);
 ```
 
+`ToPdfAsync` also accepts a `CancellationToken`.
+
 ## `HtmlConverterOptions`
 
 `HtmlConverterOptions` groups:
@@ -70,6 +72,10 @@ var options = new HtmlConverterOptions
 };
 ```
 
+If `Resources.BaseDirectory` is not set, the converter uses
+`AppContext.BaseDirectory`. Set it explicitly when HTML references relative
+image paths.
+
 ## Diagnostics
 
 ```csharp
@@ -87,9 +93,33 @@ var report = result.DiagnosticsReport;
 Use `Html2x.Diagnostics.DiagnosticsReportSerializer.ToJson(report)` to export
 diagnostics JSON.
 
+Raw HTML is omitted from diagnostics by default. To include it for local
+troubleshooting, set `DiagnosticsOptions.IncludeRawHtml = true`. The captured
+payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
+
 ## Result
 
 `Html2PdfResult` contains:
 
 - `PdfBytes`: rendered PDF bytes.
 - `DiagnosticsReport`: optional diagnostics report when enabled.
+
+`HtmlLayout.Pages` is read-only for consumers and renderers. Code that manually
+builds an `HtmlLayout` for advanced renderer usage should add pages through
+`HtmlLayout.AddPage` or the `HtmlLayout(IEnumerable<LayoutPage>)` constructor.
+
+## Public Surface
+
+The supported consumer facade is `HtmlConverter`, `HtmlConverterOptions`, and
+`Html2PdfResult`. `Html2x.RenderModel` remains public for direct renderer input
+and custom renderer authors.
+
+`Html2x.LayoutEngine.Contracts` is an internal pipeline handoff assembly. Style
+trees, geometry requests, image metadata resolver contracts, published layout
+facts, and diagnostic snapshot mappers are not consumer extension points.
+
+Text runtime seams in `Html2x.Text` are intentionally public for advanced
+manual render model construction and tests: `IFontSource`, `FontPathSource`,
+`DiagnosticsFontSource`, `ITextMeasurer`, `SkiaTextMeasurer`,
+`TextMeasurement`, and `FontResolutionException`. Public constructors keep
+filesystem and Skia factory details internal.

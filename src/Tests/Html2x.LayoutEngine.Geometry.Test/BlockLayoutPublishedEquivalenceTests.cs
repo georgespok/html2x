@@ -2,13 +2,13 @@ using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test;
+namespace Html2x.LayoutEngine.Geometry.Test;
 
 public sealed class BlockLayoutPublishedEquivalenceTests
 {
@@ -55,7 +55,7 @@ public sealed class BlockLayoutPublishedEquivalenceTests
         image.AuthoredSizePx.Width.GetValueOrDefault().ShouldBeGreaterThan(0d);
         image.AuthoredSizePx.Height.HasValue.ShouldBeTrue();
         image.AuthoredSizePx.Height.GetValueOrDefault().ShouldBeGreaterThan(0d);
-        image.UsedGeometry.ShouldNotBeNull().BorderBoxRect.Size.ShouldBe(new System.Drawing.SizeF(30f, 12f));
+        image.UsedGeometry.ShouldNotBeNull().BorderBoxRect.Size.ShouldBe(new SizePt(30f, 12f));
     }
 
     [Fact]

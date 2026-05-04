@@ -6,6 +6,7 @@ using Xunit.Abstractions;
 
 namespace Html2x.Test.Scenarios;
 
+[Trait("Category", "Integration")]
 public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     private static HtmlConverterOptions Options => new()

@@ -1,11 +1,11 @@
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
 /// <summary>
 /// Stores the computed style facts consumed by box construction, layout, diagnostics, and fragment projection.
 /// </summary>
-public sealed record ComputedStyle
+internal sealed record ComputedStyle
 {
     public string FontFamily { get; init; } = HtmlCssConstants.Defaults.FontFamily;
     public float FontSizePt { get; init; } = 12;

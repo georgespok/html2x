@@ -1,6 +1,6 @@
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Test.Builders;
 using Shouldly;
 using CoreFragment = Html2x.RenderModel.Fragment;

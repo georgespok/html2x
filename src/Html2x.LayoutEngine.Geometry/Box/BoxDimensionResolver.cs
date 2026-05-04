@@ -1,6 +1,6 @@
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Box;
 

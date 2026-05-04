@@ -19,7 +19,9 @@ PdfRender stage/started
 PdfRender stage/succeeded with render fields
 ```
 
-If layout fails, `PdfRender` is skipped and the diagnostics report is attached to the thrown exception as `DiagnosticsReport` when available.
+If layout fails, `PdfRender` is skipped and the diagnostics report is attached to the thrown exception as `DiagnosticsReport` when available. If cancellation is requested, the active stage emits `stage/cancelled` and downstream stages are skipped when they have not started.
+
+The layout start record includes `htmlLength`. Raw HTML is omitted by default. Consumers can opt in through `DiagnosticsOptions.IncludeRawHtml`; `DiagnosticsOptions.MaxRawHtmlLength` caps the captured value.
 
 ## Ownership
 
@@ -39,6 +41,7 @@ Pipeline stages own the events that describe their decisions:
 - Layout owns geometry, formatting, table, pagination, image resolution, and unsupported layout mode diagnostics.
 - The public facade owns conversion lifecycle and converter-level font path failures.
 - The PDF renderer owns renderer summaries and renderer-local failures.
+- Shared stage lifecycle event construction belongs in `Html2x.Diagnostics.Contracts`.
 
 ## Severity
 

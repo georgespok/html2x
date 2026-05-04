@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\\Html2x.Diagnostics.Contracts\\Html2x.Diagnostics.Contracts.csproj" />
+    <ProjectReference Include="..\Html2x.Resources\Html2x.Resources.csproj" />
     <ProjectReference Include="..\\Html2x.Text\\Html2x.Text.csproj" />
     <ProjectReference Include="..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>

@@ -1,6 +1,6 @@
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.Assertions;
 using Html2x.LayoutEngine.Test.Builders;
 

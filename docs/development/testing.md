@@ -12,7 +12,7 @@ fragments, diagnostics, PDF validity, extracted text, and public API results.
 | `Html2x.LayoutEngine.Test` | Pipeline integration, composition behavior, diagnostics snapshots, and architecture guardrails. |
 | `Html2x.LayoutEngine.Geometry.Test` | Geometry algorithms, published layout output, table layout, image layout, block and inline geometry, and parser-free `StyleTree` inputs. |
 | `Html2x.LayoutEngine.Fragments.Test` | Fragment projection from `PublishedLayoutTree` to renderer-facing `FragmentTree` models. |
-| `Html2x.LayoutEngine.Pagination.Test` | Focused pagination behavior through `LayoutPaginator`, translated fragment clone coverage, pagination diagnostics, and audit facts. |
+| `Html2x.LayoutEngine.Pagination.Test` | Focused pagination behavior through the internal `LayoutPaginator`, translated fragment clone coverage, pagination diagnostics, and audit facts. |
 | `Html2x.Renderers.Pdf.Test` | PDF renderer behavior, drawing helpers, fonts, images, borders, table rendering, and PDF validation helpers. |
 | `Html2x.Test` | End-to-end `HtmlConverter` scenarios and diagnostics behavior. |
 | `Html2x.TestConsole.Test` | Manual harness parsing and diagnostics envelope behavior. |
@@ -56,7 +56,7 @@ Fragment projection tests must not construct mutable boxes or reference
 SkiaSharp. Renderer tests remain renderer-owned.
 
 Pagination tests belong in `Html2x.LayoutEngine.Pagination.Test` when they
-exercise `LayoutPaginator`, page placement, cloned translated fragments,
+exercise the internal `LayoutPaginator`, page placement, cloned translated fragments,
 pagination diagnostics, `PaginationResult`, `PaginationPageAudit`, or
 `PaginationPlacementAudit`. Pagination tests should build render model
 fragments directly. They must not reference style, geometry implementation,
@@ -74,6 +74,29 @@ LayoutEngine.Test owns orchestration, diagnostics integration, and
 architecture guardrails. It may inspect contract handoff facts, but it must not
 construct parser providers or mutable geometry internals outside focused helper
 coverage.
+
+## Architecture Test Harness
+
+Architecture tests in `Html2x.LayoutEngine.Test` should use the repo-owned
+harness under `Architecture/` and pick the cheapest reliable rule level:
+
+- Use `ArchitectureProject` and `ArchitectureSolution` for solution membership,
+  project references, package references, and target framework rules.
+- Use `CSharpSourceFile` and `CSharpSourceSet` for namespace declarations, type
+  visibility, constructor shape, public members, string literal ownership, and
+  syntax-level dependency rules.
+- Use `ArchitectureSemanticProject` for forbidden namespace references,
+  forbidden type references, and public surface checks that need compile-time
+  symbols.
+- Use behavior tests for converter, resource, diagnostics, geometry,
+  pagination, fragment, and renderer outcomes.
+- Use `ArchitectureDocument` only for focused documentation topic checks.
+
+Do not add broad source text assertions such as `ShouldContain("...")` or
+`Contains("...")` when project graph, syntax, semantic, or behavior checks can
+express the same intent. A source text check is acceptable only when it is a
+focused docs topic or a narrow string literal ownership rule exposed through the
+harness.
 
 Text and font tests belong to the stage that owns the behavior:
 
@@ -98,6 +121,9 @@ Text and font tests belong to the stage that owns the behavior:
   permutations.
 - Keep arrange, act, and assert blocks compact.
 - Avoid binary PDF equality.
+- Add `[Trait("Category", "Integration")]` to end-to-end converter tests and
+  PDF renderer tests that use Skia, PdfPig, file IO, or full rendering
+  pipelines. Focused algorithm tests should stay untagged.
 
 ## Identity-Aware Fixtures
 
@@ -192,4 +218,5 @@ dotnet test src\Tests\Html2x.LayoutEngine.Pagination.Test\Html2x.LayoutEngine.Pa
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build
 dotnet test src\Html2x.sln -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build --filter FullyQualifiedName~Architecture
+dotnet test src\Html2x.sln -c Release --no-build --filter Category=Integration
 ```

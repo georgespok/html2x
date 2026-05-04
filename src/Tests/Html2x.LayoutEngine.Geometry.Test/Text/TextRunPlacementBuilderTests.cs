@@ -1,10 +1,10 @@
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Text;
+namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 public sealed class TextRunPlacementBuilderTests
 {

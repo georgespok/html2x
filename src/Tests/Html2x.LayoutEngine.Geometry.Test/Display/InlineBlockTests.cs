@@ -10,7 +10,7 @@ using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragment;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Display;
+namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
 public class InlineBlockTests
 {

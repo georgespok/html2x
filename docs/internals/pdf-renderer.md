@@ -12,7 +12,7 @@
 
 ## Boundary
 
-The PDF renderer consumes render model fragments and page models as read-only facts. It must not reach back into DOM, style tree, box tree objects, fragment projection, layout implementation packages, or font source adapters.
+The PDF renderer consumes render model fragments and page models as read-only facts. `HtmlLayout.Pages` is exposed as a read-only list at this seam. It must not reach back into DOM, style tree, box tree objects, fragment projection, layout implementation packages, or font source adapters.
 
 The renderer consumes renderer-owned `PdfRenderSettings` and does not reference
 public converter options. It references `Html2x.Text` only for internal

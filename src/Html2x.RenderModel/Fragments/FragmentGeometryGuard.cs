@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace Html2x.RenderModel;
 /// </summary>
 internal static class FragmentGeometryGuard
 {
-    public static void GuardRect(string name, RectangleF rect)
+    public static void GuardRect(string name, RectPt rect)
     {
         RequireFinite($"{name}.X", rect.X);
         RequireFinite($"{name}.Y", rect.Y);
@@ -15,7 +13,7 @@ internal static class FragmentGeometryGuard
         RequireNonNegativeFinite($"{name}.Height", rect.Height);
     }
 
-    public static PointF RequirePoint(string name, PointF point)
+    public static PointPt RequirePoint(string name, PointPt point)
     {
         RequireFinite($"{name}.X", point.X);
         RequireFinite($"{name}.Y", point.Y);

@@ -1,13 +1,13 @@
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Text;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Text;
+namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 public class TextLayoutEngineTests
 {
@@ -35,7 +35,7 @@ public class TextLayoutEngineTests
     }
 
     [Fact]
-    public void Layout_WrapsAtWhitespaceWhenPossible()
+    public void Layout_TextWithSpaces_WrapsAtWhitespace()
     {
         var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
         var input = BuildInput(80f, 12f, Run(1, "alpha beta gamma"));

@@ -1,8 +1,11 @@
-namespace Html2x.LayoutEngine.Geometry.Images;
+namespace Html2x.LayoutEngine.Contracts.Geometry.Images;
 
-public enum ImageMetadataStatus
+internal enum ImageMetadataStatus
 {
     Ok,
     Missing,
-    Oversize
+    Oversize,
+    InvalidDataUri,
+    DecodeFailed,
+    OutOfScope
 }

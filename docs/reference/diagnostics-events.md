@@ -90,7 +90,16 @@ block-boundary only.
 
 - `image/render`
 
-Missing and oversized images are warnings. Successful image rendering is informational.
+Recoverable image failures are warnings. Successful image rendering is informational.
+
+Known status values:
+
+- `Ok`
+- `Missing`
+- `Oversize`
+- `InvalidDataUri`
+- `DecodeFailed`
+- `OutOfScope`
 
 ## Fonts
 

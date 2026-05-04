@@ -4,6 +4,7 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Style;
+using Html2x.Resources;
 using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.Text;
@@ -12,7 +13,10 @@ namespace Html2x;
 
 public class HtmlConverter
 {
-    public async Task<Html2PdfResult> ToPdfAsync(string html, HtmlConverterOptions options)
+    public async Task<Html2PdfResult> ToPdfAsync(
+        string html,
+        HtmlConverterOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
         if (html is null)
         {
@@ -30,6 +34,9 @@ public class HtmlConverter
             diagnosticsSink = collector;
         }
 
+        ValidateOptions(options);
+        var baseDirectory = ResolveBaseDirectory(options);
+
         var fontPath = options.Fonts.FontPath;
         if (string.IsNullOrWhiteSpace(fontPath))
         {
@@ -43,7 +50,7 @@ public class HtmlConverter
         {
             fontSource = new FontPathSource(fontPath);
         }
-        catch (InvalidOperationException exception) when (IsFontPathException(exception))
+        catch (FontResolutionException)
         {
             throw CreateFontPathException(
                 $"HtmlConverterOptions.Fonts.FontPath '{fontPath}' does not exist.",
@@ -55,30 +62,45 @@ public class HtmlConverter
             fontSource = new DiagnosticsFontSource(fontSource, diagnosticsSink);
         }
 
-        var measurer = new SkiaTextMeasurer(fontSource);
+        using var measurer = new SkiaTextMeasurer(fontSource);
         var imageMetadataResolver = new FileImageProvider();
 
-        EmitStageStarted(
+        DiagnosticStageEmitter.Started(
             diagnosticsSink,
             "LayoutBuild",
-            DiagnosticFields.Create(DiagnosticFields.Field("html", html.Trim())));
+            CreateLayoutStartFields(html, options.Diagnostics));
 
         var layoutBuilder = new LayoutBuilder(measurer, imageMetadataResolver);
 
         HtmlLayout layout;
         try
         {
-            layout = await layoutBuilder.BuildAsync(html, ToLayoutBuildSettings(options), diagnosticsSink);
+            cancellationToken.ThrowIfCancellationRequested();
+            layout = await layoutBuilder.BuildAsync(
+                html,
+                ToLayoutBuildSettings(options, baseDirectory),
+                diagnosticsSink,
+                cancellationToken);
+        }
+        catch (OperationCanceledException exception)
+        {
+            DiagnosticStageEmitter.Cancelled(diagnosticsSink, "LayoutBuild", "LayoutBuild canceled.");
+            DiagnosticStageEmitter.Skipped(
+                diagnosticsSink,
+                "PdfRender",
+                "Skipped because LayoutBuild was canceled.");
+            AttachDiagnosticsReport(exception, collector);
+            throw;
         }
         catch (Exception exception)
         {
-            EmitStageFailed(diagnosticsSink, "LayoutBuild", exception.Message);
-            EmitStageSkipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
+            DiagnosticStageEmitter.Failed(diagnosticsSink, "LayoutBuild", exception.Message);
+            DiagnosticStageEmitter.Skipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
-        EmitStageSucceeded(
+        DiagnosticStageEmitter.Succeeded(
             diagnosticsSink,
             "LayoutBuild",
             DiagnosticFields.Create(
@@ -86,21 +108,31 @@ public class HtmlConverter
 
         var renderer = new PdfRenderer();
 
-        EmitStageStarted(diagnosticsSink, "PdfRender");
+        DiagnosticStageEmitter.Started(diagnosticsSink, "PdfRender");
 
         byte[] pdfBytes;
         try
         {
-            pdfBytes = await renderer.RenderAsync(layout, ToPdfRenderSettings(options), diagnosticsSink: diagnosticsSink);
+            pdfBytes = await renderer.RenderAsync(
+                layout,
+                ToPdfRenderSettings(options, baseDirectory),
+                diagnosticsSink: diagnosticsSink,
+                cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException exception)
+        {
+            DiagnosticStageEmitter.Cancelled(diagnosticsSink, "PdfRender", "PdfRender canceled.");
+            AttachDiagnosticsReport(exception, collector);
+            throw;
         }
         catch (Exception exception)
         {
-            EmitStageFailed(diagnosticsSink, "PdfRender", exception.Message);
+            DiagnosticStageEmitter.Failed(diagnosticsSink, "PdfRender", exception.Message);
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
-        EmitStageSucceeded(
+        DiagnosticStageEmitter.Succeeded(
             diagnosticsSink,
             "PdfRender",
             DiagnosticFields.Create(
@@ -115,14 +147,14 @@ public class HtmlConverter
         };
     }
 
-    private static LayoutBuildSettings ToLayoutBuildSettings(HtmlConverterOptions options)
+    private static LayoutBuildSettings ToLayoutBuildSettings(HtmlConverterOptions options, string baseDirectory)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         return new LayoutBuildSettings
         {
             PageSize = options.Page.Size,
-            HtmlDirectory = options.Resources.BaseDirectory,
+            HtmlDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
             Style = new StyleBuildSettings
             {
@@ -132,14 +164,77 @@ public class HtmlConverter
         };
     }
 
-    private static PdfRenderSettings ToPdfRenderSettings(HtmlConverterOptions options)
+    private static PdfRenderSettings ToPdfRenderSettings(HtmlConverterOptions options, string baseDirectory)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         return new PdfRenderSettings
         {
-            HtmlDirectory = options.Resources.BaseDirectory
+            HtmlDirectory = baseDirectory,
+            MaxImageSizeBytes = options.Resources.MaxImageSizeBytes
         };
+    }
+
+    private static void ValidateOptions(HtmlConverterOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options.Page);
+        ArgumentNullException.ThrowIfNull(options.Resources);
+        ArgumentNullException.ThrowIfNull(options.Css);
+        ArgumentNullException.ThrowIfNull(options.Fonts);
+        ArgumentNullException.ThrowIfNull(options.Diagnostics);
+
+        if (options.Resources.MaxImageSizeBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(ResourceOptions.MaxImageSizeBytes),
+                "HtmlConverterOptions.Resources.MaxImageSizeBytes must be greater than zero.");
+        }
+
+        if (options.Diagnostics.MaxRawHtmlLength <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(DiagnosticsOptions.MaxRawHtmlLength),
+                "HtmlConverterOptions.Diagnostics.MaxRawHtmlLength must be greater than zero.");
+        }
+    }
+
+    private static string ResolveBaseDirectory(HtmlConverterOptions options)
+    {
+        var configuredBaseDirectory = options.Resources.BaseDirectory;
+        var resolvedBaseDirectory = ImageResourceLoader.ResolveBaseDirectory(configuredBaseDirectory);
+        if (!string.IsNullOrWhiteSpace(configuredBaseDirectory) &&
+            !Directory.Exists(resolvedBaseDirectory))
+        {
+            throw new DirectoryNotFoundException(
+                $"HtmlConverterOptions.Resources.BaseDirectory '{configuredBaseDirectory}' does not exist.");
+        }
+
+        return resolvedBaseDirectory;
+    }
+
+    private static DiagnosticFields CreateLayoutStartFields(
+        string html,
+        DiagnosticsOptions diagnosticsOptions)
+    {
+        var fields = new List<KeyValuePair<string, DiagnosticValue?>>
+        {
+            DiagnosticFields.Field("htmlLength", html.Length)
+        };
+
+        if (diagnosticsOptions.IncludeRawHtml)
+        {
+            var rawHtml = html.Trim();
+            fields.Add(DiagnosticFields.Field(
+                "html",
+                rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength
+                    ? rawHtml[..diagnosticsOptions.MaxRawHtmlLength]
+                    : rawHtml));
+            fields.Add(DiagnosticFields.Field(
+                "htmlTruncated",
+                rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength));
+        }
+
+        return new DiagnosticFields(fields);
     }
 
     private static InvalidOperationException CreateFontPathException(
@@ -147,9 +242,14 @@ public class HtmlConverter
         DiagnosticsCollector? collector)
     {
         IDiagnosticsSink? diagnosticsSink = collector;
-        EmitDiagnosticsRecord(diagnosticsSink, "Configuration", "font-path/error", DiagnosticSeverity.Error, message);
-        EmitStageFailed(diagnosticsSink, "LayoutBuild", message);
-        EmitStageSkipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
+        DiagnosticStageEmitter.Emit(
+            diagnosticsSink,
+            "Configuration",
+            "font-path/error",
+            DiagnosticSeverity.Error,
+            message);
+        DiagnosticStageEmitter.Failed(diagnosticsSink, "LayoutBuild", message);
+        DiagnosticStageEmitter.Skipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
 
         var exception = new InvalidOperationException(message);
         AttachDiagnosticsReport(exception, collector);
@@ -171,44 +271,5 @@ public class HtmlConverter
     {
         var endTime = DateTimeOffset.UtcNow;
         return collector?.ToReport(endTime);
-    }
-
-    private static bool IsFontPathException(Exception exception) =>
-        exception.Data["DiagnosticsName"] as string == "FontPath";
-
-    private static void EmitStageStarted(
-        IDiagnosticsSink? diagnosticsSink,
-        string stage,
-        DiagnosticFields? fields = null) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/started", DiagnosticSeverity.Info, null, fields);
-
-    private static void EmitStageSucceeded(
-        IDiagnosticsSink? diagnosticsSink,
-        string stage,
-        DiagnosticFields? fields = null) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/succeeded", DiagnosticSeverity.Info, null, fields);
-
-    private static void EmitStageFailed(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/failed", DiagnosticSeverity.Error, message);
-
-    private static void EmitStageSkipped(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/skipped", DiagnosticSeverity.Info, message);
-
-    private static void EmitDiagnosticsRecord(
-        IDiagnosticsSink? diagnosticsSink,
-        string stage,
-        string name,
-        DiagnosticSeverity severity,
-        string? message,
-        DiagnosticFields? fields = null)
-    {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: stage,
-            Name: name,
-            Severity: severity,
-            Message: message,
-            Context: null,
-            Fields: fields ?? DiagnosticFields.Empty,
-            Timestamp: DateTimeOffset.UtcNow));
     }
 }

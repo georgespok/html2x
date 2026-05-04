@@ -1,11 +1,12 @@
 using Html2x.RenderModel;
+using Html2x.LayoutEngine.Contracts.Style;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Style;
 
 /// <summary>
 /// Accumulates parsed CSS values before creating an immutable computed style snapshot.
 /// </summary>
-public sealed class ComputedStyleBuilder
+internal sealed class ComputedStyleBuilder
 {
     public string FontFamily { get; set; } = HtmlCssConstants.Defaults.FontFamily;
     public float FontSizePt { get; set; } = 12;
@@ -68,7 +69,7 @@ public sealed class ComputedStyleBuilder
     /// <summary>
     /// Accumulates per-side border declarations before normalizing them into border edge values.
     /// </summary>
-    public sealed class BorderBuilder
+    internal sealed class BorderBuilder
     {
         public float? TopWidth { get; set; }
         public BorderLineStyle TopStyle { get; set; }

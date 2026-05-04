@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Geometry.Models;
 
 /// <summary>
 /// Represents an HTML horizontal rule element that lays out as a block and projects to a rule fragment.

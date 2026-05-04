@@ -6,7 +6,7 @@ using Html2x.LayoutEngine.Style;
 
 namespace Html2x.LayoutEngine.Dom;
 
-public sealed class AngleSharpDomProvider(IConfiguration config)
+internal sealed class AngleSharpDomProvider(IConfiguration config)
 {
     public async Task<IDocument> LoadAsync(string html, StyleBuildSettings settings)
     {

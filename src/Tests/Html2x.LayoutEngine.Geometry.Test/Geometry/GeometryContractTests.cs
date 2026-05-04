@@ -1,18 +1,17 @@
-using System.Drawing;
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Geometry;
+namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
 /// <summary>
 /// Verifies layout geometry creation, projection, and measurement contracts.
@@ -44,7 +43,7 @@ public sealed class GeometryContractTests
 
         var laidOutTable = tree.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
         laidOutTable.UsedGeometry.ShouldNotBeNull();
-        laidOutTable.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectangleF(10f, 0f, 40f, 0f));
+        laidOutTable.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectPt(10f, 0f, 40f, 0f));
     }
 
     [Fact]
@@ -58,8 +57,8 @@ public sealed class GeometryContractTests
             new Spacing(4f, 4f, 4f, 4f),
             new Spacing(3f, 3f, 3f, 3f));
 
-        geometry.BorderBoxRect.ShouldBe(new RectangleF(1f, 2f, 10f, 6f));
-        geometry.ContentBoxRect.ShouldBe(new RectangleF(8f, 9f, 0f, 0f));
+        geometry.BorderBoxRect.ShouldBe(new RectPt(1f, 2f, 10f, 6f));
+        geometry.ContentBoxRect.ShouldBe(new RectPt(8f, 9f, 0f, 0f));
     }
 
     [Fact]
@@ -201,7 +200,7 @@ public sealed class GeometryContractTests
     }
 
     [Fact]
-    public void InlineLayoutEngineMeasure_InlineBlockImage_DoesNotPublishImageGeometryOrMetadata()
+    public void InlineLayoutEngineMeasure_InlineBlockImage_SkipsImageFacts()
     {
         var style = new ComputedStyle();
         var root = new BlockBox(BoxRole.Block)
@@ -274,22 +273,22 @@ public sealed class GeometryContractTests
         var translated = geometry.Translate(4f, -6f);
         var resized = geometry.WithBorderWidth(8f);
 
-        geometry.BorderBoxRect.ShouldBe(new RectangleF(10f, 20f, 100f, 50f));
-        geometry.ContentBoxRect.ShouldBe(new RectangleF(16f, 23f, 90f, 42f));
+        geometry.BorderBoxRect.ShouldBe(new RectPt(10f, 20f, 100f, 50f));
+        geometry.ContentBoxRect.ShouldBe(new RectPt(16f, 23f, 90f, 42f));
         geometry.Baseline.ShouldBe(30f);
-        translated.BorderBoxRect.ShouldBe(new RectangleF(14f, 14f, 100f, 50f));
-        translated.ContentBoxRect.ShouldBe(new RectangleF(20f, 17f, 90f, 42f));
+        translated.BorderBoxRect.ShouldBe(new RectPt(14f, 14f, 100f, 50f));
+        translated.ContentBoxRect.ShouldBe(new RectPt(20f, 17f, 90f, 42f));
         translated.Baseline.ShouldBe(24f);
-        resized.BorderBoxRect.ShouldBe(new RectangleF(10f, 20f, 8f, 50f));
-        resized.ContentBoxRect.ShouldBe(new RectangleF(16f, 23f, 0f, 42f));
+        resized.BorderBoxRect.ShouldBe(new RectPt(10f, 20f, 8f, 50f));
+        resized.ContentBoxRect.ShouldBe(new RectPt(16f, 23f, 0f, 42f));
     }
 
     [Fact]
     public void UsedGeometry_InvalidConstructorInput_Throws()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new UsedGeometry(
-            new RectangleF(float.NaN, 0f, 10f, 10f),
-            new RectangleF(0f, 0f, 10f, 10f),
+            new RectPt(float.NaN, 0f, 10f, 10f),
+            new RectPt(0f, 0f, 10f, 10f),
             baseline: null,
             markerOffset: 0f,
             allowsOverflow: false));
@@ -306,7 +305,7 @@ public sealed class GeometryContractTests
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new BlockFragment
         {
-            Rect = new RectangleF(x, y, width, height)
+            Rect = new RectPt(x, y, width, height)
         });
     }
 
@@ -330,7 +329,7 @@ public sealed class GeometryContractTests
             "x",
             font,
             fontSize,
-            new PointF(originX, 20f),
+            new PointPt(originX, 20f),
             advanceWidth,
             ascent,
             descent));
@@ -344,7 +343,7 @@ public sealed class GeometryContractTests
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new LineBoxFragment
         {
-            Rect = new RectangleF(0f, 0f, 10f, 12f),
+            Rect = new RectPt(0f, 0f, 10f, 12f),
             BaselineY = baselineY,
             LineHeight = lineHeight
         });

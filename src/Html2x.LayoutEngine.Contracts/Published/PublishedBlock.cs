@@ -1,23 +1,17 @@
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Geometry;
+using Html2x.RenderModel;
 
 /// <summary>
 /// Carries the immutable block facts that fragment projection consumes after layout geometry completes.
 /// </summary>
-/// <remarks>
-/// <see cref="Style"/> intentionally carries the resolved computed style for now because fragment
-/// projection still needs rendering style values. If that style surface becomes too broad, the next
-/// module-deepening step should publish narrower rendering style facts instead of making fragments
-/// inspect mutable boxes.
-/// </remarks>
 internal sealed record PublishedBlock
 {
     public PublishedBlock(
         PublishedBlockIdentity identity,
         PublishedDisplayFacts display,
-        ComputedStyle style,
+        VisualStyle style,
         UsedGeometry geometry,
         PublishedInlineLayout? inlineLayout,
         PublishedImageFacts? image,
@@ -48,7 +42,7 @@ internal sealed record PublishedBlock
 
     public PublishedDisplayFacts Display { get; }
 
-    public ComputedStyle Style { get; }
+    public VisualStyle Style { get; }
 
     public UsedGeometry Geometry { get; }
 

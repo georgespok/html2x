@@ -4,6 +4,7 @@ using Shouldly;
 
 namespace Html2x.Test;
 
+[Trait("Category", "Integration")]
 public sealed class HtmlConverterDiagnosticsTests
 {
     private static HtmlConverterOptions DiagnosticsOptions => new()

@@ -1,13 +1,12 @@
-using System.Drawing;
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Geometry;
+namespace Html2x.LayoutEngine.Contracts.Geometry;
 
-public readonly record struct UsedGeometry
+internal readonly record struct UsedGeometry
 {
     internal UsedGeometry(
-        RectangleF borderBoxRect,
-        RectangleF contentBoxRect,
+        RectPt borderBoxRect,
+        RectPt contentBoxRect,
         float? baseline,
         float markerOffset,
         bool allowsOverflow)
@@ -24,9 +23,9 @@ public readonly record struct UsedGeometry
         AllowsOverflow = allowsOverflow;
     }
 
-    public RectangleF BorderBoxRect { get; }
+    public RectPt BorderBoxRect { get; }
 
-    public RectangleF ContentBoxRect { get; }
+    public RectPt ContentBoxRect { get; }
 
     public float? Baseline { get; }
 
@@ -101,7 +100,7 @@ public readonly record struct UsedGeometry
         var topInset = ContentBoxRect.Y - BorderBoxRect.Y;
         var rightInset = BorderBoxRect.Right - ContentBoxRect.Right;
         var bottomInset = BorderBoxRect.Bottom - ContentBoxRect.Bottom;
-        var borderRect = new RectangleF(
+        var borderRect = new RectPt(
             BorderBoxRect.X,
             BorderBoxRect.Y,
             GuardNonNegativeFinite(nameof(borderWidth), borderWidth),
@@ -118,24 +117,24 @@ public readonly record struct UsedGeometry
             AllowsOverflow);
     }
 
-    private static RectangleF Translate(RectangleF rect, float deltaX, float deltaY)
+    private static RectPt Translate(RectPt rect, float deltaX, float deltaY)
     {
         GuardFinite(nameof(deltaX), deltaX);
         GuardFinite(nameof(deltaY), deltaY);
 
-        return RenderGeometryTranslator.Translate(rect, deltaX, deltaY);
+        return rect.Translate(deltaX, deltaY);
     }
 
-    private static RectangleF Inset(RectangleF rect, Spacing inset)
+    private static RectPt Inset(RectPt rect, Spacing inset)
     {
-        return new RectangleF(
+        return new RectPt(
             rect.X + inset.Left,
             rect.Y + inset.Top,
             Math.Max(0f, rect.Width - inset.Horizontal),
             Math.Max(0f, rect.Height - inset.Vertical));
     }
 
-    private static void GuardRect(string name, RectangleF rect)
+    private static void GuardRect(string name, RectPt rect)
     {
         GuardFinite($"{name}.X", rect.X);
         GuardFinite($"{name}.Y", rect.Y);

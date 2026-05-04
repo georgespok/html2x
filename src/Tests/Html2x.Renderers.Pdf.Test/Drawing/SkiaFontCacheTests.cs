@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Renderers.Pdf.Test;
 using Html2x.Text;
 using Html2x.RenderModel;
@@ -171,7 +170,7 @@ public sealed class SkiaFontCacheTests
             "Trace",
             requested,
             12f,
-            PointF.Empty,
+            PointPt.Zero,
             24f,
             9f,
             3f,
@@ -203,7 +202,7 @@ public sealed class SkiaFontCacheTests
             "Trace",
             requested,
             12f,
-            PointF.Empty,
+            PointPt.Zero,
             24f,
             9f,
             3f);
@@ -211,11 +210,11 @@ public sealed class SkiaFontCacheTests
         var typefaceFactory = new TestSkiaTypefaceFactory();
         using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
 
-        var exception = Should.Throw<InvalidOperationException>(() => cache.GetTypeface(run));
+        var exception = Should.Throw<FontResolutionException>(() => cache.GetTypeface(run));
 
         exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
-        exception.Data["DiagnosticsName"].ShouldBe("ResolvedFont");
-        exception.Data["RequestedFamily"].ShouldBe("PolicyFamily");
+        exception.RequestedFont.ShouldBe(requested);
+        exception.Text.ShouldBe("Trace");
         typefaceFactory.FromFileCalls.ShouldBeEmpty();
         typefaceFactory.FromFileWithFaceIndexCalls.ShouldBeEmpty();
         typefaceFactory.FromFamilyNameCalls.ShouldBeEmpty();

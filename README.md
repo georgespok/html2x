@@ -14,10 +14,23 @@ Html2x is a modern, cross-platform .NET 8 library for converting static HTML and
 ```text
 src/
   Html2x/                     Public composition facade
-  Html2x.Abstractions/        Shared contracts, options, diagnostics, measurements
   Html2x.Diagnostics/         Diagnostics JSON serialization
-  Html2x.LayoutEngine/        HTML/CSS to box, fragment, and page layout
+  Html2x.Diagnostics.Contracts/
+                               Diagnostics contracts and sink abstractions
+  Html2x.LayoutEngine.Contracts/
+                               Internal style, geometry, and publication handoff facts
+  Html2x.LayoutEngine.Style/   HTML parsing and CSS computation
+  Html2x.LayoutEngine.Geometry/
+                               Box construction and layout geometry
+  Html2x.LayoutEngine.Fragments/
+                               Published layout to render model projection
+  Html2x.LayoutEngine.Pagination/
+                               Page placement for render fragments
+  Html2x.LayoutEngine/        Layout pipeline composition
+  Html2x.RenderModel/         Public renderer input facts
   Html2x.Renderers.Pdf/       Fragment to PDF rendering
+  Html2x.Resources/           File and data URI resource loading
+  Html2x.Text/                Font resolution and text measurement runtime
   Tests/
     Html2x.LayoutEngine.Test/
     Html2x.Renderers.Pdf.Test/
@@ -41,14 +54,13 @@ dotnet test src/Html2x.sln -c Release
 Manual PDF smoke test:
 
 ```powershell
-dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/example.html build/example.pdf
+dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input src/Tests/Html2x.TestConsole/html/example.html --output build/example.pdf
 ```
 
 ## Minimal Usage
 
 ```csharp
 using Html2x;
-using Html2x.Abstractions.Options;
 
 var converter = new HtmlConverter();
 
@@ -56,7 +68,7 @@ var result = await converter.ToPdfAsync(
     "<h1>Invoice</h1><p>Total: $42.00</p>",
     new HtmlConverterOptions
     {
-        Pdf =
+        Fonts = new FontOptions
         {
             FontPath = @"C:\Projects\html2x\src\Tests\Html2x.TestConsole\fonts"
         }
@@ -65,7 +77,7 @@ var result = await converter.ToPdfAsync(
 await File.WriteAllBytesAsync("invoice.pdf", result.PdfBytes);
 ```
 
-`PdfOptions.FontPath` must point to a font file or directory before layout begins.
+`HtmlConverterOptions.Fonts.FontPath` must point to a font file or directory before layout begins.
 
 ## Documentation
 

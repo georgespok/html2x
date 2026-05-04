@@ -4,7 +4,7 @@ using AngleSharp.Dom;
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Style.Dimensions;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Style;
 

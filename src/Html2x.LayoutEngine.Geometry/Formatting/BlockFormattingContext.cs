@@ -1,7 +1,7 @@
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Formatting;
 
@@ -10,6 +10,13 @@ namespace Html2x.LayoutEngine.Formatting;
 /// </summary>
 internal sealed class BlockFormattingContext : IBlockFormattingContext
 {
+    private readonly BlockFlowMeasurementExecutor _flowMeasurement;
+
+    public BlockFormattingContext()
+    {
+        _flowMeasurement = new BlockFlowMeasurementExecutor(this);
+    }
+
     public BlockFormattingResult Format(BlockFormattingRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -20,7 +27,7 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
         var totalWidth = ResolveTotalWidth(request, blocks);
         var totalHeight = ResolveTotalHeight(request, blocks);
         float? baseline = request.ContextKind == FormattingContextKind.InlineBlock
-            ? ResolvePublishedOrSeedHeight(request.RootBlock)
+            ? ResolvePublishedOrZeroHeight(request.RootBlock)
             : null;
 
         return new BlockFormattingResult(blocks, totalWidth, totalHeight, baseline);
@@ -151,24 +158,28 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
             return Math.Max(0f, block.Style.WidthPt.Value);
         }
 
-        return ResolveLegacySeedWidth(block);
+        return 0f;
     }
 
     private float ResolveTotalHeight(BlockFormattingRequest request, IReadOnlyList<BlockBox> blocks)
     {
         if (TryResolveSequentialHeight(request, out var sequentialHeight))
         {
-            return Math.Max(Math.Max(0f, ResolvePublishedOrSeedHeight(request.RootBlock)), sequentialHeight);
+            return Math.Max(Math.Max(0f, ResolvePublishedOrZeroHeight(request.RootBlock)), sequentialHeight);
         }
 
         if (blocks.Count == 0)
         {
-            return Math.Max(0f, ResolveBlockHeight(request.RootBlock, request));
+            return Math.Max(0f, BlockFlowMeasurementExecutor.ResolveBlockHeight(
+                request.RootBlock,
+                request.AvailableWidth,
+                request.BlockHeightMeasurer,
+                request.TableHeightMeasurer));
         }
 
-        var rootY = ResolvePublishedOrSeedY(request.RootBlock);
+        var rootY = ResolvePublishedOrZeroY(request.RootBlock);
         var minY = rootY;
-        var maxY = rootY + ResolvePublishedOrSeedHeight(request.RootBlock);
+        var maxY = rootY + ResolvePublishedOrZeroHeight(request.RootBlock);
 
         foreach (var block in blocks)
         {
@@ -182,113 +193,37 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
 
     private bool TryResolveSequentialHeight(BlockFormattingRequest request, out float totalHeight)
     {
-        var blockChildren = request.RootBlock.Children.OfType<BlockBox>().ToList();
-        if (blockChildren.Count == 0)
-        {
-            totalHeight = 0f;
-            return false;
-        }
-
-        totalHeight = 0f;
-        for (var i = 0; i < blockChildren.Count; i++)
-        {
-            var current = blockChildren[i];
-            totalHeight += ResolveBlockHeight(current, request);
-
-            if (i == blockChildren.Count - 1)
-            {
-                continue;
-            }
-
-            var currentMarginBottom = ResolveMargin(current).Bottom;
-            var next = blockChildren[i + 1];
-            var nextMarginTop = ResolveMargin(next).Top;
-            totalHeight += CollapseMargins(
-                currentMarginBottom,
-                nextMarginTop,
-                request.ContextKind,
-                request.ConsumerName,
-                request.EmitDiagnostics ? request.DiagnosticsSink : null);
-        }
-
-        totalHeight += ResolveMargin(blockChildren[^1]).Bottom;
-        return true;
-    }
-
-    private static float ResolveBlockHeight(BlockBox block, BlockFormattingRequest request)
-    {
-        if (block is TableBox table && request.TableHeightMeasurer is not null)
-        {
-            return Math.Max(0f, request.TableHeightMeasurer(table, request.AvailableWidth));
-        }
-
-        if (request.BlockHeightMeasurer is not null)
-        {
-            return Math.Max(0f, request.BlockHeightMeasurer(block, request.AvailableWidth));
-        }
-
-        if (block.UsedGeometry is { } geometry)
-        {
-            return geometry.Height;
-        }
-
-        var padding = block.Style.Padding.Safe();
-        var border = Spacing.FromBorderEdges(block.Style.Borders).Safe();
-
-        if (block.Style.HeightPt is float explicitHeight)
-        {
-            return Math.Max(0f, explicitHeight) + padding.Vertical + border.Vertical;
-        }
-
-        return Math.Max(0f, ResolveLegacySeedHeight(block));
-    }
-
-    private static Spacing ResolveMargin(BlockBox block)
-    {
-        var styleMargin = block.Style.Margin.Safe();
-        if (HasAnySpacing(styleMargin))
-        {
-            return styleMargin;
-        }
-
-        return block.Margin.Safe();
-    }
-
-    private static bool HasAnySpacing(Spacing spacing)
-    {
-        return spacing.Left > 0f || spacing.Right > 0f || spacing.Top > 0f || spacing.Bottom > 0f;
+        return _flowMeasurement.TryMeasureStackedChildren(
+            request.RootBlock.Children,
+            request.AvailableWidth,
+            out totalHeight,
+            request.BlockHeightMeasurer,
+            request.TableHeightMeasurer,
+            request.EmitDiagnostics ? request.DiagnosticsSink : null,
+            request.ContextKind,
+            request.ConsumerName);
     }
 
     private static (float Top, float Bottom) ResolveVerticalBounds(BlockBox block)
     {
-        var margin = ResolveMargin(block);
-        var blockY = ResolvePublishedOrSeedY(block);
+        var margin = BlockFlowMeasurementExecutor.ResolveMargin(block);
+        var blockY = ResolvePublishedOrZeroY(block);
         var top = blockY - margin.Top;
-        var bottom = blockY + ResolvePublishedOrSeedHeight(block) + margin.Bottom;
+        var bottom = blockY + ResolvePublishedOrZeroHeight(block) + margin.Bottom;
         return (top, bottom);
     }
 
-    private static float ResolvePublishedOrSeedY(BlockBox block)
+    private static float ResolvePublishedOrZeroY(BlockBox block)
     {
         return block.UsedGeometry is { } geometry
             ? geometry.Y
             : 0f;
     }
 
-    private static float ResolvePublishedOrSeedHeight(BlockBox block)
+    private static float ResolvePublishedOrZeroHeight(BlockBox block)
     {
         return block.UsedGeometry is { } geometry
             ? geometry.Height
-            : ResolveLegacySeedHeight(block);
-    }
-
-    private static float ResolveLegacySeedWidth(BlockBox block)
-    {
-        return 0f;
-    }
-
-    private static float ResolveLegacySeedHeight(BlockBox block)
-    {
-        return 0f;
+            : 0f;
     }
 }

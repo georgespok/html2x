@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public sealed record StyleContentIdentity
+internal sealed record StyleContentIdentity
 {
     public StyleContentIdentity(
         StyleContentId contentId,

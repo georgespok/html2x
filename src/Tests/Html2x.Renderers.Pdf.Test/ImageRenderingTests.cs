@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Diagnostics.Contracts;
 using Html2x.RenderModel;
 using Html2x.Renderers.Pdf;
@@ -7,6 +6,7 @@ using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public class ImageRenderingTests
 {
     [Fact]
@@ -14,7 +14,7 @@ public class ImageRenderingTests
     {
         // arrange: construct layout with success, missing, and oversize cases
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(24, 24, 24, 24),
             new List<Fragment>
@@ -51,7 +51,7 @@ public class ImageRenderingTests
     public async Task Render_ImageDiagnostics_UseCanonicalEventAndContext()
     {
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(24, 24, 24, 24),
             new List<Fragment>
@@ -78,7 +78,7 @@ public class ImageRenderingTests
 
     [Theory]
     [MemberData(nameof(ImageBorderCases))]
-    public async Task Render_WhenImageHasBorder_ShouldReportBorderMetadata(
+    public async Task Render_ImageWithBorder_ReportsBorderMetadata(
         ImageStatus status,
         float borderWidth,
         ColorRgba borderColor,
@@ -87,7 +87,7 @@ public class ImageRenderingTests
         var borders = BorderEdges.Uniform(new BorderSide(borderWidth, borderColor, lineStyle));
 
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
@@ -117,7 +117,7 @@ public class ImageRenderingTests
         var borders = BorderEdges.Uniform(new BorderSide(0f, ColorRgba.Black, BorderLineStyle.None));
 
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(0, 0, 0, 0),
             new List<Fragment>
@@ -147,7 +147,7 @@ public class ImageRenderingTests
         BorderEdges? borders = null,
         string? src = null)
     {
-        const string dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAuMB9p8S9F0AAAAASUVORK5CYII=";
+        const string dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 
         var isMissing = status == ImageStatus.Missing;
         var isOversize = status == ImageStatus.Oversize;
@@ -157,8 +157,8 @@ public class ImageRenderingTests
             Src = src ?? dataUri,
             AuthoredSizePx = new SizePx(width, height),
             IntrinsicSizePx = new SizePx(width, height),
-            Rect = new RectangleF(x, y, width, height),
-            ContentRect = new RectangleF(x, y, width, height),
+            Rect = new RectPt(x, y, width, height),
+            ContentRect = new RectPt(x, y, width, height),
             Style = new VisualStyle(Borders: borders),
             ZOrder = 0,
             IsMissing = isMissing,

@@ -1,7 +1,6 @@
-using System.Drawing;
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 internal static class PublishedLayoutGuard
 {
@@ -79,7 +78,7 @@ internal static class PublishedLayoutGuard
         }
     }
 
-    public static RectangleF RequireRect(RectangleF value, string parameterName)
+    public static RectPt RequireRect(RectPt value, string parameterName)
     {
         RequireFinite(value.X, $"{parameterName}.X");
         RequireFinite(value.Y, $"{parameterName}.Y");

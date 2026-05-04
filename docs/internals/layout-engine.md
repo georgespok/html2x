@@ -18,12 +18,13 @@ geometry algorithms directly.
   application, CSS parsing, computed style construction, style diagnostics, and
   the parser-free `StyleTree` handoff.
 - `Html2x.LayoutEngine.Geometry` consumes `StyleTree` and produces published
-  layout geometry.
+  layout geometry. Block flow delegates image placement, table placement, and
+  published layout publishing to smaller internal modules.
 - `Html2x.LayoutEngine.Pagination` consumes render model fragments and returns
   `PaginationResult` with final `HtmlLayout` plus pagination audit facts.
 - `Html2x.Renderers.Pdf` consumes `HtmlLayout` only.
 
-## Primary Entry Points
+## Internal Entry Points
 
 - `LayoutBuilder`
 - `IStyleTreeBuilder`
@@ -35,13 +36,19 @@ geometry algorithms directly.
 
 ## Internal Boundaries
 
-`LayoutBuilder` constructs the concrete pipeline stages for the converter flow.
+`LayoutBuilder` constructs the concrete pipeline stages for the converter flow
+and is reached through the public `HtmlConverter` facade.
 The style stage is reached through `IStyleTreeBuilder`. The geometry stage is
 reached through `LayoutGeometryBuilder`.
 
 The layout engine should keep style, geometry, fragment, and pagination
 responsibilities separable even when implementation classes coordinate multiple
 steps.
+
+Inside geometry, keep `BlockLayoutEngine` focused on block-flow orchestration.
+Move specialized image, table, inline publishing, or compatibility-state logic
+behind focused internal modules when the logic can be tested through published
+layout behavior.
 
 When adding behavior:
 

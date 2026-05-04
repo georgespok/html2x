@@ -1,14 +1,13 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box.Publishing;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Geometry;
+namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
 public sealed class PublishedLayoutContractTests
 {
@@ -20,7 +19,7 @@ public sealed class PublishedLayoutContractTests
             FragmentDisplayRole.Block,
             FormattingContextKind.Block,
             markerOffset: null);
-        var style = new ComputedStyle { FontSizePt = 14f };
+        var style = new VisualStyle { Color = ColorRgba.Black };
         var geometry = CreateGeometry();
 
         var block = new PublishedBlock(
@@ -68,17 +67,17 @@ public sealed class PublishedLayoutContractTests
         var inlineObjectContent = CreateBlock("body/p[1]/img[1]", sourceOrder: 3);
         var textItem = new PublishedInlineTextItem(
             order: 0,
-            rect: new RectangleF(1f, 2f, 30f, 10f),
+            rect: new RectPt(1f, 2f, 30f, 10f),
             runs: [run],
             sources: [source]);
         var objectItem = new PublishedInlineObjectItem(
             order: 1,
-            rect: new RectangleF(35f, 2f, 12f, 10f),
+            rect: new RectPt(35f, 2f, 12f, 10f),
             inlineObjectContent);
         var line = new PublishedInlineLine(
             lineIndex: 0,
-            rect: new RectangleF(0f, 0f, 100f, 14f),
-            occupiedRect: new RectangleF(1f, 2f, 46f, 10f),
+            rect: new RectPt(0f, 0f, 100f, 14f),
+            occupiedRect: new RectPt(1f, 2f, 46f, 10f),
             baselineY: 11f,
             lineHeight: 14f,
             textAlign: "left",
@@ -119,7 +118,7 @@ public sealed class PublishedLayoutContractTests
             AuthoredSizePx = new SizePx(40d, 20d),
             IntrinsicSizePx = new SizePx(80d, 40d),
             IsMissing = true,
-            Style = new ComputedStyle { FontSizePt = 14f }
+            Style = new ComputedStyle { FontSizePt = 14f, WidthPt = 42f }
         };
         var identity = PublishedBlockFactory.CreateIdentity(source, sourceOrder: 7);
         var geometry = CreateGeometry();
@@ -134,7 +133,7 @@ public sealed class PublishedLayoutContractTests
         block.Identity.ShouldBe(identity);
         block.Identity.SourceOrder.ShouldBe(7);
         block.Display.Role.ShouldBe(FragmentDisplayRole.Block);
-        block.Style.ShouldBeSameAs(source.Style);
+        block.Style.WidthPt.ShouldBe(source.Style.WidthPt);
         block.Geometry.ShouldBe(geometry);
         block.Image.ShouldNotBeNull().Src.ShouldBe("images/logo.png");
         block.Rule.ShouldBeNull();
@@ -165,7 +164,7 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
-    public void PublishedBlockFactory_CreateIdentity_UsesBoxSourceIdentityElementIdentity()
+    public void PublishedBlockFactory_CreateIdentity_UsesBoxElementIdentity()
     {
         var sourceIdentity = CreateSourceIdentity(
             nodeId: 6,
@@ -278,7 +277,7 @@ public sealed class PublishedLayoutContractTests
     [Theory]
     [InlineData(-1f)]
     [InlineData(float.NaN)]
-    public void PublishedDisplayFacts_WithInvalidMarkerOffset_ThrowsArgumentOutOfRangeException(float markerOffset)
+    public void PublishedDisplayFacts_InvalidMarkerOffset_ThrowsOutOfRange(float markerOffset)
     {
         var exception = Should.Throw<ArgumentOutOfRangeException>(() => new PublishedDisplayFacts(
             FragmentDisplayRole.Block,
@@ -301,7 +300,7 @@ public sealed class PublishedLayoutContractTests
                 FragmentDisplayRole.Block,
                 FormattingContextKind.Block,
                 markerOffset: null),
-            new ComputedStyle(),
+            new VisualStyle(),
             CreateGeometry(),
             inlineLayout: inlineLayout,
             image: null,
@@ -327,7 +326,7 @@ public sealed class PublishedLayoutContractTests
             "alpha",
             new FontKey("Test", FontWeight.W400, FontStyle.Normal),
             12f,
-            new PointF(1f, 11f),
+            new PointPt(1f, 11f),
             30f,
             8f,
             3f);

@@ -2,13 +2,13 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Box;
 
 /// <summary>
-/// Builds the legacy mutable box tree used by layout implementation tests and diagnostics harnesses.
+/// Builds mutable box trees used by layout implementation tests and diagnostics harnesses.
 /// </summary>
 /// <remarks>
 /// Production layout should use LayoutGeometryBuilder so callers depend on PublishedLayoutTree
@@ -79,28 +79,13 @@ internal sealed class BoxTreeBuilder
         ArgumentNullException.ThrowIfNull(initialBoxRoot);
         ArgumentNullException.ThrowIfNull(styles);
 
-        var geometryRequest = request ?? LayoutGeometryRequest.Default;
-        var imageResolver = new ImageLayoutResolver(geometryRequest);
-        var inlineEngine = new InlineLayoutEngine(
-            new FontMetricsProvider(),
+        var runtime = LayoutGeometryRuntimeFactory.Create(
+            styles,
+            request,
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
             _blockFormattingContext,
-            imageResolver,
-            diagnosticsSink);
-        var blockEngine = new BlockLayoutEngine(
-            inlineEngine,
-            new TableLayoutEngine(inlineEngine, imageResolver),
-            _blockFormattingContext,
-            imageResolver,
             diagnosticsSink);
 
-        var page = new PageBox
-        {
-            Margin = styles.Page.Margin,
-            Size = geometryRequest.PageSize
-        };
-
-        return blockEngine.Layout(initialBoxRoot, page);
+        return runtime.BlockEngine.Layout(initialBoxRoot, runtime.Page);
     }
 }

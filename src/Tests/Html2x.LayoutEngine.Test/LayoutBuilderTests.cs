@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
@@ -87,7 +87,7 @@ public class LayoutBuilderTests
     }
 
     [Fact]
-    public async Task BuildAsync_UnsupportedInlineBlockTable_PublishesFailedBoxTreeStageAndRethrows()
+    public async Task BuildAsync_UnsupportedInlineBlockTable_PublishesBoxTreeFailure()
     {
         const string html = @"
             <html>

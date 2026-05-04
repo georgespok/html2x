@@ -1,9 +1,8 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
 using Shouldly;
 
@@ -12,7 +11,7 @@ namespace Html2x.LayoutEngine.Test.Diagnostics;
 public sealed class GeometrySnapshotMapperTests
 {
     [Fact]
-    public void From_MapsPublishedGeometryFragmentsAndPaginationPlacementsIntoSingleSnapshot()
+    public void From_PublishedGeometryAndPagination_MapsSingleSnapshot()
     {
         var layoutTree = new PublishedLayoutTree(
             new PublishedPage(PaperSizes.A4, new Spacing()),
@@ -20,7 +19,7 @@ public sealed class GeometrySnapshotMapperTests
                 CreatePublishedBlock(
                     "div",
                     "div",
-                    new RectangleF(10f, 20f, 120f, 40f),
+                    new RectPt(10f, 20f, 120f, 40f),
                     new Spacing(2f, 3f, 4f, 5f),
                     new Spacing(1f, 1f, 1f, 1f),
                     markerOffset: 8f)
@@ -29,12 +28,12 @@ public sealed class GeometrySnapshotMapperTests
         {
             FragmentId = 7,
             PageNumber = 1,
-            Rect = new RectangleF(10f, 20f, 120f, 40f),
+            Rect = new RectPt(10f, 20f, 120f, 40f),
             DisplayRole = FragmentDisplayRole.Block,
             Style = new VisualStyle()
         };
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), [fragment]));
+        layout.AddPage(new LayoutPage(PaperSizes.A4, new Spacing(), [fragment]));
         var pagination = new PaginationResult
         {
             Layout = layout,
@@ -45,7 +44,7 @@ public sealed class GeometrySnapshotMapperTests
                     PageNumber = 1,
                     PageSize = PaperSizes.A4,
                     Margin = new Spacing(),
-                    ContentArea = new RectangleF(0f, 0f, PaperSizes.A4.Width, PaperSizes.A4.Height),
+                    ContentArea = new RectPt(0f, 0f, PaperSizes.A4.Width, PaperSizes.A4.Height),
                     Placements =
                     [
                         new PaginationPlacementAudit
@@ -96,13 +95,13 @@ public sealed class GeometrySnapshotMapperTests
     [Fact]
     public void From_NestedAndSiblingPublishedBlocks_AssignsDepthFirstSequenceIds()
     {
-        var child = CreatePublishedBlock("div/p[1]", "p", new RectangleF(0f, 0f, 80f, 20f));
+        var child = CreatePublishedBlock("div/p[1]", "p", new RectPt(0f, 0f, 80f, 20f));
         var root = CreatePublishedBlock(
             "div",
             "div",
-            new RectangleF(0f, 0f, 100f, 50f),
+            new RectPt(0f, 0f, 100f, 50f),
             children: [child]);
-        var sibling = CreatePublishedBlock("section", "section", new RectangleF(0f, 60f, 100f, 30f));
+        var sibling = CreatePublishedBlock("section", "section", new RectPt(0f, 60f, 100f, 30f));
         var layoutTree = new PublishedLayoutTree(
             new PublishedPage(PaperSizes.A4, new Spacing()),
             [root, sibling]);
@@ -132,7 +131,7 @@ public sealed class GeometrySnapshotMapperTests
                 CreatePublishedBlock(
                     "layout/section",
                     "section#summary",
-                    new RectangleF(0f, 0f, 100f, 20f),
+                    new RectPt(0f, 0f, 100f, 20f),
                     sourceIdentity: sourceIdentity)
             ]);
 
@@ -167,7 +166,7 @@ public sealed class GeometrySnapshotMapperTests
                 CreatePublishedBlock(
                     "layout/div/anonymous[0]",
                     "div.card",
-                    new RectangleF(0f, 0f, 100f, 20f),
+                    new RectPt(0f, 0f, 100f, 20f),
                     sourceIdentity: sourceIdentity)
             ]);
 
@@ -186,7 +185,7 @@ public sealed class GeometrySnapshotMapperTests
     }
 
     [Fact]
-    public void From_PublishedBlockWithoutSourceIdentity_LeavesSourceIdentityFieldsNull()
+    public void From_BlockWithoutSourceIdentity_LeavesSourceFieldsNull()
     {
         var layoutTree = new PublishedLayoutTree(
             new PublishedPage(PaperSizes.A4, new Spacing()),
@@ -194,7 +193,7 @@ public sealed class GeometrySnapshotMapperTests
                 CreatePublishedBlock(
                     "layout/div",
                     "div",
-                    new RectangleF(0f, 0f, 100f, 20f))
+                    new RectPt(0f, 0f, 100f, 20f))
             ]);
 
         var snapshot = GeometrySnapshotMapper.From(
@@ -213,7 +212,7 @@ public sealed class GeometrySnapshotMapperTests
     private static PublishedBlock CreatePublishedBlock(
         string nodePath,
         string elementIdentity,
-        RectangleF borderBox,
+        RectPt borderBox,
         Spacing? padding = null,
         Spacing? border = null,
         float markerOffset = 0f,
@@ -226,7 +225,7 @@ public sealed class GeometrySnapshotMapperTests
                 FragmentDisplayRole.Block,
                 FormattingContextKind.Block,
                 markerOffset > 0f ? markerOffset : null),
-            new ComputedStyle(),
+            new VisualStyle(),
             BoxGeometryFactory.FromBorderBox(
                 borderBox,
                 padding ?? new Spacing(),

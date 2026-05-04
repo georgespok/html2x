@@ -1,7 +1,8 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
+using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.Resources;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf;
@@ -13,6 +14,7 @@ internal sealed class ImageRenderer
 {
     private readonly string _htmlDirectory;
     private readonly IDiagnosticsSink? _diagnosticsSink;
+    private readonly long _maxImageSizeBytes;
     private const string ImageRenderEvent = "image/render";
 
     public ImageRenderer(
@@ -21,9 +23,8 @@ internal sealed class ImageRenderer
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        _htmlDirectory = string.IsNullOrWhiteSpace(settings.HtmlDirectory)
-            ? Directory.GetCurrentDirectory()
-            : settings.HtmlDirectory;
+        _htmlDirectory = ImageResourceLoader.ResolveBaseDirectory(settings.HtmlDirectory);
+        _maxImageSizeBytes = settings.MaxImageSizeBytes;
         _diagnosticsSink = diagnosticsSink;
     }
 
@@ -35,9 +36,7 @@ internal sealed class ImageRenderer
         var rect = command.ContentRect;
         var width = rect.Width;
         var height = rect.Height;
-        var status = command.IsMissing
-            ? ImageRenderStatus.Missing
-            : command.IsOversize ? ImageRenderStatus.Oversize : ImageRenderStatus.Ok;
+        var status = ToRenderStatus(command);
 
         if (width <= 0 || height <= 0)
         {
@@ -53,20 +52,21 @@ internal sealed class ImageRenderer
             return;
         }
 
-        var imgBytes = ImageLoader.Load(command.Src, _htmlDirectory);
-        if (imgBytes is null)
+        var resource = ImageResourceLoader.Load(command.Src, _htmlDirectory, _maxImageSizeBytes);
+        status = ToRenderStatus(resource.Status);
+        if (resource.Bytes is null || status != ImageRenderStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
             Record(command, status, width, height);
             return;
         }
 
-        DrawImage(canvas, rect, imgBytes);
+        DrawImage(canvas, rect, resource.Bytes);
 
         Record(command, status, width, height);
     }
 
-    private static void DrawImage(SKCanvas canvas, RectangleF rect, byte[] bytes)
+    private static void DrawImage(SKCanvas canvas, RectPt rect, byte[] bytes)
     {
         using var bitmap = SKBitmap.Decode(bytes);
         if (bitmap is null)
@@ -76,11 +76,11 @@ internal sealed class ImageRenderer
         }
 
         using var image = SKImage.FromBitmap(bitmap);
-        var dest = new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
+        var dest = SkiaGeometryMapper.ToSKRect(rect);
         canvas.DrawImage(image, dest);
     }
 
-    private static void RenderPlaceholder(SKCanvas canvas, RectangleF rect)
+    private static void RenderPlaceholder(SKCanvas canvas, RectPt rect)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
         {
@@ -95,7 +95,7 @@ internal sealed class ImageRenderer
             IsAntialias = true
         };
 
-        canvas.DrawRect(new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom), paint);
+        canvas.DrawRect(SkiaGeometryMapper.ToSKRect(rect), paint);
     }
 
     private void Record(ImagePaintCommand command, ImageRenderStatus status, float width, float height)
@@ -149,10 +149,47 @@ internal sealed class ImageRenderer
                 DiagnosticObject.Field("lineStyle", DiagnosticValue.FromEnum(side.LineStyle)));
     }
 
+    private static ImageRenderStatus ToRenderStatus(ImageResourceStatus status) =>
+        status switch
+        {
+            ImageResourceStatus.Ok => ImageRenderStatus.Ok,
+            ImageResourceStatus.Oversize => ImageRenderStatus.Oversize,
+            ImageResourceStatus.InvalidDataUri => ImageRenderStatus.InvalidDataUri,
+            ImageResourceStatus.DecodeFailed => ImageRenderStatus.DecodeFailed,
+            ImageResourceStatus.OutOfScope => ImageRenderStatus.OutOfScope,
+            _ => ImageRenderStatus.Missing
+        };
+
+    private static ImageRenderStatus ToRenderStatus(ImagePaintCommand command)
+    {
+        if (command.Status != ImageLoadStatus.Ok)
+        {
+            return ToRenderStatus(command.Status);
+        }
+
+        return command.IsOversize
+            ? ImageRenderStatus.Oversize
+            : command.IsMissing ? ImageRenderStatus.Missing : ImageRenderStatus.Ok;
+    }
+
+    private static ImageRenderStatus ToRenderStatus(ImageLoadStatus status) =>
+        status switch
+        {
+            ImageLoadStatus.Ok => ImageRenderStatus.Ok,
+            ImageLoadStatus.Oversize => ImageRenderStatus.Oversize,
+            ImageLoadStatus.InvalidDataUri => ImageRenderStatus.InvalidDataUri,
+            ImageLoadStatus.DecodeFailed => ImageRenderStatus.DecodeFailed,
+            ImageLoadStatus.OutOfScope => ImageRenderStatus.OutOfScope,
+            _ => ImageRenderStatus.Missing
+        };
+
     private enum ImageRenderStatus
     {
         Ok,
         Missing,
-        Oversize
+        Oversize,
+        InvalidDataUri,
+        DecodeFailed,
+        OutOfScope
     }
 }

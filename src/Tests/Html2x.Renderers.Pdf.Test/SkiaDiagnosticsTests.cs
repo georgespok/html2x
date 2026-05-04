@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Diagnostics.Contracts;
 using Html2x.RenderModel;
 using Html2x.Renderers.Pdf;
@@ -7,6 +6,7 @@ using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public class SkiaDiagnosticsTests
 {
     [Fact]
@@ -41,8 +41,8 @@ public class SkiaDiagnosticsTests
                 Src = "missing.png",
                 IntrinsicSizePx = new SizePx(50, 40),
                 IsMissing = true,
-                Rect = new RectangleF(20, 30, 50, 40),
-                ContentRect = new RectangleF(20, 30, 50, 40),
+                Rect = new RectPt(20, 30, 50, 40),
+                ContentRect = new RectPt(20, 30, 50, 40),
                 Style = new VisualStyle()
             }
         };
@@ -54,7 +54,7 @@ public class SkiaDiagnosticsTests
             1,
             new ColorRgba(255, 255, 255, 255));
 
-        layout.Pages.Add(page);
+        layout.AddPage(page);
         return layout;
     }
 

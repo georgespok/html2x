@@ -4,7 +4,7 @@ This document explains how Html2x turns HTML and CSS into PDF bytes.
 
 ## Composition
 
-`LayoutBuilder` is the composition layer. It coordinates style, geometry,
+`LayoutBuilder` is the internal composition layer. It coordinates style, geometry,
 fragment projection, pagination, and final layout assembly, but it does not own
 HTML parsing or CSS computation directly.
 
@@ -71,12 +71,13 @@ project-owned models and must not depend on parser objects.
 
 Image metadata contracts live in `Html2x.LayoutEngine.Contracts` because they
 are geometry inputs. Geometry consumes `IImageMetadataResolver` for source,
-status, and intrinsic size only. PDF rendering loads image bytes separately
-through renderer-owned infrastructure.
+status, and intrinsic size only. `Html2x.Resources` owns image path scope, data
+URI parsing, byte limits, byte loading, and intrinsic dimension decoding. PDF
+rendering consumes the same resource policy for image bytes.
 
 Fragment projection lives in `Html2x.LayoutEngine.Fragments`. Composition calls
-that module after geometry publishes layout facts. Renderer-facing fragment
-models live in `Html2x.RenderModel`.
+that internal module after geometry publishes layout facts. Renderer-facing
+fragment models live in `Html2x.RenderModel`.
 
 `Html2x.RenderModel` owns pure render facts: units, style value facts, font
 request facts, resolved font facts, renderer-facing documents, renderer-facing
@@ -157,6 +158,11 @@ block, inline, inline-block, table, row, cell, image, list item, and rule. The
 geometry pass then resolves dimensions, margins, padding, borders, inline
 layout, image layout, and table placements.
 
+`BlockLayoutEngine` coordinates block kind dispatch and publication. Specialized
+internal modules own normal block-flow sequencing, non-mutating block-flow
+measurement, image block placement, table diagnostics and placement, published
+layout caching, inline publishing, and shared mutable compatibility writes.
+
 Input: `StyleTree` and layout geometry options.
 
 Output: contract-owned `PublishedLayoutTree`.
@@ -188,6 +194,13 @@ facts. It must not reference parser packages, geometry implementation projects,
 fragment implementation code, renderer implementation code, diagnostics
 serializers, or mutable box types.
 
+Contract namespace ownership is explicit: style handoff facts use
+`Html2x.LayoutEngine.Contracts.Style`, geometry request and value facts use
+`Html2x.LayoutEngine.Contracts.Geometry`, image metadata contracts use
+`Html2x.LayoutEngine.Contracts.Geometry.Images`, and published layout facts use
+`Html2x.LayoutEngine.Contracts.Published`. The old `Models` and
+`Geometry.Published` names are not used for contracts.
+
 ## Fragment Projection
 
 `Html2x.LayoutEngine.Fragments` owns the projection from published layout facts
@@ -209,7 +222,7 @@ layout.
 
 ## Pagination
 
-`Html2x.LayoutEngine.Pagination` owns page placement. `LayoutPaginator`
+`Html2x.LayoutEngine.Pagination` owns page placement. Internal `LayoutPaginator`
 consumes measured render model block fragments plus `PaginationOptions` and
 returns `PaginationResult`. The result contains the final `HtmlLayout` and
 stable audit facts for page and placement diagnostics.
@@ -217,6 +230,10 @@ stable audit facts for page and placement diagnostics.
 Input: unpaginated render model block fragments.
 
 Output: `PaginationResult`.
+
+`HtmlLayout.Pages` is exposed as a read-only list. Pagination assembles pages
+through `HtmlLayout.AddPage`, and renderers treat the final page set as input
+facts.
 
 Pagination owns translated fragment clones and page assembly. Source fragments
 remain read-only inputs. The current internal algorithm is `BlockPaginator`,

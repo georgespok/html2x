@@ -1,109 +1,56 @@
-using SkiaSharp;
-using Xunit.Abstractions;
+using Html2x.RenderModel;
+using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.Text;
+using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-public class AbsolutePositioningTests(ITestOutputHelper output)
+[Trait("Category", "Integration")]
+public sealed class AbsolutePositioningTests
 {
     [Fact]
-    public void AbsoluteRendering_SkiaPdf_GeneratePdf()
+    public async Task RenderAsync_PositionedLines_PreservesPageCoordinates()
     {
-        // Arrange: mock fragments
-        var fragments = new ITestFragment[]
-        {
-            new TestRectFragment(50, 40, 200, 60, SKColors.LightGray),
-            new TestTextFragment(60, 80, "Hello absolute world!", 20, SKColors.Black),
-            new TestRectFragment(100, 150, 150, 40, SKColors.CornflowerBlue)
-        };
+        var layout = new HtmlLayout();
+        layout.AddPage(new LayoutPage(
+            new SizePt(400f, 400f),
+            new Spacing(),
+            [
+                CreateLine("Anchor", 40f, 60f),
+                CreateLine("Offset", 180f, 220f)
+            ],
+            PageNumber: 1,
+            PageBackground: new ColorRgba(255, 255, 255, 255)));
+        var renderer = new PdfRenderer();
 
-        // Prepare output path
-        var tempDir = Path.GetTempPath();
-        var outputPath = Path.Combine(tempDir, "absolute-rendering.pdf");
+        var pdfBytes = await renderer.RenderAsync(layout, new PdfRenderSettings());
 
-        using var pdfStream = File.OpenWrite(outputPath);
-        using var document = SKDocument.CreatePdf(pdfStream);
-
-        // A4: 595×842 points
-        const float width = 595;
-        const float height = 842;
-
-        using (var canvas = document.BeginPage(width, height))
-        {
-            canvas.Clear(SKColors.White);
-
-            foreach (var f in fragments)
-            {
-                canvas.Save();
-                canvas.Translate(f.X, f.Y);
-
-                switch (f)
-                {
-                    case TestRectFragment rect:
-                        DrawRect(canvas, rect);
-                        break;
-
-                    case TestTextFragment text:
-                        DrawText(canvas, text);
-                        break;
-                }
-
-                canvas.Restore();
-            }
-
-            document.EndPage();
-        }
-
-        document.Close();
-
-        // Assert that PDF exists and has content
-        Assert.True(new FileInfo(outputPath).Length > 1000);
-
-        output.WriteLine($"PDF saved to: {outputPath}");
+        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        var words = PdfWordParser.GetRawWords(pdfBytes);
+        var anchor = PdfWordParser.FindWordByText(words, "Anchor").ShouldNotBeNull();
+        var offset = PdfWordParser.FindWordByText(words, "Offset").ShouldNotBeNull();
+        offset.BoundingBox.Left.ShouldBeGreaterThan(anchor.BoundingBox.Left + 100d);
+        Math.Abs(offset.BoundingBox.Top - anchor.BoundingBox.Top).ShouldBeGreaterThan(100d);
     }
 
-    // ---------------- Skia Drawing Methods ----------------
-
-    private static void DrawRect(SKCanvas canvas, TestRectFragment rect)
+    private static LineBoxFragment CreateLine(string text, float x, float y)
     {
-        using var paint = new SKPaint
+        return new LineBoxFragment
         {
-            Style = SKPaintStyle.Fill,
-            
-            Color = rect.Color,
-            IsAntialias = true
+            Rect = new RectPt(x, y, 100f, 20f),
+            BaselineY = y + 15f,
+            LineHeight = 20f,
+            Runs =
+            [
+                RendererFontTestData.CreateTextRun(
+                    text,
+                    RendererFontTestData.CreateFont(weight: FontWeight.W400),
+                    12f,
+                    new PointPt(x, y + 15f),
+                    60f,
+                    9f,
+                    3f)
+            ]
         };
-
-        canvas.DrawRect(0, 0, rect.Width, rect.Height, paint);
     }
-
-    private static void DrawText(SKCanvas canvas, TestTextFragment text)
-    {
-        using var font = new SKFont
-        {
-            Size = text.FontSize
-        };
-
-        using var paint = new SKPaint
-        {
-            Color = text.Color,
-            IsAntialias = true
-        };
-
-        // Draw text baseline at FontSize (like top-left baseline)
-        canvas.DrawText(text.Text, 0, text.FontSize, SKTextAlign.Left, font, paint);
-    }
-
-    // ---------------- Fragment Model ----------------
-
-    private interface ITestFragment
-    {
-        float X { get; }
-        float Y { get; }
-    }
-
-    private record TestRectFragment(float X, float Y, float Width, float Height, SKColor Color)
-        : ITestFragment;
-
-    private record TestTextFragment(float X, float Y, string Text, float FontSize, SKColor Color)
-        : ITestFragment;
 }

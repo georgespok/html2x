@@ -1,5 +1,5 @@
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Contracts.Published;
 using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments;
@@ -52,7 +52,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
-            Style = StyleConverter.FromComputed(source.Style),
+            Style = source.Style,
             DisplayRole = source.Display.Role,
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset,
@@ -67,7 +67,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
-            Style = StyleConverter.FromComputed(source.Style),
+            Style = source.Style,
             DisplayRole = source.Display.Role,
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset,
@@ -82,7 +82,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
-            Style = StyleConverter.FromComputed(source.Style),
+            Style = source.Style,
             DisplayRole = source.Display.Role,
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset,
@@ -98,7 +98,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
-            Style = StyleConverter.FromComputed(source.Style),
+            Style = source.Style,
             DisplayRole = source.Display.Role,
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset
@@ -112,7 +112,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
-            Style = StyleConverter.FromComputed(source.Style)
+            Style = source.Style
         };
     }
 
@@ -128,11 +128,12 @@ internal sealed class PublishedLayoutToFragmentProjector
             Src = image.Src,
             AuthoredSizePx = image.AuthoredSizePx,
             IntrinsicSizePx = image.IntrinsicSizePx,
+            Status = image.Status,
             IsMissing = image.IsMissing,
             IsOversize = image.IsOversize,
             Rect = source.Geometry.BorderBoxRect,
             ContentRect = source.Geometry.ContentBoxRect,
-            Style = StyleConverter.FromComputed(source.Style)
+            Style = source.Style
         };
     }
 }

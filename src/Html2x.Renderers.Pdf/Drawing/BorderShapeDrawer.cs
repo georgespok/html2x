@@ -3,7 +3,7 @@ using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;
 
-public class BorderShapeDrawer
+internal sealed class BorderShapeDrawer
 {
     /// <summary>
     /// Calculates the drawing rectangles for each border side using Horizontal Dominance strategy.
@@ -22,13 +22,13 @@ public class BorderShapeDrawer
 
         // Top: Full width (0, 0, W, T)
         var topRect = new SKRect(0, 0, w, t);
-        
+
         // Bottom: Full width (0, H-B, W, H)
         var bottomRect = new SKRect(0, h - b, w, h);
-        
+
         // Right: Height minus Top/Bottom (W-R, T, W, H-B)
         var rightRect = new SKRect(w - r, verticalTop, w, verticalBottom);
-        
+
         // Left: Height minus Top/Bottom (0, T, L, H-B)
         var leftRect = new SKRect(0, verticalTop, l, verticalBottom);
 

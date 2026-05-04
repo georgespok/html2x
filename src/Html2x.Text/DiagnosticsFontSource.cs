@@ -106,10 +106,16 @@ public sealed class DiagnosticsFontSource : IFontSource
 
     private static ResolvedFont? CreateFailedResolution(Exception exception)
     {
-        var configuredPath = exception.Data["FontConfiguredPath"] as string;
-        var filePath = exception.Data["FontFilePath"] as string;
-        var sourceId = exception.Data["FontSourceId"] as string
-            ?? exception.Data["FontResolvedPath"] as string
+        if (exception is not FontResolutionException fontException)
+        {
+            return null;
+        }
+
+        var resolved = fontException.ResolvedFont;
+        var configuredPath = fontException.ConfiguredPath;
+        var filePath = resolved?.FilePath;
+        var sourceId = resolved?.SourceId
+            ?? fontException.ResolvedPath
             ?? configuredPath;
 
         if (string.IsNullOrWhiteSpace(sourceId) &&
@@ -120,12 +126,12 @@ public sealed class DiagnosticsFontSource : IFontSource
         }
 
         return new ResolvedFont(
-            exception.Data["FontFamily"] as string ?? string.Empty,
-            exception.Data["FontWeight"] is FontWeight weight ? weight : default,
-            exception.Data["FontStyle"] is FontStyle style ? style : default,
+            resolved?.Family ?? string.Empty,
+            resolved?.Weight ?? default,
+            resolved?.Style ?? default,
             sourceId ?? string.Empty,
             FilePath: filePath,
-            FaceIndex: exception.Data["FontFaceIndex"] is int faceIndex ? faceIndex : 0,
+            FaceIndex: resolved?.FaceIndex ?? 0,
             ConfiguredPath: configuredPath);
     }
 }

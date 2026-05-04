@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public sealed record StyleContentNode(
+internal sealed record StyleContentNode(
     StyleContentIdentity Identity,
     StyleContentNodeKind Kind,
     string? Text,

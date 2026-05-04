@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
 
 /// <summary>
@@ -8,7 +6,7 @@ namespace Html2x.RenderModel;
 public sealed class LineBoxFragment : Fragment
 {
     private bool _hasOccupiedRect;
-    private readonly RectangleF _occupiedRect;
+    private readonly RectPt _occupiedRect;
     private readonly float _baselineY;
     private readonly float _lineHeight;
 
@@ -16,7 +14,7 @@ public sealed class LineBoxFragment : Fragment
     {
     }
 
-    public RectangleF OccupiedRect
+    public RectPt OccupiedRect
     {
         get => _hasOccupiedRect ? _occupiedRect : Rect;
         init

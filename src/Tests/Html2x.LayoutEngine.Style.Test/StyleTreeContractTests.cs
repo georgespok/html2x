@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Style.Test;
@@ -112,20 +112,25 @@ public sealed class StyleTreeContractTests
         lineBreak.Text.ShouldBeNull();
     }
 
-    [Fact]
-    public void StyleNodeId_NegativeValue_ThrowsArgumentOutOfRangeException()
+    [Theory]
+    [InlineData("node")]
+    [InlineData("content")]
+    public void StyleId_NegativeValue_ThrowsOutOfRange(string idKind)
     {
-        Should.Throw<ArgumentOutOfRangeException>(() => new StyleNodeId(-1));
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+        {
+            Action create = idKind switch
+            {
+                "node" => () => _ = new StyleNodeId(-1),
+                "content" => () => _ = new StyleContentId(-1),
+                _ => throw new ArgumentOutOfRangeException(nameof(idKind))
+            };
+            create();
+        });
     }
 
     [Fact]
-    public void StyleContentId_NegativeValue_ThrowsArgumentOutOfRangeException()
-    {
-        Should.Throw<ArgumentOutOfRangeException>(() => new StyleContentId(-1));
-    }
-
-    [Fact]
-    public void StyleSourceIdentity_NegativeSourceOrder_ThrowsArgumentOutOfRangeException()
+    public void StyleSourceIdentity_NegativeSourceOrder_ThrowsOutOfRange()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new StyleSourceIdentity(
             StyleNodeId.Unspecified,
@@ -151,7 +156,7 @@ public sealed class StyleTreeContractTests
     }
 
     [Fact]
-    public void StyleContentIdentity_NegativeSiblingIndex_ThrowsArgumentOutOfRangeException()
+    public void StyleContentIdentity_NegativeSiblingIndex_ThrowsOutOfRange()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new StyleContentIdentity(
             StyleContentId.Unspecified,

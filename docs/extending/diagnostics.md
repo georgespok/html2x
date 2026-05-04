@@ -15,7 +15,7 @@ Records should include:
 - A short message when the record describes a warning or error.
 - Context needed to find the affected input or output.
 - Stable event-specific fields.
-- Raw user input only when diagnostics are enabled and reproduction requires it.
+- Raw user input only when the owning public option explicitly opts in and reproduction requires it.
 
 Use `DiagnosticFields` for event-specific data. Field values must be strings,
 numbers, booleans, enum names as strings, nulls, diagnostic arrays, or nested
@@ -30,9 +30,11 @@ Emit records from the module that owns the decision:
 - Conversion lifecycle diagnostics from the converter facade.
 - Render summaries and renderer failures from the renderer.
 
-Producer modules should use small local helper methods when a record needs to
-flatten local domain models. `Html2x.Diagnostics` must not reference those
-domain models.
+Producer modules should use `DiagnosticStage` for standard run-bound lifecycle
+records. Use `DiagnosticStageEmitter` when a facade must coordinate lifecycle
+events directly, such as emitting skipped stages after a prior failure. Use
+small local helper methods when a record needs to flatten local domain models.
+`Html2x.Diagnostics` must not reference those domain models.
 
 ## Serialization
 

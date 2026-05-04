@@ -1,0 +1,31 @@
+namespace Html2x.LayoutEngine.Contracts.Published;
+
+using Html2x.RenderModel;
+using Html2x.LayoutEngine.Contracts.Geometry;
+
+
+internal sealed record PublishedInlineSource
+{
+    public PublishedInlineSource(
+        string nodePath,
+        string? elementIdentity,
+        int sourceOrder,
+        GeometrySourceIdentity? sourceIdentity = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nodePath);
+        ArgumentOutOfRangeException.ThrowIfNegative(sourceOrder);
+
+        NodePath = nodePath;
+        ElementIdentity = string.IsNullOrWhiteSpace(elementIdentity) ? null : elementIdentity;
+        SourceOrder = sourceOrder;
+        SourceIdentity = sourceIdentity ?? GeometrySourceIdentity.Unspecified;
+    }
+
+    public string NodePath { get; }
+
+    public string? ElementIdentity { get; }
+
+    public int SourceOrder { get; }
+
+    public GeometrySourceIdentity SourceIdentity { get; }
+}

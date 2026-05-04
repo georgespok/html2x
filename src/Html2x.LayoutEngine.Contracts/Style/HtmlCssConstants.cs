@@ -1,12 +1,50 @@
 using Html2x.RenderModel;
-namespace Html2x.LayoutEngine;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
 /// <summary>
 ///     Centralized constants for HTML element tag names, CSS property names,
 ///     CSS value strings, and CSS class names to avoid hardcoded strings.
 /// </summary>
-public static class HtmlCssConstants
+internal static class HtmlCssConstants
 {
+    public static IReadOnlySet<string> SupportedElementTags { get; } =
+        new HashSet<string>(
+            [
+                HtmlTags.Body,
+                HtmlTags.H1,
+                HtmlTags.H2,
+                HtmlTags.H3,
+                HtmlTags.H4,
+                HtmlTags.H5,
+                HtmlTags.H6,
+                HtmlTags.P,
+                HtmlTags.Span,
+                HtmlTags.Div,
+                HtmlTags.Table,
+                HtmlTags.Tbody,
+                HtmlTags.Thead,
+                HtmlTags.Tfoot,
+                HtmlTags.Tr,
+                HtmlTags.Td,
+                HtmlTags.Th,
+                HtmlTags.Img,
+                HtmlTags.Hr,
+                HtmlTags.Br,
+                HtmlTags.Ul,
+                HtmlTags.Ol,
+                HtmlTags.Li,
+                HtmlTags.Section,
+                HtmlTags.Main,
+                HtmlTags.Header,
+                HtmlTags.Footer,
+                HtmlTags.B,
+                HtmlTags.I,
+                HtmlTags.Strong,
+                HtmlTags.U,
+                HtmlTags.S
+            ],
+            StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     ///     HTML element tag names (case-insensitive in practice).
     /// </summary>

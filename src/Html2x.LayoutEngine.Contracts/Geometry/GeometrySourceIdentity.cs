@@ -1,4 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
+
+namespace Html2x.LayoutEngine.Contracts.Geometry;
 
 internal sealed record GeometrySourceIdentity
 {

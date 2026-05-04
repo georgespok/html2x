@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public enum StyleContentNodeKind
+internal enum StyleContentNodeKind
 {
     Element,
     Text,

@@ -1,8 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Builders;
@@ -19,7 +18,7 @@ internal static class PublishedLayoutTestBuilder
     public static PublishedBlock Block(
         string nodePath = "body/div",
         int sourceOrder = 0,
-        RectangleF? rect = null,
+        RectPt? rect = null,
         FragmentDisplayRole role = FragmentDisplayRole.Block,
         FormattingContextKind formattingContext = FormattingContextKind.Block,
         float? markerOffset = null,
@@ -32,7 +31,7 @@ internal static class PublishedLayoutTestBuilder
         IReadOnlyList<PublishedBlockFlowItem>? flow = null)
     {
         var geometry = BoxGeometryFactory.FromBorderBox(
-            rect ?? new RectangleF(0f, 0f, 100f, 20f),
+            rect ?? new RectPt(0f, 0f, 100f, 20f),
             new Spacing(),
             new Spacing(),
             markerOffset: markerOffset.GetValueOrDefault());
@@ -40,7 +39,7 @@ internal static class PublishedLayoutTestBuilder
         return new PublishedBlock(
             new PublishedBlockIdentity(nodePath, elementIdentity: null, sourceOrder),
             new PublishedDisplayFacts(role, formattingContext, markerOffset),
-            style ?? new ComputedStyle(),
+            ToVisualStyle(style ?? new ComputedStyle()),
             geometry,
             inlineLayout,
             image,
@@ -68,8 +67,8 @@ internal static class PublishedLayoutTestBuilder
             [
                 new PublishedInlineLine(
                     lineIndex: 0,
-                    rect: new RectangleF(0f, 0f, 100f, 12f),
-                    occupiedRect: new RectangleF(0f, 0f, 100f, 12f),
+                    rect: new RectPt(0f, 0f, 100f, 12f),
+                    occupiedRect: new RectPt(0f, 0f, 100f, 12f),
                     baselineY: 9f,
                     lineHeight: 12f,
                     textAlign: "left",
@@ -83,7 +82,7 @@ internal static class PublishedLayoutTestBuilder
     {
         return new PublishedInlineTextItem(
             order,
-            new RectangleF(order * 20f, 0f, 20f, 12f),
+            new RectPt(order * 20f, 0f, 20f, 12f),
             [CreateRun(text)],
             [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
     }
@@ -92,7 +91,7 @@ internal static class PublishedLayoutTestBuilder
     {
         return new PublishedInlineObjectItem(
             order,
-            new RectangleF(order * 20f, 0f, 20f, 12f),
+            new RectPt(order * 20f, 0f, 20f, 12f),
             content);
     }
 
@@ -104,10 +103,25 @@ internal static class PublishedLayoutTestBuilder
             text,
             font,
             12f,
-            new PointF(0f, 9f),
+            new PointPt(0f, 9f),
             20f,
             8f,
             3f,
             ResolvedFont: TextMeasurement.CreateFallback(font, 20f, 8f, 3f).ResolvedFont);
+    }
+
+    private static VisualStyle ToVisualStyle(ComputedStyle style)
+    {
+        var hasBorders = style.Borders?.HasAny == true;
+
+        return new VisualStyle(
+            BackgroundColor: style.BackgroundColor,
+            Borders: hasBorders ? style.Borders : null,
+            Color: style.Color,
+            Margin: style.Margin,
+            Padding: style.Padding,
+            WidthPt: style.WidthPt,
+            HeightPt: style.HeightPt,
+            Display: style.Display);
     }
 }

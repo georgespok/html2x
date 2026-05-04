@@ -110,42 +110,24 @@ internal sealed class SkiaFontCache : IDisposable
             ? $"Failed to load font file '{path}' (face {faceIndex})."
             : $"Failed to load font file '{path}'.";
 
-    private static InvalidOperationException CreateFontResolutionException(
+    private static FontResolutionException CreateFontResolutionException(
         string message,
         FontKey requested,
         ResolvedFont resolved,
         string? path)
     {
-        var exception = new InvalidOperationException(message);
-        exception.Data["DiagnosticsName"] = "FontPath";
-        exception.Data["RequestedFamily"] = requested.Family;
-        exception.Data["RequestedWeight"] = requested.Weight;
-        exception.Data["RequestedStyle"] = requested.Style;
-        exception.Data["FontFamily"] = resolved.Family;
-        exception.Data["FontWeight"] = resolved.Weight;
-        exception.Data["FontStyle"] = resolved.Style;
-        exception.Data["FontSourceId"] = resolved.SourceId;
-        exception.Data["FontConfiguredPath"] = resolved.ConfiguredPath;
-        exception.Data["FontFilePath"] = resolved.FilePath;
-        exception.Data["FontFaceIndex"] = resolved.FaceIndex;
-
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            exception.Data["FontResolvedPath"] = path;
-        }
-
-        return exception;
+        return new FontResolutionException(
+            message,
+            requested,
+            resolved,
+            resolvedPath: path);
     }
 
-    private static InvalidOperationException CreateMissingResolvedFontException(TextRun run)
+    private static FontResolutionException CreateMissingResolvedFontException(TextRun run)
     {
-        var exception = new InvalidOperationException(
-            "TextRun.ResolvedFont is required before PDF rendering. Build renderer inputs through layout geometry or provide resolved font facts on manually constructed text runs.");
-        exception.Data["DiagnosticsName"] = "ResolvedFont";
-        exception.Data["RequestedFamily"] = run.Font.Family;
-        exception.Data["RequestedWeight"] = run.Font.Weight;
-        exception.Data["RequestedStyle"] = run.Font.Style;
-        exception.Data["Text"] = run.Text;
-        return exception;
+        return new FontResolutionException(
+            "TextRun.ResolvedFont is required before PDF rendering. Build renderer inputs through layout geometry or provide resolved font facts on manually constructed text runs.",
+            run.Font,
+            text: run.Text);
     }
 }

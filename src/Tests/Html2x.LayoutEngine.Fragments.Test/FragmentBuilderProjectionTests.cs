@@ -1,8 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments.Test.Assertions;
 using Html2x.LayoutEngine.Fragments.Test.Builders;
-using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Contracts.Published;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Fragments.Test;
@@ -24,11 +23,11 @@ public sealed class FragmentBuilderProjectionTests
         var first = PublishedLayoutFragmentTestBuilder.Block(
             nodePath: "body/div/p[0]",
             sourceOrder: 1,
-            rect: new RectangleF(1f, 0f, 10f, 10f));
+            rect: new RectPt(1f, 0f, 10f, 10f));
         var second = PublishedLayoutFragmentTestBuilder.Block(
             nodePath: "body/div/p[1]",
             sourceOrder: 2,
-            rect: new RectangleF(2f, 0f, 10f, 10f));
+            rect: new RectPt(2f, 0f, 10f, 10f));
         var root = PublishedLayoutFragmentTestBuilder.Block(
             children: [first, second],
             flow:
@@ -173,8 +172,8 @@ public sealed class FragmentBuilderProjectionTests
     [Fact]
     public void Build_InlineLine_CopiesLineGeometryBaselineAndAlignment()
     {
-        var lineRect = new RectangleF(3f, 4f, 90f, 14f);
-        var occupiedRect = new RectangleF(8f, 4f, 44f, 14f);
+        var lineRect = new RectPt(3f, 4f, 90f, 14f);
+        var occupiedRect = new RectPt(8f, 4f, 44f, 14f);
         var textItem = PublishedLayoutFragmentTestBuilder.TextItem(
             0,
             "alpha",
@@ -243,15 +242,15 @@ public sealed class FragmentBuilderProjectionTests
     [Fact]
     public void Build_ImageBlock_EmitsImageFragmentWithImageFacts()
     {
-        var style = new Html2x.LayoutEngine.Models.ComputedStyle
+        var style = new Html2x.LayoutEngine.Contracts.Style.ComputedStyle
         {
             BackgroundColor = new ColorRgba(10, 20, 30, 255)
         };
         var image = PublishedLayoutFragmentTestBuilder.Block(
             nodePath: "body/img",
             sourceOrder: 0,
-            rect: new RectangleF(1f, 2f, 30f, 20f),
-            contentRect: new RectangleF(3f, 4f, 20f, 12f),
+            rect: new RectPt(1f, 2f, 30f, 20f),
+            contentRect: new RectPt(3f, 4f, 20f, 12f),
             style: style,
             image: new PublishedImageFacts(
                 "images/logo.png",
@@ -271,8 +270,8 @@ public sealed class FragmentBuilderProjectionTests
         imageFragment.IntrinsicSizePx.ShouldBe(new SizePx(60d, 40d));
         imageFragment.IsMissing.ShouldBeTrue();
         imageFragment.IsOversize.ShouldBeFalse();
-        imageFragment.Rect.ShouldBe(new RectangleF(1f, 2f, 30f, 20f));
-        imageFragment.ContentRect.ShouldBe(new RectangleF(3f, 4f, 20f, 12f));
+        imageFragment.Rect.ShouldBe(new RectPt(1f, 2f, 30f, 20f));
+        imageFragment.ContentRect.ShouldBe(new RectPt(3f, 4f, 20f, 12f));
         imageFragment.Style.BackgroundColor.ShouldBe(style.BackgroundColor);
     }
 
@@ -282,7 +281,7 @@ public sealed class FragmentBuilderProjectionTests
         var rule = PublishedLayoutFragmentTestBuilder.Block(
             nodePath: "body/hr",
             sourceOrder: 0,
-            rect: new RectangleF(4f, 5f, 70f, 2f),
+            rect: new RectPt(4f, 5f, 70f, 2f),
             rule: new PublishedRuleFacts());
 
         var fragments = Build(PublishedLayoutFragmentTestBuilder.Tree(rule));
@@ -291,7 +290,7 @@ public sealed class FragmentBuilderProjectionTests
             .Children
             .ShouldHaveSingleItem()
             .ShouldBeOfType<RuleFragment>();
-        ruleFragment.Rect.ShouldBe(new RectangleF(4f, 5f, 70f, 2f));
+        ruleFragment.Rect.ShouldBe(new RectPt(4f, 5f, 70f, 2f));
     }
 
     [Fact]

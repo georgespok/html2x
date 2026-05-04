@@ -1,6 +1,6 @@
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Geometry;
 
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 internal sealed record PublishedBlockIdentity
 {

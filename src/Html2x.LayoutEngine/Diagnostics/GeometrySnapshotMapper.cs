@@ -1,8 +1,9 @@
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Geometry;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
 
 namespace Html2x.LayoutEngine.Diagnostics;

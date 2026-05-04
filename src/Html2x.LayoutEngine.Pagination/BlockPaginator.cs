@@ -1,7 +1,6 @@
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Geometry;
-using System.Drawing;
 
 namespace Html2x.LayoutEngine.Pagination;
 
@@ -37,7 +36,7 @@ internal sealed class BlockPaginator
         var orderedBlocks = ToDeterministicOrder(blocks);
 
         var contentArea = PageContentArea.From(pageSize, margins);
-        var auditContentArea = new RectangleF(contentArea.X, contentArea.Y, contentArea.Width, contentArea.Height);
+        var auditContentArea = new RectPt(contentArea.X, contentArea.Y, contentArea.Width, contentArea.Height);
         var paginationState = new PaginationBuildState(
             pageSize,
             margins,
@@ -115,7 +114,7 @@ internal sealed class BlockPaginator
         int pageNumber,
         SizePt pageSize,
         Spacing margins,
-        RectangleF contentArea,
+        RectPt contentArea,
         IReadOnlyList<BlockFragmentPlacement> placements)
     {
         return new BlockPaginationPage
@@ -208,7 +207,7 @@ internal sealed class BlockPaginator
     private sealed class PaginationBuildState(
         SizePt pageSize,
         Spacing margins,
-        RectangleF contentArea,
+        RectPt contentArea,
         float initialCursorY,
         int placementCapacity)
     {

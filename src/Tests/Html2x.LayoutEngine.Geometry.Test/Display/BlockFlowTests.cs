@@ -3,14 +3,13 @@ using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
-using Moq;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragment;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test.Display;
+namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
 public class BlockFlowTests
 {
@@ -292,7 +291,6 @@ public class BlockFlowTests
         {
             Style = new ComputedStyle()
         };
-        var fragment = new object();
         var inline = new InlineBox(BoxRole.Inline)
         {
             Parent = parent,
@@ -301,7 +299,6 @@ public class BlockFlowTests
             Width = 25f,
             Height = 8f,
             BaselineOffset = 6f,
-            Fragment = fragment,
             SourceIdentity = sourceIdentity
         };
         parent.Children.Add(inline);
@@ -322,7 +319,6 @@ public class BlockFlowTests
         clonedInline.Width.ShouldBe(25f);
         clonedInline.Height.ShouldBe(8f);
         clonedInline.BaselineOffset.ShouldBe(6f);
-        clonedInline.Fragment.ShouldBeSameAs(fragment);
         clonedInline.SourceIdentity.ShouldBe(sourceIdentity);
     }
 
@@ -544,14 +540,7 @@ public class BlockFlowTests
 
     private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns((FontKey font, float _, string text) => TextMeasurement.CreateFallback(font, text.Length * widthPerChar, 8f, 2f));
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns((FontKey _, float _, string text) => text.Length * widthPerChar);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((8f, 2f));
-        return textMeasurer.Object;
+        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
     }
 
     private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)

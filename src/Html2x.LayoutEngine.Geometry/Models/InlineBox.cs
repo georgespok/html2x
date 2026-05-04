@@ -1,25 +1,23 @@
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Geometry.Models;
 
 internal sealed class InlineBox(BoxRole role) : BoxNode(role)
 {
     public string? TextContent { get; init; } // For inline text nodes
 
-    public float Width { get; set; }
-    public float Height { get; set; }
+    public float Width { get; internal set; }
+    public float Height { get; internal set; }
     public SizePt Size
     {
         get => new(Width, Height);
-        set
+        internal set
         {
             Width = value.Width;
             Height = value.Height;
         }
     }
-    public float BaselineOffset { get; set; }
-
-    public object? Fragment { get; set; } // reference to layout fragment (e.g., ImageFragment)
+    public float BaselineOffset { get; internal set; }
 
     protected override BoxNode CloneShallowForParent(BoxNode parent)
     {
@@ -32,8 +30,7 @@ internal sealed class InlineBox(BoxRole role) : BoxNode(role)
             SourceIdentity = SourceIdentity,
             Width = Width,
             Height = Height,
-            BaselineOffset = BaselineOffset,
-            Fragment = Fragment
+            BaselineOffset = BaselineOffset
         };
     }
 }

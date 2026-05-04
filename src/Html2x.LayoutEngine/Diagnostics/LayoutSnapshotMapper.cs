@@ -8,7 +8,7 @@ namespace Html2x.LayoutEngine.Diagnostics;
 /// <summary>
 /// Projects assembled layout output into diagnostic snapshots and validates fragment structures that cross layout boundaries.
 /// </summary>
-public static class LayoutSnapshotMapper
+internal static class LayoutSnapshotMapper
 {
     internal static LayoutSnapshot From(HtmlLayout layout)
     {

@@ -1,8 +1,8 @@
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Geometry.Images;
+namespace Html2x.LayoutEngine.Contracts.Geometry.Images;
 
-public sealed class ImageMetadataResult
+internal sealed class ImageMetadataResult
 {
     public required string Src { get; init; }
 

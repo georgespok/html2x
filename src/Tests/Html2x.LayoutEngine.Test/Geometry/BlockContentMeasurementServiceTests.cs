@@ -1,9 +1,9 @@
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Shouldly;
 using Html2x.Text;
@@ -41,7 +41,7 @@ public sealed class BlockContentMeasurementServiceTests
     }
 
     [Fact]
-    public void Measure_WithImage_ReturnsResolvedFactsWithoutMetadataOrGeometryMutation()
+    public void Measure_Image_ReturnsFactsWithoutMutatingInputs()
     {
         var image = new ImageBox(BoxRole.Block)
         {
@@ -162,11 +162,11 @@ public sealed class BlockContentMeasurementServiceTests
 
         var tableResult = CreateTableEngine().Layout(table, 100f);
         var rowResult = tableResult.Rows.ShouldHaveSingleItem();
-        var assignedWidth = rowResult.Cells.ShouldHaveSingleItem().Width;
+        var assignedWidth = rowResult.Cells.ShouldHaveSingleItem().UsedGeometry.Width;
         var measuredCell = CreateMeasurementService().Measure(cell, assignedWidth, MeasureTable);
 
-        rowResult.Height.ShouldBeGreaterThan(20f);
-        measuredCell.BorderBoxHeight.ShouldBe(rowResult.Height, 0.01f);
+        rowResult.UsedGeometry.Height.ShouldBeGreaterThan(20f);
+        measuredCell.BorderBoxHeight.ShouldBe(rowResult.UsedGeometry.Height, 0.01f);
     }
 
     [Theory]

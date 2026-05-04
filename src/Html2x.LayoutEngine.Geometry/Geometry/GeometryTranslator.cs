@@ -10,8 +10,8 @@ internal static class GeometryTranslator
     internal static UsedGeometry Translate(UsedGeometry geometry, float deltaX, float deltaY)
     {
         return BoxGeometryFactory.FromResolvedBoxes(
-            RenderGeometryTranslator.Translate(geometry.BorderBoxRect, deltaX, deltaY),
-            RenderGeometryTranslator.Translate(geometry.ContentBoxRect, deltaX, deltaY),
+            geometry.BorderBoxRect.Translate(deltaX, deltaY),
+            geometry.ContentBoxRect.Translate(deltaX, deltaY),
             geometry.Baseline.HasValue ? geometry.Baseline.Value + deltaY : null,
             geometry.MarkerOffset,
             geometry.AllowsOverflow);

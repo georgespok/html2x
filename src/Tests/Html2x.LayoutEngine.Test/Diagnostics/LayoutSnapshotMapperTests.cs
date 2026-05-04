@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Shouldly;
@@ -17,7 +16,7 @@ public sealed class LayoutSnapshotMapperTests
         var borders = BorderEdges.Uniform(new BorderSide(2f, color, BorderLineStyle.Solid));
         var fragment = new BlockFragment
         {
-            Rect = new RectangleF(10, 20, 300, 40),
+            Rect = new RectPt(10, 20, 300, 40),
             Style = new VisualStyle(
                 BackgroundColor: background,
                 Borders: borders,
@@ -30,7 +29,7 @@ public sealed class LayoutSnapshotMapperTests
             DisplayRole = FragmentDisplayRole.Block
         };
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(24, 24, 24, 24),
             [fragment]));
@@ -61,8 +60,8 @@ public sealed class LayoutSnapshotMapperTests
         var fragment = new ImageFragment
         {
             Src = "image.png",
-            Rect = new RectangleF(20, 30, 100, 80),
-            ContentRect = new RectangleF(27, 31, 90, 70),
+            Rect = new RectPt(20, 30, 100, 80),
+            ContentRect = new RectPt(27, 31, 90, 70),
             Style = new VisualStyle(
                 BackgroundColor: background,
                 Borders: borders,
@@ -74,7 +73,7 @@ public sealed class LayoutSnapshotMapperTests
                 Display: "inline-block")
         };
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(
+        layout.AddPage(new LayoutPage(
             new SizePt(612, 792),
             new Spacing(24, 24, 24, 24),
             [fragment]));
@@ -101,25 +100,25 @@ public sealed class LayoutSnapshotMapperTests
     {
         var line = new LineBoxFragment
         {
-            Rect = new RectangleF(10, 10, 80, 12)
+            Rect = new RectPt(10, 10, 80, 12)
         };
         var block = new BlockFragment([line])
         {
-            Rect = new RectangleF(10, 10, 100, 20)
+            Rect = new RectPt(10, 10, 100, 20)
         };
         var image = new ImageFragment
         {
             Src = "sequence.png",
-            Rect = new RectangleF(10, 40, 20, 20),
-            ContentRect = new RectangleF(10, 40, 20, 20)
+            Rect = new RectPt(10, 40, 20, 20),
+            ContentRect = new RectPt(10, 40, 20, 20)
         };
         var rule = new RuleFragment
         {
-            Rect = new RectangleF(10, 10, 100, 2)
+            Rect = new RectPt(10, 10, 100, 2)
         };
         var layout = new HtmlLayout();
-        layout.Pages.Add(new LayoutPage(new SizePt(612, 792), new Spacing(), [block, image]));
-        layout.Pages.Add(new LayoutPage(new SizePt(612, 792), new Spacing(), [rule]));
+        layout.AddPage(new LayoutPage(new SizePt(612, 792), new Spacing(), [block, image]));
+        layout.AddPage(new LayoutPage(new SizePt(612, 792), new Spacing(), [rule]));
 
         var snapshot = LayoutSnapshotMapper.From(layout);
 

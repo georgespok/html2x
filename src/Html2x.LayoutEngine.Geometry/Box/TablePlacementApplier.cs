@@ -1,11 +1,11 @@
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Box;
 
 /// <summary>
-/// Applies table layout results back to table, row, and cell boxes for fragment projection compatibility.
+/// Applies table layout results back to table, row, and cell boxes before fragment projection.
 /// </summary>
 internal sealed class TablePlacementApplier
 {
@@ -82,7 +82,7 @@ internal sealed class TablePlacementApplier
         rowBlock.Padding = rowBlock.Style.Padding.Safe();
         rowBlock.RowIndex = rowResult.RowIndex;
         rowBlock.TextAlign = rowBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        rowBlock.ApplyLayoutGeometry(rowResult.UsedGeometry.Translate(tableX, tableY));
+        rowBlock.ApplyLayoutGeometry(GeometryTranslator.Translate(rowResult.UsedGeometry, tableX, tableY));
 
         foreach (var placement in rowResult.Cells)
         {
@@ -102,7 +102,7 @@ internal sealed class TablePlacementApplier
         cellBlock.ColumnIndex = placement.ColumnIndex;
         cellBlock.IsHeader = placement.IsHeader;
         cellBlock.TextAlign = cellBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        cellBlock.ApplyLayoutGeometry(placement.UsedGeometry.Translate(tableX, tableY));
+        cellBlock.ApplyLayoutGeometry(GeometryTranslator.Translate(placement.UsedGeometry, tableX, tableY));
 
         LayoutTableCellContent(cellBlock, layoutChildBlocks);
     }

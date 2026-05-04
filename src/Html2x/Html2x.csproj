@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Html2x.LayoutEngine\Html2x.LayoutEngine.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.Renderers.Pdf\Html2x.Renderers.Pdf.csproj" />
+    <ProjectReference Include="..\Html2x.Resources\Html2x.Resources.csproj" />
     <ProjectReference Include="..\Html2x.Text\Html2x.Text.csproj" />
     <ProjectReference Include="..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>

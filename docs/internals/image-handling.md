@@ -1,15 +1,17 @@
 # Image Handling
 
-Html2x resolves and renders images through geometry-owned image metadata and renderer-owned drawing.
+Html2x resolves and renders images through a shared resource module, geometry-owned image metadata, and renderer-owned drawing.
 
 ## Source Resolution
 
-Image metadata paths are resolved relative to the configured HTML directory:
+Image paths are resolved relative to the configured HTML directory:
 
 - `HtmlConverterOptions.Resources.BaseDirectory` is the single public owner.
-- `HtmlConverter` maps it into layout geometry metadata resolution and PDF image byte loading.
+- When no base directory is supplied, `HtmlConverter` uses `AppContext.BaseDirectory`.
+- `HtmlConverter` maps the resolved directory into layout geometry metadata resolution and PDF image byte loading.
+- `Html2x.Resources` owns scoped path resolution and data URI parsing.
 
-Use absolute paths while debugging if working directory resolution is uncertain.
+Use an explicit base directory while debugging. Resource loading must not depend on the process current directory.
 
 ## Size Policy
 
@@ -19,19 +21,18 @@ Relevant options:
 
 - `HtmlConverterOptions.Resources.MaxImageSizeBytes`
 
-The facade maps this value into layout metadata checks. PDF rendering receives
-resource context through renderer-owned `PdfRenderSettings`.
+The facade maps this value into layout metadata checks and PDF rendering. Direct PDF renderer usage can pass the same value through renderer-owned `PdfRenderSettings`.
 
 ## Geometry Flow
 
-Geometry resolves image metadata through `IImageMetadataResolver`. The metadata contract returns only source, status, and intrinsic size. It does not load render bytes.
+Geometry resolves image metadata through the internal image metadata seam. The metadata contract returns only source, status, and intrinsic size. The shared resource module decodes intrinsic dimensions from the same file and data URI policy used for render byte loading.
 
-Layout resolves image dimensions, padding, borders, and content rectangles from authored values and image metadata. Render model fragments carry those render facts forward. Pagination may translate image fragments and must preserve image content rectangles.
+Layout resolves image dimensions, padding, borders, and content rectangles from authored values and image metadata. Render model fragments carry those render facts and the image load status forward. Pagination may translate image fragments and must preserve image content rectangles and status.
 
-The renderer draws the image and border from render model fragment data. It loads image bytes through renderer-owned infrastructure and should not rederive layout geometry.
+The renderer draws the image and border from render model fragment data. It loads image bytes through `Html2x.Resources` and should not rederive layout geometry.
 
 ## Diagnostics
 
-Image rendering uses `image/render`. Missing and oversized images are warnings. Successfully rendered images are informational.
+Image rendering uses `image/render`. Missing, oversized, invalid data URI, decode failure, and out-of-scope images are warnings. Successfully rendered images are informational.
 
 Payloads should include status, rendered size, border metadata, source context, and raw image source when diagnostics are enabled.

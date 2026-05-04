@@ -1,5 +1,5 @@
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine;
@@ -7,7 +7,7 @@ namespace Html2x.LayoutEngine;
 /// <summary>
 /// Provides font metrics and crude width estimation for layout calculations.
 /// </summary>
-public interface IFontMetricsProvider
+internal interface IFontMetricsProvider
 {
     FontKey GetFontKey(ComputedStyle style);
 

@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
 
 /// <summary>
@@ -8,7 +6,7 @@ namespace Html2x.RenderModel;
 /// </summary>
 public sealed class ImageFragment : Fragment
 {
-    private readonly RectangleF _contentRect;
+    private readonly RectPt _contentRect;
 
     public ImageFragment()
     {
@@ -21,7 +19,7 @@ public sealed class ImageFragment : Fragment
     /// Content box rect after applying padding and borders to the outer rect.
     /// Used for image drawing and placeholders.
     /// </summary>
-    public required RectangleF ContentRect
+    public required RectPt ContentRect
     {
         get => _contentRect;
         init
@@ -38,6 +36,9 @@ public sealed class ImageFragment : Fragment
 
     /// <summary>Intrinsic image size in CSS pixels (0 if unknown at fragment creation).</summary>
     public SizePx IntrinsicSizePx { get; init; }
+
+    /// <summary>Shared image resource load status carried from layout into rendering diagnostics.</summary>
+    public ImageLoadStatus Status { get; init; }
 
     /// <summary>True when the image failed validation or loading (e.g., out-of-scope path).</summary>
     public bool IsMissing { get; init; }

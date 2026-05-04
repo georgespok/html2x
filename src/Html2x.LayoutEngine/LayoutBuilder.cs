@@ -3,9 +3,10 @@ using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
+using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.Text;
@@ -16,7 +17,7 @@ namespace Html2x.LayoutEngine;
 /// Coordinates the deterministic HTML layout pipeline from DOM and style resolution
 /// through box tree layout, fragment projection, pagination, and layout assembly.
 /// </summary>
-public class LayoutBuilder
+internal sealed class LayoutBuilder
 {
     private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
     private readonly FragmentBuilder _fragmentBuilder;
@@ -41,32 +42,44 @@ public class LayoutBuilder
     public async Task<HtmlLayout> BuildAsync(
         string html,
         LayoutBuildSettings settings,
-        IDiagnosticsSink? diagnosticsSink = null)
+        IDiagnosticsSink? diagnosticsSink = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var styleTree = await _styleTreeBuilder.BuildAsync(html, settings.Style, diagnosticsSink: diagnosticsSink);
+        var styleTree = await _styleTreeBuilder.BuildAsync(
+            html,
+            settings.Style,
+            cancellationToken,
+            diagnosticsSink);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var publishedLayout = RunStage("stage/box-tree", () => _layoutGeometryBuilder.Build(
-            styleTree,
-            new LayoutGeometryRequest
-            {
-                PageSize = settings.PageSize,
-                ImageMetadataResolver = _imageMetadataResolver,
-                HtmlDirectory = settings.HtmlDirectory,
-                MaxImageSizeBytes = settings.MaxImageSizeBytes
-            },
-            diagnosticsSink), diagnosticsSink);
-        var fragments = RunStage(
+        var publishedLayout = DiagnosticStage.Run(
+            diagnosticsSink,
+            "stage/box-tree",
+            () => _layoutGeometryBuilder.Build(
+                styleTree,
+                new LayoutGeometryRequest
+                {
+                    PageSize = settings.PageSize,
+                    ImageMetadataResolver = _imageMetadataResolver,
+                    HtmlDirectory = settings.HtmlDirectory,
+                    MaxImageSizeBytes = settings.MaxImageSizeBytes
+                },
+                diagnosticsSink),
+            cancellationToken);
+        var fragments = DiagnosticStage.Run(
+            diagnosticsSink,
             "stage/fragment-tree",
             () => _fragmentBuilder.Build(publishedLayout),
-            diagnosticsSink);
-        
-        return RunStage(
+            cancellationToken);
+
+        return DiagnosticStage.Run(
+            diagnosticsSink,
             "stage/pagination",
             () => CreateHtmlLayout(settings, publishedLayout, fragments, diagnosticsSink),
-            diagnosticsSink);
+            cancellationToken);
     }
 
     private static HtmlLayout CreateHtmlLayout(
@@ -103,63 +116,6 @@ public class LayoutBuilder
                 DiagnosticFields.Field(
                     "snapshot",
                     GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination))),
-            Timestamp: DateTimeOffset.UtcNow));
-    }
-
-    private static T RunStage<T>(
-        string stage,
-        Func<T> action,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        EmitStageStarted(diagnosticsSink, stage);
-        try
-        {
-            var result = action();
-            EmitStageSucceeded(diagnosticsSink, stage);
-            return result;
-        }
-        catch (Exception exception)
-        {
-            EmitStageFailed(diagnosticsSink, stage, exception.Message);
-            throw;
-        }
-    }
-
-    private static void RunStage(
-        string stage,
-        Action action,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        RunStage<object?>(stage, () =>
-        {
-            action();
-            return null;
-        }, diagnosticsSink);
-    }
-
-    private static void EmitStageStarted(IDiagnosticsSink? diagnosticsSink, string stage) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/started", DiagnosticSeverity.Info, null);
-
-    private static void EmitStageSucceeded(IDiagnosticsSink? diagnosticsSink, string stage) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/succeeded", DiagnosticSeverity.Info, null);
-
-    private static void EmitStageFailed(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/failed", DiagnosticSeverity.Error, message);
-
-    private static void EmitDiagnosticsRecord(
-        IDiagnosticsSink? diagnosticsSink,
-        string stage,
-        string name,
-        DiagnosticSeverity severity,
-        string? message)
-    {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: stage,
-            Name: name,
-            Severity: severity,
-            Message: message,
-            Context: null,
-            Fields: DiagnosticFields.Empty,
             Timestamp: DateTimeOffset.UtcNow));
     }
 

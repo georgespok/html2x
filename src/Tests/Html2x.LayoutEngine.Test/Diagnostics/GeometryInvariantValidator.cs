@@ -1,10 +1,9 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragment;
@@ -221,8 +220,8 @@ internal static class GeometryInvariantValidator
         placed.FragmentId.ShouldBe(source.FragmentId, snapshotText);
         placed.ZOrder.ShouldBe(source.ZOrder, snapshotText);
         RectEquals(
-                new RectangleF(source.Rect.X, source.Rect.Y, source.Rect.Width, source.Rect.Height),
-                new RectangleF(source.Rect.X, source.Rect.Y, placed.Rect.Width, placed.Rect.Height))
+                new RectPt(source.Rect.X, source.Rect.Y, source.Rect.Width, source.Rect.Height),
+                new RectPt(source.Rect.X, source.Rect.Y, placed.Rect.Width, placed.Rect.Height))
             .ShouldBeTrue(snapshotText);
 
         var deltaX = placed.Rect.X - source.Rect.X;
@@ -329,7 +328,7 @@ internal static class GeometryInvariantValidator
         (placed.ContentRect.Y - source.ContentRect.Y).ShouldBe(deltaY, 0.01f, snapshotText);
     }
 
-    private static bool RectEquals(RectangleF expected, RectangleF actual)
+    private static bool RectEquals(RectPt expected, RectPt actual)
     {
         return Math.Abs(expected.X - actual.X) <= 0.01f &&
                Math.Abs(expected.Y - actual.Y) <= 0.01f &&
@@ -337,7 +336,7 @@ internal static class GeometryInvariantValidator
                Math.Abs(expected.Height - actual.Height) <= 0.01f;
     }
 
-    private static bool RectContainedBy(RectangleF child, RectangleF parent)
+    private static bool RectContainedBy(RectPt child, RectPt parent)
     {
         const float epsilon = 0.01f;
         return child.Left >= parent.Left - epsilon &&

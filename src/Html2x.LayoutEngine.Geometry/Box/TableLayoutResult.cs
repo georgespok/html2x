@@ -1,7 +1,8 @@
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Box;
+
 
 internal sealed class TableLayoutResult
 {
@@ -49,32 +50,4 @@ internal sealed class TableLayoutResult
             BorderBoxHeight = 0f
         };
     }
-}
-
-internal sealed record TableLayoutRowResult(
-    TableRowBox SourceRow,
-    int RowIndex,
-    UsedGeometry UsedGeometry,
-    IReadOnlyList<TableLayoutCellPlacement> Cells)
-{
-    // Compatibility projection over UsedGeometry. New placement code should consume UsedGeometry directly.
-    public float Y => UsedGeometry.Y;
-
-    public float Height => UsedGeometry.Height;
-}
-
-internal sealed record TableLayoutCellPlacement(
-    TableCellBox SourceCell,
-    int ColumnIndex,
-    bool IsHeader,
-    UsedGeometry UsedGeometry)
-{
-    // Compatibility projection over UsedGeometry. New placement code should consume UsedGeometry directly.
-    public float X => UsedGeometry.X;
-
-    public float Y => UsedGeometry.Y;
-
-    public float Width => UsedGeometry.Width;
-
-    public float Height => UsedGeometry.Height;
 }

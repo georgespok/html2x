@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Geometry.Images;
+namespace Html2x.LayoutEngine.Contracts.Geometry.Images;
 
-public interface IImageMetadataResolver
+internal interface IImageMetadataResolver
 {
     ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes);
 }

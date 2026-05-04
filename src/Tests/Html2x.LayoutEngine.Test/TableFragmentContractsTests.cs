@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Shouldly;
 
@@ -11,26 +10,26 @@ public class TableFragmentContractsTests
     {
         var line = new LineBoxFragment
         {
-            Rect = new RectangleF(12f, 18f, 40f, 10f),
+            Rect = new RectPt(12f, 18f, 40f, 10f),
             Runs = []
         };
 
         var cell = new TableCellFragment([line])
         {
-            Rect = new RectangleF(10f, 16f, 80f, 24f),
+            Rect = new RectPt(10f, 16f, 80f, 24f),
             ColumnIndex = 1,
             IsHeader = true
         };
 
         var row = new TableRowFragment([cell])
         {
-            Rect = new RectangleF(8f, 14f, 160f, 28f),
+            Rect = new RectPt(8f, 14f, 160f, 28f),
             RowIndex = 0
         };
 
         var table = new TableFragment([row])
         {
-            Rect = new RectangleF(6f, 12f, 160f, 56f),
+            Rect = new RectPt(6f, 12f, 160f, 56f),
             DerivedColumnCount = 2
         };
 

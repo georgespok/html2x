@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Fragments;
@@ -312,7 +312,7 @@ public class LayoutIntegrationTests
     }
 
     [Fact]
-    public async Task Build_ImageSizing_CoversCssDimensionsIntrinsicRatioAndAvailableWidthCap()
+    public async Task Build_ImageSizing_AppliesCssRatioAndWidthCap()
     {
         const string html = @"
             <html>
@@ -348,7 +348,7 @@ public class LayoutIntegrationTests
     [Theory]
     [InlineData("margin: 0;", "width: 200px;", 150f)]
     [InlineData("margin: 200px;", "min-width: 400px;", 300f)]
-    public async Task Build_WhenWidthConstraintApplies_ShouldResolveBlockWidth(
+    public async Task Build_WidthConstraint_ResolvesBlockWidth(
         string bodyStyle,
         string divStyle,
         float expectedWidth)
@@ -376,7 +376,7 @@ public class LayoutIntegrationTests
     [InlineData("height: 100px;", 75f)]
     [InlineData("min-height: 120px;", 90f)]
     [InlineData("height: 300px; max-height: 100px;", 75f)]
-    public async Task Build_WhenHeightConstraintApplies_ShouldResolveBlockHeight(
+    public async Task Build_HeightConstraint_ResolvesBlockHeight(
         string divStyle,
         float expectedHeight)
     {

@@ -1,8 +1,8 @@
 using System.Globalization;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public readonly record struct StyleNodeId
+internal readonly record struct StyleNodeId
 {
     public StyleNodeId(int value)
     {

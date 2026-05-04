@@ -1,6 +1,7 @@
 using Html2x.Text;
 namespace Html2x.LayoutEngine.Text;
 
+
 /// <summary>
 /// Computes justification spacing and converts justified text runs into measured token placements.
 /// </summary>
@@ -127,15 +128,4 @@ internal sealed class InlineJustificationPlanner
 
         return count;
     }
-}
-
-/// <summary>
-/// Describes whether a line should be justified and how much extra space each whitespace receives.
-/// </summary>
-internal readonly record struct JustificationPlan(
-    bool ShouldJustify,
-    float ExtraSpace,
-    float PerWhitespaceExtra)
-{
-    public static JustificationPlan None { get; } = new(false, 0f, 0f);
 }

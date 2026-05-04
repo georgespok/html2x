@@ -27,6 +27,22 @@ Recovery:
 3. Compare parent fragment bounds with nested line and text origins.
 4. Add or fix the fragment translator registration.
 
+## Image Renders As Placeholder
+
+Cause candidates:
+
+- The file is missing under `HtmlConverterOptions.Resources.BaseDirectory`.
+- The path escapes the configured base directory.
+- The data URI is malformed.
+- The image bytes cannot be decoded.
+- The image exceeds `HtmlConverterOptions.Resources.MaxImageSizeBytes`.
+
+Recovery:
+
+1. Enable diagnostics and inspect `image/render`.
+2. Check the `status` field for `Missing`, `OutOfScope`, `InvalidDataUri`, `DecodeFailed`, or `Oversize`.
+3. Set an explicit `Resources.BaseDirectory` when HTML references relative image paths.
+
 ## Page Count Drift
 
 Cause candidates:

@@ -1,14 +1,13 @@
 using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.Builders;
 using Html2x.Diagnostics.Contracts;
 using Shouldly;
 using Html2x.RenderModel;
-using System.Drawing;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Test;
+namespace Html2x.LayoutEngine.Geometry.Test;
 
 public class BlockLayoutEngineTests
 {
@@ -135,7 +134,7 @@ public class BlockLayoutEngineTests
         geometry.X.ShouldBe(8f);
         geometry.Y.ShouldBe(9f);
         geometry.Height.ShouldBe(18f);
-        geometry.BorderBoxRect.ShouldBe(new RectangleF(8f, 9f, 100f, 18f));
+        geometry.BorderBoxRect.ShouldBe(new RectPt(8f, 9f, 100f, 18f));
         geometry.ContentBoxRect.Y.ShouldBe(geometry.Y + 2f);
         geometry.ContentBoxRect.Height.ShouldBe(12f);
     }
@@ -229,7 +228,7 @@ public class BlockLayoutEngineTests
 
         var block = result.Blocks.ShouldHaveSingleItem();
         var geometry = block.UsedGeometry.ShouldNotBeNull();
-        geometry.ContentBoxRect.ShouldBe(new RectangleF(
+        geometry.ContentBoxRect.ShouldBe(new RectPt(
             geometry.BorderBoxRect.X + 9f,
             geometry.BorderBoxRect.Y + 5f,
             geometry.BorderBoxRect.Width - 15f,
@@ -546,9 +545,9 @@ public class BlockLayoutEngineTests
 
         table.UsedGeometry.ShouldNotBeNull().Width.ShouldBe(120f);
         table.UsedGeometry.Value.Height.ShouldBe(34f);
-        table.UsedGeometry!.Value.ContentBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
-        row.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
-        cell.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectangleF(9f, 6f, 104f, 20f));
+        table.UsedGeometry!.Value.ContentBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
+        row.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
+        cell.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
     }
 
     [Fact]

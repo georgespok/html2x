@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
-public sealed class StyleNode
+internal sealed class StyleNode
 {
     public StyleNode()
         : this(

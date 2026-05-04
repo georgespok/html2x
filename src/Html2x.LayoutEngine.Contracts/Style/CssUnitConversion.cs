@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine;
+namespace Html2x.LayoutEngine.Contracts.Style;
 
 internal static class CssUnitConversion
 {

@@ -138,29 +138,17 @@ public sealed class FontPathSource : IFontSource
         return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
     }
 
-    private static InvalidOperationException CreateFontResolutionException(
+    private static FontResolutionException CreateFontResolutionException(
         string message,
         FontKey? requested,
         string configuredPath,
         string? resolvedPath = null)
     {
-        var exception = new InvalidOperationException(message);
-        exception.Data["DiagnosticsName"] = "FontPath";
-        exception.Data["FontConfiguredPath"] = configuredPath;
-
-        if (requested is not null)
-        {
-            exception.Data["RequestedFamily"] = requested.Family;
-            exception.Data["RequestedWeight"] = requested.Weight;
-            exception.Data["RequestedStyle"] = requested.Style;
-        }
-
-        if (!string.IsNullOrWhiteSpace(resolvedPath))
-        {
-            exception.Data["FontResolvedPath"] = resolvedPath;
-        }
-
-        return exception;
+        return new FontResolutionException(
+            message,
+            requested,
+            configuredPath: configuredPath,
+            resolvedPath: resolvedPath);
     }
 
 }

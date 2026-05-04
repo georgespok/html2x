@@ -1,13 +1,12 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Shouldly;
 using Html2x.LayoutEngine.Geometry;
 
-namespace Html2x.LayoutEngine.Test;
+namespace Html2x.LayoutEngine.Geometry.Test;
 
 public class TableLayoutEngineTests
 {
@@ -82,7 +81,7 @@ public class TableLayoutEngineTests
         result.ResolvedWidth.ShouldBe(144f);
         result.ColumnWidths.ShouldBe([60f, 60f]);
         result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(120f);
-        result.Rows[0].Cells[1].X.ShouldBe(60f);
+        result.Rows[0].Cells[1].UsedGeometry.X.ShouldBe(60f);
     }
 
     [Fact]
@@ -179,15 +178,15 @@ public class TableLayoutEngineTests
         var placement = result.Rows.ShouldHaveSingleItem().Cells.ShouldHaveSingleItem();
         var geometry = placement.UsedGeometry;
 
-        geometry.BorderBoxRect.ShouldBe(new RectangleF(0f, 0f, 120f, placement.Height));
+        geometry.BorderBoxRect.ShouldBe(new RectPt(0f, 0f, 120f, placement.UsedGeometry.Height));
         geometry.ContentBoxRect.X.ShouldBe(8f);
         geometry.ContentBoxRect.Y.ShouldBe(5f);
         geometry.ContentBoxRect.Width.ShouldBe(106f);
-        geometry.ContentBoxRect.Height.ShouldBe(placement.Height - 12f);
+        geometry.ContentBoxRect.Height.ShouldBe(placement.UsedGeometry.Height - 12f);
     }
 
     [Fact]
-    public void TableLayoutCellPlacement_GeometryReadsCanonicalValues()
+    public void TableLayoutCellPlacement_StoresCanonicalGeometry()
     {
         var cell = CreateCell();
 
@@ -196,15 +195,78 @@ public class TableLayoutEngineTests
             0,
             false,
             BoxGeometryFactory.FromBorderBox(
-                new RectangleF(0f, 0f, 10f, 10f),
+                new RectPt(0f, 0f, 10f, 10f),
                 new Spacing(),
                 new Spacing()));
 
-        placement.UsedGeometry.BorderBoxRect.ShouldBe(new RectangleF(0f, 0f, 10f, 10f));
-        placement.X.ShouldBe(0f);
-        placement.Y.ShouldBe(0f);
-        placement.Width.ShouldBe(10f);
-        placement.Height.ShouldBe(10f);
+        placement.UsedGeometry.BorderBoxRect.ShouldBe(new RectPt(0f, 0f, 10f, 10f));
+    }
+
+    [Fact]
+    public void ApplySupported_TranslatesRowAndCellGeometryThroughGeometryOwner()
+    {
+        var row = new TableRowBox(BoxRole.TableRow);
+        var cell = CreateCell();
+        row.Children.Add(cell);
+        var table = new TableBox(BoxRole.Table)
+        {
+            Style = new ComputedStyle()
+        };
+        table.Children.Add(row);
+        var rowGeometry = BoxGeometryFactory.FromBorderBox(
+            0f,
+            1f,
+            50f,
+            20f,
+            new Spacing(1f, 2f, 3f, 4f),
+            new Spacing(1f, 1f, 1f, 1f),
+            baseline: 12f,
+            markerOffset: 5f);
+        var cellGeometry = BoxGeometryFactory.FromBorderBox(
+            2f,
+            3f,
+            25f,
+            10f,
+            new Spacing(1f, 1f, 1f, 1f),
+            new Spacing(),
+            baseline: 8f,
+            markerOffset: 4f);
+        var result = new TableLayoutResult
+        {
+            IsSupported = true,
+            ResolvedWidth = 50f,
+            DerivedColumnCount = 1,
+            Rows =
+            [
+                new TableLayoutRowResult(
+                    row,
+                    0,
+                    rowGeometry,
+                    [new TableLayoutCellPlacement(cell, 0, false, cellGeometry)])
+            ],
+            ContentHeight = 20f,
+            BorderBoxHeight = 20f
+        };
+
+        _ = new TablePlacementApplier().ApplySupported(
+            table,
+            result,
+            x: 30f,
+            y: 40f,
+            margin: new Spacing(),
+            static (_, _, _, _, _) => 0f);
+
+        var appliedRow = row.UsedGeometry.ShouldNotBeNull();
+        var appliedCell = cell.UsedGeometry.ShouldNotBeNull();
+
+        appliedRow.BorderBoxRect.ShouldBe(new RectPt(30f, 41f, 50f, 20f));
+        appliedRow.ContentBoxRect.ShouldBe(new RectPt(35f, 43f, 42f, 14f));
+        appliedRow.Baseline.ShouldBe(52f);
+        appliedRow.MarkerOffset.ShouldBe(5f);
+        appliedCell.BorderBoxRect.ShouldBe(new RectPt(32f, 43f, 25f, 10f));
+        appliedCell.ContentBoxRect.ShouldBe(new RectPt(33f, 44f, 23f, 8f));
+        appliedCell.Baseline.ShouldBe(48f);
+        appliedCell.MarkerOffset.ShouldBe(4f);
     }
 
     [Fact]
@@ -299,8 +361,8 @@ public class TableLayoutEngineTests
         result.DerivedColumnCount.ShouldBe(2);
         result.Rows[0].SourceRow.ShouldBeSameAs(firstRow);
         result.Rows[1].SourceRow.ShouldBeSameAs(secondRow);
-        result.Rows[0].Y.ShouldBe(0f);
-        result.Rows[1].Y.ShouldBe(result.Rows[0].Height, 0.01f);
+        result.Rows[0].UsedGeometry.Y.ShouldBe(0f);
+        result.Rows[1].UsedGeometry.Y.ShouldBe(result.Rows[0].UsedGeometry.Height, 0.01f);
     }
 
     [Fact]
@@ -330,7 +392,7 @@ public class TableLayoutEngineTests
     [Theory]
     [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "Table cell colspan is not supported.")]
     [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "Table cell rowspan is not supported.")]
-    public void Layout_WhenCellHasUnsupportedSpanAttribute_ShouldReturnUnsupportedResultBeforeGeometryCalculation(
+    public void Layout_UnsupportedCellSpan_ReturnsUnsupportedBeforeGeometry(
         string attributeName,
         string expectedReason)
     {
@@ -427,14 +489,14 @@ public class TableLayoutEngineTests
         var firstPlacement = row.Cells[0];
         var secondPlacement = row.Cells[1];
 
-        row.Y.ShouldBe(0f);
-        row.Height.ShouldBe(30.9f, 0.2f);
-        firstPlacement.Y.ShouldBe(0f);
-        firstPlacement.Height.ShouldBe(row.Height, 0.01f);
-        secondPlacement.Y.ShouldBe(0f);
-        secondPlacement.Height.ShouldBe(row.Height, 0.01f);
-        result.ContentHeight.ShouldBe(row.Height, 0.01f);
-        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
+        row.UsedGeometry.Y.ShouldBe(0f);
+        row.UsedGeometry.Height.ShouldBe(30.9f, 0.2f);
+        firstPlacement.UsedGeometry.Y.ShouldBe(0f);
+        firstPlacement.UsedGeometry.Height.ShouldBe(row.UsedGeometry.Height, 0.01f);
+        secondPlacement.UsedGeometry.Y.ShouldBe(0f);
+        secondPlacement.UsedGeometry.Height.ShouldBe(row.UsedGeometry.Height, 0.01f);
+        result.ContentHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
     }
 
     [Fact]
@@ -462,9 +524,9 @@ public class TableLayoutEngineTests
         var result = Layout(table, availableWidth: 200f);
 
         var row = result.Rows.ShouldHaveSingleItem();
-        row.Height.ShouldBe(30f, 0.01f);
-        result.ContentHeight.ShouldBe(row.Height, 0.01f);
-        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
+        row.UsedGeometry.Height.ShouldBe(30f, 0.01f);
+        result.ContentHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
     }
 
     [Fact]
@@ -488,9 +550,9 @@ public class TableLayoutEngineTests
         var result = Layout(outerTable, availableWidth: 200f);
 
         var row = result.Rows.ShouldHaveSingleItem();
-        row.Height.ShouldBe(36f, 0.01f);
-        result.ContentHeight.ShouldBe(row.Height, 0.01f);
-        result.BorderBoxHeight.ShouldBe(row.Height, 0.01f);
+        row.UsedGeometry.Height.ShouldBe(36f, 0.01f);
+        result.ContentHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
+        result.BorderBoxHeight.ShouldBe(row.UsedGeometry.Height, 0.01f);
     }
 
     private static TableLayoutResult Layout(TableBox table, float availableWidth)

@@ -1,7 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Geometry.Models;
+
 
 /// <summary>
 /// Captures measured inline layout segments and aggregate dimensions for a block content area.
@@ -12,51 +12,4 @@ internal sealed record InlineLayoutResult(
     float MaxLineWidth)
 {
     public static InlineLayoutResult Empty { get; } = new([], 0f, 0f);
-}
-
-/// <summary>
-/// Groups contiguous inline lines that share a coordinate space within a block.
-/// </summary>
-internal sealed record InlineFlowSegmentLayout(
-    IReadOnlyList<InlineLineLayout> Lines,
-    float Top,
-    float Height);
-
-/// <summary>
-/// Describes one inline line where Rect is the line slot and OccupiedRect is the tight item bounds.
-/// </summary>
-internal sealed record InlineLineLayout(
-    int LineIndex,
-    RectangleF Rect,
-    RectangleF OccupiedRect,
-    float BaselineY,
-    float LineHeight,
-    string? TextAlign,
-    IReadOnlyList<InlineLineItemLayout> Items);
-
-internal abstract record InlineLineItemLayout(int Order, RectangleF Rect);
-
-internal sealed record InlineTextItemLayout(
-    int Order,
-    RectangleF Rect,
-    IReadOnlyList<TextRun> Runs,
-    IReadOnlyList<InlineBox> Sources)
-    : InlineLineItemLayout(Order, Rect);
-
-internal sealed record InlineObjectItemLayout(
-    int Order,
-    RectangleF Rect,
-    BlockBox ContentBox)
-    : InlineLineItemLayout(Order, Rect);
-
-internal readonly record struct InlineLayoutRequest(
-    float ContentLeft,
-    float ContentTop,
-    float AvailableWidth,
-    bool IncludeSyntheticListMarker = true)
-{
-    public static InlineLayoutRequest ForMeasurement(float availableWidth, bool includeSyntheticListMarker = true)
-    {
-        return new InlineLayoutRequest(0f, 0f, availableWidth, includeSyntheticListMarker);
-    }
 }

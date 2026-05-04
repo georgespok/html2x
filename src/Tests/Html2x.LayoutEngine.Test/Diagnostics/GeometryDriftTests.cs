@@ -1,7 +1,6 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Shouldly;
@@ -108,7 +107,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 500,
             PageNumber = 1,
-            Rect = new RectangleF(12f, 120f, 25f, 14f),
+            Rect = new RectPt(12f, 120f, 25f, 14f),
             ZOrder = 5,
             Style = style,
             BaselineY = 130f,
@@ -120,7 +119,7 @@ public sealed class GeometryDriftTests
                     "A",
                     font,
                     12f,
-                    new PointF(12f, 130f),
+                    new PointPt(12f, 130f),
                     10f,
                     9f,
                     3f,
@@ -132,8 +131,8 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 501,
             PageNumber = 1,
-            Rect = new RectangleF(40f, 121f, 30f, 20f),
-            ContentRect = new RectangleF(42f, 123f, 26f, 16f),
+            Rect = new RectPt(40f, 121f, 30f, 20f),
+            ContentRect = new RectPt(42f, 123f, 26f, 16f),
             ZOrder = 6,
             Style = style,
             Src = "image.png",
@@ -146,7 +145,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 502,
             PageNumber = 1,
-            Rect = new RectangleF(10f, 145f, 80f, 2f),
+            Rect = new RectPt(10f, 145f, 80f, 2f),
             ZOrder = 7,
             Style = style
         };
@@ -154,7 +153,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 400,
             PageNumber = 1,
-            Rect = new RectangleF(10f, 118f, 90f, 32f),
+            Rect = new RectPt(10f, 118f, 90f, 32f),
             ZOrder = 4,
             Style = style,
             DisplayRole = FragmentDisplayRole.TableCell,
@@ -167,7 +166,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 300,
             PageNumber = 1,
-            Rect = new RectangleF(8f, 116f, 100f, 36f),
+            Rect = new RectPt(8f, 116f, 100f, 36f),
             ZOrder = 3,
             Style = style,
             DisplayRole = FragmentDisplayRole.TableRow,
@@ -179,7 +178,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 200,
             PageNumber = 1,
-            Rect = new RectangleF(6f, 114f, 110f, 40f),
+            Rect = new RectPt(6f, 114f, 110f, 40f),
             ZOrder = 2,
             Style = style,
             DisplayRole = FragmentDisplayRole.Table,
@@ -191,7 +190,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 100,
             PageNumber = 1,
-            Rect = new RectangleF(0f, 95f, 120f, 60f),
+            Rect = new RectPt(0f, 95f, 120f, 60f),
             ZOrder = 1,
             Style = style,
             DisplayRole = FragmentDisplayRole.Block,
@@ -204,7 +203,7 @@ public sealed class GeometryDriftTests
                 new BlockFragment
                 {
                     FragmentId = 1,
-                    Rect = new RectangleF(0f, 10f, 100f, 75f)
+                    Rect = new RectPt(0f, 10f, 100f, 75f)
                 },
                 sourceBlock
             ],
@@ -242,8 +241,8 @@ public sealed class GeometryDriftTests
         movedLine.BaselineY.ShouldBe(line.BaselineY + deltaY);
         movedLine.LineHeight.ShouldBe(line.LineHeight);
         movedLine.TextAlign.ShouldBe(line.TextAlign);
-        movedLine.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointF(line.Runs[0].Origin.X + deltaX, line.Runs[0].Origin.Y + deltaY));
-        movedImage.ContentRect.ShouldBe(new RectangleF(
+        movedLine.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointPt(line.Runs[0].Origin.X + deltaX, line.Runs[0].Origin.Y + deltaY));
+        movedImage.ContentRect.ShouldBe(new RectPt(
             image.ContentRect.X + deltaX,
             image.ContentRect.Y + deltaY,
             image.ContentRect.Width,
@@ -654,7 +653,7 @@ public sealed class GeometryDriftTests
         moved.PageNumber.ShouldBe(expectedPageNumber);
         moved.ZOrder.ShouldBe(source.ZOrder);
         moved.Style.ShouldBe(source.Style);
-        moved.Rect.ShouldBe(new RectangleF(
+        moved.Rect.ShouldBe(new RectPt(
             source.Rect.X + deltaX,
             source.Rect.Y + deltaY,
             source.Rect.Width,

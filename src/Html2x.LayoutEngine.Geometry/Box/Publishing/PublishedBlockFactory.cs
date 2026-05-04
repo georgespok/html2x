@@ -4,8 +4,8 @@ using System.Text;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 
 /// <summary>
 /// Adapts resolved mutable box layout state into published layout facts.
@@ -26,7 +26,7 @@ internal static class PublishedBlockFactory
         return new PublishedBlock(
             identity,
             CreateDisplay(source, geometry),
-            source.Style,
+            CreateStyle(source.Style),
             geometry,
             inlineLayout,
             CreateImage(source),
@@ -78,7 +78,8 @@ internal static class PublishedBlockFactory
                 image.AuthoredSizePx,
                 image.IntrinsicSizePx,
                 image.IsMissing,
-                image.IsOversize)
+                image.IsOversize,
+                image.Status)
             : null;
     }
 
@@ -105,6 +106,21 @@ internal static class PublishedBlockFactory
             ResolveRowIndex(source),
             ResolveColumnIndex(source),
             ResolveIsHeader(source));
+    }
+
+    private static VisualStyle CreateStyle(ComputedStyle style)
+    {
+        var hasBorders = style.Borders?.HasAny == true;
+
+        return new VisualStyle(
+            BackgroundColor: style.BackgroundColor,
+            Borders: hasBorders ? style.Borders : null,
+            Color: style.Color,
+            Margin: style.Margin,
+            Padding: style.Padding,
+            WidthPt: style.WidthPt,
+            HeightPt: style.HeightPt,
+            Display: style.Display);
     }
 
     private static string? BuildElementIdentity(BoxNode source)

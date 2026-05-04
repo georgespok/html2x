@@ -1,6 +1,6 @@
 using Html2x.RenderModel;
 
-namespace Html2x.LayoutEngine.Models;
+namespace Html2x.LayoutEngine.Geometry.Models;
 
 internal sealed class PageBox
 {

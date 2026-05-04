@@ -1,7 +1,6 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Text;
 
@@ -18,7 +17,7 @@ internal sealed class InlineObjectPlacementBuilder
         _buildSegment = buildSegment ?? throw new ArgumentNullException(nameof(buildSegment));
     }
 
-    public RectangleF Place(InlineObjectLayout inlineObject, float left, float baselineY)
+    public RectPt Place(InlineObjectLayout inlineObject, float left, float baselineY)
     {
         ArgumentNullException.ThrowIfNull(inlineObject);
 
@@ -69,6 +68,7 @@ internal sealed class InlineObjectPlacementBuilder
         imageBox.Src = image.Src;
         imageBox.AuthoredSizePx = image.AuthoredSizePx;
         imageBox.IntrinsicSizePx = image.IntrinsicSizePx;
+        imageBox.Status = image.Status;
         imageBox.IsMissing = image.IsMissing;
         imageBox.IsOversize = image.IsOversize;
     }

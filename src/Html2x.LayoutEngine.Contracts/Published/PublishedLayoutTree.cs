@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 /// <summary>
 /// Defines the published output seam of the layout geometry module.

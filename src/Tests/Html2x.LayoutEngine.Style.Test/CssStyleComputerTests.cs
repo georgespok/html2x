@@ -5,7 +5,7 @@ using Html2x.RenderModel;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Style.Test.Assertions;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Style.Test;
@@ -375,7 +375,7 @@ public class CssStyleComputerTests
     [InlineData("50pt", 50f)]
     [InlineData("-10px", null)]
     [InlineData("none", null)]
-    public async Task ParseMaxWidth_ResolvesCorrectly(string value, float? expectedPt)
+    public async Task ParseMaxWidth_ResolvesPoints(string value, float? expectedPt)
     {
         // Arrange
         var document = await CreateHtmlDocument(
@@ -404,14 +404,14 @@ public class CssStyleComputerTests
 
         _sut.Compute(document, sink);
 
-        var diagnostic = sink.Records.Single(e => e.Name == "style/unsupported-declaration");
+        var diagnostic = SingleDiagnostic(sink, "style/unsupported-declaration");
         diagnostic.Severity.ShouldBe(DiagnosticSeverity.Warning);
         diagnostic.Context.ShouldNotBeNull().ElementIdentity.ShouldBe("div#hero");
         diagnostic.Context.StyleDeclaration.ShouldBe("width: 10rem");
         diagnostic.Context.StructuralPath.ShouldBe("html/body/div#hero");
-        diagnostic.Fields["propertyName"].ShouldBe(new DiagnosticStringValue("width"));
-        diagnostic.Fields["rawValue"].ShouldBe(new DiagnosticStringValue("10rem"));
-        diagnostic.Fields["decision"].ShouldBe(new DiagnosticStringValue("Unsupported"));
+        AssertStringField(diagnostic, "propertyName", "width");
+        AssertStringField(diagnostic, "rawValue", "10rem");
+        AssertStringField(diagnostic, "decision", "Unsupported");
         diagnostic.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value.ShouldContain("Unsupported unit");
     }
 
@@ -426,17 +426,16 @@ public class CssStyleComputerTests
 
         _sut.Compute(document, diagnosticsSink: sink);
 
-        var record = sink.Records.Single(
-            static record => record.Name == "style/unsupported-declaration");
+        var record = SingleDiagnostic(sink, "style/unsupported-declaration");
         record.Stage.ShouldBe("stage/style");
         record.Severity.ShouldBe(DiagnosticSeverity.Warning);
         record.Message.ShouldNotBeNull().ShouldContain("Unsupported unit");
         record.Context.ShouldNotBeNull();
         record.Context.ElementIdentity.ShouldBe("div#hero");
         record.Context.StyleDeclaration.ShouldBe("width: 10rem");
-        record.Fields["propertyName"].ShouldBe(new DiagnosticStringValue("width"));
-        record.Fields["rawValue"].ShouldBe(new DiagnosticStringValue("10rem"));
-        record.Fields["decision"].ShouldBe(new DiagnosticStringValue("Unsupported"));
+        AssertStringField(record, "propertyName", "width");
+        AssertStringField(record, "rawValue", "10rem");
+        AssertStringField(record, "decision", "Unsupported");
         record.Fields["reason"].ShouldNotBeNull();
     }
 
@@ -451,11 +450,11 @@ public class CssStyleComputerTests
 
         _sut.Compute(document, sink);
 
-        var diagnostic = sink.Records.Single(e => e.Name == "style/ignored-declaration");
+        var diagnostic = SingleDiagnostic(sink, "style/ignored-declaration");
         diagnostic.Severity.ShouldBe(DiagnosticSeverity.Warning);
-        diagnostic.Fields["propertyName"].ShouldBe(new DiagnosticStringValue("padding"));
-        diagnostic.Fields["rawValue"].ShouldBe(new DiagnosticStringValue("1px 2px 3px 4px 5px"));
-        diagnostic.Fields["decision"].ShouldBe(new DiagnosticStringValue("Ignored"));
+        AssertStringField(diagnostic, "propertyName", "padding");
+        AssertStringField(diagnostic, "rawValue", "1px 2px 3px 4px 5px");
+        AssertStringField(diagnostic, "decision", "Ignored");
         diagnostic.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value.ShouldContain("expected 1 to 4");
         diagnostic.Context.ShouldNotBeNull().ElementIdentity.ShouldBe("div#box");
         diagnostic.Context.StyleDeclaration.ShouldBe("padding: 1px 2px 3px 4px 5px");
@@ -472,12 +471,12 @@ public class CssStyleComputerTests
 
         _sut.Compute(document, sink);
 
-        var diagnostic = sink.Records.Single(e => e.Name == "style/partially-applied-declaration");
+        var diagnostic = SingleDiagnostic(sink, "style/partially-applied-declaration");
         diagnostic.Severity.ShouldBe(DiagnosticSeverity.Warning);
-        diagnostic.Fields["propertyName"].ShouldBe(new DiagnosticStringValue("padding-top"));
-        diagnostic.Fields["rawValue"].ShouldBe(new DiagnosticStringValue("-4px"));
-        diagnostic.Fields["normalizedValue"].ShouldBe(new DiagnosticStringValue("0"));
-        diagnostic.Fields["decision"].ShouldBe(new DiagnosticStringValue("PartiallyApplied"));
+        AssertStringField(diagnostic, "propertyName", "padding-top");
+        AssertStringField(diagnostic, "rawValue", "-4px");
+        AssertStringField(diagnostic, "normalizedValue", "0");
+        AssertStringField(diagnostic, "decision", "PartiallyApplied");
         diagnostic.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value.ShouldContain("clamped to zero");
         diagnostic.Context.ShouldNotBeNull().ElementIdentity.ShouldBe("div.summary");
         diagnostic.Context.StyleDeclaration.ShouldBe("padding-top: -4px");
@@ -575,6 +574,16 @@ public class CssStyleComputerTests
         var document = await domProvider.LoadAsync(html, options);
         var tree = styleComputer.Compute(document);
         return StyleTreeSnapshot.FromTree(tree);
+    }
+
+    private static DiagnosticRecord SingleDiagnostic(RecordingDiagnosticsSink sink, string name)
+    {
+        return sink.Records.Single(record => record.Name == name);
+    }
+
+    private static void AssertStringField(DiagnosticRecord record, string fieldName, string expected)
+    {
+        record.Fields[fieldName].ShouldBe(new DiagnosticStringValue(expected));
     }
 
     public static IEnumerable<object[]> BorderCases()

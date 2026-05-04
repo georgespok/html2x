@@ -160,35 +160,17 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 
     private static SKFont CreateFont(SKTypeface typeface, float sizePt) => new(typeface, sizePt);
 
-    private static InvalidOperationException CreateFontResolutionException(
+    private static FontResolutionException CreateFontResolutionException(
         string message,
         ResolvedFont resolved,
         FontKey? fontKey,
         string? path = null)
     {
-        var exception = new InvalidOperationException(message);
-        exception.Data["DiagnosticsName"] = "FontPath";
-        exception.Data["FontFamily"] = resolved.Family;
-        exception.Data["FontWeight"] = resolved.Weight;
-        exception.Data["FontStyle"] = resolved.Style;
-        exception.Data["FontSourceId"] = resolved.SourceId;
-        exception.Data["FontFilePath"] = resolved.FilePath;
-        exception.Data["FontConfiguredPath"] = resolved.ConfiguredPath;
-        exception.Data["FontFaceIndex"] = resolved.FaceIndex;
-
-        if (fontKey is not null)
-        {
-            exception.Data["RequestedFamily"] = fontKey.Family;
-            exception.Data["RequestedWeight"] = fontKey.Weight;
-            exception.Data["RequestedStyle"] = fontKey.Style;
-        }
-
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            exception.Data["FontResolvedPath"] = path;
-        }
-
-        return exception;
+        return new FontResolutionException(
+            message,
+            fontKey,
+            resolved,
+            resolvedPath: path);
     }
 
     public void Dispose()

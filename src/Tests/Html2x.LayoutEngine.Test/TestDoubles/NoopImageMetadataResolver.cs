@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.RenderModel;
 
 namespace Html2x.LayoutEngine.Test.TestDoubles;

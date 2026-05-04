@@ -1,5 +1,5 @@
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry.Published;
+using Html2x.LayoutEngine.Contracts.Published;
 using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments;
@@ -11,11 +11,11 @@ namespace Html2x.LayoutEngine.Fragments;
 /// Fragment projection consumes only <see cref="PublishedLayoutTree"/>. Layout may
 /// mutate boxes internally, but rendering must not depend on box internals.
 /// </remarks>
-public sealed class FragmentBuilder
+internal sealed class FragmentBuilder
 {
     private readonly PublishedLayoutToFragmentProjector _projector;
 
-    public FragmentBuilder()
+    internal FragmentBuilder()
         : this(new PublishedLayoutToFragmentProjector())
     {
     }

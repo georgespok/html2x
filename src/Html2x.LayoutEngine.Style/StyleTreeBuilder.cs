@@ -1,11 +1,11 @@
 using AngleSharp;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Dom;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Style;
 
-public sealed class StyleTreeBuilder : IStyleTreeBuilder
+internal sealed class StyleTreeBuilder : IStyleTreeBuilder
 {
     private readonly AngleSharpDomProvider _domProvider;
     private readonly CssStyleComputer _styleComputer;
@@ -30,7 +30,8 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
         ArgumentNullException.ThrowIfNull(html);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var document = await RunStageAsync(
+        var document = await DiagnosticStage.RunAsync(
+            diagnosticsSink,
             "stage/dom",
             async () =>
             {
@@ -39,79 +40,16 @@ public sealed class StyleTreeBuilder : IStyleTreeBuilder
                 cancellationToken.ThrowIfCancellationRequested();
                 return loaded;
             },
-            diagnosticsSink);
+            cancellationToken);
 
-        return RunStage(
+        return DiagnosticStage.Run(
+            diagnosticsSink,
             "stage/style",
             () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 return _styleComputer.Compute(document, diagnosticsSink);
             },
-            diagnosticsSink);
-    }
-
-    private static T RunStage<T>(
-        string stage,
-        Func<T> action,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        EmitStageStarted(diagnosticsSink, stage);
-        try
-        {
-            var result = action();
-            EmitStageSucceeded(diagnosticsSink, stage);
-            return result;
-        }
-        catch (Exception exception)
-        {
-            EmitStageFailed(diagnosticsSink, stage, exception.Message);
-            throw;
-        }
-    }
-
-    private static async Task<T> RunStageAsync<T>(
-        string stage,
-        Func<Task<T>> action,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        EmitStageStarted(diagnosticsSink, stage);
-        try
-        {
-            var result = await action();
-            EmitStageSucceeded(diagnosticsSink, stage);
-            return result;
-        }
-        catch (Exception exception)
-        {
-            EmitStageFailed(diagnosticsSink, stage, exception.Message);
-            throw;
-        }
-    }
-
-    private static void EmitStageStarted(IDiagnosticsSink? diagnosticsSink, string stage) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/started", DiagnosticSeverity.Info, null);
-
-    private static void EmitStageSucceeded(IDiagnosticsSink? diagnosticsSink, string stage) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/succeeded", DiagnosticSeverity.Info, null);
-
-    private static void EmitStageFailed(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
-        EmitDiagnosticsRecord(diagnosticsSink, stage, "stage/failed", DiagnosticSeverity.Error, message);
-
-    private static void EmitDiagnosticsRecord(
-        IDiagnosticsSink? diagnosticsSink,
-        string stage,
-        string name,
-        DiagnosticSeverity severity,
-        string? message)
-    {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: stage,
-            Name: name,
-            Severity: severity,
-            Message: message,
-            Context: null,
-            Fields: DiagnosticFields.Empty,
-            Timestamp: DateTimeOffset.UtcNow));
+            cancellationToken);
     }
 }

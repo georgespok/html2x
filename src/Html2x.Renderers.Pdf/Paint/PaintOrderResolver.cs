@@ -197,6 +197,7 @@ internal sealed class PaintOrderResolver
             image.ContentRect,
             image.AuthoredSizePx,
             image.IntrinsicSizePx,
+            image.Status,
             image.IsMissing,
             image.IsOversize));
 
@@ -215,7 +216,7 @@ internal sealed class PaintOrderResolver
             borders!));
     }
 
-    private static bool ShouldPaintBorder(System.Drawing.RectangleF rect, BorderEdges? borders)
+    private static bool ShouldPaintBorder(RectPt rect, BorderEdges? borders)
     {
         return borders is { HasAny: true } && rect.Width > 0f && rect.Height > 0f;
     }

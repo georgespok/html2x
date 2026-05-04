@@ -38,7 +38,7 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             DisplayRole = source.DisplayRole,
@@ -53,7 +53,7 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             DisplayRole = source.DisplayRole,
@@ -69,7 +69,7 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             DisplayRole = source.DisplayRole,
@@ -85,7 +85,7 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             DisplayRole = source.DisplayRole,
@@ -102,14 +102,14 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
-            OccupiedRect = RenderGeometryTranslator.Translate(source.OccupiedRect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
+            OccupiedRect = source.OccupiedRect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             BaselineY = source.BaselineY + deltaY,
             LineHeight = source.LineHeight,
             Runs = source.Runs
-                .Select(run => RenderGeometryTranslator.Translate(run, deltaX, deltaY))
+                .Select(run => run with { Origin = run.Origin.Translate(deltaX, deltaY) })
                 .ToList(),
             TextAlign = source.TextAlign
         };
@@ -121,13 +121,14 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style,
             Src = source.Src,
-            ContentRect = RenderGeometryTranslator.Translate(source.ContentRect, deltaX, deltaY),
+            ContentRect = source.ContentRect.Translate(deltaX, deltaY),
             AuthoredSizePx = source.AuthoredSizePx,
             IntrinsicSizePx = source.IntrinsicSizePx,
+            Status = source.Status,
             IsMissing = source.IsMissing,
             IsOversize = source.IsOversize
         };
@@ -139,7 +140,7 @@ internal sealed class FragmentPlacementCloner
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
-            Rect = RenderGeometryTranslator.Translate(source.Rect, deltaX, deltaY),
+            Rect = source.Rect.Translate(deltaX, deltaY),
             ZOrder = source.ZOrder,
             Style = source.Style
         };

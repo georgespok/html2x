@@ -1,7 +1,6 @@
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Geometry;
 using Shouldly;
-using System.Drawing;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
 
@@ -34,8 +33,8 @@ public sealed class BoxGeometryFactoryTests
 
         var resized = BoxGeometryFactory.WithBorderSize(geometry, 30f, 12f);
 
-        resized.BorderBoxRect.ShouldBe(new RectangleF(10f, 20f, 30f, 12f));
-        resized.ContentBoxRect.ShouldBe(new RectangleF(20f, 24f, 14f, 0f));
+        resized.BorderBoxRect.ShouldBe(new RectPt(10f, 20f, 30f, 12f));
+        resized.ContentBoxRect.ShouldBe(new RectPt(20f, 24f, 14f, 0f));
         resized.Baseline.ShouldBe(30f);
         resized.MarkerOffset.ShouldBe(7f);
     }
@@ -98,7 +97,7 @@ public sealed class BoxGeometryFactoryTests
     }
 
     [Fact]
-    public void ResolveContentFlowWidth_UnboundedBorderWidth_ReturnsUnboundedContentWidth()
+    public void ResolveContentFlowWidth_UnboundedBorder_ReturnsUnbounded()
     {
         var contentWidth = BoxGeometryFactory.ResolveContentFlowWidth(
             float.PositiveInfinity,

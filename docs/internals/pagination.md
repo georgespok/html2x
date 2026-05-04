@@ -27,7 +27,7 @@ DOM/CSSOM
 
 ## Module Seam
 
-- `LayoutPaginator`: public pagination module seam.
+- `LayoutPaginator`: internal pagination module seam.
 - `PaginationOptions`: page size and page margin input facts.
 - `PaginationResult`: final `HtmlLayout` plus stable audit facts.
 - `PaginationDecisionKind`: stable decision vocabulary for audit records.
@@ -54,8 +54,8 @@ Internal implementation details:
 - `FragmentPlacementCloner`: cloned translated fragment creation.
 - `PaginationDiagnostics`: pagination trace event emission.
 
-The public result does not expose `FragmentPlacementCloner` or internal block
-placement models.
+The pagination result does not expose `FragmentPlacementCloner` or internal
+block placement models.
 
 The current algorithm is intentionally block-boundary only. It may move a whole
 block fragment to the next page and may mark a block as oversized, but it does

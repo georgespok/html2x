@@ -31,20 +31,24 @@ public class PdfRenderer
     public Task<byte[]> RenderAsync(
         HtmlLayout htmlLayout,
         PdfRenderSettings? settings = null,
-        IDiagnosticsSink? diagnosticsSink = null)
+        IDiagnosticsSink? diagnosticsSink = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
         settings ??= new PdfRenderSettings();
 
-        var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink);
+        var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink, cancellationToken);
         return Task.FromResult(bytes);
     }
 
     private byte[] RenderWithSkia(
         HtmlLayout layout,
         PdfRenderSettings settings,
-        IDiagnosticsSink? diagnosticsSink)
+        IDiagnosticsSink? diagnosticsSink,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         using var stream = new MemoryStream();
         using var document = SKDocument.CreatePdf(stream);
         if (document is null)
@@ -58,6 +62,7 @@ public class PdfRenderer
 
         foreach (var page in layout.Pages)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var size = page.PageSize;
             using var canvas = document.BeginPage(size.Width, size.Height);
             if (canvas is null)

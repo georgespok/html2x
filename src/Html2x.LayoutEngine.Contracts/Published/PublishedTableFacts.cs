@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Geometry.Published;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 internal sealed record PublishedTableFacts
 {

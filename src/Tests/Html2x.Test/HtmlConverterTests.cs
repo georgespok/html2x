@@ -5,6 +5,7 @@ using Xunit.Abstractions;
 
 namespace Html2x.Test;
 
+[Trait("Category", "Integration")]
 public sealed class HtmlConverterTests : IntegrationTestBase
 {
     private readonly HtmlConverter _htmlConverter;
@@ -195,6 +196,115 @@ public sealed class HtmlConverterTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ToPdfAsync_FileImageWithWidthOnly_UsesDecodedIntrinsicRatio()
+    {
+        var tempDirectory = Directory.CreateTempSubdirectory();
+        try
+        {
+            await File.WriteAllBytesAsync(
+                Path.Combine(tempDirectory.FullName, "ratio.png"),
+                TwoByOnePngBytes());
+            const string html = """
+                <html>
+                  <body>
+                    <img src="ratio.png" width="40" />
+                  </body>
+                </html>
+                """;
+
+            var result = await _htmlConverter.ToPdfAsync(
+                html,
+                CreateDiagnosticsOptions(tempDirectory.FullName));
+
+            var imageRecord = SingleImageRecord(result);
+            Assert.Equal("Ok", StringField(imageRecord, "status"));
+            Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), precision: 1);
+            Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), precision: 1);
+        }
+        finally
+        {
+            tempDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DataUriImageWithHeightOnly_UsesDecodedIntrinsicRatio()
+    {
+        var html = $"""
+            <html>
+              <body>
+                <img src="{TwoByOnePngDataUri}" height="20" />
+              </body>
+            </html>
+            """;
+
+        var result = await _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions());
+
+        var imageRecord = SingleImageRecord(result);
+        Assert.Equal("Ok", StringField(imageRecord, "status"));
+        Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), precision: 1);
+        Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), precision: 1);
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_ImageResources_ReportDetailedRecoverableStatuses()
+    {
+        var rootDirectory = Directory.CreateTempSubdirectory();
+        var baseDirectory = Directory.CreateDirectory(Path.Combine(rootDirectory.FullName, "base"));
+
+        try
+        {
+            await File.WriteAllBytesAsync(Path.Combine(rootDirectory.FullName, "outside.png"), TwoByOnePngBytes());
+            await File.WriteAllBytesAsync(Path.Combine(baseDirectory.FullName, "oversize.png"), new byte[] { 1, 2 });
+
+            const string html = """
+                <html>
+                  <body>
+                    <img src="missing.png" width="16" height="16" />
+                    <img src="../outside.png" width="16" height="16" />
+                    <img src="oversize.png" width="16" height="16" />
+                    <img src="data:image/png;base64,not-base64" width="16" height="16" />
+                    <img src="data:image/png;base64,eA==" width="16" height="16" />
+                  </body>
+                </html>
+                """;
+            var options = new HtmlConverterOptions
+            {
+                Fonts = new FontOptions
+                {
+                    FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
+                },
+                Resources = new ResourceOptions
+                {
+                    BaseDirectory = baseDirectory.FullName,
+                    MaxImageSizeBytes = 1
+                },
+                Diagnostics = new DiagnosticsOptions
+                {
+                    EnableDiagnostics = true
+                }
+            };
+
+            var result = await _htmlConverter.ToPdfAsync(html, options);
+
+            var imageRecords = result.DiagnosticsReport!.Records
+                .Where(static record => record.Name == "image/render")
+                .ToList();
+
+            Assert.Equal(5, imageRecords.Count);
+            Assert.Equal("Missing", StringField(imageRecords[0], "status"));
+            Assert.Equal("OutOfScope", StringField(imageRecords[1], "status"));
+            Assert.Equal("Oversize", StringField(imageRecords[2], "status"));
+            Assert.Equal("InvalidDataUri", StringField(imageRecords[3], "status"));
+            Assert.Equal("DecodeFailed", StringField(imageRecords[4], "status"));
+        }
+        finally
+        {
+            rootDirectory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task ToPdfAsync_DiagnosticsAreEnabled_ExposesSerializableDiagnosticsReport()
     {
         const string html = "<html><body><p>Hello diagnostics report</p></body></html>";
@@ -231,9 +341,10 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         var layoutStart = Assert.Single(report.Records, static record =>
             record.Stage == "LayoutBuild" &&
             record.Name == "stage/started");
-        var htmlField = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticStringValue>(
-            layoutStart.Fields["html"]);
-        Assert.Equal(html, htmlField.Value);
+        var htmlLengthField = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticNumberValue>(
+            layoutStart.Fields["htmlLength"]);
+        Assert.Equal(html.Length, htmlLengthField.Value);
+        Assert.False(layoutStart.Fields.ContainsKey("html"));
 
         var layoutSucceeded = Assert.Single(report.Records, static record =>
             record.Stage == "LayoutBuild" &&
@@ -258,6 +369,57 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         Assert.Contains(records, static record =>
             record.GetProperty("stage").GetString() == "PdfRender" &&
             record.GetProperty("name").GetString() == "stage/succeeded");
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_RawHtmlDiagnosticsOptIn_CapsPayload()
+    {
+        const string html = "<html><body><p>Hello raw diagnostics payload</p></body></html>";
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new FontOptions
+            {
+                FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true,
+                IncludeRawHtml = true,
+                MaxRawHtmlLength = 18
+            }
+        };
+
+        var result = await _htmlConverter.ToPdfAsync(html, options);
+
+        var layoutStart = Assert.Single(result.DiagnosticsReport!.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/started");
+
+        Assert.Equal(html[..18], StringField(layoutStart, "html"));
+        Assert.True(BoolField(layoutStart, "htmlTruncated"));
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_CancellationRequested_EmitsCancellationLifecycle()
+    {
+        const string html = "<html><body><p>cancel me</p></body></html>";
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+            () => _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions(), cancellation.Token));
+
+        var diagnostics = Assert.IsType<DiagnosticsReport>(exception.Data["DiagnosticsReport"]);
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/started");
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/cancelled");
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/skipped" &&
+            record.Message == "Skipped because LayoutBuild was canceled.");
     }
 
     [Fact]
@@ -306,4 +468,41 @@ public sealed class HtmlConverterTests : IntegrationTestBase
 
     private static string StringField(DiagnosticRecord record, string fieldName) =>
         Assert.IsType<DiagnosticStringValue>(record.Fields[fieldName]).Value;
+
+    private static double NumberField(DiagnosticRecord record, string fieldName) =>
+        Assert.IsType<DiagnosticNumberValue>(record.Fields[fieldName]).Value;
+
+    private static bool BoolField(DiagnosticRecord record, string fieldName) =>
+        Assert.IsType<DiagnosticBooleanValue>(record.Fields[fieldName]).Value;
+
+    private static DiagnosticRecord SingleImageRecord(Html2PdfResult result)
+    {
+        Assert.NotNull(result.DiagnosticsReport);
+        return Assert.Single(result.DiagnosticsReport.Records, static record => record.Name == "image/render");
+    }
+
+    private static HtmlConverterOptions CreateDiagnosticsOptions(string? baseDirectory = null) =>
+        new()
+        {
+            Fonts = new FontOptions
+            {
+                FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
+            },
+            Resources = new ResourceOptions
+            {
+                BaseDirectory = baseDirectory
+            },
+            Diagnostics = new DiagnosticsOptions
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+    private static byte[] TwoByOnePngBytes() =>
+        Convert.FromBase64String(TwoByOnePngBase64);
+
+    private const string TwoByOnePngDataUri = $"data:image/png;base64,{TwoByOnePngBase64}";
+
+    private const string TwoByOnePngBase64 =
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 }

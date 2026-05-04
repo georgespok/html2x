@@ -1,106 +1,32 @@
-using System.Text;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.RenderModel;
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.Resources;
 
 namespace Html2x;
 
 /// <summary>
-/// Resolves image metadata from data URIs or scoped file paths and enforces max byte size.
+/// Adapts shared image resource loading to the layout image metadata seam.
 /// </summary>
-public sealed class FileImageProvider : IImageMetadataResolver
+internal sealed class FileImageProvider : IImageMetadataResolver
 {
     public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
     {
-        if (string.IsNullOrWhiteSpace(src))
+        var resource = ImageResourceLoader.Load(src, baseDirectory, maxBytes);
+        return new ImageMetadataResult
         {
-            return Missing(src);
-        }
-
-        try
-        {
-            if (IsDataUri(src))
-            {
-                var bytes = DecodeDataUri(src);
-                if (bytes is null)
-                {
-                    return Missing(src);
-                }
-
-                if (bytes.LongLength > maxBytes)
-                {
-                    return Oversize(src);
-                }
-
-                return Ok(src, 0, 0);
-            }
-
-            var full = Path.GetFullPath(Path.Combine(baseDirectory, src));
-            if (!IsWithinScope(full, baseDirectory) || !File.Exists(full))
-            {
-                return Missing(src);
-            }
-
-            var length = new FileInfo(full).Length;
-            if (length > maxBytes)
-            {
-                return Oversize(src);
-            }
-
-            return Ok(src, 0, 0);
-        }
-        catch
-        {
-            return Missing(src);
-        }
-    }
-
-    private static bool IsDataUri(string src) => src.StartsWith("data:", StringComparison.OrdinalIgnoreCase);
-
-    private static byte[]? DecodeDataUri(string src)
-    {
-        var commaIndex = src.IndexOf(',', StringComparison.Ordinal);
-        if (commaIndex < 0 || commaIndex == src.Length - 1)
-        {
-            return null;
-        }
-
-        var metadata = src.Substring(5, commaIndex - 5);
-        var payload = src.Substring(commaIndex + 1);
-        var isBase64 = metadata.EndsWith(";base64", StringComparison.OrdinalIgnoreCase);
-
-        return isBase64
-            ? Convert.FromBase64String(payload)
-            : Encoding.UTF8.GetBytes(Uri.UnescapeDataString(payload));
-    }
-
-    private static bool IsWithinScope(string fullPath, string baseDir)
-    {
-        var basePath = Path.GetFullPath(baseDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
-                       Path.DirectorySeparatorChar;
-        return fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static ImageMetadataResult Missing(string src) =>
-        new()
-        {
-            Src = src,
-            Status = ImageMetadataStatus.Missing,
-            IntrinsicSizePx = new SizePx(0, 0)
+            Src = resource.Src,
+            Status = ToMetadataStatus(resource.Status),
+            IntrinsicSizePx = resource.IntrinsicSizePx
         };
+    }
 
-    private static ImageMetadataResult Oversize(string src) =>
-        new()
+    private static ImageMetadataStatus ToMetadataStatus(ImageResourceStatus status) =>
+        status switch
         {
-            Src = src,
-            Status = ImageMetadataStatus.Oversize,
-            IntrinsicSizePx = new SizePx(0, 0)
-        };
-
-    private static ImageMetadataResult Ok(string src, double width, double height) =>
-        new()
-        {
-            Src = src,
-            Status = ImageMetadataStatus.Ok,
-            IntrinsicSizePx = new SizePx(width, height)
+            ImageResourceStatus.Ok => ImageMetadataStatus.Ok,
+            ImageResourceStatus.Oversize => ImageMetadataStatus.Oversize,
+            ImageResourceStatus.InvalidDataUri => ImageMetadataStatus.InvalidDataUri,
+            ImageResourceStatus.DecodeFailed => ImageMetadataStatus.DecodeFailed,
+            ImageResourceStatus.OutOfScope => ImageMetadataStatus.OutOfScope,
+            _ => ImageMetadataStatus.Missing
         };
 }

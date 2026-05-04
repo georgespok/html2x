@@ -83,12 +83,10 @@ internal sealed class SkiaPaintCommandDrawer
             IsAntialias = false
         };
 
-        canvas.DrawRect(
-            new SKRect(command.Rect.Left, command.Rect.Top, command.Rect.Right, command.Rect.Bottom),
-            paint);
+        canvas.DrawRect(SkiaGeometryMapper.ToSKRect(command.Rect), paint);
     }
 
-    private void DrawBorder(SKCanvas canvas, System.Drawing.RectangleF rect, BorderEdges borders)
+    private void DrawBorder(SKCanvas canvas, RectPt rect, BorderEdges borders)
     {
         if (rect.Width <= 0 || rect.Height <= 0)
         {

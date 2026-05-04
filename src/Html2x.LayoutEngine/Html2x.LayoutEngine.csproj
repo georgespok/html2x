@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console.Cli" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Html2x.Diagnostics.Contracts\Html2x.Diagnostics.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Fragments\Html2x.LayoutEngine.Fragments.csproj" />

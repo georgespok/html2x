@@ -39,5 +39,7 @@ Font resolution diagnostics should include:
 
 - Missing `HtmlConverterOptions.Fonts.FontPath` fails before layout begins.
 - Invalid font paths fail before layout begins.
+- Font path and renderer font failures use `FontResolutionException` with
+  typed request, resolved font, configured path, resolved path, and text facts.
 - Missing `TextRun.ResolvedFont` fails during PDF rendering with a renderer input error.
 - Platform font differences can cause layout drift. Use repository test fonts for deterministic test and console scenarios.

@@ -3,6 +3,7 @@ using Html2x.Diagnostics.Contracts;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
+
 internal static class TableLayoutDiagnostics
 {
     private const string SupportedTableEvent = "layout/table";
@@ -198,23 +199,3 @@ internal static class TableLayoutDiagnostics
         public FormattingContextKind FormattingContext { get; init; } = FormattingContextKind.Block;
     }
 }
-
-internal sealed record TableRowDiagnosticContext(
-    int RowIndex,
-    int CellCount,
-    float Height);
-
-internal sealed record TableCellDiagnosticContext(
-    int RowIndex,
-    int ColumnIndex,
-    bool IsHeader,
-    float Width,
-    float Height);
-
-internal sealed record TableColumnDiagnosticContext(
-    int ColumnIndex,
-    float Width);
-
-internal sealed record TableGroupDiagnosticContext(
-    string GroupKind,
-    int RowCount);

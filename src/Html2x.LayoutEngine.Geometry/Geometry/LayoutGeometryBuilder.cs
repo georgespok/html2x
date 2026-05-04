@@ -2,8 +2,8 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry;
@@ -82,28 +82,13 @@ internal sealed class LayoutGeometryBuilder
     {
         GeometryLayoutStructureValidator.ValidateInlineBlockStructures(initialBoxRoot, diagnosticsSink);
 
-        var geometryRequest = request ?? LayoutGeometryRequest.Default;
-        var imageResolver = new ImageLayoutResolver(geometryRequest);
-        var inlineEngine = new InlineLayoutEngine(
-            new FontMetricsProvider(),
+        var runtime = LayoutGeometryRuntimeFactory.Create(
+            styles,
+            request,
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
             _blockFormattingContext,
-            imageResolver,
             diagnosticsSink);
-        var blockEngine = new BlockLayoutEngine(
-            inlineEngine,
-            new TableLayoutEngine(inlineEngine, imageResolver),
-            _blockFormattingContext,
-            imageResolver,
-            diagnosticsSink);
-        var page = new PageBox
-        {
-            Margin = styles.Page.Margin,
-            Size = geometryRequest.PageSize
-        };
-
-        var layout = blockEngine.LayoutPublished(initialBoxRoot, page);
+        var layout = runtime.BlockEngine.LayoutPublished(initialBoxRoot, runtime.Page);
         GeometryLayoutStructureValidator.ValidateInlineBlockStructures(layout, diagnosticsSink);
         return layout;
     }

@@ -1,5 +1,3 @@
-using System.Drawing;
-
 namespace Html2x.RenderModel;
 
 /// <summary>
@@ -7,7 +5,7 @@ namespace Html2x.RenderModel;
 /// </summary>
 public abstract class Fragment
 {
-    private readonly RectangleF _rect;
+    private readonly RectPt _rect;
     private readonly VisualStyle _style = new();
 
     protected Fragment()
@@ -18,7 +16,7 @@ public abstract class Fragment
 
     public int PageNumber { get; init; }
 
-    public RectangleF Rect
+    public RectPt Rect
     {
         get => _rect;
         init

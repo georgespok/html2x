@@ -1,9 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
 
 namespace Html2x.LayoutEngine.Geometry;
 
-internal readonly record struct ContentFlowArea(float X, float Y, float Width, float Height);
 
 internal static class BoxGeometryFactory
 {
@@ -28,7 +26,7 @@ internal static class BoxGeometryFactory
     }
 
     public static UsedGeometry FromBorderBox(
-        RectangleF borderBoxRect,
+        RectPt borderBoxRect,
         Spacing padding,
         Spacing border,
         float? baseline = null,
@@ -49,8 +47,8 @@ internal static class BoxGeometryFactory
     }
 
     internal static UsedGeometry FromResolvedBoxes(
-        RectangleF borderBoxRect,
-        RectangleF contentBoxRect,
+        RectPt borderBoxRect,
+        RectPt contentBoxRect,
         float? baseline = null,
         float markerOffset = 0f,
         bool allowsOverflow = false)
@@ -160,27 +158,27 @@ internal static class BoxGeometryFactory
             allowsOverflow);
     }
 
-    internal static RectangleF CreateLayoutRect(float x, float y, float width, float height)
+    internal static RectPt CreateLayoutRect(float x, float y, float width, float height)
     {
         GeometryGuard.RequireFinite(nameof(x), x);
         GeometryGuard.RequireFinite(nameof(y), y);
         GeometryGuard.RequireNonNegativeFinite(nameof(width), width);
         GeometryGuard.RequireNonNegativeFinite(nameof(height), height);
 
-        return new RectangleF(
+        return new RectPt(
             x,
             y,
             width,
             height);
     }
 
-    internal static RectangleF NormalizeLayoutRect(RectangleF rect)
+    internal static RectPt NormalizeLayoutRect(RectPt rect)
     {
         return CreateLayoutRect(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
-    internal static RectangleF ResolveContentRect(
-        RectangleF borderBoxRect,
+    internal static RectPt ResolveContentRect(
+        RectPt borderBoxRect,
         Spacing padding,
         Spacing border)
     {
@@ -207,7 +205,7 @@ internal static class BoxGeometryFactory
         return GeometryGuard.RequireNullableFinite(nameof(value), value);
     }
 
-    private static ContentFlowArea ResolveContentFlowArea(RectangleF contentRect, float markerOffset)
+    private static ContentFlowArea ResolveContentFlowArea(RectPt contentRect, float markerOffset)
     {
         var safeRect = NormalizeLayoutRect(contentRect);
         var safeMarkerOffset = RequireMarkerOffset(markerOffset);
@@ -218,16 +216,16 @@ internal static class BoxGeometryFactory
             safeRect.Height);
     }
 
-    private static RectangleF Inset(RectangleF rect, Spacing inset)
+    private static RectPt Inset(RectPt rect, Spacing inset)
     {
-        return new RectangleF(
+        return new RectPt(
             rect.X + inset.Left,
             rect.Y + inset.Top,
             Math.Max(0f, rect.Width - inset.Left - inset.Right),
             Math.Max(0f, rect.Height - inset.Top - inset.Bottom));
     }
 
-    private static RectangleF ValidateLayoutRect(string name, RectangleF rect)
+    private static RectPt ValidateLayoutRect(string name, RectPt rect)
     {
         return GeometryGuard.RequireRect(name, rect);
     }

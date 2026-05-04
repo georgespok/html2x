@@ -84,6 +84,47 @@ public sealed class BehaviorBaselineGeometryTests
         after.Rect.Y.ShouldBeGreaterThanOrEqualTo(rule.Rect.Bottom - 0.01f);
     }
 
+    [Fact]
+    public async Task Build_BlockTableImageAndInlineFlow_PreservesPublishedFragmentFacts()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div style='margin: 0; padding: 4px; border: 1px solid black;'>
+                  Alpha <span>Beta</span>
+                  <img src='image.png' width='40' height='20' style='display: block;' />
+                  <table style='margin: 0; width: 120px;'>
+                    <tr>
+                      <th>A</th>
+                      <td>B</td>
+                    </tr>
+                  </table>
+                </div>
+              </body>
+            </html>
+            """);
+
+        var fragments = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .ToList();
+
+        fragments.OfType<LineBoxFragment>()
+            .ShouldContain(static line => line.Runs.Any(static run => run.Text.Contains("Alpha", StringComparison.Ordinal)));
+
+        var image = fragments.OfType<ImageFragment>().ShouldHaveSingleItem();
+        image.ContentRect.Width.ShouldBe(30f, 0.01f);
+        image.ContentRect.Height.ShouldBe(15f, 0.01f);
+
+        var table = fragments.OfType<TableFragment>().ShouldHaveSingleItem();
+        table.DerivedColumnCount.ShouldBe(2);
+
+        var header = fragments.OfType<TableCellFragment>()
+            .Single(static cell => cell.IsHeader);
+        header.ColumnIndex.ShouldBe(0);
+    }
+
     private static LineBoxFragment FindLine(IEnumerable<LineBoxFragment> lines, string text)
     {
         return lines.First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));

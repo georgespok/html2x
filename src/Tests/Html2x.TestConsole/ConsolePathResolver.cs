@@ -1,5 +1,6 @@
 namespace Html2x.TestConsole;
 
+
 internal static class ConsolePathResolver
 {
     public static ConsolePaths Resolve(RenderSettings settings, string inputPath, string? selectedSamplePath)
@@ -40,8 +41,3 @@ internal static class ConsolePathResolver
             : Path.Combine(Path.GetTempPath(), requestedPath);
     }
 }
-
-internal sealed record ConsolePaths(
-    string InputPath,
-    string OutputPath,
-    string? SelectedSamplePath);

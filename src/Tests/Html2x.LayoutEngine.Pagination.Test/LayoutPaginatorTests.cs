@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.Diagnostics.Contracts;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Pagination;
@@ -419,7 +418,7 @@ public sealed class LayoutPaginatorTests
         return new BlockFragment
         {
             FragmentId = id,
-            Rect = new RectangleF(0f, y, width, height)
+            Rect = new RectPt(0f, y, width, height)
         };
     }
 
@@ -449,7 +448,7 @@ public sealed class LayoutPaginatorTests
         var line = new LineBoxFragment
         {
             FragmentId = id * 100,
-            Rect = new RectangleF(0f, lineY, width, 12f),
+            Rect = new RectPt(0f, lineY, width, 12f),
             BaselineY = baselineY,
             LineHeight = 12f,
             Runs =
@@ -458,7 +457,7 @@ public sealed class LayoutPaginatorTests
                     text,
                     font,
                     12f,
-                    new PointF(0f, baselineY),
+                    new PointPt(0f, baselineY),
                     30f,
                     9f,
                     3f)
@@ -468,7 +467,7 @@ public sealed class LayoutPaginatorTests
         return new BlockFragment([line])
         {
             FragmentId = id,
-            Rect = new RectangleF(0f, y, width, height)
+            Rect = new RectPt(0f, y, width, height)
         };
     }
 }

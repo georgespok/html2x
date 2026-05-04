@@ -7,14 +7,14 @@ namespace Html2x.LayoutEngine.Pagination;
 /// <summary>
 /// Paginates measured layout fragments into page placement results.
 /// </summary>
-public sealed class LayoutPaginator
+internal sealed class LayoutPaginator
 {
     private readonly BlockPaginator _blockPaginator;
 
     /// <summary>
     /// Initializes a new layout paginator using the current block-boundary placement algorithm.
     /// </summary>
-    public LayoutPaginator()
+    internal LayoutPaginator()
         : this(new BlockPaginator())
     {
     }
@@ -31,7 +31,7 @@ public sealed class LayoutPaginator
     /// <param name="options">Page size and margin input facts.</param>
     /// <param name="diagnosticsSink">Optional diagnostics sink for pagination trace events.</param>
     /// <returns>The final layout plus stable pagination audit facts.</returns>
-    public PaginationResult Paginate(
+    internal PaginationResult Paginate(
         IReadOnlyList<BlockFragment> blocks,
         PaginationOptions options,
         IDiagnosticsSink? diagnosticsSink = null)
@@ -52,7 +52,7 @@ public sealed class LayoutPaginator
 
         foreach (var page in plan.Pages)
         {
-            layout.Pages.Add(new LayoutPage(
+            layout.AddPage(new LayoutPage(
                 page.PageSize,
                 page.Margin,
                 page.Placements.Select(static placement => (LayoutFragment)placement.Fragment).ToList(),

@@ -3,9 +3,9 @@
 Geometry must be computed once during layout, then projected forward without reinterpretation.
 
 `Html2x.LayoutEngine.Geometry` consumes parser-free `StyleTree` input from
-`Html2x.LayoutEngine.Style`. It may read `ComputedStyle`, `StyledElementFacts`,
-and ordered `StyleContentNode` values. It must not parse HTML or CSS, reference
-AngleSharp, or traverse DOM nodes.
+`Html2x.LayoutEngine.Contracts.Style`. It may read `ComputedStyle`,
+`StyledElementFacts`, and ordered `StyleContentNode` values. It must not parse
+HTML or CSS, reference AngleSharp, or traverse DOM nodes.
 
 ## Authority
 
@@ -21,13 +21,17 @@ AngleSharp, or traverse DOM nodes.
 
 ## Helper Ownership
 
-Render fact translation is owned by `Html2x.RenderModel` through
-`RenderGeometryTranslator`. Pagination uses it when translating cloned render
-model rectangles and text run origins to page-local coordinates.
+Point-space geometry is owned by `Html2x.RenderModel` through `RectPt`,
+`PointPt`, and `SizePt`. Pagination uses `RectPt.Translate` and
+`PointPt.Translate` when translating cloned render model rectangles and text
+run origins to page-local coordinates.
 
 `UsedGeometry` translation remains geometry-owned in
 `Html2x.LayoutEngine.Geometry`. Geometry may translate `UsedGeometry` because it
 has to preserve geometry invariants through `BoxGeometryFactory`.
+Production geometry placement should route `UsedGeometry` translation through
+`GeometryTranslator`; direct `UsedGeometry` transformation helpers are
+compatibility conveniences, not the place for new layout behavior.
 
 Page content area calculation is a layout-owned fact in
 `Html2x.LayoutEngine.Contracts`. `PageContentArea` is shared by geometry and
@@ -57,11 +61,27 @@ border, content rectangles, marker offsets, or block sizes. They may translate
 already-published rectangles when pagination moves a fragment subtree to another
 page.
 
+## Block Flow Locality
+
+`BlockLayoutEngine` orchestrates block kind dispatch and publication. Block-flow
+locality lives in smaller internal modules:
+
+- `BlockFlowLayoutExecutor` owns laid-out block-flow sequencing: cursor state,
+  margin collapse, inline flushing, child ordering, and flow item ordering.
+- `BlockFlowMeasurementExecutor` owns non-mutating stacked block measurement so
+  layout and measurement share the same block-flow policy.
+- `ImageBlockLayoutApplier` applies image metadata and image block geometry.
+- `TableBlockLayoutApplier` owns table diagnostics and table placement.
+- `PublishedLayoutPublisher` owns published block caching, source order, and
+  inline publishing.
+- `BlockLayoutState` is the helper that writes shared mutable block
+  compatibility state for normal block layout.
+
 ## Compatibility Fields
 
-`BlockBox.X`, `Y`, `Width`, `Height`, and `MarkerOffset` remain compatibility accessors. They must mirror `UsedGeometry` and must not become a second geometry source.
+`BlockBox` layout facts such as margin, padding, inline layout, used geometry, and inline-block context are internal mutable compatibility state. New downstream code should consume `PublishedLayoutTree` or render model fragments, not these fields.
 
-Table layout may still expose scalar row and cell positions for compatibility. New code should prefer `UsedGeometry`.
+Table layout may still expose scalar row and cell metadata for fragment projection. New code should prefer `UsedGeometry` and published table facts.
 
 ## Validation Policy
 
@@ -72,7 +92,7 @@ Published geometry is strict. `UsedGeometry` and renderable fragments should rej
 ## Invariants
 
 - Every laid-out block has `UsedGeometry`.
-- Compatibility accessors match `UsedGeometry.BorderBoxRect`.
+- Mutable layout geometry is published from `UsedGeometry`.
 - Fragment rectangles come from layout geometry.
 - Pagination preserves width and height.
 - Pagination translation preserves nested baselines, text origins, image content rectangles, line occupied rectangles, and block-like metadata.

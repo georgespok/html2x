@@ -1,8 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Geometry;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Fragments.Test.Builders;
 
@@ -18,8 +17,8 @@ internal static class PublishedLayoutFragmentTestBuilder
     public static PublishedBlock Block(
         string nodePath = "body/div",
         int sourceOrder = 0,
-        RectangleF? rect = null,
-        RectangleF? contentRect = null,
+        RectPt? rect = null,
+        RectPt? contentRect = null,
         FragmentDisplayRole role = FragmentDisplayRole.Block,
         FormattingContextKind formattingContext = FormattingContextKind.Block,
         float? markerOffset = null,
@@ -31,7 +30,7 @@ internal static class PublishedLayoutFragmentTestBuilder
         IReadOnlyList<PublishedBlock>? children = null,
         IReadOnlyList<PublishedBlockFlowItem>? flow = null)
     {
-        var borderRect = rect ?? new RectangleF(0f, 0f, 100f, 20f);
+        var borderRect = rect ?? new RectPt(0f, 0f, 100f, 20f);
         var geometry = new UsedGeometry(
             borderRect,
             contentRect ?? borderRect,
@@ -42,7 +41,7 @@ internal static class PublishedLayoutFragmentTestBuilder
         return new PublishedBlock(
             new PublishedBlockIdentity(nodePath, elementIdentity: null, sourceOrder),
             new PublishedDisplayFacts(role, formattingContext, markerOffset),
-            style ?? new ComputedStyle(),
+            ToVisualStyle(style ?? new ComputedStyle()),
             geometry,
             inlineLayout,
             image,
@@ -79,8 +78,8 @@ internal static class PublishedLayoutFragmentTestBuilder
 
     public static PublishedInlineLine Line(
         int lineIndex = 0,
-        RectangleF? rect = null,
-        RectangleF? occupiedRect = null,
+        RectPt? rect = null,
+        RectPt? occupiedRect = null,
         float baselineY = 9f,
         float lineHeight = 12f,
         string? textAlign = "left",
@@ -88,8 +87,8 @@ internal static class PublishedLayoutFragmentTestBuilder
     {
         return new PublishedInlineLine(
             lineIndex,
-            rect ?? new RectangleF(0f, 0f, 100f, 12f),
-            occupiedRect ?? new RectangleF(0f, 0f, 100f, 12f),
+            rect ?? new RectPt(0f, 0f, 100f, 12f),
+            occupiedRect ?? new RectPt(0f, 0f, 100f, 12f),
             baselineY,
             lineHeight,
             textAlign,
@@ -99,22 +98,22 @@ internal static class PublishedLayoutFragmentTestBuilder
     public static PublishedInlineTextItem TextItem(
         int order,
         string text,
-        RectangleF? rect = null,
+        RectPt? rect = null,
         FontKey? font = null,
         ResolvedFont? resolvedFont = null)
     {
         return new PublishedInlineTextItem(
             order,
-            rect ?? new RectangleF(order * 20f, 0f, 20f, 12f),
+            rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             [CreateRun(text, font, resolvedFont)],
             [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
     }
 
-    public static PublishedInlineTextItem EmptyTextItem(int order, RectangleF? rect = null)
+    public static PublishedInlineTextItem EmptyTextItem(int order, RectPt? rect = null)
     {
         return new PublishedInlineTextItem(
             order,
-            rect ?? new RectangleF(order * 20f, 0f, 20f, 12f),
+            rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             [],
             [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
     }
@@ -122,11 +121,11 @@ internal static class PublishedLayoutFragmentTestBuilder
     public static PublishedInlineObjectItem ObjectItem(
         int order,
         PublishedBlock content,
-        RectangleF? rect = null)
+        RectPt? rect = null)
     {
         return new PublishedInlineObjectItem(
             order,
-            rect ?? new RectangleF(order * 20f, 0f, 20f, 12f),
+            rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             content);
     }
 
@@ -138,7 +137,7 @@ internal static class PublishedLayoutFragmentTestBuilder
             text,
             fontKey,
             12f,
-            new PointF(0f, 9f),
+            new PointPt(0f, 9f),
             20f,
             8f,
             3f,
@@ -147,5 +146,20 @@ internal static class PublishedLayoutFragmentTestBuilder
                 fontKey.Weight,
                 fontKey.Style,
                 "test://font"));
+    }
+
+    private static VisualStyle ToVisualStyle(ComputedStyle style)
+    {
+        var hasBorders = style.Borders?.HasAny == true;
+
+        return new VisualStyle(
+            BackgroundColor: style.BackgroundColor,
+            Borders: hasBorders ? style.Borders : null,
+            Color: style.Color,
+            Margin: style.Margin,
+            Padding: style.Padding,
+            WidthPt: style.WidthPt,
+            HeightPt: style.HeightPt,
+            Display: style.Display);
     }
 }

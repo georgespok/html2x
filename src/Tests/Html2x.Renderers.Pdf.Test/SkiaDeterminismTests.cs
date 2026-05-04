@@ -1,4 +1,3 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.Text;
 using Html2x.Renderers.Pdf;
@@ -7,6 +6,7 @@ using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+[Trait("Category", "Integration")]
 public class SkiaDeterminismTests
 {
     [Fact]
@@ -50,7 +50,7 @@ public class SkiaDeterminismTests
             1,
             new ColorRgba(255, 255, 255, 255));
 
-        layout.Pages.Add(page);
+        layout.AddPage(page);
         return layout;
     }
 
@@ -62,7 +62,7 @@ public class SkiaDeterminismTests
             "Hello,",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
-            new PointF(60, 100),
+            new PointPt(60, 100),
             40f,
             11f,
             3f);
@@ -71,14 +71,14 @@ public class SkiaDeterminismTests
             "Skia!",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
-            new PointF(110, 100),
+            new PointPt(110, 100),
             40f,
             11f,
             3f);
 
         var line = new LineBoxFragment
         {
-            Rect = new RectangleF(50, 90, 200, 24),
+            Rect = new RectPt(50, 90, 200, 24),
             ZOrder = 1,
             Style = new VisualStyle(),
             BaselineY = 110,

@@ -5,6 +5,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
 namespace Html2x.Renderers.Pdf.Test;
 
+
 /// <summary>
 ///     Parses PDF documents to extract structured word information including text and styling attributes.
 /// </summary>
@@ -231,33 +232,5 @@ public static class PdfWordParser
             writeLine(
                 $"  Original: '{word.Text}' -> Clean: '{cleanText}' at position ({word.BoundingBox.TopLeft.X:F1}, {word.BoundingBox.TopLeft.Y:F1})");
         }
-    }
-}
-
-/// <summary>
-///     Represents a word extracted from a PDF with its styling attributes.
-/// </summary>
-public record PdfWord(
-    string Text,
-    string HexColor,
-    bool IsBold,
-    bool IsItalic,
-    double FontSize);
-
-/// <summary>
-///     Result of word lookup operations.
-/// </summary>
-public class WordLookupResult(Dictionary<string, Word?> words)
-{
-    private readonly Dictionary<string, Word?> _words = words;
-
-    /// <summary>
-    ///     Gets a word by its search text, throwing if not found.
-    /// </summary>
-    public Word GetWord(string searchText)
-    {
-        var word = _words.GetValueOrDefault(searchText) ??
-                   throw new InvalidOperationException($"Word '{searchText}' should be found in the PDF");
-        return word;
     }
 }

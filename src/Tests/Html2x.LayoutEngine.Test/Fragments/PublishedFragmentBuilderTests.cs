@@ -1,8 +1,7 @@
-using System.Drawing;
 using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Published;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.Builders;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragment;
@@ -19,13 +18,13 @@ public sealed class PublishedFragmentBuilderTests
             Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         };
         var block = PublishedLayoutTestBuilder.Block(
-            rect: new RectangleF(10f, 20f, 100f, 50f),
+            rect: new RectPt(10f, 20f, 100f, 50f),
             style: style);
 
         var fragments = Build(PublishedLayoutTestBuilder.Tree(block));
 
         var fragment = fragments.Blocks.ShouldHaveSingleItem();
-        fragment.Rect.ShouldBe(new RectangleF(10f, 20f, 100f, 50f));
+        fragment.Rect.ShouldBe(new RectPt(10f, 20f, 100f, 50f));
         fragment.Style.Borders.ShouldBe(style.Borders);
     }
 
@@ -76,7 +75,7 @@ public sealed class PublishedFragmentBuilderTests
     }
 
     [Fact]
-    public void Build_WithPublishedInlineSegment_CopiesLineFactsAndPreservesResolvedFonts()
+    public void Build_PublishedInlineSegment_CopiesLineFactsAndFonts()
     {
         var segment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "alpha"));
         var inlineLayout = PublishedLayoutTestBuilder.InlineLayout(segment);
@@ -107,7 +106,7 @@ public sealed class PublishedFragmentBuilderTests
         var image = PublishedLayoutTestBuilder.Block(
             nodePath: "body/img",
             sourceOrder: 0,
-            rect: new RectangleF(1f, 2f, 30f, 20f),
+            rect: new RectPt(1f, 2f, 30f, 20f),
             image: new PublishedImageFacts(
                 "images/logo.png",
                 new SizePx(30d, 20d),
@@ -117,7 +116,7 @@ public sealed class PublishedFragmentBuilderTests
         var rule = PublishedLayoutTestBuilder.Block(
             nodePath: "body/hr",
             sourceOrder: 1,
-            rect: new RectangleF(4f, 5f, 70f, 2f),
+            rect: new RectPt(4f, 5f, 70f, 2f),
             rule: new PublishedRuleFacts());
 
         var fragments = Build(PublishedLayoutTestBuilder.Tree(image, rule));
@@ -125,7 +124,7 @@ public sealed class PublishedFragmentBuilderTests
         var imageFragment = fragments.Blocks[0].Children.ShouldHaveSingleItem().ShouldBeOfType<ImageFragment>();
         imageFragment.Src.ShouldBe("images/logo.png");
         imageFragment.IsOversize.ShouldBeTrue();
-        imageFragment.Rect.ShouldBe(new RectangleF(1f, 2f, 30f, 20f));
+        imageFragment.Rect.ShouldBe(new RectPt(1f, 2f, 30f, 20f));
         fragments.Blocks[1].Children.ShouldHaveSingleItem().ShouldBeOfType<RuleFragment>();
     }
 

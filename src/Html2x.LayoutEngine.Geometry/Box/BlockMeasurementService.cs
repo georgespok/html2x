@@ -1,24 +1,10 @@
 using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Models;
+using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Box;
 
-/// <summary>
-/// Prepares block spacing and dimension inputs for layout consumers.
-/// </summary>
-internal interface IBlockGeometryMeasurer
-{
-    BlockMeasurementBasis Prepare(BlockBox box, float availableWidth);
-
-    BlockMeasurementBasis PrepareAtomic(BlockBox box, float availableWidth);
-
-    float ResolveContentHeight(
-        BlockBox box,
-        float resolvedContentHeight,
-        float minimumContentHeight = 0f);
-}
 
 /// <summary>
 /// Prepares block spacing and dimension inputs for layout consumers.
@@ -26,6 +12,7 @@ internal interface IBlockGeometryMeasurer
 internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
 {
     private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly BlockFlowMeasurementExecutor _flowMeasurement;
 
     public BlockMeasurementService()
         : this(new BlockFormattingContext())
@@ -35,6 +22,7 @@ internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
     internal BlockMeasurementService(IBlockFormattingContext blockFormattingContext)
     {
         _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _flowMeasurement = new BlockFlowMeasurementExecutor(_blockFormattingContext);
     }
 
     public BlockMeasurementBasis Prepare(BlockBox box, float availableWidth)
@@ -93,39 +81,16 @@ internal sealed class BlockMeasurementService : IBlockGeometryMeasurer
         ArgumentNullException.ThrowIfNull(measureBlockHeight);
         ArgumentNullException.ThrowIfNull(measureTableHeight);
 
-        var syntheticRoot = new BlockBox(BoxRole.Block)
-        {
-            Style = new ComputedStyle()
-        };
-
-        foreach (var child in children)
-        {
-            if (child is BlockBox block)
-            {
-                syntheticRoot.Children.Add(block);
-            }
-        }
-
-        var request = new BlockFormattingRequest(
-            formattingContext,
-            syntheticRoot,
+        return _flowMeasurement.TryMeasureStackedChildren(
+            children,
             availableWidth,
-            consumerName: nameof(BlockMeasurementService),
-            diagnosticsSink: diagnosticsSink,
-            emitDiagnostics: diagnosticsSink is not null,
-            blockHeightMeasurer: measureBlockHeight,
-            tableHeightMeasurer: measureTableHeight);
-
-        return _blockFormattingContext.Format(request).TotalHeight;
+            out var totalHeight,
+            measureBlockHeight,
+            measureTableHeight,
+            diagnosticsSink,
+            formattingContext,
+            nameof(BlockMeasurementService))
+            ? totalHeight
+            : 0f;
     }
 }
-
-/// <summary>
-/// Carries resolved block spacing and width values for one layout pass.
-/// </summary>
-internal readonly record struct BlockMeasurementBasis(
-    Spacing Margin,
-    Spacing Padding,
-    Spacing Border,
-    float BorderBoxWidth,
-    float ContentFlowWidth);
