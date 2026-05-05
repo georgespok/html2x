@@ -1,22 +1,16 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.Text;
 
-public sealed class DiagnosticsFontSource : IFontSource
+public sealed class DiagnosticsFontSource(
+    IFontSource inner,
+    IDiagnosticsSink diagnosticsSink) : IFontSource
 {
-    private readonly IFontSource _inner;
-    private readonly IDiagnosticsSink _diagnosticsSink;
+    private readonly IFontSource _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    private readonly IDiagnosticsSink _diagnosticsSink = diagnosticsSink ?? throw new ArgumentNullException(nameof(diagnosticsSink));
     private readonly HashSet<ResolutionEventKey> _published = [];
     private readonly object _gate = new();
-
-    public DiagnosticsFontSource(
-        IFontSource inner,
-        IDiagnosticsSink diagnosticsSink)
-    {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _diagnosticsSink = diagnosticsSink ?? throw new ArgumentNullException(nameof(diagnosticsSink));
-    }
 
     public ResolvedFont Resolve(FontKey requested, string consumer)
     {
@@ -30,7 +24,7 @@ public sealed class DiagnosticsFontSource : IFontSource
                 requested,
                 consumer,
                 DiagnosticSeverity.Info,
-                "Resolved",
+                FontDiagnosticNames.Outcomes.Resolved,
                 reason: null,
                 resolved);
             return resolved;
@@ -41,7 +35,7 @@ public sealed class DiagnosticsFontSource : IFontSource
                 requested,
                 consumer,
                 DiagnosticSeverity.Error,
-                "Failed",
+                FontDiagnosticNames.Outcomes.Failed,
                 exception.Message,
                 CreateFailedResolution(exception));
             throw;
@@ -73,26 +67,42 @@ public sealed class DiagnosticsFontSource : IFontSource
         }
 
         _diagnosticsSink.Emit(new DiagnosticRecord(
-            Stage: "stage/font",
-            Name: "font/resolve",
+            Stage: FontDiagnosticNames.Stages.Font,
+            Name: FontDiagnosticNames.Events.Resolve,
             Severity: severity,
             Message: reason,
             Context: null,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("owner", nameof(FontPathSource)),
-                DiagnosticFields.Field("consumer", consumer),
-                DiagnosticFields.Field("requestedFamily", requested.Family),
-                DiagnosticFields.Field("requestedWeight", DiagnosticValue.FromEnum(requested.Weight)),
-                DiagnosticFields.Field("requestedStyle", DiagnosticValue.FromEnum(requested.Style)),
-                DiagnosticFields.Field("resolvedFamily", resolved?.Family is null ? null : DiagnosticValue.From(resolved.Family)),
-                DiagnosticFields.Field("resolvedWeight", resolved is null ? null : DiagnosticValue.FromEnum(resolved.Weight)),
-                DiagnosticFields.Field("resolvedStyle", resolved is null ? null : DiagnosticValue.FromEnum(resolved.Style)),
-                DiagnosticFields.Field("sourceId", resolved?.SourceId is null ? null : DiagnosticValue.From(resolved.SourceId)),
-                DiagnosticFields.Field("configuredPath", resolved?.ConfiguredPath is null ? null : DiagnosticValue.From(resolved.ConfiguredPath)),
-                DiagnosticFields.Field("filePath", resolved?.FilePath is null ? null : DiagnosticValue.From(resolved.FilePath)),
-                DiagnosticFields.Field("faceIndex", resolved is null ? null : DiagnosticValue.From(resolved.FaceIndex)),
-                DiagnosticFields.Field("outcome", outcome),
-                DiagnosticFields.Field("reason", reason is null ? null : DiagnosticValue.From(reason))),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.Owner, nameof(FontPathSource)),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.Consumer, consumer),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedFamily, requested.Family),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedWeight, DiagnosticValue.FromEnum(requested.Weight)),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedStyle, DiagnosticValue.FromEnum(requested.Style)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.ResolvedFamily,
+                    resolved?.Family is null ? null : DiagnosticValue.From(resolved.Family)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.ResolvedWeight,
+                    resolved is null ? null : DiagnosticValue.FromEnum(resolved.Weight)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.ResolvedStyle,
+                    resolved is null ? null : DiagnosticValue.FromEnum(resolved.Style)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.SourceId,
+                    resolved?.SourceId is null ? null : DiagnosticValue.From(resolved.SourceId)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.ConfiguredPath,
+                    resolved?.ConfiguredPath is null ? null : DiagnosticValue.From(resolved.ConfiguredPath)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.FilePath,
+                    resolved?.FilePath is null ? null : DiagnosticValue.From(resolved.FilePath)),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.FaceIndex,
+                    resolved is null ? null : DiagnosticValue.From(resolved.FaceIndex)),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.Outcome, outcome),
+                DiagnosticFields.Field(
+                    FontDiagnosticNames.Fields.Reason,
+                    reason is null ? null : DiagnosticValue.From(reason))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 

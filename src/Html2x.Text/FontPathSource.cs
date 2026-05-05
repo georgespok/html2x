@@ -1,5 +1,5 @@
 using SkiaSharp;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.Text;
 

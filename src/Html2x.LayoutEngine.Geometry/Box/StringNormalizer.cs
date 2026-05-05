@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 internal static class StringNormalizer
 {

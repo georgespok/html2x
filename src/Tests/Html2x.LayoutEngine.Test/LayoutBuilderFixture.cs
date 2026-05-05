@@ -1,7 +1,6 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
@@ -23,7 +22,7 @@ internal sealed class LayoutBuilderFixture
 
         var layoutBuilder = new LayoutBuilder(
             textMeasurer,
-            imageMetadataResolver ?? new NoopImageMetadataResolver());
+            imageMetadataResolver ?? new Html2x.LayoutEngine.Test.TestDoubles.NoopImageMetadataResolver());
         var layoutOptions = options ?? new LayoutBuildSettings { PageSize = PaperSizes.A4 };
 
         return layoutBuilder.BuildAsync(html, layoutOptions);

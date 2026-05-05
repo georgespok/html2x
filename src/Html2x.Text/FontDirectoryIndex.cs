@@ -1,5 +1,5 @@
 using SkiaSharp;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.Text;
 
@@ -140,7 +140,7 @@ internal static class FontDirectoryIndex
         new(
             entry.IsItalic == wantsItalic ? 0 : 1,
             Math.Abs(entry.Weight - requestedWeight),
-            entry.Family ?? string.Empty,
+            entry.Family,
             entry.Path,
             entry.FaceIndex);
 

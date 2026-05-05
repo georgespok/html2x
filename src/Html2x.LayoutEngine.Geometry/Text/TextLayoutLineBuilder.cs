@@ -1,8 +1,6 @@
-using System.Text;
-using Html2x.RenderModel;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
 /// Builds wrapped text layout lines from measured inline run inputs.
@@ -12,8 +10,9 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly TextLayoutInput _input = input ?? throw new ArgumentNullException(nameof(input));
     private readonly float _availableWidth = availableWidth;
+    private readonly TextLayoutLineMaterializer _lineMaterializer = new(measurer);
     private readonly List<TextLayoutLine> _lines = [];
-    private readonly List<LineRunBuffer> _currentLine = [];
+    private readonly List<TextLineRunBuffer> _currentLine = [];
     private float _currentWidth;
 
     public IReadOnlyList<TextLayoutLine> Lines => _lines;
@@ -86,76 +85,10 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
 
         TrimLineEnd(_currentLine);
 
-        var lineRuns = BuildLineRuns(out var lineWidth);
-        var lineHeight = ResolveLineHeight(lineRuns, _input.LineHeight);
-
-        _lines.Add(new TextLayoutLine(lineRuns, lineWidth, lineHeight));
+        _lines.Add(_lineMaterializer.Build(_currentLine, _input.LineHeight));
 
         _currentLine.Clear();
         _currentWidth = 0f;
-    }
-
-    private List<TextLayoutRun> BuildLineRuns(out float lineWidth)
-    {
-        var lineRuns = new List<TextLayoutRun>(_currentLine.Count);
-        lineWidth = 0f;
-
-        foreach (var buffer in _currentLine)
-        {
-            if (buffer.InlineObject is not null)
-            {
-                var inlineObject = buffer.InlineObject;
-                var inlineAscent = inlineObject.Baseline;
-                var inlineDescent = inlineObject.BorderBoxHeight - inlineObject.Baseline;
-
-                lineRuns.Add(new TextLayoutRun(
-                    buffer.Source.Source,
-                    string.Empty,
-                    buffer.Source.Font,
-                    buffer.Source.FontSizePt,
-                    inlineObject.BorderBoxWidth,
-                    buffer.LeftSpacing,
-                    buffer.RightSpacing,
-                    inlineAscent,
-                    inlineDescent,
-                    buffer.Source.Style.Decorations,
-                    buffer.Source.Style.Color,
-                    ResolvedFont: null,
-                    inlineObject));
-
-                lineWidth += buffer.LeftSpacing + inlineObject.BorderBoxWidth + buffer.RightSpacing;
-                continue;
-            }
-
-            if (buffer.Text.Length == 0)
-            {
-                continue;
-            }
-
-            var text = buffer.Text.ToString();
-            var measurement = _measurer.Measure(buffer.Source.Font, buffer.Source.FontSizePt, text);
-
-            var leftSpacing = buffer.LeftSpacing;
-            var rightSpacing = buffer.RightSpacing;
-
-            lineRuns.Add(new TextLayoutRun(
-                buffer.Source.Source,
-                text,
-                buffer.Source.Font,
-                buffer.Source.FontSizePt,
-                measurement.Width,
-                leftSpacing,
-                rightSpacing,
-                measurement.Ascent,
-                measurement.Descent,
-                buffer.Source.Style.Decorations,
-                buffer.Source.Style.Color,
-                measurement.ResolvedFont));
-
-            lineWidth += leftSpacing + measurement.Width + rightSpacing;
-        }
-
-        return lineRuns;
     }
 
     private void ProcessLogicalLine(TextRunInput run, string rawLine)
@@ -235,35 +168,27 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
 
     private void AppendToken(TextRunInput run, string token, float tokenWidth)
     {
-        if (_currentLine.Count > 0)
+        var buffer = GetOrCreateTextBuffer(run);
+        buffer.Append(token);
+        _currentWidth += tokenWidth;
+    }
+
+    private TextLineRunBuffer GetOrCreateTextBuffer(TextRunInput run)
+    {
+        if (_currentLine.Count > 0 && _currentLine[^1].Source.RunId == run.RunId)
         {
-            var buffer = _currentLine[^1];
-            if (buffer.Source.RunId == run.RunId)
-            {
-                buffer.Append(token);
-            }
-            else
-            {
-                buffer = new LineRunBuffer(run);
-                buffer.Append(token);
-                _currentLine.Add(buffer);
-                _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
-            }
-        }
-        else
-        {
-            var buffer = new LineRunBuffer(run);
-            buffer.Append(token);
-            _currentLine.Add(buffer);
-            _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
+            return _currentLine[^1];
         }
 
-        _currentWidth += tokenWidth;
+        var buffer = new TextLineRunBuffer(run);
+        _currentLine.Add(buffer);
+        _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
+        return buffer;
     }
 
     private void AppendInlineObject(TextRunInput run, float tokenWidth)
     {
-        var buffer = new LineRunBuffer(run, run.InlineObject);
+        var buffer = new TextLineRunBuffer(run, run.InlineObject);
         _currentLine.Add(buffer);
         _currentWidth += buffer.LeftSpacing + tokenWidth + buffer.RightSpacing;
     }
@@ -304,7 +229,7 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         return width <= maxWidth;
     }
 
-    private static void TrimLineEnd(List<LineRunBuffer> runs)
+    private static void TrimLineEnd(List<TextLineRunBuffer> runs)
     {
         for (var i = runs.Count - 1; i >= 0; i--)
         {
@@ -380,48 +305,4 @@ internal sealed class TextLayoutLineBuilder(ITextMeasurer measurer, TextLayoutIn
         }
     }
 
-    /// <summary>
-    /// Buffers one source run while text is accumulated for a line.
-    /// </summary>
-    private sealed class LineRunBuffer
-    {
-        public TextRunInput Source { get; }
-        public StringBuilder Text { get; } = new();
-        public float LeftSpacing { get; }
-        public float RightSpacing { get; }
-        public InlineObjectLayout? InlineObject { get; }
-
-        public LineRunBuffer(TextRunInput source, InlineObjectLayout? inlineObject = null)
-        {
-            Source = source;
-            InlineObject = inlineObject;
-            LeftSpacing = source.PaddingLeft + source.MarginLeft;
-            RightSpacing = source.PaddingRight + source.MarginRight;
-        }
-
-        public void Append(string text)
-        {
-            Text.Append(text);
-        }
-    }
-
-    private static float ResolveLineHeight(IReadOnlyList<TextLayoutRun> runs, float fallbackLineHeight)
-    {
-        var maxAscent = 0f;
-        var maxDescent = 0f;
-
-        foreach (var run in runs)
-        {
-            maxAscent = Math.Max(maxAscent, run.Ascent);
-            maxDescent = Math.Max(maxDescent, run.Descent);
-        }
-
-        var measured = maxAscent + maxDescent;
-        if (measured <= 0f)
-        {
-            return fallbackLineHeight;
-        }
-
-        return Math.Max(fallbackLineHeight, measured);
-    }
 }

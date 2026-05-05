@@ -1,4 +1,5 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
 
 namespace Html2x.Renderers.Pdf.Paint;
 

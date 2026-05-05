@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 internal sealed class TextNormalizationState
 {

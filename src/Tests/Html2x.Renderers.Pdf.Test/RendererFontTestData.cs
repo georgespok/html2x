@@ -1,5 +1,6 @@
-using Html2x.RenderModel;
-using Html2x.Text;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.Renderers.Pdf.Test;
 

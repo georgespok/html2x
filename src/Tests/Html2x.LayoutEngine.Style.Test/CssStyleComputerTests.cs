@@ -1,11 +1,11 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Dom;
 using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Style.Document;
+using Html2x.LayoutEngine.Style.Style;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Style.Test;
@@ -175,7 +175,13 @@ public class CssStyleComputerTests
     }
 
     [Theory]
+    [InlineData("red", 255, 0, 0, 255)]
     [InlineData("blue", 0, 0, 255, 255)]
+    [InlineData("#123456", 18, 52, 86, 255)]
+    [InlineData("#abc", 170, 187, 204, 255)]
+    [InlineData("#11223344", 17, 34, 51, 68)]
+    [InlineData("rgb(10, 20, 30)", 10, 20, 30, 255)]
+    [InlineData("rgb(100%, 50%, 0%)", 255, 128, 0, 255)]
     [InlineData("rgba(255, 0, 0, 0.5)", 255, 0, 0, 127)]
     public async Task Compute_ColorVariants_ResolvesToRgba(string cssColor, byte r, byte g, byte b, byte a)
     {
@@ -190,6 +196,44 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("p", new() { Color = new ColorRgba(r, g, b, a) })
         ]));
+    }
+
+    [Fact]
+    public async Task Compute_InvalidColor_InheritsParentColor()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html><body style='color: #112233;'>
+                <p style='color: definitely-not-a-color;'>Text</p>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", new() { Color = new ColorRgba(17, 34, 51, 255) }, [
+            new("p", new() { Color = new ColorRgba(17, 34, 51, 255) })
+        ]));
+    }
+
+    [Fact]
+    public async Task Compute_MalformedHexColor_InheritsParentColorAndEmitsDiagnostic()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html><body style='color: #112233;'>
+                <p id='copy' style='color: #zzzzzz;'>Text</p>
+            </body></html>");
+        var sink = new RecordingDiagnosticsSink();
+
+        var tree = _sut.Compute(document, sink);
+        var actual = StyleTreeSnapshot.FromTree(tree);
+
+        actual.ShouldMatch(new("body", new() { Color = new ColorRgba(17, 34, 51, 255) }, [
+            new("p", new() { Color = new ColorRgba(17, 34, 51, 255) })
+        ]));
+        var diagnostic = SingleDiagnostic(sink, "style/ignored-declaration");
+        AssertStringField(diagnostic, "propertyName", "color");
+        AssertStringField(diagnostic, "rawValue", "#zzzzzz");
+        diagnostic.Context.ShouldNotBeNull().StyleDeclaration.ShouldBe("color: #zzzzzz");
+        diagnostic.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value.ShouldContain("supported color");
     }
 
     [Theory]
@@ -210,6 +254,20 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new() { BackgroundColor = new ColorRgba(r, g, b, a) })
         ]));
+    }
+
+    [Fact]
+    public async Task Compute_InvalidBackgroundColor_RemainsUnset()
+    {
+        var document = await CreateHtmlDocument(@"
+            <html><body>
+                <div style='background-color: definitely-not-a-color;'>Box</div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+
+        var style = tree.Root!.Children.ShouldHaveSingleItem().Style;
+        style.BackgroundColor.ShouldBeNull();
     }
 
     [Fact]
@@ -483,6 +541,61 @@ public class CssStyleComputerTests
     }
 
     [Fact]
+    public async Task Compute_UnsupportedBorderWidthUnit_EmitsStyleDiagnostic()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div id='box' style='border-top-width: 2rem; border-top-style: solid;'>Box</div>
+            </body></html>");
+        var sink = new RecordingDiagnosticsSink();
+
+        _sut.Compute(document, sink);
+
+        var diagnostic = SingleDiagnostic(sink, "style/unsupported-declaration");
+        AssertStringField(diagnostic, "propertyName", "border-top-width");
+        AssertStringField(diagnostic, "rawValue", "2rem");
+        AssertStringField(diagnostic, "decision", "Unsupported");
+        diagnostic.Context.ShouldNotBeNull().StyleDeclaration.ShouldBe("border-top-width: 2rem");
+    }
+
+    [Fact]
+    public async Task Compute_UnsupportedBorderStyle_EmitsStyleDiagnostic()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div id='box' style='border-top-style: double;'>Box</div>
+            </body></html>");
+        var sink = new RecordingDiagnosticsSink();
+
+        _sut.Compute(document, sink);
+
+        var diagnostic = SingleDiagnostic(sink, "style/unsupported-declaration");
+        AssertStringField(diagnostic, "propertyName", "border-top-style");
+        AssertStringField(diagnostic, "rawValue", "double");
+        AssertStringField(diagnostic, "decision", "Unsupported");
+        diagnostic.Context.ShouldNotBeNull().StyleDeclaration.ShouldBe("border-top-style: double");
+    }
+
+    [Fact]
+    public async Task Compute_InvalidBorderColor_EmitsStyleDiagnostic()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div id='box' style='border-top-color: #zzzzzz;'>Box</div>
+            </body></html>");
+        var sink = new RecordingDiagnosticsSink();
+
+        _sut.Compute(document, sink);
+
+        var diagnostic = SingleDiagnostic(sink, "style/ignored-declaration");
+        AssertStringField(diagnostic, "propertyName", "border-top-color");
+        AssertStringField(diagnostic, "rawValue", "#zzzzzz");
+        AssertStringField(diagnostic, "decision", "Ignored");
+        diagnostic.Context.ShouldNotBeNull().StyleDeclaration.ShouldBe("border-top-color: #zzzzzz");
+        diagnostic.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value.ShouldContain("supported color");
+    }
+
+    [Fact]
     public async Task Compute_UsesEmbeddedUserAgentStyleSheetByDefault()
     {
         const string html = "<html><body><h1>Title</h1><p>Text</p></body></html>";
@@ -608,6 +721,16 @@ public class CssStyleComputerTests
                 </div>
             </body></html>",
             expected
+        ];
+
+        yield return
+        [
+            @"<html><body>
+                <div style='border: 1px solid #123456;'>
+                    Text
+                </div>
+            </body></html>",
+            BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(18, 52, 86, 255), BorderLineStyle.Solid))
         ];
     }
 

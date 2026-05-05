@@ -1,8 +1,7 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
 /// Centralizes supported border-box and content-box dimension policy.
@@ -79,7 +78,7 @@ internal static class BoxDimensionResolver
         Spacing border,
         float markerOffset = 0f)
     {
-        return BoxGeometryFactory.ResolveContentFlowWidth(borderBoxWidth, padding, border, markerOffset);
+        return UsedGeometryCalculator.ResolveContentFlowWidth(borderBoxWidth, padding, border, markerOffset);
     }
 
     public static float ResolveContentBoxHeight(
@@ -106,7 +105,7 @@ internal static class BoxDimensionResolver
             contentHeight = Math.Min(contentHeight, style.MaxHeightPt.Value);
         }
 
-        return BoxGeometryFactory.RequireNonNegativeFinite(contentHeight);
+        return UsedGeometryCalculator.RequireNonNegativeFinite(contentHeight);
     }
 
     public static float ApplyContentWidthConstraints(float contentBoxWidth, ComputedStyle style)
@@ -115,7 +114,7 @@ internal static class BoxDimensionResolver
 
         var constrained = float.IsPositiveInfinity(contentBoxWidth)
             ? float.PositiveInfinity
-            : BoxGeometryFactory.RequireNonNegativeFinite(contentBoxWidth);
+            : UsedGeometryCalculator.RequireNonNegativeFinite(contentBoxWidth);
         if (style.MinWidthPt.HasValue)
         {
             constrained = Math.Max(constrained, style.MinWidthPt.Value);
@@ -139,7 +138,7 @@ internal static class BoxDimensionResolver
             return float.PositiveInfinity;
         }
 
-        return BoxGeometryFactory.RequireNonNegativeFinite(contentBoxWidth) +
+        return UsedGeometryCalculator.RequireNonNegativeFinite(contentBoxWidth) +
                padding.Safe().Horizontal +
                border.Safe().Horizontal;
     }

@@ -1,10 +1,7 @@
-using System.Globalization;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 /// <summary>
@@ -15,8 +12,6 @@ internal readonly record struct ImageLayoutResolution(
     SizePx AuthoredSizePx,
     SizePx IntrinsicSizePx,
     ImageLoadStatus Status,
-    bool IsMissing,
-    bool IsOversize,
     float ContentWidth,
     float ContentHeight,
     float TotalWidth,

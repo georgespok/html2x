@@ -1,6 +1,6 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Contracts.Published;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Fragments;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments;
 
@@ -30,46 +30,38 @@ internal sealed class FragmentBuilder
         ArgumentNullException.ThrowIfNull(layout);
 
         var fragments = new FragmentTree();
-        var pageNumber = 1;
-        var nextFragmentId = 1;
+        var context = new FragmentProjectionContext(pageNumber: 1);
 
-        var blockBindings = CreateBlockFragments(layout, fragments, pageNumber, ref nextFragmentId);
-        AppendFlowFragments(layout, blockBindings, pageNumber, ref nextFragmentId);
-        AppendSpecialFragments(blockBindings, pageNumber, ref nextFragmentId);
+        CreateBlockFragments(layout, fragments, context);
+        AppendFlowFragments(layout, context);
+        AppendSpecialFragments(context);
 
         return fragments;
     }
 
-    private IReadOnlyList<PublishedBlockFragmentBinding> CreateBlockFragments(
+    private void CreateBlockFragments(
         PublishedLayoutTree layout,
         FragmentTree fragments,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        var bindings = new List<PublishedBlockFragmentBinding>();
-
         foreach (var block in layout.Blocks)
         {
-            var fragment = CreateBlockFragmentRecursive(block, bindings, pageNumber, ref nextFragmentId);
+            var fragment = CreateBlockFragmentRecursive(block, context);
             fragments.Blocks.Add(fragment);
         }
-
-        return bindings;
     }
 
     private BlockFragment CreateBlockFragmentRecursive(
         PublishedBlock block,
-        ICollection<PublishedBlockFragmentBinding> bindings,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        var fragment = _projector.CreateBlockFragment(block, ReserveFragmentId(ref nextFragmentId), pageNumber);
+        var fragment = _projector.CreateBlockFragment(block, context.ReserveFragmentId(), context.PageNumber);
 
-        bindings.Add(new PublishedBlockFragmentBinding(block, fragment));
+        context.BindBlock(block, fragment);
 
         foreach (var child in block.Children)
         {
-            _ = CreateBlockFragmentRecursive(child, bindings, pageNumber, ref nextFragmentId);
+            _ = CreateBlockFragmentRecursive(child, context);
         }
 
         return fragment;
@@ -77,47 +69,31 @@ internal sealed class FragmentBuilder
 
     private void AppendFlowFragments(
         PublishedLayoutTree layout,
-        IReadOnlyList<PublishedBlockFragmentBinding> blockBindings,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        if (blockBindings.Count == 0)
+        if (context.BlockBindings.Count == 0)
         {
             return;
         }
 
-        var lookup = blockBindings.ToDictionary(
-            static binding => binding.Source,
-            static binding => binding.Fragment,
-            ReferenceEqualityComparer<PublishedBlock>.Instance);
-        var visited = new HashSet<PublishedBlock>(ReferenceEqualityComparer<PublishedBlock>.Instance);
-
         foreach (var block in layout.Blocks)
         {
-            if (!lookup.TryGetValue(block, out var fragment))
+            var fragment = context.FindBlockFragment(block);
+            if (fragment is null)
             {
                 continue;
             }
 
-            AppendFlowFragments(
-                block,
-                fragment,
-                lookup,
-                visited,
-                pageNumber,
-                ref nextFragmentId);
+            AppendFlowFragments(block, fragment, context);
         }
     }
 
     private void AppendFlowFragments(
         PublishedBlock block,
         BlockFragment fragment,
-        IReadOnlyDictionary<PublishedBlock, BlockFragment> lookup,
-        ISet<PublishedBlock> visited,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        if (!visited.Add(block))
+        if (!context.VisitFlowBlock(block))
         {
             return;
         }
@@ -127,111 +103,78 @@ internal sealed class FragmentBuilder
             switch (item)
             {
                 case PublishedInlineFlowSegmentItem inlineSegment:
-                    EmitSegment(fragment, inlineSegment.Segment, pageNumber, ref nextFragmentId);
+                    EmitSegment(fragment, inlineSegment.Segment, context);
                     break;
-                case PublishedChildBlockItem childBlock when lookup.TryGetValue(childBlock.Block, out var childFragment):
+                case PublishedChildBlockItem childBlock
+                    when context.FindBlockFragment(childBlock.Block) is { } childFragment:
                     fragment.AddChild(childFragment);
                     AppendFlowFragments(
                         childBlock.Block,
                         childFragment,
-                        lookup,
-                        visited,
-                        pageNumber,
-                        ref nextFragmentId);
+                        context);
                     break;
             }
         }
     }
 
     private void AppendSpecialFragments(
-        IReadOnlyList<PublishedBlockFragmentBinding> blockBindings,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        if (blockBindings.Count == 0)
+        if (context.BlockBindings.Count == 0)
         {
             return;
         }
 
-        var lookup = blockBindings.ToDictionary(
-            static binding => binding.Source,
-            static binding => binding.Fragment,
-            ReferenceEqualityComparer<PublishedBlock>.Instance);
-        var visited = new HashSet<PublishedBlock>(ReferenceEqualityComparer<PublishedBlock>.Instance);
-
-        foreach (var binding in blockBindings)
+        foreach (var binding in context.BlockBindings)
         {
             AppendSpecialFragments(
                 binding.Source,
                 binding.Fragment,
-                lookup,
-                visited,
-                pageNumber,
-                ref nextFragmentId);
+                context);
         }
     }
 
     private void AppendSpecialFragments(
         PublishedBlock block,
         BlockFragment fragment,
-        IReadOnlyDictionary<PublishedBlock, BlockFragment> lookup,
-        ISet<PublishedBlock> visited,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        if (!visited.Add(block))
+        if (!context.VisitSpecialBlock(block))
         {
             return;
         }
 
-        if (HasSpecialFragment(block) &&
-            _projector.TryCreateSpecialFragment(
-                block,
-                ReserveFragmentId(ref nextFragmentId),
-                pageNumber,
-                out var ownFragment))
-        {
-            fragment.AddChild(ownFragment);
-        }
+        AppendOwnSpecialFragment(block, fragment, context);
 
         foreach (var child in block.Children)
         {
-            if (lookup.TryGetValue(child, out var childFragment))
+            var childFragment = context.FindBlockFragment(child);
+            if (childFragment is not null)
             {
-                AppendSpecialFragments(child, childFragment, lookup, visited, pageNumber, ref nextFragmentId);
+                AppendSpecialFragments(child, childFragment, context);
             }
         }
     }
 
     private BlockFragment CreateInlineObjectBlockFragment(
         PublishedBlock block,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
-        var fragment = _projector.CreateBlockFragment(block, ReserveFragmentId(ref nextFragmentId), pageNumber);
+        var fragment = _projector.CreateBlockFragment(block, context.ReserveFragmentId(), context.PageNumber);
 
-        if (HasSpecialFragment(block) &&
-            _projector.TryCreateSpecialFragment(
-                block,
-                ReserveFragmentId(ref nextFragmentId),
-                pageNumber,
-                out var ownFragment))
-        {
-            fragment.AddChild(ownFragment);
-        }
+        AppendOwnSpecialFragment(block, fragment, context);
 
         foreach (var item in block.Flow.OrderBy(static item => item.Order))
         {
             switch (item)
             {
                 case PublishedInlineFlowSegmentItem inlineSegment:
-                    EmitSegment(fragment, inlineSegment.Segment, pageNumber, ref nextFragmentId);
+                    EmitSegment(fragment, inlineSegment.Segment, context);
                     break;
                 case PublishedChildBlockItem childBlock:
                     fragment.AddChild(CreateInlineObjectFragment(
                         childBlock.Block,
-                        pageNumber,
-                        ref nextFragmentId));
+                        context));
                     break;
             }
         }
@@ -242,8 +185,7 @@ internal sealed class FragmentBuilder
     private void EmitSegment(
         BlockFragment parentFragment,
         PublishedInlineFlowSegment segment,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
         foreach (var line in segment.Lines)
         {
@@ -252,11 +194,11 @@ internal sealed class FragmentBuilder
                 switch (item)
                 {
                     case PublishedInlineTextItem textItem:
-                        EmitTextItem(parentFragment, line, textItem, pageNumber, ref nextFragmentId);
+                        EmitTextItem(parentFragment, line, textItem, context);
                         break;
                     case PublishedInlineObjectItem objectItem:
                         parentFragment.AddChild(
-                            CreateInlineObjectFragment(objectItem.Content, pageNumber, ref nextFragmentId));
+                            CreateInlineObjectFragment(objectItem.Content, context));
                         break;
                 }
             }
@@ -267,18 +209,25 @@ internal sealed class FragmentBuilder
         BlockFragment parentFragment,
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
         if (textItem.Runs.Count == 0)
         {
             return;
         }
 
-        var fragment = new LineBoxFragment
+        parentFragment.AddChild(CreateLineBoxFragment(line, textItem, context));
+    }
+
+    private LineBoxFragment CreateLineBoxFragment(
+        PublishedInlineLine line,
+        PublishedInlineTextItem textItem,
+        FragmentProjectionContext context)
+    {
+        return new LineBoxFragment
         {
-            FragmentId = ReserveFragmentId(ref nextFragmentId),
-            PageNumber = pageNumber,
+            FragmentId = context.ReserveFragmentId(),
+            PageNumber = context.PageNumber,
             Rect = line.Rect,
             OccupiedRect = textItem.Rect,
             BaselineY = line.BaselineY,
@@ -286,26 +235,22 @@ internal sealed class FragmentBuilder
             Runs = textItem.Runs.ToList(),
             TextAlign = line.TextAlign
         };
-
-        parentFragment.AddChild(fragment);
     }
 
     private LayoutFragment CreateInlineObjectFragment(
         PublishedBlock content,
-        int pageNumber,
-        ref int nextFragmentId)
+        FragmentProjectionContext context)
     {
         if (HasSpecialFragment(content) &&
-            _projector.TryCreateSpecialFragment(
+            _projector.CreateSpecialFragment(
                 content,
-                ReserveFragmentId(ref nextFragmentId),
-                pageNumber,
-                out var specialFragment))
+                context.ReserveFragmentId(),
+                context.PageNumber) is { } specialFragment)
         {
             return specialFragment;
         }
 
-        return CreateInlineObjectBlockFragment(content, pageNumber, ref nextFragmentId);
+        return CreateInlineObjectBlockFragment(content, context);
     }
 
     private static bool HasSpecialFragment(PublishedBlock block)
@@ -313,8 +258,67 @@ internal sealed class FragmentBuilder
         return block.Image is not null || block.Rule is not null;
     }
 
-    private static int ReserveFragmentId(ref int nextFragmentId)
+    private void AppendOwnSpecialFragment(
+        PublishedBlock block,
+        BlockFragment fragment,
+        FragmentProjectionContext context)
     {
-        return nextFragmentId++;
+        if (!HasSpecialFragment(block))
+        {
+            return;
+        }
+
+        var specialFragment = _projector.CreateSpecialFragment(
+            block,
+            context.ReserveFragmentId(),
+            context.PageNumber);
+        if (specialFragment is not null)
+        {
+            fragment.AddChild(specialFragment);
+        }
+    }
+
+    private sealed class FragmentProjectionContext(int pageNumber)
+    {
+        private int _nextFragmentId = 1;
+        private readonly List<PublishedBlockFragmentBinding> _blockBindings = [];
+        private readonly Dictionary<PublishedBlock, BlockFragment> _blockFragments = new(
+            ReferenceEqualityComparer<PublishedBlock>.Instance);
+        private readonly HashSet<PublishedBlock> _flowVisited = new(
+            ReferenceEqualityComparer<PublishedBlock>.Instance);
+        private readonly HashSet<PublishedBlock> _specialVisited = new(
+            ReferenceEqualityComparer<PublishedBlock>.Instance);
+
+        public int PageNumber { get; } = pageNumber;
+
+        public IReadOnlyList<PublishedBlockFragmentBinding> BlockBindings => _blockBindings;
+
+        public int ReserveFragmentId()
+        {
+            return _nextFragmentId++;
+        }
+
+        public void BindBlock(PublishedBlock block, BlockFragment fragment)
+        {
+            _blockBindings.Add(new PublishedBlockFragmentBinding(block, fragment));
+            _blockFragments[block] = fragment;
+        }
+
+        public BlockFragment? FindBlockFragment(PublishedBlock block)
+        {
+            return _blockFragments.TryGetValue(block, out var fragment)
+                ? fragment
+                : null;
+        }
+
+        public bool VisitFlowBlock(PublishedBlock block)
+        {
+            return _flowVisited.Add(block);
+        }
+
+        public bool VisitSpecialBlock(PublishedBlock block)
+        {
+            return _specialVisited.Add(block);
+        }
     }
 }

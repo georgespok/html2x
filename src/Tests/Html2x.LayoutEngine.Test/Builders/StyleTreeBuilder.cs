@@ -1,17 +1,11 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Test.Builders;
 
-internal sealed class StyleTreeBuilder
+internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssConstants.HtmlTags.Body)
 {
     private readonly PageStyle _page = new();
-    private readonly StyleNodeBuilder _root;
-
-    public StyleTreeBuilder(string rootTagName = HtmlCssConstants.HtmlTags.Body)
-    {
-        _root = CreateNodeBuilder(StyledElementFacts.Create(rootTagName));
-    }
+    private readonly StyleNodeBuilder _root = CreateNodeBuilder(StyledElementFacts.Create(rootTagName));
 
     public StyleTreeBuilder WithPageMargins(float top, float right, float bottom, float left)
     {

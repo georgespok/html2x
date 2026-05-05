@@ -1,10 +1,12 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Test.Builders;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Fragments;
 
@@ -111,8 +113,7 @@ public sealed class PublishedFragmentBuilderTests
                 "images/logo.png",
                 new SizePx(30d, 20d),
                 new SizePx(60d, 40d),
-                isMissing: false,
-                isOversize: true));
+                ImageLoadStatus.Oversize));
         var rule = PublishedLayoutTestBuilder.Block(
             nodePath: "body/hr",
             sourceOrder: 1,

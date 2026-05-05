@@ -1,7 +1,6 @@
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Primitives;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 /// <summary>
@@ -17,10 +16,10 @@ internal readonly record struct BlockContentMeasurement
         ImageLayoutResolution? image = null,
         TableLayoutResult? table = null)
     {
-        BorderBoxHeight = BoxGeometryFactory.RequireNonNegativeFinite(borderBoxHeight);
-        ContentHeight = BoxGeometryFactory.RequireNonNegativeFinite(contentHeight);
-        InlineHeight = BoxGeometryFactory.RequireNonNegativeFinite(inlineHeight);
-        NestedBlockHeight = BoxGeometryFactory.RequireNonNegativeFinite(nestedBlockHeight);
+        BorderBoxHeight = UsedGeometryCalculator.RequireNonNegativeFinite(borderBoxHeight);
+        ContentHeight = UsedGeometryCalculator.RequireNonNegativeFinite(contentHeight);
+        InlineHeight = UsedGeometryCalculator.RequireNonNegativeFinite(inlineHeight);
+        NestedBlockHeight = UsedGeometryCalculator.RequireNonNegativeFinite(nestedBlockHeight);
         Image = image;
         Table = table;
     }

@@ -1,7 +1,11 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.LayoutEngine.Fragments.Test.Builders;
 

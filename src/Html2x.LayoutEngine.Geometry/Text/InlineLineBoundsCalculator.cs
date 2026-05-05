@@ -1,7 +1,7 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
 /// Calculates full line slots and tight occupied rectangles from already placed inline items.

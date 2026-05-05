@@ -1,23 +1,17 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
 /// Places text runs and inline objects into ordered inline line item layouts.
 /// </summary>
-internal sealed class TextRunPlacementBuilder
+internal sealed class TextRunPlacementBuilder(
+    AtomicInlineObjectPlacement inlineObjectPlacement,
+    InlineLineBoundsCalculator boundsCalculator)
 {
-    private readonly InlineObjectPlacementBuilder _inlineObjectPlacementBuilder;
-    private readonly InlineLineBoundsCalculator _boundsCalculator;
-
-    public TextRunPlacementBuilder(
-        InlineObjectPlacementBuilder inlineObjectPlacementBuilder,
-        InlineLineBoundsCalculator boundsCalculator)
-    {
-        _inlineObjectPlacementBuilder = inlineObjectPlacementBuilder ?? throw new ArgumentNullException(nameof(inlineObjectPlacementBuilder));
-        _boundsCalculator = boundsCalculator ?? throw new ArgumentNullException(nameof(boundsCalculator));
-    }
+    private readonly AtomicInlineObjectPlacement _inlineObjectPlacement = inlineObjectPlacement ?? throw new ArgumentNullException(nameof(inlineObjectPlacement));
+    private readonly InlineLineBoundsCalculator _boundsCalculator = boundsCalculator ?? throw new ArgumentNullException(nameof(boundsCalculator));
 
     public IReadOnlyList<InlineLineItemLayout> Build(
         TextLayoutLine line,
@@ -28,7 +22,7 @@ internal sealed class TextRunPlacementBuilder
         ArgumentNullException.ThrowIfNull(createTextPlacements);
 
         var context = new RunPlacementContext(
-            _inlineObjectPlacementBuilder,
+            _inlineObjectPlacement,
             _boundsCalculator,
             placement,
             line.Runs.Count);
@@ -55,7 +49,7 @@ internal sealed class TextRunPlacementBuilder
     /// </summary>
     private sealed class RunPlacementContext
     {
-        private readonly InlineObjectPlacementBuilder _inlineObjectPlacementBuilder;
+        private readonly AtomicInlineObjectPlacement _inlineObjectPlacement;
         private readonly InlineLineBoundsCalculator _boundsCalculator;
         private readonly InlineLinePlacement _placement;
         private readonly List<InlineLineItemLayout> _items;
@@ -65,12 +59,12 @@ internal sealed class TextRunPlacementBuilder
         private int _order;
 
         internal RunPlacementContext(
-            InlineObjectPlacementBuilder inlineObjectPlacementBuilder,
+            AtomicInlineObjectPlacement inlineObjectPlacement,
             InlineLineBoundsCalculator boundsCalculator,
             InlineLinePlacement placement,
             int capacity)
         {
-            _inlineObjectPlacementBuilder = inlineObjectPlacementBuilder;
+            _inlineObjectPlacement = inlineObjectPlacement;
             _boundsCalculator = boundsCalculator;
             _placement = placement;
             _items = new List<InlineLineItemLayout>(capacity);
@@ -87,7 +81,7 @@ internal sealed class TextRunPlacementBuilder
             }
 
             FlushTextItem();
-            var inlineRect = _inlineObjectPlacementBuilder.Place(
+            var inlineRect = _inlineObjectPlacement.Place(
                 run.InlineObject,
                 _currentX + run.LeftSpacing,
                 _placement.BaselineY);

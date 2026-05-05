@@ -1,4 +1,9 @@
+using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Style;
 using Shouldly;
+using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
@@ -10,18 +15,18 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
             .ShouldMentionTopicsInSection(
                 "Dependency Direction",
-                "Html2x.Diagnostics.Contracts",
-                "Html2x.Diagnostics",
+                AssemblyName<IDiagnosticsSink>(),
+                DiagnosticsAssemblyName,
                 "Diagnostic producer modules");
         ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
             .ShouldMentionTopicsInSection(
                 "DiagnosticFields Value Rules",
-                "DiagnosticFields",
+                nameof(DiagnosticFields),
                 "object");
         ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
             .ShouldMentionTopicsInSection(
                 "Runtime Flow",
-                "IDiagnosticsSink",
+                nameof(IDiagnosticsSink),
                 "DiagnosticsCollector",
                 "DiagnosticsReport",
                 "Renderer diagnostics");
@@ -35,13 +40,13 @@ public sealed class DiagnosticsBoundaryArchitectureTests
             .ShouldMentionTopicsInSection(
                 "Facade Boundary",
                 "Public facade options",
-                "Html2x.Diagnostics.Contracts",
-                "Html2x.Diagnostics");
+                AssemblyName<IDiagnosticsSink>(),
+                DiagnosticsAssemblyName);
         ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
             .ShouldMentionTopicsInSection(
                 "Emission Rule",
-                "IDiagnosticsSink.Emit",
-                "DiagnosticRecord");
+                nameof(IDiagnosticsSink) + "." + nameof(IDiagnosticsSink.Emit),
+                nameof(DiagnosticRecord));
     }
 
     [Fact]
@@ -49,12 +54,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     {
         ArchitectureSolution.Load("src", "Html2x.sln")
             .ProjectNames()
-            .ShouldContain("Html2x.Diagnostics.Contracts");
+            .ShouldContain(AssemblyName<IDiagnosticsSink>());
 
-        var project = ArchitectureProject.Load(
-            "src",
-            "Html2x.Diagnostics.Contracts",
-            "Html2x.Diagnostics.Contracts.csproj");
+        var project = ProjectFor<IDiagnosticsSink>();
         project.ShouldHaveNoProjectReferences();
         project.ShouldHaveNoPackageReferences();
     }
@@ -62,9 +64,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void DiagnosticsContractsSource_StaysGeneric()
     {
-        CSharpSourceSet.FromDirectory("src", "Html2x.Diagnostics.Contracts")
+        SourceSetFor<IDiagnosticsSink>()
             .ShouldNotUseObjectType();
-        CSharpSourceSet.FromDirectory("src", "Html2x.Diagnostics.Contracts")
+        SourceSetFor<IDiagnosticsSink>()
             .ShouldNotUseIdentifiers(
                 "IDiagnosticsPayload",
                 "DiagnosticsSession",
@@ -73,15 +75,12 @@ public sealed class DiagnosticsBoundaryArchitectureTests
                 "Snapshot",
                 "TableBox",
                 "TableLayoutResult");
-        ArchitectureSemanticProject.Load(
-                "src",
-                "Html2x.Diagnostics.Contracts",
-                "Html2x.Diagnostics.Contracts.csproj")
+        SemanticProjectFor<IDiagnosticsSink>()
             .ShouldNotReferenceNamespaces(
-                "Html2x.LayoutEngine",
+                AssemblyName<LayoutBuilder>(),
                 "Html2x.Renderers",
                 ParserPackageName(),
-                "SkiaSharp");
+                SkiaSharpPackageName);
     }
 
     [Fact]
@@ -89,25 +88,22 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     {
         foreach (var project in StageProjects())
         {
-            project.ShouldNotReferenceProjects("Html2x.Diagnostics");
+            project.ShouldNotReferenceProjects(DiagnosticsAssemblyName);
             project.ProjectReferences()
-                .ShouldContain("Html2x.Diagnostics.Contracts");
+                .ShouldContain(AssemblyName<IDiagnosticsSink>());
         }
     }
 
     [Fact]
     public void PaginationDiagnostics_AreLocalToPaginationProject()
     {
-        File.Exists(PathFromRoot("src", "Html2x.LayoutEngine", "Diagnostics", "PaginationDiagnostics.cs"))
+        File.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Diagnostics", "PaginationDiagnostics.cs"))
             .ShouldBeFalse();
 
-        var diagnostics = CSharpSourceFile.Load(
-            "src",
-            "Html2x.LayoutEngine.Pagination",
-            "PaginationDiagnostics.cs");
-        diagnostics.ShouldDeclareNamespace("Html2x.LayoutEngine.Pagination");
-        diagnostics.ShouldContainType("PaginationDiagnostics", "internal");
-        diagnostics.ShouldUseIdentifier("IDiagnosticsSink");
+        var diagnostics = SourceFileFor(typeof(PaginationDiagnostics));
+        diagnostics.ShouldDeclareNamespace(NamespaceOf(typeof(PaginationDiagnostics)));
+        diagnostics.ShouldContainType(nameof(PaginationDiagnostics), InternalAccessibility);
+        diagnostics.ShouldUseIdentifier(nameof(IDiagnosticsSink));
         diagnostics.ShouldContainStringLiteral("layout/pagination/page-created");
         diagnostics.ShouldContainStringLiteral("layout/pagination/block-moved-next-page");
         diagnostics.ShouldContainStringLiteral("layout/pagination/oversized-block");
@@ -117,48 +113,48 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void PipelineBoundaries_AcceptDiagnosticsSink()
     {
-        CSharpSourceFile.Load("src", "Html2x", "HtmlConverter.cs")
+        CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverter.cs")
             .ShouldConstructType("DiagnosticsCollector");
-        CSharpSourceFile.Load("src", "Html2x", "Html2PdfResult.cs")
+        CSharpSourceFile.Load("src", FacadeAssemblyName, "Html2PdfResult.cs")
             .ShouldContainPropertyInType("Html2PdfResult", "DiagnosticsReport", "DiagnosticsReport?", "public");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "LayoutBuilder.cs")
-            .ShouldHaveParameter("BuildAsync", "diagnosticsSink", "IDiagnosticsSink?");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Style", "StyleTreeBuilder.cs")
-            .ShouldHaveParameter("BuildAsync", "diagnosticsSink", "IDiagnosticsSink?");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Style", "IStyleTreeBuilder.cs")
-            .ShouldHaveParameter("BuildAsync", "diagnosticsSink", "IDiagnosticsSink?");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Geometry", "Geometry", "LayoutGeometryBuilder.cs")
-            .ShouldHaveParameter("Build", "diagnosticsSink", "IDiagnosticsSink?");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Pagination", "LayoutPaginator.cs")
-            .ShouldHaveParameter("Paginate", "diagnosticsSink", "IDiagnosticsSink?");
-        CSharpSourceFile.Load("src", "Html2x.Renderers.Pdf", "Pipeline", "PdfRenderer.cs")
-            .ShouldHaveParameter("RenderAsync", "diagnosticsSink", "IDiagnosticsSink?");
+        SourceFileFor<LayoutBuilder>()
+            .ShouldHaveParameter(nameof(LayoutBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+        SourceFileFor<StyleTreeBuilder>()
+            .ShouldHaveParameter(nameof(StyleTreeBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+        SourceFileFor<IStyleTreeBuilder>()
+            .ShouldHaveParameter(nameof(IStyleTreeBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+        SourceFileFor<LayoutGeometryBuilder>()
+            .ShouldHaveParameter(nameof(LayoutGeometryBuilder.Build), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+        SourceFileFor<LayoutPaginator>()
+            .ShouldHaveParameter(nameof(LayoutPaginator.Paginate), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+        CSharpSourceFile.Load("src", PdfRendererAssemblyName, "Pipeline", "PdfRenderer.cs")
+            .ShouldHaveParameter("RenderAsync", "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
     }
 
     [Fact]
     public void DiagnosticsRuntime_DoesNotReferenceStageParserOrRendererDependencies()
     {
-        ArchitectureProject.Load("src", "Html2x.Diagnostics", "Html2x.Diagnostics.csproj")
+        ArchitectureProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
             .ShouldNotReferenceProjects(
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.Renderers.Pdf");
-        ArchitectureProject.Load("src", "Html2x.Diagnostics", "Html2x.Diagnostics.csproj")
-            .ShouldNotReferencePackages(ParserPackageName(), "SkiaSharp");
+                AssemblyName<LayoutBuilder>(),
+                AssemblyName<LayoutPaginator>(),
+                PdfRendererAssemblyName);
+        ArchitectureProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
+            .ShouldNotReferencePackages(ParserPackageName(), SkiaSharpPackageName);
 
-        ArchitectureSemanticProject.Load("src", "Html2x.Diagnostics", "Html2x.Diagnostics.csproj")
+        ArchitectureSemanticProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
             .ShouldNotReferenceNamespaces(
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.Renderers.Pdf",
+                AssemblyName<LayoutBuilder>(),
+                AssemblyName<LayoutPaginator>(),
+                PdfRendererAssemblyName,
                 ParserPackageName(),
-                "SkiaSharp");
+                SkiaSharpPackageName);
     }
 
     [Fact]
     public void DiagnosticsRuntime_DoesNotOwnProducerLocalStageNames()
     {
-        CSharpSourceSet.FromDirectory("src", "Html2x.Diagnostics")
+        CSharpSourceSet.FromDirectory("src", DiagnosticsAssemblyName)
             .ShouldNotContainStringLiterals(
                 "stage/pagination",
                 "layout/pagination",
@@ -171,9 +167,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void DiagnosticsRuntime_OwnsCollectorReportAndSerializer()
     {
-        var collector = CSharpSourceFile.Load("src", "Html2x.Diagnostics", "DiagnosticsCollector.cs");
-        var report = CSharpSourceFile.Load("src", "Html2x.Diagnostics", "DiagnosticsReport.cs");
-        var serializer = CSharpSourceFile.Load("src", "Html2x.Diagnostics", "DiagnosticsReportSerializer.cs");
+        var collector = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsCollector.cs");
+        var report = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsReport.cs");
+        var serializer = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsReportSerializer.cs");
 
         collector.ShouldContainType("DiagnosticsCollector", "public", isSealed: true);
         collector.ShouldContainMethodInType("DiagnosticsCollector", "ToReport", "DiagnosticsReport", "public");
@@ -186,9 +182,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void DiagnosticsReportSerializer_ReferencesOnlyContractsAndReportTypes()
     {
-        var serializer = CSharpSourceFile.Load("src", "Html2x.Diagnostics", "DiagnosticsReportSerializer.cs");
+        var serializer = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsReportSerializer.cs");
 
-        serializer.ShouldUseNamespace("Html2x.Diagnostics.Contracts");
+        serializer.ShouldUseNamespace(NamespaceOf<IDiagnosticsSink>());
         serializer.ShouldUseIdentifier("DiagnosticsReport");
         serializer.ShouldUseIdentifier("DiagnosticValue");
         serializer.ShouldNotUseIdentifiers(
@@ -209,8 +205,8 @@ public sealed class DiagnosticsBoundaryArchitectureTests
             "FragmentSnapshot",
             "TableBox",
             "TableLayoutResult");
-        ArchitectureSemanticProject.Load("src", "Html2x.Diagnostics", "Html2x.Diagnostics.csproj")
-            .ShouldNotReferenceNamespaces("Html2x.LayoutEngine", "Html2x.Renderers", ParserPackageName(), "SkiaSharp");
+        ArchitectureSemanticProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
+            .ShouldNotReferenceNamespaces(AssemblyName<LayoutBuilder>(), "Html2x.Renderers", ParserPackageName(), SkiaSharpPackageName);
     }
 
     [Fact]
@@ -218,39 +214,24 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     {
         foreach (var sourceRoot in new[]
         {
-            CSharpSourceSet.FromDirectory("src", "Html2x"),
-            CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine"),
-            CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine.Pagination"),
-            CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine.Style"),
-            CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine.Geometry"),
-            CSharpSourceSet.FromDirectory("src", "Html2x.Renderers.Pdf")
+            CSharpSourceSet.FromDirectory("src", FacadeAssemblyName),
+            SourceSetFor<LayoutBuilder>(),
+            SourceSetFor<LayoutPaginator>(),
+            SourceSetFor<StyleTreeBuilder>(),
+            SourceSetFor<LayoutGeometryBuilder>(),
+            CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
         })
         {
             sourceRoot.ShouldNotInvokeMemberOn("Events", "Add", "AddRange", "Clear", "Remove", "RemoveAt", "Insert");
         }
     }
 
-    [Fact]
-    public void ObsoleteAbstractionsDiagnosticsTypes_AreRemoved()
-    {
-        Directory.Exists(PathFromRoot("src", "Html2x.Abstractions"))
-            .ShouldBeFalse("diagnostics cannot leak into a deleted obsolete module.");
-        ArchitectureSolution.Load("src", "Html2x.sln")
-            .ProjectNames()
-            .ShouldNotContain("Html2x.Abstractions");
-    }
-
     private static IReadOnlyList<ArchitectureProject> StageProjects() =>
     [
-        ArchitectureProject.Load("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj"),
-        ArchitectureProject.Load("src", "Html2x.LayoutEngine.Geometry", "Html2x.LayoutEngine.Geometry.csproj"),
-        ArchitectureProject.Load("src", "Html2x.LayoutEngine.Pagination", "Html2x.LayoutEngine.Pagination.csproj"),
-        ArchitectureProject.Load("src", "Html2x.LayoutEngine", "Html2x.LayoutEngine.csproj"),
-        ArchitectureProject.Load("src", "Html2x.Renderers.Pdf", "Html2x.Renderers.Pdf.csproj")
+        ProjectFor<StyleTreeBuilder>(),
+        ProjectFor<LayoutGeometryBuilder>(),
+        ProjectFor<LayoutPaginator>(),
+        ProjectFor<LayoutBuilder>(),
+        ArchitectureProject.Load("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj")
     ];
-
-    private static string PathFromRoot(params string[] pathSegments) =>
-        ArchitecturePaths.PathFromRoot(pathSegments);
-
-    private static string ParserPackageName() => "Angle" + "Sharp";
 }

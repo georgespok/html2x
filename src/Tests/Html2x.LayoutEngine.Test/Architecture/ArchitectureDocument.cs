@@ -1,8 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
@@ -10,13 +6,13 @@ namespace Html2x.LayoutEngine.Test.Architecture;
 
 internal sealed class ArchitectureDocument
 {
-    private readonly string path;
-    private readonly string content;
+    private readonly string _path;
+    private readonly string _content;
 
     private ArchitectureDocument(string path)
     {
-        this.path = path;
-        content = File.ReadAllText(path);
+        _path = path;
+        _content = File.ReadAllText(path);
     }
 
     public static ArchitectureDocument Load(params string[] pathSegments) =>
@@ -26,8 +22,8 @@ internal sealed class ArchitectureDocument
     {
         foreach (var topic in topics)
         {
-            content.Contains(topic, StringComparison.Ordinal)
-                .ShouldBeTrue($"{path} should mention {topic}.");
+            _content.Contains(topic, StringComparison.Ordinal)
+                .ShouldBeTrue($"{_path} should mention {topic}.");
         }
     }
 
@@ -35,8 +31,8 @@ internal sealed class ArchitectureDocument
     {
         foreach (var topic in topics)
         {
-            content.Contains(topic, StringComparison.Ordinal)
-                .ShouldBeFalse($"{path} should not mention {topic}.");
+            _content.Contains(topic, StringComparison.Ordinal)
+                .ShouldBeFalse($"{_path} should not mention {topic}.");
         }
     }
 
@@ -46,13 +42,13 @@ internal sealed class ArchitectureDocument
         foreach (var topic in topics)
         {
             sectionContent.Contains(topic, StringComparison.Ordinal)
-                .ShouldBeTrue($"{path} section '{heading}' should mention {topic}.");
+                .ShouldBeTrue($"{_path} section '{heading}' should mention {topic}.");
         }
     }
 
     private string SectionContent(string heading)
     {
-        var lines = content.Split(["\r\n", "\n"], StringSplitOptions.None);
+        var lines = _content.Split(["\r\n", "\n"], StringSplitOptions.None);
         var headingIndex = -1;
         var headingLevel = 0;
 
@@ -67,7 +63,7 @@ internal sealed class ArchitectureDocument
             }
         }
 
-        headingIndex.ShouldNotBe(-1, $"{path} should contain heading {heading}.");
+        headingIndex.ShouldNotBe(-1, $"{_path} should contain heading {heading}.");
 
         var endIndex = lines.Length;
         for (var i = headingIndex + 1; i < lines.Length; i++)

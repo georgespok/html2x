@@ -2,8 +2,6 @@ namespace Html2x.LayoutEngine.Contracts.Style;
 
 internal sealed class StyledElementFacts
 {
-    private readonly IReadOnlyDictionary<string, string> _attributes;
-
     public StyledElementFacts(
         string tagName,
         string? localName = null,
@@ -16,10 +14,10 @@ internal sealed class StyledElementFacts
             : tagName;
         LocalName = string.IsNullOrWhiteSpace(localName)
             ? TagName.ToLowerInvariant()
-            : localName!;
+            : localName;
         Id = string.IsNullOrWhiteSpace(id) ? null : id;
         ClassAttribute = string.IsNullOrWhiteSpace(classAttribute) ? null : classAttribute;
-        _attributes = NormalizeAttributes(attributes, Id, ClassAttribute);
+        Attributes = NormalizeAttributes(attributes, Id, ClassAttribute);
     }
 
     public static StyledElementFacts Empty { get; } = new(string.Empty);
@@ -32,7 +30,7 @@ internal sealed class StyledElementFacts
 
     public string? ClassAttribute { get; }
 
-    public IReadOnlyDictionary<string, string> Attributes => _attributes;
+    public IReadOnlyDictionary<string, string> Attributes { get; }
 
     public static StyledElementFacts Create(string tagName, params (string Name, string Value)[] attributes)
     {
@@ -59,12 +57,12 @@ internal sealed class StyledElementFacts
 
     public bool HasAttribute(string attributeName)
     {
-        return _attributes.ContainsKey(attributeName);
+        return Attributes.ContainsKey(attributeName);
     }
 
     public string? GetAttribute(string attributeName)
     {
-        return _attributes.TryGetValue(attributeName, out var value)
+        return Attributes.TryGetValue(attributeName, out var value)
             ? value
             : null;
     }

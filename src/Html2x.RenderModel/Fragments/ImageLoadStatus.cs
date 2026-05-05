@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Describes the shared image resource load outcome carried by image fragments.

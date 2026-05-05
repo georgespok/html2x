@@ -1,10 +1,11 @@
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Test.Builders;
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
 using Shouldly;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test;
@@ -30,10 +31,10 @@ public class BlockLayoutEngineTests
 
         
         // Act
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
         // Assert
-        var block = result.Blocks.ShouldHaveSingleItem();
+        var block = result.ShouldHaveSingleItem();
         block.InlineLayout.ShouldNotBeNull();
         block.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(block.InlineLayout!.TotalHeight + 10f + 6f, 0.01f);
     }
@@ -58,9 +59,9 @@ public class BlockLayoutEngineTests
             MarkerOffset = 9f
         });
 
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
-        var block = result.Blocks.ShouldHaveSingleItem();
+        var block = result.ShouldHaveSingleItem();
         block.UsedGeometry.ShouldNotBeNull();
 
         var geometry = block.UsedGeometry!.Value;
@@ -224,9 +225,9 @@ public class BlockLayoutEngineTests
         });
         root.Children.Add(listItem);
 
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
-        var block = result.Blocks.ShouldHaveSingleItem();
+        var block = result.ShouldHaveSingleItem();
         var geometry = block.UsedGeometry.ShouldNotBeNull();
         geometry.ContentBoxRect.ShouldBe(new RectPt(
             geometry.BorderBoxRect.X + 9f,
@@ -262,9 +263,9 @@ public class BlockLayoutEngineTests
         };
         root.Children.Add(parent);
 
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
-        var laidOutParent = result.Blocks.ShouldHaveSingleItem();
+        var laidOutParent = result.ShouldHaveSingleItem();
         laidOutParent.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(12f);
         laidOutParent.Children.ShouldHaveSingleItem()
             .ShouldBeOfType<BlockBox>()
@@ -295,7 +296,7 @@ public class BlockLayoutEngineTests
         });
         root.Children.Add(listItem);
 
-        _ = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        _ = LayoutMutableBlocks(root);
 
         listItem.InlineLayout.ShouldNotBeNull();
         var line = listItem.InlineLayout!.Segments[0].Lines[0];
@@ -317,14 +318,14 @@ public class BlockLayoutEngineTests
 
         
         // Act
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
         // Assert
-        result.Blocks.ShouldSatisfyAllConditions(
-            () => result.Blocks.Count.ShouldBe(2),
-            () => result.Blocks[0].IsAnonymous.ShouldBeTrue(),
-            () => result.Blocks[0].Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>().TextContent.ShouldBe("root inline"),
-            () => result.Blocks[1].IsAnonymous.ShouldBeFalse());
+        result.ShouldSatisfyAllConditions(
+            () => result.Count.ShouldBe(2),
+            () => result[0].IsAnonymous.ShouldBeTrue(),
+            () => result[0].Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>().TextContent.ShouldBe("root inline"),
+            () => result[1].IsAnonymous.ShouldBeFalse());
     }
 
     [Fact]
@@ -348,11 +349,11 @@ public class BlockLayoutEngineTests
 
         NormalizeForBlockLayout(root);
 
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
-        var anonymous = result.Blocks.FirstOrDefault(b => b.IsAnonymous);
+        var anonymous = result.FirstOrDefault(b => b.IsAnonymous);
         anonymous.ShouldNotBeNull();
-        anonymous!.Style.WidthPt.ShouldBeNull();
+        anonymous.Style.WidthPt.ShouldBeNull();
         anonymous.Style.MinWidthPt.ShouldBeNull();
         anonymous.Style.MaxWidthPt.ShouldBeNull();
         anonymous.Style.HeightPt.ShouldBeNull();
@@ -372,12 +373,12 @@ public class BlockLayoutEngineTests
         NormalizeForBlockLayout(root);
 
         // Act
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
         // Assert
-        result.Blocks.Count.ShouldBe(2);
-        result.Blocks[0].IsAnonymous.ShouldBeFalse();
-        result.Blocks[1].IsAnonymous.ShouldBeFalse();
+        result.Count.ShouldBe(2);
+        result[0].IsAnonymous.ShouldBeFalse();
+        result[1].IsAnonymous.ShouldBeFalse();
     }
     
     [Theory]
@@ -392,440 +393,16 @@ public class BlockLayoutEngineTests
             .BuildRoot();
 
         // Act
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
+        var result = LayoutMutableBlocks(root);
 
         // Assert
-        result.Blocks.ShouldHaveSingleItem()
+        result.ShouldHaveSingleItem()
             .UsedGeometry
             .ShouldNotBeNull()
             .Width
             .ShouldBe(expectedWidth);
     }
 
-    [Fact]
-    public void Layout_TableNode_ProducesNestedTableRowAndCellBlocks()
-    {
-        var firstRowSource = new TableRowBox(BoxRole.TableRow) { Style = new ComputedStyle() };
-        var firstCellSource = new TableCellBox(BoxRole.TableCell) { Parent = firstRowSource, Style = new ComputedStyle() };
-        var secondCellSource = new TableCellBox(BoxRole.TableCell) { Parent = firstRowSource, Style = new ComputedStyle() };
-        firstRowSource.Children.Add(firstCellSource);
-        firstRowSource.Children.Add(secondCellSource);
-
-        var secondRowSource = new TableRowBox(BoxRole.TableRow) { Style = new ComputedStyle() };
-        var thirdCellSource = new TableCellBox(BoxRole.TableCell) { Parent = secondRowSource, Style = new ComputedStyle() };
-        secondRowSource.Children.Add(thirdCellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        };
-        root.Children.Add(firstRowSource);
-        root.Children.Add(secondRowSource);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        table.Role.ShouldBe(BoxRole.Table);
-        table.UsedGeometry.ShouldNotBeNull().Width.ShouldBe(120f);
-        table.UsedGeometry.Value.Height.ShouldBe(40f);
-        table.Children.Count.ShouldBe(2);
-
-        var firstRow = table.Children[0].ShouldBeOfType<TableRowBox>();
-        firstRow.ShouldBeSameAs(firstRowSource);
-        firstRow.Role.ShouldBe(BoxRole.TableRow);
-        firstRow.UsedGeometry.ShouldNotBeNull().Y.ShouldBe(0f);
-        firstRow.Children.Count.ShouldBe(2);
-
-        var firstCell = firstRow.Children[0].ShouldBeOfType<TableCellBox>();
-        firstCell.ShouldBeSameAs(firstCellSource);
-        firstCell.Role.ShouldBe(BoxRole.TableCell);
-        firstCell.UsedGeometry.ShouldNotBeNull().X.ShouldBe(0f);
-        firstCell.UsedGeometry.Value.Width.ShouldBe(60f);
-
-        var secondCell = firstRow.Children[1].ShouldBeOfType<TableCellBox>();
-        secondCell.ShouldBeSameAs(secondCellSource);
-        secondCell.UsedGeometry.ShouldNotBeNull().X.ShouldBe(60f);
-        secondCell.UsedGeometry.Value.Width.ShouldBe(60f);
-
-        var secondRow = table.Children[1].ShouldBeOfType<TableRowBox>();
-        secondRow.ShouldBeSameAs(secondRowSource);
-        secondRow.Role.ShouldBe(BoxRole.TableRow);
-        secondRow.UsedGeometry.ShouldNotBeNull().Y.ShouldBe(20f);
-        var thirdCell = secondRow.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
-        thirdCell.ShouldBeSameAs(thirdCellSource);
-        thirdCell.Role.ShouldBe(BoxRole.TableCell);
-    }
-
-    [Fact]
-    public void Layout_TableMaterialization_PopulatesRowAndCellGeometry()
-    {
-        var rowSource = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new ComputedStyle
-            {
-                Padding = new Spacing(1f, 2f, 3f, 4f)
-            }
-        };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new ComputedStyle
-            {
-                Padding = new Spacing(2f, 4f, 6f, 8f)
-            }
-        };
-        rowSource.Children.Add(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        };
-        root.Children.Add(rowSource);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        var row = table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
-        var cell = row.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
-
-        table.UsedGeometry.ShouldNotBeNull();
-        row.UsedGeometry.ShouldNotBeNull();
-        cell.UsedGeometry.ShouldNotBeNull();
-
-        var rowGeometry = row.UsedGeometry!.Value;
-        var cellGeometry = cell.UsedGeometry!.Value;
-        rowGeometry.BorderBoxRect.X.ShouldBe(0f);
-        rowGeometry.BorderBoxRect.Y.ShouldBe(0f);
-        rowGeometry.BorderBoxRect.Width.ShouldBe(120f);
-        rowGeometry.ContentBoxRect.X.ShouldBe(rowGeometry.X + 4f);
-        rowGeometry.ContentBoxRect.Y.ShouldBe(rowGeometry.Y + 1f);
-        cellGeometry.BorderBoxRect.X.ShouldBe(4f);
-        cellGeometry.BorderBoxRect.Y.ShouldBe(1f);
-        cellGeometry.BorderBoxRect.Width.ShouldBe(114f);
-        cellGeometry.ContentBoxRect.X.ShouldBe(cellGeometry.X + 8f);
-        cellGeometry.ContentBoxRect.Y.ShouldBe(cellGeometry.Y + 2f);
-    }
-
-    [Fact]
-    public void Layout_TablePaddingAndBorder_PlacesCellsInContentBox()
-    {
-        var rowSource = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new ComputedStyle()
-        };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new ComputedStyle()
-        };
-        rowSource.Children.Add(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 104f,
-                Padding = new Spacing(4f, 5f, 6f, 7f),
-                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        root.Children.Add(rowSource);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        var row = table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
-        var cell = row.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
-
-        table.UsedGeometry.ShouldNotBeNull().Width.ShouldBe(120f);
-        table.UsedGeometry.Value.Height.ShouldBe(34f);
-        table.UsedGeometry!.Value.ContentBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
-        row.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
-        cell.UsedGeometry!.Value.BorderBoxRect.ShouldBe(new RectPt(9f, 6f, 104f, 20f));
-    }
-
-    [Fact]
-    public void Layout_TableCellContent_PlacesNestedBlockAtCellContentBox()
-    {
-        var sourceRow = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new ComputedStyle()
-        };
-        var sourceCell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = sourceRow,
-            Style = new ComputedStyle
-            {
-                Padding = new Spacing(3f, 4f, 5f, 6f),
-                Borders = BorderEdges.Uniform(new BorderSide(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        var nestedBlock = new BlockBox(BoxRole.Block)
-        {
-            Parent = sourceCell,
-            Style = new ComputedStyle
-            {
-                HeightPt = 7f
-            }
-        };
-        sourceCell.Children.Add(nestedBlock);
-        sourceRow.Children.Add(sourceCell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        };
-        root.Children.Add(sourceRow);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var cell = result.Blocks
-            .ShouldHaveSingleItem().ShouldBeOfType<TableBox>()
-            .Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>()
-            .Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
-        var cellContent = cell.UsedGeometry.ShouldNotBeNull().ContentBoxRect;
-        var laidOutNestedBlock = cell.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
-
-        laidOutNestedBlock.ShouldBeSameAs(nestedBlock);
-        var nestedGeometry = laidOutNestedBlock.UsedGeometry.ShouldNotBeNull();
-        nestedGeometry.X.ShouldBe(cellContent.X);
-        nestedGeometry.Y.ShouldBe(cellContent.Y);
-        nestedGeometry.Width.ShouldBe(cellContent.Width);
-    }
-
-    [Fact]
-    public void Layout_BlockContainerWithNestedTable_PreservesTableInChildFlow()
-    {
-        var tableRow = new TableRowBox(BoxRole.TableRow) { Style = new ComputedStyle() };
-        var leftCell = new TableCellBox(BoxRole.TableCell) { Parent = tableRow, Style = new ComputedStyle() };
-        var rightCell = new TableCellBox(BoxRole.TableCell) { Parent = tableRow, Style = new ComputedStyle() };
-        tableRow.Children.Add(leftCell);
-        tableRow.Children.Add(rightCell);
-
-        leftCell.Children.Add(new BlockBox(BoxRole.Block)
-        {
-            Parent = leftCell,
-            Style = new ComputedStyle
-            {
-                HeightPt = 40f
-            }
-        });
-
-        var section = new BlockBox(BoxRole.Block)
-        {
-            Style = new ComputedStyle()
-        };
-        var headingSource = new BlockBox(BoxRole.Block)
-        {
-            Parent = section,
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.H2),
-            Style = new ComputedStyle
-            {
-                HeightPt = 12f
-            }
-        };
-        headingSource.Children.Add(new InlineBox(BoxRole.Inline)
-        {
-            Parent = headingSource,
-            Style = new ComputedStyle(),
-            TextContent = "Heading"
-        });
-        section.Children.Add(headingSource);
-        section.Children.Add(new TableBox(BoxRole.Table)
-        {
-            Parent = section,
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Table),
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        });
-        var table = (TableBox)section.Children[1];
-        table.Children.Add(tableRow);
-
-        var root = new BlockBox(BoxRole.Block)
-        {
-            Style = new ComputedStyle()
-        };
-        root.Children.Add(section);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var laidOutSection = result.Blocks.ShouldHaveSingleItem();
-        laidOutSection.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(52f);
-        laidOutSection.Children.Count.ShouldBe(2);
-
-        var heading = laidOutSection.Children[0].ShouldBeOfType<BlockBox>();
-        heading.UsedGeometry.ShouldNotBeNull().Y.ShouldBe(0f);
-        heading.UsedGeometry.Value.Height.ShouldBe(12f);
-
-        var laidOutTable = laidOutSection.Children[1].ShouldBeOfType<TableBox>();
-        laidOutTable.Role.ShouldBe(BoxRole.Table);
-        laidOutTable.UsedGeometry.ShouldNotBeNull().Y.ShouldBe(12f);
-        laidOutTable.UsedGeometry.Value.Height.ShouldBe(40f);
-        var laidOutRow = laidOutTable.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
-        laidOutRow.ShouldBeSameAs(tableRow);
-        laidOutRow.Role.ShouldBe(BoxRole.TableRow);
-    }
-
-    [Fact]
-    public void Layout_TableGeometry_MaterializesWithoutRecalculation()
-    {
-        var rowSource = new TableRowBox(BoxRole.TableRow) { Style = new ComputedStyle() };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new ComputedStyle
-            {
-                Padding = new Spacing(7.5f, 7.5f, 7.5f, 7.5f)
-            }
-        };
-        cellSource.Children.Add(new BlockBox(BoxRole.Block)
-        {
-            Parent = cellSource,
-            Style = new ComputedStyle
-            {
-                HeightPt = 14.5f
-            }
-        });
-        rowSource.Children.Add(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        };
-        root.Children.Add(rowSource);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        var row = table.Children.ShouldHaveSingleItem().ShouldBeOfType<TableRowBox>();
-        var cell = row.Children.ShouldHaveSingleItem().ShouldBeOfType<TableCellBox>();
-
-        row.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(29.5f);
-        cell.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(29.5f);
-        table.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(29.5f);
-    }
-
-    [Fact]
-    public void Layout_TableCellContent_IsMappedIntoMaterializedCellTree()
-    {
-        var sourceRow = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new ComputedStyle()
-        };
-        var sourceCell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = sourceRow,
-            Style = new ComputedStyle()
-        };
-        sourceCell.Children.Add(new InlineBox(BoxRole.Inline)
-        {
-            Parent = sourceCell,
-            TextContent = "alpha",
-            Style = new ComputedStyle()
-        });
-
-        var nestedBlock = new BlockBox(BoxRole.Block)
-        {
-            Parent = sourceCell,
-            Style = new ComputedStyle()
-        };
-        nestedBlock.Children.Add(new InlineBox(BoxRole.Inline)
-        {
-            Parent = nestedBlock,
-            TextContent = "beta",
-            Style = new ComputedStyle()
-        });
-        sourceCell.Children.Add(nestedBlock);
-        sourceRow.Children.Add(sourceCell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new ComputedStyle
-            {
-                WidthPt = 120f
-            }
-        };
-        root.Children.Add(sourceRow);
-
-        var result = CreateBlockLayoutEngine().Layout(root, DefaultPage());
-
-        var cell = result.Blocks
-            .ShouldHaveSingleItem().ShouldBeOfType<TableBox>()
-            .Children.ShouldHaveSingleItem()
-            .ShouldBeOfType<TableRowBox>()
-            .Children.ShouldHaveSingleItem()
-            .ShouldBeOfType<TableCellBox>();
-        cell.ShouldBeSameAs(sourceCell);
-
-        var inlineChild = cell.Children[0].ShouldBeOfType<InlineBox>();
-        inlineChild.ShouldBeSameAs(sourceCell.Children[0]);
-        inlineChild.TextContent.ShouldBe("alpha");
-
-        var mappedNestedBlock = cell.Children[1].ShouldBeOfType<BlockBox>();
-        mappedNestedBlock.ShouldBeSameAs(nestedBlock);
-        mappedNestedBlock.Parent.ShouldBeSameAs(cell);
-        mappedNestedBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>().TextContent.ShouldBe("beta");
-    }
-
-    [Fact]
-    public void Layout_UnsupportedTable_EmitsDiagnosticsAndSkipsRows()
-    {
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
-        var row = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new ComputedStyle()
-        };
-        var cell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = row,
-            Element = StyledElementFacts.Create(
-                HtmlCssConstants.HtmlTags.Td,
-                (HtmlCssConstants.HtmlAttributes.Colspan, "2")),
-            Style = new ComputedStyle()
-        };
-        row.Children.Add(cell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Table),
-            Style = new ComputedStyle
-            {
-                WidthPt = 150f
-            }
-        };
-        root.Children.Add(row);
-
-        var result = CreateBlockLayoutEngine(diagnosticsSink).Layout(root, DefaultPage());
-
-        var table = result.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        table.Role.ShouldBe(BoxRole.Table);
-        table.UsedGeometry.ShouldNotBeNull().Height.ShouldBe(0f);
-        table.Children.ShouldBeEmpty();
-        diagnosticsSink.Records.Any(e =>
-            e.Name == "layout/table/unsupported-structure" &&
-            e.Fields["structureKind"] is DiagnosticStringValue { Value: HtmlCssConstants.HtmlAttributes.Colspan } &&
-            e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." }).ShouldBeTrue();
-        diagnosticsSink.Records.Any(e =>
-            e.Name == "layout/table" &&
-            e.Fields["outcome"] is DiagnosticStringValue { Value: "Unsupported" } &&
-            e.Fields["rowCount"] is DiagnosticNumberValue { Value: 1 } &&
-            e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." }).ShouldBeTrue();
-    }
-    
     private BlockLayoutEngine CreateBlockLayoutEngine(IDiagnosticsSink? diagnosticsSink = null)
     {
         var imageResolver = new ImageLayoutResolver();
@@ -833,10 +410,28 @@ public class BlockLayoutEngineTests
             new FontMetricsProvider(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
-            new Html2x.LayoutEngine.Formatting.BlockFormattingContext(),
+            new BlockFormattingContext(),
             imageResolver,
             diagnosticsSink);
         return new BlockLayoutEngine(inlineEngine, new TableLayoutEngine(inlineEngine, imageResolver), diagnosticsSink);
+    }
+
+    private IReadOnlyList<BlockBox> LayoutMutableBlocks(BoxNode root, IDiagnosticsSink? diagnosticsSink = null)
+    {
+        var page = DefaultPage();
+        CreateBlockLayoutEngine(diagnosticsSink).LayoutPublished(root, page);
+
+        if (root is TableBox tableRoot)
+        {
+            return [tableRoot];
+        }
+
+        if (root is BlockBox rootBlock)
+        {
+            return rootBlock.Children.OfType<BlockBox>().ToList();
+        }
+
+        return [];
     }
 
     private static void NormalizeForBlockLayout(BoxNode root)

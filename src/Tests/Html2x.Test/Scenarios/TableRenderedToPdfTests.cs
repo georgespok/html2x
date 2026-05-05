@@ -1,6 +1,7 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
+using Html2x.Options;
+using Html2x.RenderModel.Measurements.Units;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -188,9 +189,9 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
 
         result.PdfBytes.ShouldNotBeEmpty();
         unsupportedEvent.ShouldNotBeNull();
-        StringField(unsupportedEvent!, "structureKind").ShouldBe("colspan");
+        StringField(unsupportedEvent, "structureKind").ShouldBe("colspan");
         tableLayoutEvent.ShouldNotBeNull();
-        StringField(tableLayoutEvent!, "outcome").ShouldBe("Unsupported");
+        StringField(tableLayoutEvent, "outcome").ShouldBe("Unsupported");
         StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
         tableFragments.Count.ShouldBe(1);
         tableFragments[0].Size.Height.ShouldBe(0f);
@@ -230,9 +231,9 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
 
         result.PdfBytes.ShouldNotBeEmpty();
         unsupportedEvent.ShouldNotBeNull();
-        StringField(unsupportedEvent!, "structureKind").ShouldBe("colspan");
+        StringField(unsupportedEvent, "structureKind").ShouldBe("colspan");
         tableLayoutEvent.ShouldNotBeNull();
-        StringField(tableLayoutEvent!, "outcome").ShouldBe("Unsupported");
+        StringField(tableLayoutEvent, "outcome").ShouldBe("Unsupported");
         NumberField(tableLayoutEvent, "rowCount").ShouldBe(1);
         StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
 
@@ -286,7 +287,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
             x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
 
         endLayoutBuild.ShouldNotBeNull();
-        var snapshot = endLayoutBuild!.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
+        var snapshot = endLayoutBuild.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
         var pages = ArrayField(snapshot, "pages");
         pages.ShouldNotBeEmpty();
 

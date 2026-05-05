@@ -1,11 +1,12 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Style.Models;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
 /// Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
@@ -61,14 +62,14 @@ internal sealed class CssStyleComputer
 
         var style = new ComputedStyleBuilder();
 
-        ApplyTypography(css, style, parentStyle);
+        ApplyTypography(css, element, style, parentStyle, diagnosticsSink);
         _spacingMapper.ApplySpacing(css, element, style, diagnosticsSink);
         _dimensionMapper.ApplyDimensions(css, element, style, diagnosticsSink);
         ApplyDisplay(css, style);
         ApplyFloat(css, style);
         ApplyPosition(css, style);
 
-        _borderMapper.ApplyBorders(css, style);
+        _borderMapper.ApplyBorders(css, element, style, diagnosticsSink);
         return style.Build();
     }
 
@@ -129,15 +130,21 @@ internal sealed class CssStyleComputer
         tree.Page.Margin = margin;
     }
 
-    private void ApplyTypography(ICssStyleDeclaration css, ComputedStyleBuilder style, ComputedStyle? parentStyle)
+    private void ApplyTypography(
+        ICssStyleDeclaration css,
+        IElement element,
+        ComputedStyleBuilder style,
+        ComputedStyle? parentStyle,
+        IDiagnosticsSink? diagnosticsSink)
     {
         style.FontFamily = NormalizeFontFamily(
             _converter.GetString(css, HtmlCssConstants.CssProperties.FontFamily,
                 parentStyle?.FontFamily ?? HtmlCssConstants.Defaults.FontFamily));
 
-        if (_converter.TryGetLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.FontSize), out var fs))
+        var fontSize = _converter.ParseLengthPt(css.GetPropertyValue(HtmlCssConstants.CssProperties.FontSize));
+        if (fontSize.HasValue)
         {
-            style.FontSizePt = fs;
+            style.FontSizePt = fontSize.Value;
         }
         else
         {
@@ -158,14 +165,97 @@ internal sealed class CssStyleComputer
 
         style.Decorations = ResolveTextDecorations(css, parentStyle);
 
-        style.Color = ColorRgba.FromCss(
-            _converter.GetString(css, HtmlCssConstants.CssProperties.Color),
-            parentStyle?.Color ?? ColorRgba.Black);
+        style.Color = ResolveColor(
+            css,
+            element,
+            HtmlCssConstants.CssProperties.Color,
+            parentStyle?.Color ?? ColorRgba.Black,
+            diagnosticsSink);
 
-        var background = _converter.GetString(css, HtmlCssConstants.CssProperties.BackgroundColor);
-        style.BackgroundColor = string.IsNullOrWhiteSpace(background)
+        var background = ResolveOptionalColor(
+            css,
+            element,
+            HtmlCssConstants.CssProperties.BackgroundColor,
+            diagnosticsSink);
+        style.BackgroundColor = background;
+    }
+
+    private ColorRgba ResolveColor(
+        ICssStyleDeclaration css,
+        IElement element,
+        string property,
+        ColorRgba fallback,
+        IDiagnosticsSink? diagnosticsSink)
+    {
+        var authored = InlineStyleSource.GetValue(element, property);
+        if (!string.IsNullOrWhiteSpace(authored))
+        {
+            if (IsCssWideKeyword(authored))
+            {
+                return CssColorParser.Parse(_converter.GetString(css, property), fallback);
+            }
+
+            return TryParseAuthoredColor(element, property, authored, diagnosticsSink, out var color)
+                ? color
+                : fallback;
+        }
+
+        return CssColorParser.Parse(_converter.GetString(css, property), fallback);
+    }
+
+    private ColorRgba? ResolveOptionalColor(
+        ICssStyleDeclaration css,
+        IElement element,
+        string property,
+        IDiagnosticsSink? diagnosticsSink)
+    {
+        var authored = InlineStyleSource.GetValue(element, property);
+        if (!string.IsNullOrWhiteSpace(authored))
+        {
+            if (IsCssWideKeyword(authored))
+            {
+                var computedColor = _converter.GetString(css, property);
+                return string.IsNullOrWhiteSpace(computedColor)
+                    ? null
+                    : CssColorParser.Parse(computedColor, ColorRgba.Transparent);
+            }
+
+            return TryParseAuthoredColor(element, property, authored, diagnosticsSink, out var color)
+                ? color
+                : null;
+        }
+
+        var computed = _converter.GetString(css, property);
+        return string.IsNullOrWhiteSpace(computed)
             ? null
-            : ColorRgba.FromCss(background, ColorRgba.Transparent);
+            : CssColorParser.Parse(computed, ColorRgba.Transparent);
+    }
+
+    private static bool TryParseAuthoredColor(
+        IElement element,
+        string property,
+        string rawValue,
+        IDiagnosticsSink? diagnosticsSink,
+        out ColorRgba color)
+    {
+        if (CssColorParser.TryParse(rawValue, out color))
+        {
+            return true;
+        }
+
+        StyleDiagnostics.EmitIgnoredDeclaration(
+            diagnosticsSink,
+            element,
+            property,
+            rawValue.Trim(),
+            null,
+            $"Unable to parse {property} as a supported color.");
+        return false;
+    }
+
+    private static bool IsCssWideKeyword(string rawValue)
+    {
+        return string.Equals(rawValue.Trim(), HtmlCssConstants.CssValues.Inherit, StringComparison.OrdinalIgnoreCase);
     }
 
     private static TextDecorations ResolveTextDecorations(ICssStyleDeclaration css, ComputedStyle? parentStyle)
@@ -186,15 +276,15 @@ internal sealed class CssStyleComputer
         var tokens = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var token in tokens)
         {
-            if (string.Equals(token, "underline", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(token, HtmlCssConstants.CssValues.Underline, StringComparison.OrdinalIgnoreCase))
             {
                 decorations |= TextDecorations.Underline;
             }
-            else if (string.Equals(token, "line-through", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(token, HtmlCssConstants.CssValues.LineThrough, StringComparison.OrdinalIgnoreCase))
             {
                 decorations |= TextDecorations.LineThrough;
             }
-            else if (string.Equals(token, "overline", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(token, HtmlCssConstants.CssValues.Overline, StringComparison.OrdinalIgnoreCase))
             {
                 decorations |= TextDecorations.Overline;
             }
@@ -213,12 +303,12 @@ internal sealed class CssStyleComputer
 
         var trimmed = raw.Trim();
 
-        if (string.Equals(trimmed, "normal", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(trimmed, HtmlCssConstants.CssValues.Normal, StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        if (string.Equals(trimmed, "inherit", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(trimmed, HtmlCssConstants.CssValues.Inherit, StringComparison.OrdinalIgnoreCase))
         {
             return parentStyle?.LineHeightMultiplier;
         }

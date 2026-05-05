@@ -1,4 +1,6 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Contracts.Published;
 
@@ -23,7 +25,7 @@ internal static class PublishedLayoutGuard
     public static void ThrowIfContainsNull<T>(IReadOnlyList<T> values, string parameterName)
         where T : class
     {
-        if (values.Any(static value => value is null))
+        if (values.Any(static value => false))
         {
             throw new ArgumentException(ContainsNullMessage, parameterName);
         }

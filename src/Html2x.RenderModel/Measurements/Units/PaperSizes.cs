@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Measurements.Units;
 
 public static class PaperSizes
 {

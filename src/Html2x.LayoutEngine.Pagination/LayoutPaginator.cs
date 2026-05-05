@@ -1,6 +1,7 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Pagination;
 

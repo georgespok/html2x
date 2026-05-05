@@ -1,7 +1,4 @@
-using Html2x.RenderModel;
-using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
 namespace Html2x.Renderers.Pdf.Test;
 

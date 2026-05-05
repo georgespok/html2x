@@ -1,8 +1,7 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.RenderModel.Documents;
 using Html2x.Text;
 using SkiaSharp;
 
@@ -12,7 +11,7 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 /// Renders an <see cref="HtmlLayout"/> to PDF using a SkiaSharp drawing pipeline.
 /// The renderer owns paint output only and treats layout pages and fragments as read-only inputs.
 /// </summary>
-public class PdfRenderer
+public sealed class PdfRenderer
 {
     private readonly IFileDirectory _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
@@ -36,9 +35,21 @@ public class PdfRenderer
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
         settings ??= new PdfRenderSettings();
+        ValidateSettings(settings);
 
         var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink, cancellationToken);
         return Task.FromResult(bytes);
+    }
+
+    private static void ValidateSettings(PdfRenderSettings settings)
+    {
+        if (settings.MaxImageSizeBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(settings),
+                settings.MaxImageSizeBytes,
+                "PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
+        }
     }
 
     private byte[] RenderWithSkia(

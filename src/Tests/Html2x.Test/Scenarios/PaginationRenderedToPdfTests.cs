@@ -1,4 +1,5 @@
 using Html2x.Diagnostics.Contracts;
+using Html2x.Options;
 using Shouldly;
 using Xunit.Abstractions;
 

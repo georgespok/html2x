@@ -53,16 +53,28 @@ resharper_braces_for_foreach = required
 resharper_braces_for_ifelse = required
 resharper_braces_for_while = required
 resharper_instance_members_qualify_declared_in = base_class
+resharper_object_creation_when_type_not_evident = target_typed
 
 # ReSharper inspection severities
 resharper_arrange_redundant_parentheses_highlighting = hint
-resharper_arrange_this_qualifier_highlighting = hint
+resharper_arrange_this_qualifier_highlighting = suggestion
 resharper_arrange_type_member_modifiers_highlighting = hint
 resharper_arrange_type_modifiers_highlighting = hint
 resharper_built_in_type_reference_style_for_member_access_highlighting = hint
 resharper_built_in_type_reference_style_highlighting = hint
-resharper_enforce_if_statement_braces_highlighting = hint
+resharper_convert_switch_statement_to_switch_expression_highlighting = suggestion
+resharper_enforce_if_statement_braces_highlighting = suggestion
+resharper_pass_string_interpolation_highlighting = suggestion
+resharper_redundant_array_creation_expression_highlighting = suggestion
 resharper_redundant_base_qualifier_highlighting = warning
-resharper_suggest_var_or_type_built_in_types_highlighting = hint
-resharper_suggest_var_or_type_elsewhere_highlighting = hint
-resharper_suggest_var_or_type_simple_types_highlighting = hint
+resharper_redundant_collection_initializer_element_braces_highlighting = suggestion
+resharper_replace_auto_property_with_computed_property_highlighting = suggestion
+resharper_suggest_var_or_type_built_in_types_highlighting = suggestion
+resharper_suggest_var_or_type_deconstruction_declarations_highlighting = suggestion
+resharper_suggest_var_or_type_elsewhere_highlighting = suggestion
+resharper_suggest_var_or_type_simple_types_highlighting = suggestion
+
+[*.{appxmanifest,axml,config,csproj,dbml,discomap,dtd,jsproj,lsproj,njsproj,nuspec,proj,props,resw,resx,StyleCop,targets,tasks,vbproj,xml,xsd}]
+indent_style = space
+indent_size = 2
+tab_width = 2

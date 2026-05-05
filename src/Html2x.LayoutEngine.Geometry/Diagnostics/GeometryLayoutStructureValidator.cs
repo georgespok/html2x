@@ -1,9 +1,8 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Diagnostics;
+namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
 internal static class GeometryLayoutStructureValidator
 {
@@ -13,18 +12,6 @@ internal static class GeometryLayoutStructureValidator
         BoxRole.TableRow,
         BoxRole.TableCell
     ];
-
-    public static void ValidateInlineBlockStructures(
-        BoxTree boxTree,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        ArgumentNullException.ThrowIfNull(boxTree);
-
-        foreach (var root in boxTree.Blocks)
-        {
-            ValidateInlineBlockStructure(root, diagnosticsSink);
-        }
-    }
 
     public static void ValidateInlineBlockStructures(
         BoxNode root,
@@ -43,12 +30,13 @@ internal static class GeometryLayoutStructureValidator
 
         foreach (var root in layout.Blocks)
         {
-            if (TryFindUnsupportedInlineBlockStructure(root, out var unsupportedBlock))
+            var unsupportedBlock = FindUnsupportedInlineBlockStructure(root);
+            if (unsupportedBlock is not null)
             {
                 var payload = new UnsupportedStructureDiagnostic(
                     unsupportedBlock.Identity.NodePath,
                     unsupportedBlock.Display.Role.ToString(),
-                    "Unsupported structure encountered inside inline-block formatting context.",
+                    UnsupportedDiagnosticNames.Reasons.InlineBlockUnsupportedStructure,
                     FormattingContextKind.InlineBlock);
 
                 EmitUnsupportedStructure(diagnosticsSink, payload);
@@ -63,7 +51,8 @@ internal static class GeometryLayoutStructureValidator
         BoxNode root,
         IDiagnosticsSink? diagnosticsSink)
     {
-        if (!TryFindUnsupportedInlineBlockStructure(root, out var unsupportedNode))
+        var unsupportedNode = FindUnsupportedInlineBlockStructure(root);
+        if (unsupportedNode is null)
         {
             return;
         }
@@ -71,7 +60,7 @@ internal static class GeometryLayoutStructureValidator
         var payload = new UnsupportedStructureDiagnostic(
             BoxNodePathBuilder.Build(unsupportedNode),
             unsupportedNode.Role.ToString(),
-            "Unsupported structure encountered inside inline-block formatting context.",
+            UnsupportedDiagnosticNames.Reasons.InlineBlockUnsupportedStructure,
             FormattingContextKind.InlineBlock);
 
         EmitUnsupportedStructure(diagnosticsSink, payload);
@@ -85,16 +74,18 @@ internal static class GeometryLayoutStructureValidator
         UnsupportedStructureDiagnostic payload)
     {
         diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/box-tree",
-            Name: "layout/inline-block/unsupported-structure",
+            Stage: GeometryDiagnosticNames.Stages.BoxTree,
+            Name: UnsupportedDiagnosticNames.Events.InlineBlockUnsupportedStructure,
             Severity: DiagnosticSeverity.Error,
             Message: payload.Reason,
             Context: null,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("nodePath", payload.NodePath),
-                DiagnosticFields.Field("structureKind", payload.StructureKind),
-                DiagnosticFields.Field("reason", payload.Reason),
-                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(payload.FormattingContext))),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, payload.NodePath),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, payload.StructureKind),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, payload.Reason),
+                DiagnosticFields.Field(
+                    GeometryDiagnosticNames.Fields.FormattingContext,
+                    DiagnosticValue.FromEnum(payload.FormattingContext))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 
@@ -104,7 +95,7 @@ internal static class GeometryLayoutStructureValidator
         string Reason,
         FormattingContextKind FormattingContext);
 
-    private static bool TryFindUnsupportedInlineBlockStructure(BoxNode root, out BoxNode unsupportedNode)
+    private static BoxNode? FindUnsupportedInlineBlockStructure(BoxNode root)
     {
         var rootIsInlineBlockContext = root is BlockBox rootBlock && rootBlock.IsInlineBlockContext;
         var stack = new Stack<(BoxNode Node, bool InInlineBlockContext)>();
@@ -115,8 +106,7 @@ internal static class GeometryLayoutStructureValidator
             var (current, inInlineBlockContext) = stack.Pop();
             if (inInlineBlockContext && UnsupportedInlineBlockRoles.Contains(current.Role))
             {
-                unsupportedNode = current;
-                return true;
+                return current;
             }
 
             var childInlineBlockContext = inInlineBlockContext ||
@@ -128,13 +118,10 @@ internal static class GeometryLayoutStructureValidator
             }
         }
 
-        unsupportedNode = null!;
-        return false;
+        return null;
     }
 
-    private static bool TryFindUnsupportedInlineBlockStructure(
-        PublishedBlock root,
-        out PublishedBlock unsupportedBlock)
+    private static PublishedBlock? FindUnsupportedInlineBlockStructure(PublishedBlock root)
     {
         var stack = new Stack<(PublishedBlock Block, bool InInlineBlockContext)>();
         stack.Push((root, root.Display.FormattingContext == FormattingContextKind.InlineBlock));
@@ -144,8 +131,7 @@ internal static class GeometryLayoutStructureValidator
             var (current, inInlineBlockContext) = stack.Pop();
             if (inInlineBlockContext && UnsupportedInlineBlockRoles.Contains(MapRole(current.Display.Role)))
             {
-                unsupportedBlock = current;
-                return true;
+                return current;
             }
 
             var childInlineBlockContext = inInlineBlockContext ||
@@ -157,8 +143,7 @@ internal static class GeometryLayoutStructureValidator
             }
         }
 
-        unsupportedBlock = null!;
-        return false;
+        return null;
     }
 
     private static IEnumerable<PublishedBlock> EnumeratePublishedChildBlocks(PublishedBlock block)

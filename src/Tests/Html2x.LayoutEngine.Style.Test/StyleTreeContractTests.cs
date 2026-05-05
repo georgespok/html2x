@@ -68,7 +68,7 @@ public sealed class StyleTreeContractTests
             </body></html>
             """;
 
-        var tree = await new Html2x.LayoutEngine.Style.StyleTreeBuilder()
+        var tree = await new StyleTreeBuilder()
             .BuildAsync(html, new() { UseDefaultUserAgentStyleSheet = false });
 
         var imageNode = tree.Root!.Children[0];
@@ -179,7 +179,7 @@ public sealed class StyleTreeContractTests
     {
         var node = new StyleNode();
 
-        IReadOnlyList<StyleNode> children = node.Children;
+        var children = node.Children;
 
         children.ShouldBeEmpty();
     }
@@ -189,7 +189,7 @@ public sealed class StyleTreeContractTests
     {
         var node = new StyleNode();
 
-        IReadOnlyList<StyleContentNode> content = node.Content;
+        var content = node.Content;
 
         content.ShouldBeEmpty();
     }

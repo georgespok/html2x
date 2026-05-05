@@ -1,17 +1,14 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 /// <summary>
 /// Reports layout modes that are parsed today but do not have implemented formatting contexts.
 /// </summary>
 internal sealed class UnsupportedLayoutModePolicy
 {
-    private const string UnsupportedModeEvent = "layout/unsupported-mode";
-
     public void Report(
         BoxNode root,
         IDiagnosticsSink? diagnosticsSink = null)
@@ -34,22 +31,22 @@ internal sealed class UnsupportedLayoutModePolicy
             string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Right, StringComparison.OrdinalIgnoreCase))
         {
             yield return new UnsupportedLayoutMode(
-                StructureKind: "float",
-                Reason: "CSS floats are not implemented. The current fallback omits floated content from normal layout.");
+                StructureKind: UnsupportedDiagnosticNames.StructureKinds.Float,
+                Reason: UnsupportedDiagnosticNames.Reasons.CssFloats);
         }
 
         if (string.Equals(node.Style.Display, HtmlCssConstants.CssValues.Flex, StringComparison.OrdinalIgnoreCase))
         {
             yield return new UnsupportedLayoutMode(
-                StructureKind: "display:flex",
-                Reason: "CSS flex layout is not implemented. The current fallback lays the container out as block flow.");
+                StructureKind: UnsupportedDiagnosticNames.StructureKinds.DisplayFlex,
+                Reason: UnsupportedDiagnosticNames.Reasons.CssFlex);
         }
 
         if (string.Equals(node.Style.Position, HtmlCssConstants.CssValues.Absolute, StringComparison.OrdinalIgnoreCase))
         {
             yield return new UnsupportedLayoutMode(
-                StructureKind: "position:absolute",
-                Reason: "Absolute positioning is not implemented. The current fallback keeps the element in normal flow.");
+                StructureKind: UnsupportedDiagnosticNames.StructureKinds.PositionAbsolute,
+                Reason: UnsupportedDiagnosticNames.Reasons.AbsolutePosition);
         }
     }
 
@@ -62,16 +59,18 @@ internal sealed class UnsupportedLayoutModePolicy
         var formattingContext = ResolveFormattingContext(node);
 
         diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/box-tree",
-            Name: UnsupportedModeEvent,
+            Stage: GeometryDiagnosticNames.Stages.BoxTree,
+            Name: UnsupportedDiagnosticNames.Events.UnsupportedMode,
             Severity: DiagnosticSeverity.Warning,
             Message: unsupported.Reason,
             Context: null,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("nodePath", nodePath),
-                DiagnosticFields.Field("structureKind", unsupported.StructureKind),
-                DiagnosticFields.Field("reason", unsupported.Reason),
-                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(formattingContext))),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, nodePath),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, unsupported.StructureKind),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
+                DiagnosticFields.Field(
+                    GeometryDiagnosticNames.Fields.FormattingContext,
+                    DiagnosticValue.FromEnum(formattingContext))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 

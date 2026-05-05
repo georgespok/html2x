@@ -1,6 +1,9 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;
@@ -83,7 +86,7 @@ internal sealed class SkiaPaintCommandDrawer
             IsAntialias = false
         };
 
-        canvas.DrawRect(SkiaGeometryMapper.ToSKRect(command.Rect), paint);
+        canvas.DrawRect(SkiaGeometryMapper.ToSkRect(command.Rect), paint);
     }
 
     private void DrawBorder(SKCanvas canvas, RectPt rect, BorderEdges borders)

@@ -1,9 +1,10 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 /// <summary>
 /// Owns supported block formatting measurement and margin-collapse policy.
@@ -68,18 +69,20 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
         var collapsedTopMargin = CollapseMarginPair(previousBottomMargin, nextTopMargin);
 
         diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/box-tree",
-            Name: "layout/margin-collapse",
+            Stage: GeometryDiagnosticNames.Stages.BoxTree,
+            Name: MarginCollapseDiagnosticNames.Event,
             Severity: DiagnosticSeverity.Info,
             Message: null,
             Context: null,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("previousBottomMargin", previousBottomMargin),
-                DiagnosticFields.Field("nextTopMargin", nextTopMargin),
-                DiagnosticFields.Field("collapsedTopMargin", collapsedTopMargin),
-                DiagnosticFields.Field("owner", nameof(BlockFormattingContext)),
-                DiagnosticFields.Field("consumer", consumerName),
-                DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(contextKind))),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.PreviousBottomMargin, previousBottomMargin),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.NextTopMargin, nextTopMargin),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.CollapsedTopMargin, collapsedTopMargin),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Owner, nameof(BlockFormattingContext)),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Consumer, consumerName),
+                DiagnosticFields.Field(
+                    GeometryDiagnosticNames.Fields.FormattingContext,
+                    DiagnosticValue.FromEnum(contextKind))),
             Timestamp: DateTimeOffset.UtcNow));
 
         return collapsedTopMargin;
@@ -163,9 +166,10 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
 
     private float ResolveTotalHeight(BlockFormattingRequest request, IReadOnlyList<BlockBox> blocks)
     {
-        if (TryResolveSequentialHeight(request, out var sequentialHeight))
+        var sequentialHeight = ResolveSequentialHeight(request);
+        if (sequentialHeight.HasValue)
         {
-            return Math.Max(Math.Max(0f, ResolvePublishedOrZeroHeight(request.RootBlock)), sequentialHeight);
+            return Math.Max(Math.Max(0f, ResolvePublishedOrZeroHeight(request.RootBlock)), sequentialHeight.Value);
         }
 
         if (blocks.Count == 0)
@@ -191,17 +195,18 @@ internal sealed class BlockFormattingContext : IBlockFormattingContext
         return Math.Max(0f, maxY - minY);
     }
 
-    private bool TryResolveSequentialHeight(BlockFormattingRequest request, out float totalHeight)
+    private float? ResolveSequentialHeight(BlockFormattingRequest request)
     {
-        return _flowMeasurement.TryMeasureStackedChildren(
+        var result = _flowMeasurement.MeasureStackedChildren(
             request.RootBlock.Children,
             request.AvailableWidth,
-            out totalHeight,
             request.BlockHeightMeasurer,
             request.TableHeightMeasurer,
             request.EmitDiagnostics ? request.DiagnosticsSink : null,
             request.ContextKind,
             request.ConsumerName);
+
+        return result.HasBlocks ? result.TotalHeight : null;
     }
 
     private static (float Top, float Bottom) ResolveVerticalBounds(BlockBox block)

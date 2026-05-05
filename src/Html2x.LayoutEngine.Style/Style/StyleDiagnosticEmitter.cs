@@ -1,7 +1,7 @@
 using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 internal static class StyleDiagnostics
 {
@@ -15,12 +15,12 @@ internal static class StyleDiagnostics
     {
         Emit(
             diagnosticsSink,
-            "style/ignored-declaration",
+            StyleDiagnosticNames.Events.IgnoredDeclaration,
             element,
             propertyName,
             rawValue,
             normalizedValue,
-            "Ignored",
+            StyleDiagnosticNames.Decisions.Ignored,
             reason);
     }
 
@@ -33,12 +33,12 @@ internal static class StyleDiagnostics
     {
         Emit(
             diagnosticsSink,
-            "style/unsupported-declaration",
+            StyleDiagnosticNames.Events.UnsupportedDeclaration,
             element,
             propertyName,
             rawValue,
             normalizedValue: null,
-            "Unsupported",
+            StyleDiagnosticNames.Decisions.Unsupported,
             reason);
     }
 
@@ -54,19 +54,19 @@ internal static class StyleDiagnostics
     {
         var context = CreateDiagnosticContext(element, propertyName, rawValue);
         diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/style",
+            Stage: StyleDiagnosticNames.Stages.Style,
             Name: eventName,
             Severity: DiagnosticSeverity.Warning,
             Message: reason,
             Context: context,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("propertyName", propertyName),
-                DiagnosticFields.Field("rawValue", rawValue),
+                DiagnosticFields.Field(StyleDiagnosticNames.Fields.PropertyName, propertyName),
+                DiagnosticFields.Field(StyleDiagnosticNames.Fields.RawValue, rawValue),
                 DiagnosticFields.Field(
-                    "normalizedValue",
+                    StyleDiagnosticNames.Fields.NormalizedValue,
                     normalizedValue is null ? null : DiagnosticValue.From(normalizedValue)),
-                DiagnosticFields.Field("decision", decision),
-                DiagnosticFields.Field("reason", reason)),
+                DiagnosticFields.Field(StyleDiagnosticNames.Fields.Decision, decision),
+                DiagnosticFields.Field(StyleDiagnosticNames.Fields.Reason, reason)),
             Timestamp: DateTimeOffset.UtcNow));
     }
 

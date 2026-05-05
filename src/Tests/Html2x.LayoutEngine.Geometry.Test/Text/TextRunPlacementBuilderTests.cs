@@ -1,8 +1,9 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
@@ -21,7 +22,9 @@ public sealed class TextRunPlacementBuilderTests
             LineWidth: 21f,
             LineHeight: 12f);
         var builder = new TextRunPlacementBuilder(
-            new InlineObjectPlacementBuilder((_, _, _, _, _, _) => throw new InvalidOperationException("Unexpected inline object.")),
+            new AtomicInlineObjectPlacement(
+                (_, _, _, _, _, _) => throw new InvalidOperationException("Unexpected inline object."),
+                new LayoutBoxStateWriter()),
             new InlineLineBoundsCalculator());
 
         var items = builder.Build(

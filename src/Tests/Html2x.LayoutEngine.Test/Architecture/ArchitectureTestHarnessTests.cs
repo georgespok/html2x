@@ -1,4 +1,6 @@
+using Html2x.RenderModel.Documents;
 using Shouldly;
+using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
@@ -9,11 +11,7 @@ public sealed class ArchitectureTestHarnessTests
     [InlineData("public BlockBox")]
     public void IdentifierAssertions_CompoundPattern_Throws(string pattern)
     {
-        var source = CSharpSourceFile.Load(
-            "src",
-            "Html2x.LayoutEngine.Contracts",
-            "Style",
-            "StyleNode.cs");
+        var source = SourceFileFor<StyleNode>("Style");
 
         var exception = Should.Throw<ArgumentException>(() => source.ShouldNotUseIdentifier(pattern));
 
@@ -23,7 +21,7 @@ public sealed class ArchitectureTestHarnessTests
     [Fact]
     public void SourceSetInvocationAssertion_ReceiverMemberCall_UsesSyntax()
     {
-        CSharpSourceSet.FromDirectory("src", "Html2x.RenderModel")
-            .ShouldInvokeMemberOn("_pages", "Add");
+        SourceSetFor<HtmlLayout>()
+            .ShouldInvokeMemberOn("_pages", nameof(List<int>.Add));
     }
 }

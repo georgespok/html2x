@@ -1,8 +1,6 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.Text;
+using Html2x.RenderModel.Text;
 
-namespace Html2x.LayoutEngine;
+namespace Html2x.LayoutEngine.Geometry;
 
 /// <summary>
 ///     Default heuristic font metrics provider. Replace with a real font engine when available.

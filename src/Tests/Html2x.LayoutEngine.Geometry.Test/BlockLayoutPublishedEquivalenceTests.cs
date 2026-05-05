@@ -1,10 +1,10 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 using Html2x.Text;
 
@@ -516,14 +516,6 @@ public sealed class BlockLayoutPublishedEquivalenceTests
         return GetSingleInlineLine(block).Items;
     }
 
-    private static void AssertPublishedLayoutEquivalent(
-        PublishedLayoutTree actual,
-        PublishedLayoutTree expected)
-    {
-        actual.Page.ShouldBe(expected.Page);
-        AssertBlocksEquivalent(actual.Blocks, expected.Blocks);
-    }
-
     private static void AssertBlocksEquivalent(
         IReadOnlyList<PublishedBlock> actual,
         IReadOnlyList<PublishedBlock> expected)
@@ -559,7 +551,7 @@ public sealed class BlockLayoutPublishedEquivalenceTests
         }
 
         actual.ShouldNotBeNull();
-        actual!.TotalHeight.ShouldBe(expected.TotalHeight);
+        actual.TotalHeight.ShouldBe(expected.TotalHeight);
         actual.MaxLineWidth.ShouldBe(expected.MaxLineWidth);
         actual.Segments.Count.ShouldBe(expected.Segments.Count);
 
@@ -675,8 +667,8 @@ public sealed class BlockLayoutPublishedEquivalenceTests
     }
 
     private static void AssertFragmentEquivalent(
-        Html2x.RenderModel.Fragment actual,
-        Html2x.RenderModel.Fragment expected)
+        Fragment actual,
+        Fragment expected)
     {
         actual.GetType().ShouldBe(expected.GetType());
         actual.PageNumber.ShouldBe(expected.PageNumber);

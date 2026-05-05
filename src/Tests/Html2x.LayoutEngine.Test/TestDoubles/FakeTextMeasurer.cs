@@ -1,4 +1,4 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.TestDoubles;
@@ -25,6 +25,27 @@ public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float des
         }
 
         return text.Length * widthPerChar;
+    }
+
+    public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt)
+    {
+        return (ascent, descent);
+    }
+}
+
+/// <summary>
+/// Provides deterministic fixed-width text measurements for integration tests that do not depend on text length.
+/// </summary>
+public sealed class ConstantTextMeasurer(float widthPt, float ascent, float descent) : ITextMeasurer
+{
+    public TextMeasurement Measure(FontKey font, float sizePt, string text)
+    {
+        return TextMeasurement.CreateFallback(font, widthPt, ascent, descent);
+    }
+
+    public float MeasureWidth(FontKey font, float sizePt, string text)
+    {
+        return widthPt;
     }
 
     public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt)

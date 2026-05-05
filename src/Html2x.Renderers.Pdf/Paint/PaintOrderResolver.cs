@@ -1,4 +1,7 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.Renderers.Pdf.Paint;
 
@@ -192,16 +195,14 @@ internal sealed class PaintOrderResolver
             image.Rect,
             image.ZOrder,
             commands.NextIndex(),
-            image.Style ?? new VisualStyle(),
+            image.Style,
             image.Src,
             image.ContentRect,
             image.AuthoredSizePx,
             image.IntrinsicSizePx,
-            image.Status,
-            image.IsMissing,
-            image.IsOversize));
+            image.Status));
 
-        var borders = image.Style?.Borders;
+        var borders = image.Style.Borders;
         if (!ShouldPaintBorder(image.Rect, borders))
         {
             return;

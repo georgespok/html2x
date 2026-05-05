@@ -1,7 +1,8 @@
-using Html2x.Renderers.Pdf.Test;
 using Html2x.Text;
-using Html2x.RenderModel;
 using Html2x.Renderers.Pdf.Drawing;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Text;
 using Shouldly;
 using SkiaSharp;
 
@@ -38,7 +39,7 @@ public sealed class SkiaFontCacheTests
         var faces = FontDirectoryIndex.Build(fileDirectory, typefaceFactory, "fonts");
 
         faces.Count.ShouldBe(3);
-        faces.Select(face => face.Path).ShouldBe(new[] { "fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc" }, ignoreOrder: true);
+        faces.Select(face => face.Path).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], ignoreOrder: true);
         fileDirectory.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
         fileDirectory.EnumerateFilesCalls.ShouldBe([new TestFileDirectory.FileEnumerationKey("fonts", "*.*", true)]);
         typefaceFactory.FromFileCalls.ShouldBe(["fonts\\a.ttf", "fonts\\b.otf"]);

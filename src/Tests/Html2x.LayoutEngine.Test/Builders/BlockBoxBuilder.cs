@@ -1,6 +1,6 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Test.Builders;
 
@@ -12,8 +12,6 @@ internal sealed class BlockBoxBuilder
 {
     private readonly BlockBox _block;
     private readonly BlockBoxBuilder? _parent;
-    private Spacing? _pageMargins;
-
     public BlockBoxBuilder()
         : this(new BlockBox(BoxRole.Block), parent: null)
     {
@@ -50,17 +48,6 @@ internal sealed class BlockBoxBuilder
         return this;
     }
 
-    public BlockBoxBuilder WithPageMargins(float top = 0, float right = 0, float bottom = 0, float left = 0)
-    {
-        if (_parent is not null)
-        {
-            return this;
-        }
-
-        _pageMargins = new Spacing(top, right, bottom, left);
-        return this;
-    }
-
     public BlockBoxBuilder Inline(string textContent, ComputedStyle? style = null)
     {
         _block.Children.Add(new InlineBox(BoxRole.Inline)
@@ -79,7 +66,7 @@ internal sealed class BlockBoxBuilder
             Style = resolvedStyle,
             Parent = _block
         };
-        block.UsedGeometry = BoxGeometryFactory.FromBorderBox(
+        block.UsedGeometry = UsedGeometryCalculator.FromBorderBox(
             new RectPt(x, y, width, height),
             resolvedStyle.Padding.Safe(),
             Spacing.FromBorderEdges(resolvedStyle.Borders).Safe(),
@@ -110,24 +97,6 @@ internal sealed class BlockBoxBuilder
         }
 
         return current._block;
-    }
-
-    public BoxTree BuildTree()
-    {
-        var root = BuildRoot();
-        var tree = new BoxTree();
-
-        if (_pageMargins.HasValue)
-        {
-            tree.Page.Margin = _pageMargins.Value;
-        }
-
-        foreach (var child in root.Children.OfType<BlockBox>())
-        {
-            tree.Blocks.Add(child);
-        }
-
-        return tree;
     }
 
     private BlockBoxBuilder Attach(BlockBox child)

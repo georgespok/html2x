@@ -1,17 +1,18 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
-using Moq;
-using Shouldly;
-using CoreFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Html2x.Text;
+using Shouldly;
+using CoreFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test;
 
-public class LayoutIntegrationTests
+public partial class LayoutIntegrationTests
 {
     [Fact]
     public async Task BodyMarginTop_IsAppliedToFirstBlockFragmentPosition()
@@ -82,7 +83,7 @@ public class LayoutIntegrationTests
         const string html =
             "<html><body><div><span>Span inside Div</span><p>Paragraph inside Div<div>Nested Div inside Paragraph<span>Nested Span inside nested Div</span></div></p></div></body></html>";
 
-        var styleTreeBuilder = new Html2x.LayoutEngine.Style.StyleTreeBuilder();
+        var styleTreeBuilder = new StyleTreeBuilder();
         var textMeasurer = CreateTextMeasurer();
         var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
@@ -99,7 +100,7 @@ public class LayoutIntegrationTests
             {
                 PageSize = layoutOptions.PageSize,
                 ImageMetadataResolver = new NoopImageMetadataResolver(),
-                HtmlDirectory = Directory.GetCurrentDirectory(),
+                ResourceBaseDirectory = Directory.GetCurrentDirectory(),
                 MaxImageSizeBytes = layoutOptions.MaxImageSizeBytes
             });
         var fragmentTree = fragmentBuilder.Build(publishedLayout);
@@ -118,13 +119,13 @@ public class LayoutIntegrationTests
         var outerDivBlock = page.Children.OfType<BlockFragment>().FirstOrDefault();
         outerDivBlock.ShouldNotBeNull();
 
-        var nestedDivBlock = FindBlockContainingText(outerDivBlock!, "Nested Span inside nested Div");
+        var nestedDivBlock = FindBlockContainingText(outerDivBlock, "Nested Span inside nested Div");
         nestedDivBlock.ShouldNotBeNull();
 
-        var paragraphBlock = FindBlockContainingText(outerDivBlock!, "Paragraph inside Div");
+        var paragraphBlock = FindBlockContainingText(outerDivBlock, "Paragraph inside Div");
         paragraphBlock.ShouldNotBeNull();
 
-        nestedDivBlock!.Rect.Y.ShouldBeGreaterThanOrEqualTo(paragraphBlock!.Rect.Y);
+        nestedDivBlock.Rect.Y.ShouldBeGreaterThanOrEqualTo(paragraphBlock.Rect.Y);
         paragraphBlock.Rect.Y.ShouldBeGreaterThanOrEqualTo(0f);
     }
 
@@ -247,102 +248,6 @@ public class LayoutIntegrationTests
         lineBox.Runs.Count.ShouldBe(1);
         lineBox.Runs[0].Origin.X.ShouldBe(lineBox.Rect.X, 0.5f);
         lineBox.BaselineY.ShouldBe(lineBox.Runs[0].Origin.Y, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_InlineImageWithBorderAndPadding_IncludesOuterSize()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <p>Before <img src='image.png' width='100' height='80' style='padding: 10px; border: 2px solid black;' /> After</p>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutBuildSettings
-        {
-            PageSize = PaperSizes.Letter
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var page = layout.Pages[0];
-        var image = page.Children
-            .OfType<BlockFragment>()
-            .Select(FindFirstImageFragment)
-            .FirstOrDefault(fragment => fragment is not null);
-
-        image.ShouldNotBeNull();
-        image!.Rect.Width.ShouldBe(93f, 0.5f);
-        image.Rect.Height.ShouldBe(78f, 0.5f);
-        image.ContentRect.Width.ShouldBe(75f, 0.5f);
-        image.ContentRect.Height.ShouldBe(60f, 0.5f);
-    }
-
-    [Fact]
-    public async Task Build_ImageWithOversizedBorderAndPadding_ClampsContentRectToZero()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div>
-                    <img src='image.png' width='0' height='0' style='padding: 20px; border: 10px solid black;' />
-                </div>
-              </body>
-            </html>";
-
-        var layoutOptions = new LayoutBuildSettings
-        {
-            PageSize = PaperSizes.Letter
-        };
-
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-
-        layout.Pages.Count.ShouldBe(1);
-        var page = layout.Pages[0];
-        var image = page.Children
-            .OfType<BlockFragment>()
-            .Select(FindFirstImageFragment)
-            .FirstOrDefault(fragment => fragment is not null);
-
-        image.ShouldNotBeNull();
-        image!.ContentRect.Width.ShouldBe(0f);
-        image.ContentRect.Height.ShouldBe(0f);
-    }
-
-    [Fact]
-    public async Task Build_ImageSizing_AppliesCssRatioAndWidthCap()
-    {
-        const string html = @"
-            <html>
-              <body style='margin: 0;'>
-                <div style='width: 120pt; margin: 0;'>
-                  <img src='css.png' style='display: block; width: 40px; height: 20px;' />
-                  <img src='intrinsic.png' style='display: block;' />
-                </div>
-              </body>
-            </html>";
-
-        var layout = await CreateLayoutBuilder(new FixedImageMetadataResolver(src =>
-            string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
-                ? new SizePx(400d, 200d)
-                : new SizePx(80d, 40d)))
-            .BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter });
-
-        var container = layout.Pages[0].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
-        var images = EnumerateLayoutFragments(container)
-            .OfType<ImageFragment>()
-            .ToList();
-
-        images.Count.ShouldBe(2);
-        var cssImage = images[0];
-        var intrinsicImage = images[1];
-
-        cssImage.ContentRect.Width.ShouldBe(30f, 0.01f);
-        cssImage.ContentRect.Height.ShouldBe(15f, 0.01f);
-        intrinsicImage.ContentRect.Width.ShouldBe(120f, 0.01f);
-        intrinsicImage.ContentRect.Height.ShouldBe(60f, 0.01f);
     }
 
     [Theory]
@@ -637,7 +542,7 @@ public class LayoutIntegrationTests
         page.Children.Count.ShouldBe(1);
         var block = page.Children[0] as BlockFragment;
         block.ShouldNotBeNull();
-        block!.Children.OfType<LineBoxFragment>().Count().ShouldBe(2);
+        block.Children.OfType<LineBoxFragment>().Count().ShouldBe(2);
     }
 
     private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
@@ -697,56 +602,9 @@ public class LayoutIntegrationTests
         return null;
     }
 
-    private static ImageFragment? FindFirstImageFragment(CoreFragment fragment)
-    {
-        if (fragment is ImageFragment image)
-        {
-            return image;
-        }
-
-        if (fragment is BlockFragment block)
-        {
-            foreach (var child in block.Children)
-            {
-                var match = FindFirstImageFragment(child);
-                if (match is not null)
-                {
-                    return match;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<CoreFragment> EnumerateLayoutFragments(CoreFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateLayoutFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
-
     private static ITextMeasurer CreateTextMeasurer()
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns((FontKey font, float _, string _) => TextMeasurement.CreateFallback(font, 10f, 9f, 3f));
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(10f);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((9f, 3f));
-        return textMeasurer.Object;
+        return new ConstantTextMeasurer(10f, 9f, 3f);
     }
 
     private static LayoutBuilder CreateLayoutBuilder()
@@ -759,18 +617,4 @@ public class LayoutIntegrationTests
         return new LayoutBuilder(CreateTextMeasurer(), imageMetadataResolver);
     }
 
-    private sealed class FixedImageMetadataResolver(Func<string, SizePx> resolveSize) : IImageMetadataResolver
-    {
-        private readonly Func<string, SizePx> _resolveSize = resolveSize;
-
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
-        {
-            return new ImageMetadataResult
-            {
-                Src = src,
-                Status = ImageMetadataStatus.Ok,
-                IntrinsicSizePx = _resolveSize(src)
-            };
-        }
-    }
 }

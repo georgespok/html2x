@@ -1,6 +1,5 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.TestHelpers;
@@ -19,6 +18,6 @@ internal static class InlineFlowTestHelpers
 
     public static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
     {
-        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
+        return new Html2x.LayoutEngine.Test.TestDoubles.FakeTextMeasurer(widthPerChar, 8f, 2f);
     }
 }

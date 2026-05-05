@@ -1,7 +1,7 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 internal sealed class CssValueConverter
 {
@@ -13,14 +13,14 @@ internal sealed class CssValueConverter
         }
 
         var value = styles.GetPropertyValue(property)?.Trim();
-        return string.IsNullOrWhiteSpace(value) ? fallback ?? string.Empty : value!;
+        return string.IsNullOrWhiteSpace(value) ? fallback ?? string.Empty : value;
     }
 
     public string NormalizeAlign(string? value, string fallback)
     {
         return string.IsNullOrWhiteSpace(value)
             ? fallback
-            : value!.ToLowerInvariant();
+            : value.ToLowerInvariant();
     }
 
     public bool IsBold(string? value)
@@ -30,7 +30,7 @@ internal sealed class CssValueConverter
             return false;
         }
 
-        if (value!.Equals(HtmlCssConstants.CssValues.Bold, StringComparison.OrdinalIgnoreCase))
+        if (value.Equals(HtmlCssConstants.CssValues.Bold, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
@@ -44,35 +44,34 @@ internal sealed class CssValueConverter
                string.Equals(value, HtmlCssConstants.CssValues.Oblique, StringComparison.OrdinalIgnoreCase);
     }
 
-    public bool TryGetLengthPt(string? raw, out float points)
+    public float? ParseLengthPt(string? raw)
     {
-        points = 0;
         if (string.IsNullOrWhiteSpace(raw))
         {
-            return false;
+            return null;
         }
 
         var trimmed = raw.Trim();
 
         if (trimmed.EndsWith(HtmlCssConstants.CssUnits.Pt, StringComparison.OrdinalIgnoreCase))
         {
-            return float.TryParse(trimmed[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out points);
+            return float.TryParse(trimmed[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var points)
+                ? points
+                : null;
         }
 
         if (trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase) &&
             float.TryParse(trimmed[..^2], NumberStyles.Float, CultureInfo.InvariantCulture, out var pixels))
         {
-            points = CssUnitConversion.CssPxToPt(pixels);
-            return true;
+            return CssUnitConversion.CssPxToPt(pixels);
         }
 
         if (string.Equals(trimmed, HtmlCssConstants.CssValues.Zero, StringComparison.OrdinalIgnoreCase))
         {
-            points = 0;
-            return true;
+            return 0f;
         }
 
-        return false;
+        return null;
     }
 
     public float GetLengthPt(ICssStyleDeclaration styles, string property, float fallback)
@@ -82,6 +81,6 @@ internal sealed class CssValueConverter
             throw new ArgumentNullException(nameof(styles));
         }
 
-        return TryGetLengthPt(styles.GetPropertyValue(property), out var points) ? points : fallback;
+        return ParseLengthPt(styles.GetPropertyValue(property)) ?? fallback;
     }
 }

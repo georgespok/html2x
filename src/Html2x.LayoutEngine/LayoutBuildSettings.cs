@@ -1,5 +1,5 @@
 using Html2x.LayoutEngine.Style;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine;
 
@@ -11,7 +11,7 @@ internal sealed class LayoutBuildSettings
     public SizePt PageSize { get; init; } = PaperSizes.Letter;
 
     /// <summary>Base directory used to resolve relative image paths during layout.</summary>
-    public string? HtmlDirectory { get; init; }
+    public string? ResourceBaseDirectory { get; init; }
 
     /// <summary>Maximum allowed image size in bytes; images over this are marked oversize.</summary>
     public long MaxImageSizeBytes { get; init; } = 10 * 1024 * 1024;

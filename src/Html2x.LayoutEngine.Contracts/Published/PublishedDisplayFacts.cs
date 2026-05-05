@@ -1,6 +1,6 @@
-namespace Html2x.LayoutEngine.Contracts.Published;
+using Html2x.RenderModel.Fragments;
 
-using Html2x.RenderModel;
+namespace Html2x.LayoutEngine.Contracts.Published;
 
 internal sealed record PublishedDisplayFacts
 {

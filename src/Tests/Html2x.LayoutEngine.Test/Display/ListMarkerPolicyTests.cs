@@ -1,5 +1,4 @@
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Display;

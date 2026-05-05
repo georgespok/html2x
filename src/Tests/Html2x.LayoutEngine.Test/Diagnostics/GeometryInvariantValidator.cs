@@ -1,12 +1,11 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -17,46 +16,41 @@ internal static class GeometryInvariantValidator
         ArgumentNullException.ThrowIfNull(result);
 
         var snapshotText = GeometryTestHarness.RenderSnapshot(result.Snapshot);
-        var laidOutBoxes = FlattenBoxes(result.BoxTree.Blocks)
-            .ToHashSet(Html2x.LayoutEngine.Test.TestHelpers.ReferenceEqualityComparer.Instance);
+        var boxes = result.Snapshot.Boxes.SelectMany(FlattenBoxes).ToList();
 
-        foreach (var box in laidOutBoxes)
+        foreach (var box in boxes)
         {
-            box.UsedGeometry.ShouldNotBeNull(snapshotText);
-
-            var geometry = box.UsedGeometry!.Value;
-            geometry.BorderBoxRect.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
-            geometry.BorderBoxRect.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
-            geometry.ContentBoxRect.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
-            geometry.ContentBoxRect.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
-            geometry.MarkerOffset.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            box.Size.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            box.Size.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            box.ContentSize?.Width.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            box.ContentSize?.Height.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
+            box.MarkerOffset.ShouldBeGreaterThanOrEqualTo(0f, snapshotText);
         }
 
         AssertPublishedFragmentsMatch(result.PublishedLayout, result.Fragments, snapshotText);
 
-        foreach (var parent in laidOutBoxes)
+        foreach (var parent in boxes)
         {
-            if (parent.UsedGeometry is null)
+            if (parent.AllowsOverflow || parent.ContentX is null || parent.ContentY is null || parent.ContentSize is null)
             {
                 continue;
             }
 
-            var parentGeometry = parent.UsedGeometry.Value;
-            if (parentGeometry.AllowsOverflow)
-            {
-                continue;
-            }
+            var parentContent = new RectPt(
+                parent.ContentX.Value,
+                parent.ContentY.Value,
+                parent.ContentSize.Value.Width,
+                parent.ContentSize.Value.Height);
 
-            foreach (var child in BoxNodeTraversal
-                         .EnumerateBlockChildren(parent)
-                         .Where(static child => !InlineFlowClassifier.IsInlineFlowMember(child)))
+            foreach (var child in parent.Children)
             {
-                if (child.UsedGeometry is null || child.UsedGeometry.Value.AllowsOverflow)
+                if (child.AllowsOverflow)
                 {
                     continue;
                 }
 
-                RectContainedBy(child.UsedGeometry.Value.BorderBoxRect, parentGeometry.ContentBoxRect)
+                var childRect = new RectPt(child.X, child.Y, child.Size.Width, child.Size.Height);
+                RectContainedBy(childRect, parentContent)
                     .ShouldBeTrue(snapshotText);
             }
         }
@@ -85,30 +79,25 @@ internal static class GeometryInvariantValidator
             {
                 placement.PageNumber.ShouldBe(page.PageNumber, snapshotText);
                 placedFragments.TryGetValue(placement.FragmentId, out var placedFragment).ShouldBeTrue(snapshotText);
-                placedFragment!.PageNumber.ShouldBe(page.PageNumber, snapshotText);
+                placedFragment.PageNumber.ShouldBe(page.PageNumber, snapshotText);
                 Math.Abs(placement.Width - placedFragment.Rect.Width).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
                 Math.Abs(placement.Height - placedFragment.Rect.Height).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
                 Math.Abs(placement.PageX - placedFragment.Rect.X).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
                 Math.Abs(placement.PageY - placedFragment.Rect.Y).ShouldBeLessThanOrEqualTo(0.01f, snapshotText);
 
                 sourceFragments.TryGetValue(placement.FragmentId, out var sourceFragment).ShouldBeTrue(snapshotText);
-                AssertTranslatedFragment(sourceFragment!, placedFragment, page.PageNumber, null, null, snapshotText);
+                AssertTranslatedFragment(sourceFragment, placedFragment, page.PageNumber, null, null, snapshotText);
             }
         }
     }
 
-    private static IEnumerable<BlockBox> FlattenBoxes(IEnumerable<BlockBox> blocks)
+    private static IEnumerable<BoxGeometrySnapshot> FlattenBoxes(BoxGeometrySnapshot box)
     {
-        foreach (var block in blocks)
-        {
-            yield return block;
+        yield return box;
 
-            foreach (var child in FlattenBoxes(BoxNodeTraversal
-                         .EnumerateBlockChildren(block)
-                         .Where(static child => !InlineFlowClassifier.IsInlineFlowMember(child))))
-            {
-                yield return child;
-            }
+        foreach (var child in box.Children.SelectMany(FlattenBoxes))
+        {
+            yield return child;
         }
     }
 
@@ -139,7 +128,7 @@ internal static class GeometryInvariantValidator
         {
             var image = fragment.Children.OfType<ImageFragment>().FirstOrDefault();
             image.ShouldNotBeNull(snapshotText);
-            RectEquals(source.Geometry.BorderBoxRect, image!.Rect).ShouldBeTrue(snapshotText);
+            RectEquals(source.Geometry.BorderBoxRect, image.Rect).ShouldBeTrue(snapshotText);
             RectEquals(source.Geometry.ContentBoxRect, image.ContentRect).ShouldBeTrue(snapshotText);
         }
 
@@ -147,7 +136,7 @@ internal static class GeometryInvariantValidator
         {
             var rule = fragment.Children.OfType<RuleFragment>().FirstOrDefault();
             rule.ShouldNotBeNull(snapshotText);
-            RectEquals(source.Geometry.BorderBoxRect, rule!.Rect).ShouldBeTrue(snapshotText);
+            RectEquals(source.Geometry.BorderBoxRect, rule.Rect).ShouldBeTrue(snapshotText);
         }
 
         var publishedChildren = source.Flow

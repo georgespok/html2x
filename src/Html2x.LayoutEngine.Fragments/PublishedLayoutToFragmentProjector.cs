@@ -1,6 +1,6 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Contracts.Published;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Fragments;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Fragments;
 
@@ -21,28 +21,24 @@ internal sealed class PublishedLayoutToFragmentProjector
         };
     }
 
-    public bool TryCreateSpecialFragment(
+    public LayoutFragment? CreateSpecialFragment(
         PublishedBlock source,
         int fragmentId,
-        int pageNumber,
-        out LayoutFragment fragment)
+        int pageNumber)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         if (source.Rule is not null)
         {
-            fragment = CreateRuleFragment(source, fragmentId, pageNumber);
-            return true;
+            return CreateRuleFragment(source, fragmentId, pageNumber);
         }
 
         if (source.Image is not null)
         {
-            fragment = CreateImageFragment(source, fragmentId, pageNumber);
-            return true;
+            return CreateImageFragment(source, fragmentId, pageNumber);
         }
 
-        fragment = null!;
-        return false;
+        return null;
     }
 
     private static TableFragment CreateTableFragment(PublishedBlock source, int fragmentId, int pageNumber)
@@ -129,8 +125,6 @@ internal sealed class PublishedLayoutToFragmentProjector
             AuthoredSizePx = image.AuthoredSizePx,
             IntrinsicSizePx = image.IntrinsicSizePx,
             Status = image.Status,
-            IsMissing = image.IsMissing,
-            IsOversize = image.IsOversize,
             Rect = source.Geometry.BorderBoxRect,
             ContentRect = source.Geometry.ContentBoxRect,
             Style = source.Style

@@ -1,19 +1,18 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
 /// Applies table layout, table diagnostics, and table placement to table boxes.
 /// </summary>
 internal sealed class TableBlockLayoutApplier(
-    TableLayoutEngine tableEngine,
+    TableGridLayout tableGridLayout,
     TablePlacementApplier tablePlacementApplier,
     IDiagnosticsSink? diagnosticsSink)
 {
-    private readonly TableLayoutEngine _tableEngine =
-        tableEngine ?? throw new ArgumentNullException(nameof(tableEngine));
+    private readonly TableGridLayout _tableGridLayout =
+        tableGridLayout ?? throw new ArgumentNullException(nameof(tableGridLayout));
     private readonly TablePlacementApplier _tablePlacementApplier =
         tablePlacementApplier ?? throw new ArgumentNullException(nameof(tablePlacementApplier));
 
@@ -26,21 +25,21 @@ internal sealed class TableBlockLayoutApplier(
         ArgumentNullException.ThrowIfNull(layoutChildBlocks);
 
         var margin = node.Style.Margin.Safe();
-        var origin = BlockPlacementService.ResolveOrigin(request, margin);
-        var result = _tableEngine.Layout(node, request.ContentWidth);
+        var origin = BlockOriginResolver.ResolveOrigin(request, margin);
+        var result = _tableGridLayout.Layout(node, request.ContentWidth);
         if (!result.IsSupported)
         {
             TableLayoutDiagnostics.EmitUnsupportedTable(
                 BoxNodePathBuilder.Build(node),
-                result.UnsupportedStructureKind ?? "unsupported-table-structure",
-                result.UnsupportedReason ?? "Unsupported table structure.",
+                result.UnsupportedStructureKind ?? TableStructureDiagnosticNames.StructureKinds.UnsupportedTableStructure,
+                result.UnsupportedReason ?? TableStructureDiagnosticNames.Reasons.UnsupportedTableStructure,
                 result.RowCount,
                 result.RequestedWidth,
                 result.ResolvedWidth,
                 groupContexts: BuildTableGroupContexts(node),
                 diagnosticsSink: diagnosticsSink);
 
-            TablePlacementApplier.ApplyUnsupportedPlaceholder(node, origin.X, origin.Y, result.ResolvedWidth, margin);
+            _tablePlacementApplier.ApplyUnsupportedPlaceholder(node, origin.X, origin.Y, result.ResolvedWidth, margin);
             return;
         }
 
@@ -93,7 +92,7 @@ internal sealed class TableBlockLayoutApplier(
         var groups = table.Children
             .OfType<TableSectionBox>()
             .Select(static section => new TableGroupDiagnosticContext(
-                section.Element?.TagName.ToLowerInvariant() ?? "section",
+                section.Element?.TagName.ToLowerInvariant() ?? TableLayoutDiagnosticNames.GroupKinds.Section,
                 section.Children.OfType<TableRowBox>().Count()))
             .ToList();
 
@@ -105,8 +104,9 @@ internal sealed class TableBlockLayoutApplier(
         return
         [
             new TableGroupDiagnosticContext(
-                "direct",
+                TableLayoutDiagnosticNames.GroupKinds.Direct,
                 table.Children.OfType<TableRowBox>().Count())
         ];
     }
+
 }

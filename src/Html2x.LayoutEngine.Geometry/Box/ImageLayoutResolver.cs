@@ -1,29 +1,22 @@
 using System.Globalization;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 /// <summary>
 /// Resolves image content and border-box dimensions for layout.
 /// </summary>
-internal sealed class ImageLayoutResolver : IImageLayoutResolver
+internal sealed class ImageLayoutResolver(LayoutGeometryRequest? request = null) : IImageLayoutResolver
 {
-    private readonly string _htmlDirectory;
-    private readonly IImageMetadataResolver _imageMetadataResolver;
-    private readonly long _maxImageSizeBytes;
-
-    public ImageLayoutResolver(LayoutGeometryRequest? request = null)
-    {
-        _imageMetadataResolver = request?.ImageMetadataResolver ?? new NullImageMetadataResolver();
-        _htmlDirectory = string.IsNullOrWhiteSpace(request?.HtmlDirectory)
-            ? AppContext.BaseDirectory
-            : request.HtmlDirectory;
-        _maxImageSizeBytes = request?.MaxImageSizeBytes ?? (long)(10 * 1024 * 1024);
-    }
+    private readonly string _resourceBaseDirectory = string.IsNullOrWhiteSpace(request?.ResourceBaseDirectory)
+        ? AppContext.BaseDirectory
+        : request.ResourceBaseDirectory;
+    private readonly IImageMetadataResolver _imageMetadataResolver = request?.ImageMetadataResolver ?? new NullImageMetadataResolver();
+    private readonly long _maxImageSizeBytes = request?.MaxImageSizeBytes ?? 10 * 1024 * 1024;
 
     public ImageLayoutResolution Resolve(ImageBox imageBox, float availableWidth)
     {
@@ -37,8 +30,8 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
         var padding = imageBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
         var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize);
-        var loadResult = _imageMetadataResolver.Resolve(src, _htmlDirectory, _maxImageSizeBytes);
-        var loadStatus = ToImageLoadStatus(loadResult.Status);
+        var loadResult = _imageMetadataResolver.Resolve(src, _resourceBaseDirectory, _maxImageSizeBytes);
+        var loadStatus = loadResult.Status;
         var intrinsicLayoutSize = ToLayoutSize(loadResult.IntrinsicSizePx);
         var contentSize = ResolveLayoutSize(authoredLayoutSize, intrinsicLayoutSize)
             .Safe()
@@ -59,27 +52,11 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             authoredSize,
             loadResult.IntrinsicSizePx,
             loadStatus,
-            IsMissing(loadStatus),
-            loadStatus == ImageLoadStatus.Oversize,
             contentSize.Width,
             contentSize.Height,
             totalSize.Width,
             totalSize.Height);
     }
-
-    private static ImageLoadStatus ToImageLoadStatus(ImageMetadataStatus status) =>
-        status switch
-        {
-            ImageMetadataStatus.Ok => ImageLoadStatus.Ok,
-            ImageMetadataStatus.Oversize => ImageLoadStatus.Oversize,
-            ImageMetadataStatus.InvalidDataUri => ImageLoadStatus.InvalidDataUri,
-            ImageMetadataStatus.DecodeFailed => ImageLoadStatus.DecodeFailed,
-            ImageMetadataStatus.OutOfScope => ImageLoadStatus.OutOfScope,
-            _ => ImageLoadStatus.Missing
-        };
-
-    private static bool IsMissing(ImageLoadStatus status) =>
-        status is not ImageLoadStatus.Ok and not ImageLoadStatus.Oversize;
 
     private static SizePx ResolveAuthoredMetadataSize(ImageBox imageBox, SizePx htmlAuthoredSize)
     {
@@ -181,7 +158,7 @@ internal sealed class ImageLayoutResolver : IImageLayoutResolver
             return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageMetadataStatus.Ok,
+                Status = ImageLoadStatus.Ok,
                 IntrinsicSizePx = new SizePx(0d, 0d)
             };
         }

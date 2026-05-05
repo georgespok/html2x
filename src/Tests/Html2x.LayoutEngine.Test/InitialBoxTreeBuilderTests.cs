@@ -1,6 +1,5 @@
+using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Contracts.Style;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test;
@@ -292,7 +291,7 @@ public class InitialBoxTreeBuilderTests
 
     private static Task<StyleTree> BuildStyleTree(string html)
     {
-        var builder = new Html2x.LayoutEngine.Style.StyleTreeBuilder();
+        var builder = new StyleTreeBuilder();
         return builder.BuildAsync(
             html,
             new StyleBuildSettings

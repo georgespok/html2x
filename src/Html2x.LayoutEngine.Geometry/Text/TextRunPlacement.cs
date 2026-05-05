@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 
 /// <summary>

@@ -1,18 +1,18 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Style.Models;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
 /// Maps CSS margin and padding declarations into layout spacing values and diagnostics.
 /// </summary>
 internal sealed class SpacingStyleMapper(CssValueConverter converter)
 {
-    private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
+    private readonly CssLengthDeclarationReader _lengthReader = new(converter);
 
     public void ApplySpacing(
         ICssStyleDeclaration css,
@@ -117,7 +117,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         IDiagnosticsSink? diagnosticsSink,
         Action<float> setter)
     {
-        var raw = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
+        var raw = InlineStyleSource.GetValue(css, element, property);
 
         if (string.IsNullOrWhiteSpace(raw))
         {
@@ -137,19 +137,19 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        var shorthandValue = InlineStyleSource.GetValue(element, shorthandProperty) ?? css.GetPropertyValue(shorthandProperty);
+        var shorthandValue = InlineStyleSource.GetValue(css, element, shorthandProperty);
 
         if (string.IsNullOrWhiteSpace(shorthandValue))
         {
             return;
         }
 
-        if (!TryParseSpacingValues(
+        var parsedValues = ParseSpacingValues(
                 shorthandProperty,
                 shorthandValue,
                 element,
-                diagnosticsSink,
-                out var parsedValues))
+                diagnosticsSink);
+        if (parsedValues is null)
         {
             return;
         }
@@ -185,14 +185,13 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         }
     }
 
-    private bool TryParseSpacingValues(
+    private List<float>? ParseSpacingValues(
         string property,
         string shorthandValue,
         IElement element,
-        IDiagnosticsSink? diagnosticsSink,
-        out List<float> parsedValues)
+        IDiagnosticsSink? diagnosticsSink)
     {
-        parsedValues = [];
+        var parsedValues = new List<float>();
 
         var tokens = shorthandValue.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Select(v => v.Trim())
@@ -201,7 +200,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
 
         if (tokens.Length == 0)
         {
-            return false;
+            return null;
         }
 
         if (tokens.Length > 4)
@@ -213,33 +212,20 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
                 shorthandValue.Trim(),
                 null,
                 $"{property} shorthand has {tokens.Length} values; expected 1 to 4.");
-            return false;
+            return null;
         }
 
         foreach (var token in tokens)
         {
-            var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(token);
-            if (unsupportedUnit != null)
+            if (!_lengthReader.TryParseLengthToken(
+                token,
+                element,
+                property,
+                $"Unable to parse {property} token as a supported length.",
+                diagnosticsSink,
+                out var points))
             {
-                StyleDiagnostics.EmitUnsupportedDeclaration(
-                    diagnosticsSink,
-                    element,
-                    property,
-                    token,
-                    $"Unsupported unit '{unsupportedUnit}' for {property}.");
-                return false;
-            }
-
-            if (!_converter.TryGetLengthPt(token, out var points))
-            {
-                StyleDiagnostics.EmitIgnoredDeclaration(
-                    diagnosticsSink,
-                    element,
-                    property,
-                    token,
-                    null,
-                    $"Unable to parse {property} token as a supported length.");
-                return false;
+                return null;
             }
 
             if (points < 0)
@@ -260,7 +246,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             parsedValues.Add(points);
         }
 
-        return true;
+        return parsedValues;
     }
 
     private float GetSpacingWithLogging(
@@ -269,7 +255,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         IElement element,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
+        var rawValue = _lengthReader.GetValue(css, element, property);
 
         if (string.IsNullOrWhiteSpace(rawValue))
         {
@@ -278,27 +264,14 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
 
         var trimmed = rawValue.Trim();
 
-        var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(trimmed);
-        if (unsupportedUnit != null)
+        if (!_lengthReader.TryParseLengthToken(
+            trimmed,
+            element,
+            property,
+            $"Unable to parse {property} as a supported length.",
+            diagnosticsSink,
+            out var points))
         {
-            StyleDiagnostics.EmitUnsupportedDeclaration(
-                diagnosticsSink,
-                element,
-                property,
-                trimmed,
-                $"Unsupported unit '{unsupportedUnit}' for {property}.");
-            return 0;
-        }
-
-        if (!_converter.TryGetLengthPt(rawValue, out var points))
-        {
-            StyleDiagnostics.EmitIgnoredDeclaration(
-                diagnosticsSink,
-                element,
-                property,
-                trimmed,
-                null,
-                $"Unable to parse {property} as a supported length.");
             return 0;
         }
 
@@ -326,16 +299,18 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         string NormalizedValue,
         string Reason) CreateNegativeSpacingDecision(string property, float points)
     {
-        var isPadding = property.StartsWith("padding", StringComparison.OrdinalIgnoreCase);
+        var isPadding = property.StartsWith(
+            HtmlCssConstants.CssProperties.Padding,
+            StringComparison.OrdinalIgnoreCase);
         return isPadding
             ? (
-                "style/partially-applied-declaration",
-                "PartiallyApplied",
-                "0",
+                StyleDiagnosticNames.Events.PartiallyAppliedDeclaration,
+                StyleDiagnosticNames.Decisions.PartiallyApplied,
+                HtmlCssConstants.CssValues.Zero,
                 "Negative padding value was clamped to zero.")
             : (
-                "style/applied-declaration",
-                "Applied",
+                StyleDiagnosticNames.Events.AppliedDeclaration,
+                StyleDiagnosticNames.Decisions.Applied,
                 points.ToString(CultureInfo.InvariantCulture),
                 "Negative spacing value was applied and may affect layout.");
     }

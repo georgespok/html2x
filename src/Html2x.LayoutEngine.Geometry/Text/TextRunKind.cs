@@ -1,9 +1,4 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.Text;
-
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 
 /// <summary>

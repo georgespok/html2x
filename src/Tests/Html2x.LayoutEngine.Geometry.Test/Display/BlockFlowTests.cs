@@ -1,13 +1,14 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 using Html2x.Text;
+using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
@@ -96,7 +97,7 @@ public class BlockFlowTests
               </body>
             </html>";
 
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
         _ = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
@@ -181,6 +182,32 @@ public class BlockFlowTests
             .ToList();
 
         childOrder.ShouldBe(["Inline", "Block"]);
+    }
+
+    [Fact]
+    public async Task MixedInlineBlockInline_FlushesInlineFlowAroundBlockChild()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <div>
+                  before
+                  <p style='height: 10pt;'>block</p>
+                  after
+                </div>
+              </body>
+            </html>";
+
+        var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
+
+        var container = (BlockFragment)layout.Pages[0].Children[0];
+        var childOrder = container.Children
+            .Select(ResolveDirectChildLabel)
+            .Where(static label => label is not null)
+            .Cast<string>()
+            .ToList();
+
+        childOrder.ShouldBe(["before", "block", "after"]);
     }
 
     [Fact]
@@ -379,7 +406,7 @@ public class BlockFlowTests
               </body>
             </html>";
 
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
         var layout = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
@@ -435,9 +462,9 @@ public class BlockFlowTests
     [Fact]
     public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
     {
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
         var formattingContext = new BlockFormattingContext();
-        var measurementService = new BlockMeasurementService(formattingContext);
+        var measurementService = new BlockMeasurementCalculator(formattingContext);
         var imageResolver = new ImageLayoutResolver();
         var inlineEngine = new InlineLayoutEngine(
             new FontMetricsProvider(),
@@ -488,13 +515,13 @@ public class BlockFlowTests
             imageResolver,
             diagnosticsSink);
 
-        var boxTree = engine.Layout(root, new PageBox
+        _ = engine.LayoutPublished(root, new PageBox
         {
             Margin = new Spacing(),
             Size = new SizePt(400f, 400f)
         });
 
-        var laidOutContainer = boxTree.Blocks.ShouldHaveSingleItem();
+        var laidOutContainer = root.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
         var measuredHeight = measurementService.MeasureStackedChildBlocks(
             laidOutContainer.Children,
             300f,
@@ -516,7 +543,7 @@ public class BlockFlowTests
         diagnosticsSink.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "consumer") == nameof(BlockMeasurementService) &&
+                StringField(payload, "consumer") == nameof(BoxSizingRules) &&
                 StringField(payload, "owner") == nameof(BlockFormattingContext) &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
@@ -578,6 +605,17 @@ public class BlockFlowTests
             .Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static string? ResolveDirectChildLabel(LayoutFragment fragment)
+    {
+        var text = EnumerateFragments(fragment)
+            .OfType<LineBoxFragment>()
+            .SelectMany(static line => line.Runs)
+            .Select(static run => run.Text.Trim())
+            .FirstOrDefault(static value => !string.IsNullOrWhiteSpace(value));
+
+        return text?.ToLowerInvariant();
+    }
+
     private static (float TotalHeight, float FirstBlockHeight, float SecondBlockHeight) ExtractTwoBlockMetrics(BlockFragment container)
     {
         var lines = EnumerateFragments(container)
@@ -594,12 +632,6 @@ public class BlockFlowTests
             firstLine.Rect.Height,
             secondLine.Rect.Height);
     }
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 
     private static IReadOnlyList<string> ExtractInlineText(BoxNode node)
     {

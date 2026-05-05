@@ -1,4 +1,3 @@
-using Html2x.RenderModel;
 namespace Html2x.LayoutEngine.Contracts.Style;
 
 /// <summary>
@@ -114,9 +113,6 @@ internal static class HtmlCssConstants
         public const string PaddingRight = "padding-right";
         public const string PaddingBottom = "padding-bottom";
         public const string PaddingLeft = "padding-left";
-        public const string BorderWidth = "border-width";
-        public const string BorderStyle = "border-style";
-        public const string BorderColor = "border-color";
         public const string FontFamily = "font-family";
         public const string FontSize = "font-size";
         public const string FontWeight = "font-weight";
@@ -138,14 +134,6 @@ internal static class HtmlCssConstants
     }
 
     /// <summary>
-    ///     CSS shorthand property names.
-    /// </summary>
-    public static class CssShorthand
-    {
-        public const string Font = "font";
-    }
-
-    /// <summary>
     ///     CSS value strings.
     /// </summary>
     public static class CssValues
@@ -158,13 +146,20 @@ internal static class HtmlCssConstants
         public const string InlineBlock = "inline-block";
         public const string ListItem = "list-item";
         public const string Flex = "flex";
+        public const string Center = "center";
+        public const string Justify = "justify";
         public const string Left = "left";
         public const string Right = "right";
         public const string None = "none";
+        public const string Normal = "normal";
+        public const string Inherit = "inherit";
         public const string Static = "static";
         public const string Relative = "relative";
         public const string Absolute = "absolute";
         public const string Zero = "0";
+        public const string Underline = "underline";
+        public const string LineThrough = "line-through";
+        public const string Overline = "overline";
         public const string Solid = "solid";
         public const string Dashed = "dashed";
         public const string Dotted = "dotted";
@@ -183,14 +178,18 @@ internal static class HtmlCssConstants
     {
         public const string Pt = "pt";
         public const string Px = "px";
+        public const string Percent = "%";
     }
 
     /// <summary>
-    ///     CSS class names.
+    ///     CSS box side names.
     /// </summary>
-    public static class CssClasses
+    public static class CssSides
     {
-        public const string Hero = "hero";
+        public const string Top = "top";
+        public const string Right = "right";
+        public const string Bottom = "bottom";
+        public const string Left = "left";
     }
 
     /// <summary>

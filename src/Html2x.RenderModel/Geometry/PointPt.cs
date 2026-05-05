@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Geometry;
 
 /// <summary>
 /// Represents a point in PDF points.

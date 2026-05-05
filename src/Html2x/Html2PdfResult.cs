@@ -2,9 +2,12 @@ using Html2x.Diagnostics;
 
 namespace Html2x
 {
-    public class Html2PdfResult(byte[] pdfBytes)
+    public sealed class Html2PdfResult(byte[] pdfBytes)
     {
-        public byte[] PdfBytes { get; init; } = pdfBytes;
+        private readonly byte[] _pdfBytes = pdfBytes?.ToArray() ?? throw new ArgumentNullException(nameof(pdfBytes));
+
+        public byte[] PdfBytes => _pdfBytes.ToArray();
+
         public DiagnosticsReport? DiagnosticsReport { get; init; }
     }
 }

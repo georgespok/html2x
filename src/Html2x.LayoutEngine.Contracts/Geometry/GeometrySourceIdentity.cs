@@ -133,20 +133,6 @@ internal sealed record GeometrySourceIdentity
     {
         return string.IsNullOrWhiteSpace(sourcePath)
             ? null
-            : $"{sourcePath}::{ResolveGeneratedSegment(generatedKind)}";
-    }
-
-    private static string ResolveGeneratedSegment(GeometryGeneratedSourceKind generatedKind)
-    {
-        return generatedKind switch
-        {
-            GeometryGeneratedSourceKind.AnonymousText => "anonymous-text",
-            GeometryGeneratedSourceKind.ListMarker => "list-marker",
-            GeometryGeneratedSourceKind.InlineBlockContent => "inline-block-content",
-            GeometryGeneratedSourceKind.AnonymousBlock => "anonymous-block",
-            GeometryGeneratedSourceKind.InlineBlockBoundary => "inline-block-boundary",
-            GeometryGeneratedSourceKind.InlineSegment => "inline-segment",
-            _ => "generated"
-        };
+            : $"{sourcePath}::{GeometrySourceKindNames.Resolve(generatedKind)}";
     }
 }

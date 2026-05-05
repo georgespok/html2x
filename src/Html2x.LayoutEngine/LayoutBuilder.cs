@@ -1,14 +1,14 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Formatting;
 using Html2x.LayoutEngine.Contracts.Geometry;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Fragments;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
+using Html2x.RenderModel.Documents;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine;
@@ -19,9 +19,8 @@ namespace Html2x.LayoutEngine;
 /// </summary>
 internal sealed class LayoutBuilder
 {
-    private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
-    private readonly FragmentBuilder _fragmentBuilder;
     private readonly IStyleTreeBuilder _styleTreeBuilder;
+    private readonly LayoutStageRunner _stageRunner;
     private readonly IImageMetadataResolver _imageMetadataResolver;
 
     public LayoutBuilder(
@@ -33,10 +32,12 @@ internal sealed class LayoutBuilder
 
         var blockFormattingContext = new BlockFormattingContext();
 
-        _styleTreeBuilder = new StyleTreeBuilder();
-        _layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer, blockFormattingContext);
-        _fragmentBuilder = new FragmentBuilder();
         _imageMetadataResolver = imageMetadataResolver;
+        _styleTreeBuilder = new StyleTreeBuilder();
+        _stageRunner = new LayoutStageRunner(
+            new LayoutGeometryBuilder(textMeasurer, blockFormattingContext),
+            new FragmentBuilder(),
+            new LayoutPaginator());
     }
 
     public async Task<HtmlLayout> BuildAsync(
@@ -53,70 +54,45 @@ internal sealed class LayoutBuilder
             settings.Style,
             cancellationToken,
             diagnosticsSink);
+
         cancellationToken.ThrowIfCancellationRequested();
 
-        var publishedLayout = DiagnosticStage.Run(
+        var publishedLayout = _stageRunner.BuildGeometry(
+            styleTree,
+            CreateGeometryRequest(settings),
             diagnosticsSink,
-            "stage/box-tree",
-            () => _layoutGeometryBuilder.Build(
-                styleTree,
-                new LayoutGeometryRequest
-                {
-                    PageSize = settings.PageSize,
-                    ImageMetadataResolver = _imageMetadataResolver,
-                    HtmlDirectory = settings.HtmlDirectory,
-                    MaxImageSizeBytes = settings.MaxImageSizeBytes
-                },
-                diagnosticsSink),
-            cancellationToken);
-        var fragments = DiagnosticStage.Run(
-            diagnosticsSink,
-            "stage/fragment-tree",
-            () => _fragmentBuilder.Build(publishedLayout),
             cancellationToken);
 
-        return DiagnosticStage.Run(
+        var fragments = _stageRunner.ProjectFragments(
+            publishedLayout,
             diagnosticsSink,
-            "stage/pagination",
-            () => CreateHtmlLayout(settings, publishedLayout, fragments, diagnosticsSink),
             cancellationToken);
-    }
 
-    private static HtmlLayout CreateHtmlLayout(
-        LayoutBuildSettings settings,
-        PublishedLayoutTree publishedLayout,
-        FragmentTree fragments,
-        IDiagnosticsSink? diagnosticsSink)
-    {
-        var paginator = new LayoutPaginator();
-        var pagination = paginator.Paginate(
-            fragments.Blocks,
-            new PaginationOptions
-            {
-                PageSize = settings.PageSize,
-                Margin = publishedLayout.Page.Margin
-            },
-            diagnosticsSink);
-        PublishGeometrySnapshot(publishedLayout, pagination, diagnosticsSink);
+        var pagination = _stageRunner.Paginate(
+            fragments,
+            CreatePaginationOptions(settings, publishedLayout),
+            diagnosticsSink,
+            cancellationToken,
+            result => GeometrySnapshotDiagnostics.Emit(publishedLayout, result, diagnosticsSink));
+
         return pagination.Layout;
     }
 
-    private static void PublishGeometrySnapshot(
-        PublishedLayoutTree publishedLayout,
-        PaginationResult pagination,
-        IDiagnosticsSink? diagnosticsSink)
-    {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/pagination",
-            Name: "layout/geometry-snapshot",
-            Severity: DiagnosticSeverity.Info,
-            Message: null,
-            Context: null,
-            Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field(
-                    "snapshot",
-                    GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination))),
-            Timestamp: DateTimeOffset.UtcNow));
-    }
+    private LayoutGeometryRequest CreateGeometryRequest(LayoutBuildSettings settings) =>
+        new()
+        {
+            PageSize = settings.PageSize,
+            ImageMetadataResolver = _imageMetadataResolver,
+            ResourceBaseDirectory = settings.ResourceBaseDirectory,
+            MaxImageSizeBytes = settings.MaxImageSizeBytes
+        };
 
+    private static PaginationOptions CreatePaginationOptions(
+        LayoutBuildSettings settings,
+        PublishedLayoutTree publishedLayout) =>
+        new()
+        {
+            PageSize = settings.PageSize,
+            Margin = publishedLayout.Page.Margin
+        };
 }

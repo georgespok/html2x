@@ -1,6 +1,4 @@
-using Html2x.LayoutEngine.Contracts.Style;
-
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 internal static class TableRowModel
@@ -49,7 +47,7 @@ internal static class TableRowModel
                     break;
                 default:
                     return TableRowModelResult.Unsupported(
-                        "unsupported-table-child",
+                        TableStructureDiagnosticNames.StructureKinds.UnsupportedTableChild,
                         $"Tables currently support only direct row and section children. Found '{child.Role}'.",
                         rowCount);
             }
@@ -58,8 +56,8 @@ internal static class TableRowModel
         if (hasDirectRows && hasDirectSections)
         {
             return TableRowModelResult.Unsupported(
-                "malformed-section-nesting",
-                "Tables cannot mix direct rows with explicit table sections.",
+                TableStructureDiagnosticNames.StructureKinds.MalformedSectionNesting,
+                TableStructureDiagnosticNames.Reasons.MixedDirectRowsAndSections,
                 rowCount);
         }
 
@@ -83,14 +81,14 @@ internal static class TableRowModel
             if (child is TableSectionBox)
             {
                 return TableStructureValidation.Unsupported(
-                    "malformed-section-nesting",
-                    "Table sections cannot contain nested table sections.");
+                    TableStructureDiagnosticNames.StructureKinds.MalformedSectionNesting,
+                    TableStructureDiagnosticNames.Reasons.NestedTableSections);
             }
 
             if (child is not TableRowBox row)
             {
                 return TableStructureValidation.Unsupported(
-                    "malformed-section-nesting",
+                    TableStructureDiagnosticNames.StructureKinds.MalformedSectionNesting,
                     $"Table sections currently support only direct row children. Found '{child.Role}'.");
             }
 
@@ -113,7 +111,7 @@ internal static class TableRowModel
             if (child is not TableCellBox cell)
             {
                 return TableStructureValidation.Unsupported(
-                    "unsupported-row-child",
+                    TableStructureDiagnosticNames.StructureKinds.UnsupportedRowChild,
                     $"Table rows currently support only direct cell children. Found '{child.Role}'.");
             }
 
@@ -129,39 +127,39 @@ internal static class TableRowModel
 
     private static TableStructureValidation ValidateCell(TableCellBox cell)
     {
-        if (TryGetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Colspan, out var colspan) && colspan != 1)
+        var colspan = GetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Colspan);
+        if (colspan.HasValue && colspan.Value != 1)
         {
             return TableStructureValidation.Unsupported(
                 HtmlCssConstants.HtmlAttributes.Colspan,
-                "Table cell colspan is not supported.");
+                TableStructureDiagnosticNames.Reasons.UnsupportedColspan);
         }
 
-        if (TryGetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Rowspan, out var rowspan) && rowspan != 1)
+        var rowspan = GetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Rowspan);
+        if (rowspan.HasValue && rowspan.Value != 1)
         {
             return TableStructureValidation.Unsupported(
                 HtmlCssConstants.HtmlAttributes.Rowspan,
-                "Table cell rowspan is not supported.");
+                TableStructureDiagnosticNames.Reasons.UnsupportedRowspan);
         }
 
         return TableStructureValidation.Supported();
     }
 
-    private static bool TryGetSpanValue(StyledElementFacts? element, string attributeName, out int value)
+    private static int? GetSpanValue(StyledElementFacts? element, string attributeName)
     {
-        value = 0;
         if (element is null || !element.HasAttribute(attributeName))
         {
-            return false;
+            return null;
         }
 
         var rawValue = element.GetAttribute(attributeName);
-        if (!int.TryParse(rawValue, out value) || value < 1)
+        if (!int.TryParse(rawValue, out var value) || value < 1)
         {
-            value = 0;
-            return true;
+            return 0;
         }
 
-        return true;
+        return value;
     }
 
     private readonly record struct TableStructureValidation(

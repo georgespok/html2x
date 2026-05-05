@@ -1,10 +1,10 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Contracts.Geometry;
 
 /// <summary>
-/// Carries runtime inputs required to compute layout geometry for one document.
+/// Carries per-build inputs required to compute layout geometry for one document.
 /// </summary>
 internal sealed class LayoutGeometryRequest
 {
@@ -12,7 +12,7 @@ internal sealed class LayoutGeometryRequest
 
     public IImageMetadataResolver? ImageMetadataResolver { get; init; }
 
-    public string? HtmlDirectory { get; init; }
+    public string? ResourceBaseDirectory { get; init; }
 
     public long MaxImageSizeBytes { get; init; } = 10 * 1024 * 1024;
 

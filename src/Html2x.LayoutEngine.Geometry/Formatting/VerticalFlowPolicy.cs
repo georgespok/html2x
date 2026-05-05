@@ -1,7 +1,7 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 internal static class VerticalFlowPolicy
 {

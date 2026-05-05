@@ -1,14 +1,13 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Box;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Test.TestHelpers;
-using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 using Html2x.Text;
+using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
@@ -218,7 +217,7 @@ public class InlineBlockTests
 
         var normalizedTexts = texts
             .Select(text => text.Trim())
-            .Where(text => !string.IsNullOrWhiteSpace(text) && !string.Equals(text, "•", StringComparison.Ordinal))
+            .Where(text => !string.IsNullOrWhiteSpace(text) && !string.Equals(text, "\u2022", StringComparison.Ordinal))
             .ToList();
 
         normalizedTexts.ShouldBe(["inline-before", "block-one", "inline-middle", "block-two", "inline-after"]);
@@ -247,7 +246,7 @@ public class InlineBlockTests
         var inlineBlock = EnumerateFragments(root)
             .OfType<BlockFragment>()
             .FirstOrDefault(fragment =>
-                fragment.Style?.Borders?.HasAny == true &&
+                fragment.Style.Borders?.HasAny == true &&
                 ContainsLineText(fragment, "Alpha inline-block") &&
                 ContainsLineText(fragment, "Third block descendant with") &&
                 ContainsLineText(fragment, "suffix text"));
@@ -556,7 +555,7 @@ public class InlineBlockTests
               </body>
             </html>";
 
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
 
@@ -594,8 +593,8 @@ public class InlineBlockTests
               </body>
             </html>";
 
-        var topLevelDiagnostics = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
-        var inlineBlockDiagnostics = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var topLevelDiagnostics = new RecordingDiagnosticsSink();
+        var inlineBlockDiagnostics = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
         var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
@@ -745,7 +744,7 @@ public class InlineBlockTests
         {
             case LineBoxFragment line:
                 var text = string.Concat(line.Runs.Select(run => run.Text)).Trim();
-                if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "•", StringComparison.Ordinal))
+                if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "\u2022", StringComparison.Ordinal))
                 {
                     ordered.Add(text);
                 }
@@ -775,12 +774,6 @@ public class InlineBlockTests
             currentIndex = nextIndex;
         }
     }
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 
     private static IEnumerable<FragmentSnapshot> Flatten(IEnumerable<FragmentSnapshot> fragments)
     {

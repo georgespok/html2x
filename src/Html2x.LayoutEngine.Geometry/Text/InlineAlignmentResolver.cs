@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
 /// Resolves horizontal line offsets for supported text alignment modes.
@@ -23,9 +23,9 @@ internal sealed class InlineAlignmentResolver
 
         return align switch
         {
-            "center" => extra / 2f,
-            "right" => extra,
-            "justify" when ShouldJustifyLine(line, lineIndex, lineCount) => 0f,
+            HtmlCssConstants.CssValues.Center => extra / 2f,
+            HtmlCssConstants.CssValues.Right => extra,
+            HtmlCssConstants.CssValues.Justify when ShouldJustifyLine(line, lineIndex, lineCount) => 0f,
             _ => 0f
         };
     }

@@ -1,8 +1,7 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 internal sealed record BlockFormattingRequest
 {
@@ -11,7 +10,6 @@ internal sealed record BlockFormattingRequest
         BlockBox rootBlock,
         float availableWidth,
         bool isWidthUnbounded = false,
-        object? pageContext = null,
         string consumerName = "unknown",
         IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
@@ -22,7 +20,6 @@ internal sealed record BlockFormattingRequest
         RootBlock = rootBlock ?? throw new ArgumentNullException(nameof(rootBlock));
         AvailableWidth = availableWidth;
         IsWidthUnbounded = isWidthUnbounded;
-        PageContext = pageContext;
         ConsumerName = string.IsNullOrWhiteSpace(consumerName) ? "unknown" : consumerName;
         DiagnosticsSink = diagnosticsSink;
         EmitDiagnostics = emitDiagnostics;
@@ -39,8 +36,6 @@ internal sealed record BlockFormattingRequest
     public float AvailableWidth { get; }
 
     public bool IsWidthUnbounded { get; }
-
-    public object? PageContext { get; }
 
     public string ConsumerName { get; }
 
@@ -66,30 +61,6 @@ internal sealed record BlockFormattingRequest
             rootBlock,
             availableWidth,
             isWidthUnbounded: false,
-            pageContext: null,
-            consumerName,
-            diagnosticsSink,
-            emitDiagnostics,
-            blockHeightMeasurer,
-            tableHeightMeasurer);
-    }
-
-    public static BlockFormattingRequest ForTopLevel(
-        BlockBox rootBlock,
-        float availableWidth,
-        object? pageContext = null,
-        string consumerName = "unknown",
-        IDiagnosticsSink? diagnosticsSink = null,
-        bool emitDiagnostics = false,
-        Func<BlockBox, float, float>? blockHeightMeasurer = null,
-        Func<TableBox, float, float>? tableHeightMeasurer = null)
-    {
-        return new BlockFormattingRequest(
-            FormattingContextKind.Block,
-            rootBlock,
-            availableWidth,
-            isWidthUnbounded: false,
-            pageContext,
             consumerName,
             diagnosticsSink,
             emitDiagnostics,
@@ -100,7 +71,6 @@ internal sealed record BlockFormattingRequest
     public static BlockFormattingRequest ForUnboundedWidth(
         FormattingContextKind contextKind,
         BlockBox rootBlock,
-        object? pageContext = null,
         string consumerName = "unknown",
         IDiagnosticsSink? diagnosticsSink = null,
         bool emitDiagnostics = false,
@@ -112,7 +82,6 @@ internal sealed record BlockFormattingRequest
             rootBlock,
             float.PositiveInfinity,
             isWidthUnbounded: true,
-            pageContext,
             consumerName,
             diagnosticsSink,
             emitDiagnostics,

@@ -1,7 +1,8 @@
+using Html2x.RenderModel.Styles;
+
 namespace Html2x.LayoutEngine.Contracts.Published;
 
-using Html2x.LayoutEngine.Contracts.Geometry;
-using Html2x.RenderModel;
+using Geometry;
 
 /// <summary>
 /// Carries the immutable block facts that fragment projection consumes after layout geometry completes.

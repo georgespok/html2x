@@ -1,3 +1,4 @@
+using Html2x.Options;
 using Microsoft.Extensions.Logging;
 
 namespace Html2x.TestConsole;
@@ -70,8 +71,8 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
         string htmlContent,
         ConsoleOptions consoleOptions)
     {
-        var htmlDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
-                            Directory.GetCurrentDirectory();
+        var resourceBaseDirectory = Path.GetDirectoryName(consoleOptions.InputPath) ??
+                                    Directory.GetCurrentDirectory();
         var fontPath = Path.Combine(AppContext.BaseDirectory, "fonts");
 
         var options = new HtmlConverterOptions
@@ -82,8 +83,8 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
             },
             Resources = new ResourceOptions
             {
-                BaseDirectory = htmlDirectory,
-                MaxImageSizeBytes = (long)(10 * 1024 * 1024)
+                BaseDirectory = resourceBaseDirectory,
+                MaxImageSizeBytes = 10 * 1024 * 1024
             },
             Diagnostics = new DiagnosticsOptions
             {

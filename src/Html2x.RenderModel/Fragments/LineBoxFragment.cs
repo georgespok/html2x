@@ -1,18 +1,17 @@
-namespace Html2x.RenderModel;
+using Html2x.RenderModel.Geometry;
+
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Represents one line slot of inline content, including tight occupied bounds, text runs, and line metrics.
 /// </summary>
 public sealed class LineBoxFragment : Fragment
 {
-    private bool _hasOccupiedRect;
+    private readonly bool _hasOccupiedRect;
     private readonly RectPt _occupiedRect;
     private readonly float _baselineY;
     private readonly float _lineHeight;
-
-    public LineBoxFragment()
-    {
-    }
+    private IReadOnlyList<TextRun> _runs = [];
 
     public RectPt OccupiedRect
     {
@@ -37,7 +36,11 @@ public sealed class LineBoxFragment : Fragment
         init => _lineHeight = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(LineHeight), value);
     } // computed line height
 
-    public IReadOnlyList<TextRun> Runs { get; init; } = [];
+    public IReadOnlyList<TextRun> Runs
+    {
+        get => _runs;
+        init => _runs = value?.ToArray() ?? throw new ArgumentNullException(nameof(Runs));
+    }
 
     public string? TextAlign { get; init; }
 }

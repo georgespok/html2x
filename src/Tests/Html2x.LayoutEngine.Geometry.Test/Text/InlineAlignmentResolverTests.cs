@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;

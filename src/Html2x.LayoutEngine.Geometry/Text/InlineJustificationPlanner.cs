@@ -1,20 +1,15 @@
 using Html2x.Text;
-namespace Html2x.LayoutEngine.Text;
+
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 
 /// <summary>
 /// Computes justification spacing and converts justified text runs into measured token placements.
 /// </summary>
-internal sealed class InlineJustificationPlanner
+internal sealed class InlineJustificationPlanner(ITextMeasurer measurer, InlineAlignmentResolver alignmentResolver)
 {
-    private readonly ITextMeasurer _measurer;
-    private readonly InlineAlignmentResolver _alignmentResolver;
-
-    public InlineJustificationPlanner(ITextMeasurer measurer, InlineAlignmentResolver alignmentResolver)
-    {
-        _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
-        _alignmentResolver = alignmentResolver ?? throw new ArgumentNullException(nameof(alignmentResolver));
-    }
+    private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
+    private readonly InlineAlignmentResolver _alignmentResolver = alignmentResolver ?? throw new ArgumentNullException(nameof(alignmentResolver));
 
     public JustificationPlan CreatePlan(
         string? textAlign,
@@ -30,7 +25,7 @@ internal sealed class InlineJustificationPlanner
         }
 
         var align = textAlign?.ToLowerInvariant() ?? HtmlCssConstants.Defaults.TextAlign;
-        if (!string.Equals(align, "justify", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(align, HtmlCssConstants.CssValues.Justify, StringComparison.OrdinalIgnoreCase))
         {
             return JustificationPlan.None;
         }

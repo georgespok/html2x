@@ -1,7 +1,11 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Fragments.Test.Assertions;
 using Html2x.LayoutEngine.Fragments.Test.Builders;
 using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Fragments.Test;
@@ -242,7 +246,7 @@ public sealed class FragmentBuilderProjectionTests
     [Fact]
     public void Build_ImageBlock_EmitsImageFragmentWithImageFacts()
     {
-        var style = new Html2x.LayoutEngine.Contracts.Style.ComputedStyle
+        var style = new Contracts.Style.ComputedStyle
         {
             BackgroundColor = new ColorRgba(10, 20, 30, 255)
         };
@@ -256,8 +260,7 @@ public sealed class FragmentBuilderProjectionTests
                 "images/logo.png",
                 new SizePx(30d, 20d),
                 new SizePx(60d, 40d),
-                isMissing: true,
-                isOversize: false));
+                ImageLoadStatus.Missing));
 
         var fragments = Build(PublishedLayoutFragmentTestBuilder.Tree(image));
 

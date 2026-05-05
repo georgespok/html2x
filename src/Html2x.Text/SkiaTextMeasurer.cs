@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 using SkiaSharp;
 using SkiaSharp.HarfBuzz;
 

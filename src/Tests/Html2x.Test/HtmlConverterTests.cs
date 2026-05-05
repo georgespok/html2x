@@ -1,14 +1,15 @@
 using System.Text;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
+using Html2x.Options;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
 
 [Trait("Category", "Integration")]
-public sealed class HtmlConverterTests : IntegrationTestBase
+public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
-    private readonly HtmlConverter _htmlConverter;
+    private readonly HtmlConverter _htmlConverter = new();
     private readonly HtmlConverterOptions _options = new()
     {
         Fonts = new FontOptions
@@ -16,12 +17,6 @@ public sealed class HtmlConverterTests : IntegrationTestBase
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
     };
-
-    public HtmlConverterTests(ITestOutputHelper output)
-        : base(output)
-    {
-        _htmlConverter = new HtmlConverter();
-    }
 
     [Fact]
     public async Task ToPdfAsync_HtmlIsSimple_GenerateValidPdf()
@@ -156,7 +151,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         {
             await File.WriteAllBytesAsync(
                 Path.Combine(tempDirectory.FullName, "oversize.png"),
-                new byte[] { 1, 2 });
+                [1, 2]);
             const string html = """
                 <html>
                   <body>
@@ -255,7 +250,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         try
         {
             await File.WriteAllBytesAsync(Path.Combine(rootDirectory.FullName, "outside.png"), TwoByOnePngBytes());
-            await File.WriteAllBytesAsync(Path.Combine(baseDirectory.FullName, "oversize.png"), new byte[] { 1, 2 });
+            await File.WriteAllBytesAsync(Path.Combine(baseDirectory.FullName, "oversize.png"), [1, 2]);
 
             const string html = """
                 <html>
@@ -327,7 +322,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         Assert.Contains(report.Records, static record =>
             record.Stage == "LayoutBuild" &&
             record.Name == "stage/started" &&
-            record.Severity == global::Html2x.Diagnostics.Contracts.DiagnosticSeverity.Info);
+            record.Severity == DiagnosticSeverity.Info);
         Assert.Contains(report.Records, static record =>
             record.Stage == "stage/dom" &&
             record.Name == "stage/succeeded");
@@ -341,7 +336,7 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         var layoutStart = Assert.Single(report.Records, static record =>
             record.Stage == "LayoutBuild" &&
             record.Name == "stage/started");
-        var htmlLengthField = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticNumberValue>(
+        var htmlLengthField = Assert.IsType<DiagnosticNumberValue>(
             layoutStart.Fields["htmlLength"]);
         Assert.Equal(html.Length, htmlLengthField.Value);
         Assert.False(layoutStart.Fields.ContainsKey("html"));
@@ -349,21 +344,21 @@ public sealed class HtmlConverterTests : IntegrationTestBase
         var layoutSucceeded = Assert.Single(report.Records, static record =>
             record.Stage == "LayoutBuild" &&
             record.Name == "stage/succeeded");
-        var layoutSnapshot = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticObject>(
+        var layoutSnapshot = Assert.IsType<DiagnosticObject>(
             layoutSucceeded.Fields["snapshot"]);
         Assert.Equal(
-            new global::Html2x.Diagnostics.Contracts.DiagnosticNumberValue(1),
+            new DiagnosticNumberValue(1),
             layoutSnapshot["pageCount"]);
 
         var geometrySnapshot = Assert.Single(report.Records, static record =>
             record.Name == "layout/geometry-snapshot");
-        var geometryFields = Assert.IsType<global::Html2x.Diagnostics.Contracts.DiagnosticObject>(
+        var geometryFields = Assert.IsType<DiagnosticObject>(
             geometrySnapshot.Fields["snapshot"]);
         Assert.True(geometryFields.ContainsKey("fragments"));
         Assert.True(geometryFields.ContainsKey("boxes"));
         Assert.True(geometryFields.ContainsKey("pagination"));
 
-        var json = global::Html2x.Diagnostics.DiagnosticsReportSerializer.ToJson(report);
+        var json = DiagnosticsReportSerializer.ToJson(report);
         using var document = System.Text.Json.JsonDocument.Parse(json);
         var records = document.RootElement.GetProperty("records").EnumerateArray().ToArray();
         Assert.Contains(records, static record =>

@@ -1,15 +1,13 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 public class InlineRunFactoryTests
 {
     [Fact]
-    public void TryBuildInlineBlockRun_DoesNotFlattenInlineBlockToText()
+    public void BuildInlineBlockRun_DoesNotFlattenInlineBlockToText()
     {
         var style = new ComputedStyle { FontSizePt = 12 };
         var inlineBlock = new InlineBox(BoxRole.InlineBlock)
@@ -33,7 +31,7 @@ public class InlineRunFactoryTests
 
         var factory = new InlineRunFactory(new FakeMetricsProvider());
 
-        factory.TryBuildInlineBlockRun(inlineBlock, 1, inlineLayout: null, out _).ShouldBeFalse();
+        factory.BuildInlineBlockRun(inlineBlock, 1, inlineLayout: null).ShouldBeNull();
     }
 
     private sealed class FakeMetricsProvider : IFontMetricsProvider

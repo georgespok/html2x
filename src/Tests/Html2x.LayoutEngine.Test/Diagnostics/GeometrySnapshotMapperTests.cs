@@ -1,9 +1,13 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Geometry;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
@@ -90,6 +94,180 @@ public sealed class GeometrySnapshotMapperTests
         placement.DecisionKind.ShouldBe(PaginationDecisionKind.Placed);
         placement.Size.ShouldBe(new SizePt(120f, 40f));
         placement.MetadataConsumer.ShouldBe("Pagination");
+    }
+
+    [Fact]
+    public void ToDiagnosticObject_PublishedGeometryAndPagination_PreservesSnapshotFieldShape()
+    {
+        var sourceIdentity = new GeometrySourceIdentity(
+            new StyleNodeId(4),
+            new StyleContentId(9),
+            "body[0]/section[1]",
+            "section.card",
+            3,
+            GeometryGeneratedSourceKind.AnonymousBlock);
+        var layoutTree = new PublishedLayoutTree(
+            new PublishedPage(PaperSizes.A4, new Spacing(10, 11, 12, 13)),
+            [
+                CreatePublishedBlock(
+                    "layout/section",
+                    "section.card",
+                    new RectPt(10f, 20f, 120f, 40f),
+                    new Spacing(2f, 3f, 4f, 5f),
+                    new Spacing(1f, 1f, 1f, 1f),
+                    markerOffset: 8f,
+                    sourceIdentity: sourceIdentity)
+            ]);
+        var fragment = new BlockFragment
+        {
+            FragmentId = 42,
+            PageNumber = 1,
+            Rect = new RectPt(15f, 25f, 100f, 30f),
+            DisplayRole = FragmentDisplayRole.Block,
+            FormattingContext = FormattingContextKind.Block,
+            Style = new VisualStyle()
+        };
+        var layout = new HtmlLayout();
+        layout.AddPage(new LayoutPage(PaperSizes.A4, new Spacing(10, 11, 12, 13), [fragment]));
+        var pagination = new PaginationResult
+        {
+            Layout = layout,
+            AuditPages =
+            [
+                new PaginationPageAudit
+                {
+                    PageNumber = 1,
+                    PageSize = PaperSizes.A4,
+                    Margin = new Spacing(10, 11, 12, 13),
+                    ContentArea = new RectPt(11f, 10f, 574f, 820f),
+                    Placements =
+                    [
+                        new PaginationPlacementAudit
+                        {
+                            FragmentId = fragment.FragmentId,
+                            PageNumber = 1,
+                            PlacedRect = fragment.Rect,
+                            DecisionKind = PaginationDecisionKind.Placed,
+                            IsOversized = true,
+                            OrderIndex = 2,
+                            FragmentKind = "Block",
+                            DisplayRole = FragmentDisplayRole.TableCell,
+                            FormattingContext = FormattingContextKind.InlineBlock,
+                            MarkerOffset = 5f,
+                            DerivedColumnCount = 4,
+                            RowIndex = 2,
+                            ColumnIndex = 1,
+                            IsHeader = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        var snapshot = GeometrySnapshotMapper.ToDiagnosticObject(layoutTree, pagination);
+
+        KeysShouldBe(snapshot, "fragments", "boxes", "pagination");
+        ObjectField(snapshot, "fragments")["pageCount"].ShouldBe(new DiagnosticNumberValue(1));
+
+        var box = ObjectItem(ArrayField(snapshot, "boxes"), 0);
+        KeysShouldBe(
+            box,
+            "sequenceId",
+            "path",
+            "kind",
+            "tagName",
+            "sourceNodeId",
+            "sourceContentId",
+            "sourcePath",
+            "sourceOrder",
+            "sourceElementIdentity",
+            "generatedSourceKind",
+            "x",
+            "y",
+            "size",
+            "contentX",
+            "contentY",
+            "contentSize",
+            "baseline",
+            "markerOffset",
+            "allowsOverflow",
+            "isAnonymous",
+            "isInlineBlockContext",
+            "derivedColumnCount",
+            "rowIndex",
+            "columnIndex",
+            "isHeader",
+            "metadataOwner",
+            "metadataConsumer",
+            "children");
+        box["sequenceId"].ShouldBe(new DiagnosticNumberValue(1));
+        box["path"].ShouldBe(new DiagnosticStringValue("layout/section"));
+        box["kind"].ShouldBe(new DiagnosticStringValue("block"));
+        box["tagName"].ShouldBe(new DiagnosticStringValue("section"));
+        box["sourceNodeId"].ShouldBe(new DiagnosticNumberValue(4));
+        box["sourceContentId"].ShouldBe(new DiagnosticNumberValue(9));
+        box["sourcePath"].ShouldBe(new DiagnosticStringValue("body[0]/section[1]"));
+        box["sourceOrder"].ShouldBe(new DiagnosticNumberValue(3));
+        box["sourceElementIdentity"].ShouldBe(new DiagnosticStringValue("section.card"));
+        box["generatedSourceKind"].ShouldBe(new DiagnosticStringValue("anonymous-block"));
+        NumberField(ObjectField(box, "size"), "width").ShouldBe(120);
+        NumberField(ObjectField(box, "contentSize"), "width").ShouldBe(110);
+        NumberField(box, "contentX").ShouldBe(16);
+        NumberField(box, "contentY").ShouldBe(23);
+        box["baseline"].ShouldBeNull();
+        box["markerOffset"].ShouldBe(new DiagnosticNumberValue(8));
+        box["allowsOverflow"].ShouldBe(new DiagnosticBooleanValue(false));
+        box["isAnonymous"].ShouldBe(new DiagnosticBooleanValue(false));
+        box["isInlineBlockContext"].ShouldBe(new DiagnosticBooleanValue(false));
+        box["derivedColumnCount"].ShouldBeNull();
+        box["metadataOwner"].ShouldBe(new DiagnosticStringValue("BlockLayoutEngine"));
+        box["metadataConsumer"].ShouldBe(new DiagnosticStringValue("GeometrySnapshotMapper"));
+        ArrayField(box, "children").Count.ShouldBe(0);
+
+        var page = ObjectItem(ArrayField(snapshot, "pagination"), 0);
+        KeysShouldBe(page, "pageNumber", "pageSize", "margin", "contentTop", "contentBottom", "placements");
+        page["pageNumber"].ShouldBe(new DiagnosticNumberValue(1));
+        NumberField(ObjectField(page, "pageSize"), "width").ShouldBe(PaperSizes.A4.Width);
+        NumberField(ObjectField(page, "margin"), "left").ShouldBe(13);
+        page["contentTop"].ShouldBe(new DiagnosticNumberValue(10));
+        page["contentBottom"].ShouldBe(new DiagnosticNumberValue(830));
+
+        var placement = ObjectItem(ArrayField(page, "placements"), 0);
+        KeysShouldBe(
+            placement,
+            "fragmentId",
+            "kind",
+            "pageNumber",
+            "orderIndex",
+            "isOversized",
+            "decisionKind",
+            "x",
+            "y",
+            "size",
+            "displayRole",
+            "formattingContext",
+            "markerOffset",
+            "derivedColumnCount",
+            "rowIndex",
+            "columnIndex",
+            "isHeader",
+            "metadataOwner",
+            "metadataConsumer");
+        placement["fragmentId"].ShouldBe(new DiagnosticNumberValue(42));
+        placement["kind"].ShouldBe(new DiagnosticStringValue("Block"));
+        placement["orderIndex"].ShouldBe(new DiagnosticNumberValue(2));
+        placement["isOversized"].ShouldBe(new DiagnosticBooleanValue(true));
+        placement["decisionKind"].ShouldBe(new DiagnosticStringValue(nameof(PaginationDecisionKind.Placed)));
+        NumberField(ObjectField(placement, "size"), "height").ShouldBe(30);
+        placement["displayRole"].ShouldBe(new DiagnosticStringValue(nameof(FragmentDisplayRole.TableCell)));
+        placement["formattingContext"].ShouldBe(new DiagnosticStringValue(nameof(FormattingContextKind.InlineBlock)));
+        placement["markerOffset"].ShouldBe(new DiagnosticNumberValue(5));
+        placement["derivedColumnCount"].ShouldBe(new DiagnosticNumberValue(4));
+        placement["rowIndex"].ShouldBe(new DiagnosticNumberValue(2));
+        placement["columnIndex"].ShouldBe(new DiagnosticNumberValue(1));
+        placement["isHeader"].ShouldBe(new DiagnosticBooleanValue(true));
+        placement["metadataOwner"].ShouldBe(new DiagnosticStringValue("FragmentBuilder"));
+        placement["metadataConsumer"].ShouldBe(new DiagnosticStringValue("Pagination"));
     }
 
     [Fact]
@@ -226,7 +404,7 @@ public sealed class GeometrySnapshotMapperTests
                 FormattingContextKind.Block,
                 markerOffset > 0f ? markerOffset : null),
             new VisualStyle(),
-            BoxGeometryFactory.FromBorderBox(
+            UsedGeometryCalculator.FromBorderBox(
                 borderBox,
                 padding ?? new Spacing(),
                 border ?? new Spacing(),
@@ -236,5 +414,25 @@ public sealed class GeometrySnapshotMapperTests
             rule: null,
             table: null,
             children ?? []);
+    }
+
+    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticArray>();
+
+    private static DiagnosticObject ObjectField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticObject>();
+
+    private static DiagnosticObject ObjectItem(DiagnosticArray value, int index) =>
+        value[index].ShouldBeOfType<DiagnosticObject>();
+
+    private static double NumberField(DiagnosticObject value, string fieldName) =>
+        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
+
+    private static void KeysShouldBe(DiagnosticObject value, params string[] expectedKeys)
+    {
+        var actual = value.Keys.OrderBy(static key => key, StringComparer.Ordinal).ToArray();
+        var expected = expectedKeys.OrderBy(static key => key, StringComparer.Ordinal).ToArray();
+
+        actual.ShouldBe(expected);
     }
 }

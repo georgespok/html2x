@@ -1,7 +1,8 @@
-using Html2x.RenderModel;
+using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Fragments;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -123,6 +124,36 @@ public sealed class BehaviorBaselineGeometryTests
         var header = fragments.OfType<TableCellFragment>()
             .Single(static cell => cell.IsHeader);
         header.ColumnIndex.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Build_UnsupportedTable_PublishesPlaceholderAndDiagnostics()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <table style='margin: 0; width: 120px;'>
+                  <tr>
+                    <td colspan='2'>A</td>
+                  </tr>
+                </table>
+              </body>
+            </html>
+            """);
+
+        var table = result.PublishedLayout.Blocks.ShouldHaveSingleItem();
+        table.Geometry.Height.ShouldBe(0f);
+        table.Children.ShouldBeEmpty();
+
+        result.Diagnostics
+            .ShouldContain(record =>
+                record.Name == "layout/table/unsupported-structure" &&
+                record.Severity == DiagnosticSeverity.Error);
+        result.Diagnostics
+            .ShouldContain(record =>
+                record.Name == "layout/table" &&
+                record.Fields["outcome"] == new DiagnosticStringValue("Unsupported"));
     }
 
     private static LineBoxFragment FindLine(IEnumerable<LineBoxFragment> lines, string text)

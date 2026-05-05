@@ -1,10 +1,10 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
 using Shouldly;
-using Html2x.LayoutEngine.Geometry;
 
 namespace Html2x.LayoutEngine.Geometry.Test;
 
@@ -194,7 +194,7 @@ public class TableLayoutEngineTests
             cell,
             0,
             false,
-            BoxGeometryFactory.FromBorderBox(
+            UsedGeometryCalculator.FromBorderBox(
                 new RectPt(0f, 0f, 10f, 10f),
                 new Spacing(),
                 new Spacing()));
@@ -213,7 +213,7 @@ public class TableLayoutEngineTests
             Style = new ComputedStyle()
         };
         table.Children.Add(row);
-        var rowGeometry = BoxGeometryFactory.FromBorderBox(
+        var rowGeometry = UsedGeometryCalculator.FromBorderBox(
             0f,
             1f,
             50f,
@@ -222,7 +222,7 @@ public class TableLayoutEngineTests
             new Spacing(1f, 1f, 1f, 1f),
             baseline: 12f,
             markerOffset: 5f);
-        var cellGeometry = BoxGeometryFactory.FromBorderBox(
+        var cellGeometry = UsedGeometryCalculator.FromBorderBox(
             2f,
             3f,
             25f,
@@ -402,7 +402,7 @@ public class TableLayoutEngineTests
             CreateRow(cell));
 
         var result = Layout(table, availableWidth: 200f);
-        var diagnosticsSink = new Html2x.LayoutEngine.Geometry.Test.RecordingDiagnosticsSink();
+        var diagnosticsSink = new RecordingDiagnosticsSink();
         TableLayoutDiagnostics.EmitUnsupportedTable(
             nodePath: "html/body/table",
             structureKind: result.UnsupportedStructureKind ?? string.Empty,

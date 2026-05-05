@@ -2,7 +2,7 @@ using System.Collections;
 
 namespace Html2x.Diagnostics.Contracts;
 
-public sealed class DiagnosticFields : IReadOnlyDictionary<string, DiagnosticValue?>
+public sealed class DiagnosticFields : IEnumerable<KeyValuePair<string, DiagnosticValue?>>
 {
     private readonly IReadOnlyDictionary<string, DiagnosticValue?> _values;
 
@@ -25,7 +25,7 @@ public sealed class DiagnosticFields : IReadOnlyDictionary<string, DiagnosticVal
     public DiagnosticValue? this[string key] => _values[key];
 
     public static DiagnosticFields Empty { get; } =
-        new(Array.Empty<KeyValuePair<string, DiagnosticValue?>>());
+        new([]);
 
     public static DiagnosticFields Create(params KeyValuePair<string, DiagnosticValue?>[] values) => new(values);
 
@@ -33,8 +33,6 @@ public sealed class DiagnosticFields : IReadOnlyDictionary<string, DiagnosticVal
         new(ValidateKey(key), value);
 
     public bool ContainsKey(string key) => _values.ContainsKey(key);
-
-    public bool TryGetValue(string key, out DiagnosticValue? value) => _values.TryGetValue(key, out value);
 
     public IEnumerator<KeyValuePair<string, DiagnosticValue?>> GetEnumerator() => _values.GetEnumerator();
 

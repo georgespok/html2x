@@ -1,35 +1,26 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Text;
 
 namespace Html2x.Text;
 
 /// <summary>
 /// Represents a font resolution or font file loading failure.
 /// </summary>
-public sealed class FontResolutionException : InvalidOperationException
+public sealed class FontResolutionException(
+    string message,
+    FontKey? requestedFont = null,
+    ResolvedFont? resolvedFont = null,
+    string? configuredPath = null,
+    string? resolvedPath = null,
+    string? text = null)
+    : InvalidOperationException(message)
 {
-    public FontResolutionException(
-        string message,
-        FontKey? requestedFont = null,
-        ResolvedFont? resolvedFont = null,
-        string? configuredPath = null,
-        string? resolvedPath = null,
-        string? text = null)
-        : base(message)
-    {
-        RequestedFont = requestedFont;
-        ResolvedFont = resolvedFont;
-        ConfiguredPath = configuredPath ?? resolvedFont?.ConfiguredPath;
-        ResolvedPath = resolvedPath;
-        Text = text;
-    }
+    public FontKey? RequestedFont { get; } = requestedFont;
 
-    public FontKey? RequestedFont { get; }
+    public ResolvedFont? ResolvedFont { get; } = resolvedFont;
 
-    public ResolvedFont? ResolvedFont { get; }
+    public string? ConfiguredPath { get; } = configuredPath ?? resolvedFont?.ConfiguredPath;
 
-    public string? ConfiguredPath { get; }
+    public string? ResolvedPath { get; } = resolvedPath;
 
-    public string? ResolvedPath { get; }
-
-    public string? Text { get; }
+    public string? Text { get; } = text;
 }

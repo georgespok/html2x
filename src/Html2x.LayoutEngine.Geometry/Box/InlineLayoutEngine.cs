@@ -1,11 +1,10 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Text;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
 /// Lays out inline content into line boxes and records inline layout on the owning block when requested.
@@ -18,6 +17,7 @@ internal sealed class InlineLayoutEngine
     private readonly InlineRunFactory _runFactory;
     private readonly TextLayoutEngine _textLayout;
     private readonly InlineLayoutResultBuilder _layoutResultBuilder;
+    private readonly LayoutBoxStateWriter _stateWriter;
 
     public InlineLayoutEngine()
         : this(
@@ -67,16 +67,27 @@ internal sealed class InlineLayoutEngine
             diagnosticsSink);
         _textLayout = new TextLayoutEngine(_textMeasurer);
         _layoutResultBuilder = new InlineLayoutResultBuilder(_textMeasurer);
+        _stateWriter = new LayoutBoxStateWriter();
     }
 
     public InlineLayoutResult Layout(BlockBox block, InlineLayoutRequest request)
     {
-        var result = BuildLayout(block, request, includeSegments: true);
-        block.InlineLayout = result;
-        return result;
+        return LayoutInlineFlow(block, request);
     }
 
     public InlineLayoutResult Measure(BlockBox block, InlineLayoutRequest request)
+    {
+        return MeasureInlineFlow(block, request);
+    }
+
+    public InlineLayoutResult LayoutInlineFlow(BlockBox block, InlineLayoutRequest request)
+    {
+        var result = BuildLayout(block, request, includeSegments: true);
+        _stateWriter.ApplyInlineLayout(block, result);
+        return result;
+    }
+
+    public InlineLayoutResult MeasureInlineFlow(BlockBox block, InlineLayoutRequest request)
     {
         return BuildLayout(block, request, includeSegments: false);
     }
@@ -209,7 +220,7 @@ internal sealed class InlineLayoutEngine
             contentLeft,
             contentTop,
             availableWidth,
-            blockContext.TextAlign ?? HtmlCssConstants.Defaults.TextAlign);
+            blockContext.TextAlign);
 
         return new InlineSegmentBuildResult(layout, textLayout.TotalHeight, textLayout.MaxLineWidth);
     }
@@ -232,43 +243,10 @@ internal sealed class InlineLayoutEngine
             TryAppendSyntheticListMarkerRun(blockContext, collector);
         }
 
-        foreach (var inline in inlineChildren)
-        {
-            CollectInlineRuns(inline, collector);
-        }
+        var walker = new InlineRunTreeWalker(collector);
+        walker.CollectInlineFlow(inlineChildren);
 
         return collector.Runs;
-    }
-
-    private void CollectInlineRuns(
-        BoxNode node,
-        InlineRunCollector collector)
-    {
-        switch (node)
-        {
-            case BlockBox block when InlineFlowClassifier.IsAnonymousInlineWrapper(block):
-                foreach (var child in block.Children)
-                {
-                    CollectInlineRuns(child, collector);
-                }
-
-                return;
-        }
-
-        if (TryAppendInlineRun(node, collector))
-        {
-            return;
-        }
-
-        if (node is not InlineBox inline)
-        {
-            return;
-        }
-
-        foreach (var childInline in inline.Children.OfType<InlineBox>())
-        {
-            CollectInlineRuns(childInline, collector);
-        }
     }
 
     private void TryAppendSyntheticListMarkerRun(
@@ -280,25 +258,6 @@ internal sealed class InlineLayoutEngine
         {
             collector.TryAppendTextRun(marker);
         }
-    }
-
-    private static bool TryAppendInlineRun(
-        BoxNode node,
-        InlineRunCollector collector)
-    {
-        if (node is InlineBlockBoundaryBox boundary)
-        {
-            return collector.TryAppendInlineBlockBoundaryRun(boundary);
-        }
-
-        if (node is not InlineBox inline)
-        {
-            return false;
-        }
-
-        return collector.TryAppendInlineBlockRun(inline) ||
-               collector.TryAppendLineBreakRun(inline) ||
-               collector.TryAppendTextRun(inline);
     }
 
     private readonly record struct InlineFlowState(

@@ -1,7 +1,6 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Style.Test;
@@ -76,7 +75,7 @@ public sealed class StyleTreeBuilderTests
     {
         var sink = new RecordingDiagnosticsSink();
 
-        await new Html2x.LayoutEngine.Style.StyleTreeBuilder().BuildAsync(
+        await new StyleTreeBuilder().BuildAsync(
             "<html><body><div id='hero' style='width: 10rem;'>Box</div></body></html>",
             DefaultOptions(),
             diagnosticsSink: sink);
@@ -356,7 +355,7 @@ public sealed class StyleTreeBuilderTests
         StyleBuildSettings options,
         IDiagnosticsSink? diagnostics = null)
     {
-        return new Html2x.LayoutEngine.Style.StyleTreeBuilder()
+        return new StyleTreeBuilder()
             .BuildAsync(html, options, diagnosticsSink: diagnostics);
     }
 

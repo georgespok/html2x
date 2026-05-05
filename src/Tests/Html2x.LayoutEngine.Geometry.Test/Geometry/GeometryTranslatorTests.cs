@@ -1,7 +1,9 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
@@ -10,7 +12,7 @@ public sealed class GeometryTranslatorTests
     [Fact]
     public void Translate_UsedGeometry_OffsetsBorderContentAndBaseline()
     {
-        var geometry = BoxGeometryFactory.FromBorderBox(
+        var geometry = UsedGeometryCalculator.FromBorderBox(
             10f,
             20f,
             100f,

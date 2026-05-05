@@ -1,7 +1,4 @@
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
-
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 internal sealed record TableLayoutCellPlacement(

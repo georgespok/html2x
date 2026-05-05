@@ -1,11 +1,12 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Box.Publishing;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
@@ -110,20 +111,20 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
-    public void PublishedBlockFactory_CreateBlock_MapsResolvedFactsAndProvidedIdentity()
+    public void PublishedBlockMapper_CreateBlock_MapsResolvedFactsAndProvidedIdentity()
     {
         var source = new ImageBox(BoxRole.Block)
         {
             Src = "images/logo.png",
             AuthoredSizePx = new SizePx(40d, 20d),
             IntrinsicSizePx = new SizePx(80d, 40d),
-            IsMissing = true,
+            Status = ImageLoadStatus.Missing,
             Style = new ComputedStyle { FontSizePt = 14f, WidthPt = 42f }
         };
-        var identity = PublishedBlockFactory.CreateIdentity(source, sourceOrder: 7);
+        var identity = PublishedBlockMapper.CreateIdentity(source, sourceOrder: 7);
         var geometry = CreateGeometry();
 
-        var block = PublishedBlockFactory.CreateBlock(
+        var block = PublishedBlockMapper.CreateBlock(
             source,
             identity,
             geometry,
@@ -164,7 +165,7 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
-    public void PublishedBlockFactory_CreateIdentity_UsesBoxElementIdentity()
+    public void PublishedBlockMapper_CreateIdentity_UsesBoxElementIdentity()
     {
         var sourceIdentity = CreateSourceIdentity(
             nodeId: 6,
@@ -179,7 +180,7 @@ public sealed class PublishedLayoutContractTests
             SourceIdentity = sourceIdentity
         };
 
-        var identity = PublishedBlockFactory.CreateIdentity(source, sourceOrder: 9);
+        var identity = PublishedBlockMapper.CreateIdentity(source, sourceOrder: 9);
 
         identity.NodePath.ShouldBe("section");
         identity.SourceOrder.ShouldBe(9);
@@ -201,7 +202,7 @@ public sealed class PublishedLayoutContractTests
             SourceIdentity = sourceIdentity
         };
 
-        var inlineSource = PublishedBlockFactory.CreateInlineSource(source, sourceOrder: 4);
+        var inlineSource = PublishedBlockMapper.CreateInlineSource(source, sourceOrder: 4);
 
         inlineSource.NodePath.ShouldBe("span");
         inlineSource.SourceOrder.ShouldBe(4);
@@ -258,7 +259,7 @@ public sealed class PublishedLayoutContractTests
             sourceOrder: 0,
             children));
 
-        exception.ParamName.ShouldBe("children");
+        exception.ParamName.ShouldBe("block");
     }
 
     [Theory]
@@ -311,7 +312,7 @@ public sealed class PublishedLayoutContractTests
 
     private static UsedGeometry CreateGeometry()
     {
-        return BoxGeometryFactory.FromBorderBox(
+        return UsedGeometryCalculator.FromBorderBox(
             x: 1f,
             y: 2f,
             width: 30f,

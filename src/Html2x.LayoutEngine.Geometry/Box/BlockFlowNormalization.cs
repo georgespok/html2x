@@ -1,7 +1,6 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 internal static class BlockFlowNormalization
 {
@@ -31,7 +30,8 @@ internal static class BlockFlowNormalization
 
         foreach (var child in parent.Children)
         {
-            if (TryCreateInlineBlockBoundaryNode(parent, child, out var boundaryNode))
+            var boundaryNode = CreateInlineBlockBoundaryNode(parent, child);
+            if (boundaryNode is not null)
             {
                 if (inlineBuffer.Count > 0)
                 {
@@ -67,25 +67,22 @@ internal static class BlockFlowNormalization
         parent.Children.AddRange(normalized);
     }
 
-    private static bool TryCreateInlineBlockBoundaryNode(BlockBox parent, BoxNode child, out BoxNode boundaryNode)
+    private static BoxNode? CreateInlineBlockBoundaryNode(BlockBox parent, BoxNode child)
     {
-        boundaryNode = null!;
-
         if (!parent.IsInlineBlockContext ||
             child is not InlineBox inlineBlock ||
             inlineBlock.Role != BoxRole.InlineBlock)
         {
-            return false;
+            return null;
         }
 
         var inlineBlockContent = inlineBlock.Children.OfType<BlockBox>().FirstOrDefault();
         if (inlineBlockContent is null)
         {
-            return false;
+            return null;
         }
 
-        boundaryNode = CreateInlineBlockBoundaryNode(parent, inlineBlock, inlineBlockContent);
-        return true;
+        return CreateInlineBlockBoundaryNode(parent, inlineBlock, inlineBlockContent);
     }
 
     private static bool IsInlineFlowNode(BoxNode node)

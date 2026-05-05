@@ -4,7 +4,7 @@ This directory contains developer-oriented documentation for maintaining and ext
 
 ## Start Here
 
-- [Getting Started](getting-started.md): prerequisites, build commands, test commands, and manual smoke testing.
+- [Getting Started](getting-started.md): prerequisites, build commands, and test commands.
 - [Public API](reference/public-api.md): converter usage, options, diagnostics, and failure behavior.
 - [Supported HTML And CSS](reference/supported-html-css.md): current behavior and explicit limitations.
 

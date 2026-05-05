@@ -1,8 +1,7 @@
-using AngleSharp.Dom;
-using Html2x.LayoutEngine.Contracts.Style;
 using System.Text;
+using AngleSharp.Dom;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
 /// Walks supported DOM elements and materializes a StyleNode tree using the provided style factory.
@@ -40,7 +39,7 @@ internal sealed class StyleTraversal
         var children = new List<StyleNode>();
         var content = new List<StyleContentNode>();
 
-        var contentIndex = 0;
+        var contentState = new ContentTraversalState();
         var childElementIndex = 0;
         foreach (var child in element.ChildNodes)
         {
@@ -49,7 +48,7 @@ internal sealed class StyleTraversal
                 var textIdentity = state.CreateContentIdentity(
                     identity,
                     "text",
-                    contentIndex++);
+                    contentState.ReserveIndex());
                 content.Add(StyleContentNode.ForText(textIdentity, child.TextContent));
                 continue;
             }
@@ -65,7 +64,7 @@ internal sealed class StyleTraversal
                     childElement,
                     identity,
                     content,
-                    ref contentIndex,
+                    contentState,
                     state);
                 continue;
             }
@@ -78,7 +77,7 @@ internal sealed class StyleTraversal
             var elementContentIdentity = state.CreateContentIdentity(
                 identity,
                 "element",
-                contentIndex++);
+                contentState.ReserveIndex());
             var childNode = BuildNode(
                 childElement,
                 childFacts,
@@ -97,7 +96,7 @@ internal sealed class StyleTraversal
         IElement element,
         StyleSourceIdentity owner,
         ICollection<StyleContentNode> content,
-        ref int contentIndex,
+        ContentTraversalState contentState,
         TraversalIdentityState state)
     {
         foreach (var child in element.ChildNodes)
@@ -107,7 +106,7 @@ internal sealed class StyleTraversal
                 var contentIdentity = state.CreateContentIdentity(
                     owner,
                     "text",
-                    contentIndex++);
+                    contentState.ReserveIndex());
                 content.Add(StyleContentNode.ForText(contentIdentity, child.TextContent));
                 continue;
             }
@@ -122,15 +121,15 @@ internal sealed class StyleTraversal
                 var contentIdentity = state.CreateContentIdentity(
                     owner,
                     "line-break",
-                    contentIndex++);
+                    contentState.ReserveIndex());
                 content.Add(StyleContentNode.ForLineBreak(contentIdentity));
             }
 
-            AppendUnsupportedContent(childElement, owner, content, ref contentIndex, state);
+            AppendUnsupportedContent(childElement, owner, content, contentState, state);
         }
     }
 
-    private static bool ShouldInclude(IElement element)
+    private static bool ShouldInclude(IElement? element)
     {
         return element is not null && HtmlCssConstants.SupportedElementTags.Contains(element.TagName);
     }
@@ -265,6 +264,16 @@ internal sealed class StyleTraversal
             }
 
             return "element";
+        }
+    }
+
+    private sealed class ContentTraversalState
+    {
+        private int _contentIndex;
+
+        public int ReserveIndex()
+        {
+            return _contentIndex++;
         }
     }
 }

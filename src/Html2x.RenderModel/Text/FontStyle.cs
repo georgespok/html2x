@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Text;
 
 public enum FontStyle
 {

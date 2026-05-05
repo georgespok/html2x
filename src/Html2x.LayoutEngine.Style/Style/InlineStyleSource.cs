@@ -1,6 +1,7 @@
+using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 internal static class InlineStyleSource
 {
@@ -43,5 +44,13 @@ internal static class InlineStyleSource
         return separatorIndex < 0
             ? null
             : declaration[(separatorIndex + 1)..].Trim();
+    }
+
+    public static string? GetValue(ICssStyleDeclaration styles, IElement element, string propertyName)
+    {
+        ArgumentNullException.ThrowIfNull(styles);
+        ArgumentNullException.ThrowIfNull(element);
+
+        return GetValue(element, propertyName) ?? styles.GetPropertyValue(propertyName);
     }
 }

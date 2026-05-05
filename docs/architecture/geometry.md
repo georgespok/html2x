@@ -17,7 +17,7 @@ HTML or CSS, reference AngleSharp, or traverse DOM nodes.
 - Marker offset.
 - Overflow allowance.
 
-`BoxGeometryFactory` owns geometry construction and normalization at layout boundaries. It handles finite-value normalization, non-negative sizes, content rectangle calculation, marker offsets, padding, and borders.
+`UsedGeometryCalculator` owns geometry construction and normalization at layout boundaries. It handles finite-value normalization, non-negative sizes, content rectangle calculation, marker offsets, padding, and borders.
 
 ## Helper Ownership
 
@@ -28,7 +28,7 @@ run origins to page-local coordinates.
 
 `UsedGeometry` translation remains geometry-owned in
 `Html2x.LayoutEngine.Geometry`. Geometry may translate `UsedGeometry` because it
-has to preserve geometry invariants through `BoxGeometryFactory`.
+has to preserve geometry invariants through `UsedGeometryCalculator`.
 Production geometry placement should route `UsedGeometry` translation through
 `GeometryTranslator`; direct `UsedGeometry` transformation helpers are
 compatibility conveniences, not the place for new layout behavior.
@@ -48,9 +48,10 @@ Naming:
 
 ```text
 Style tree
-  -> initial box tree from StyledElementFacts and StyleContentNode
-  -> layout computes UsedGeometry
-  -> published layout tree
+  -> StyleTreeBoxProjector creates mutable layout boxes from StyledElementFacts and StyleContentNode
+  -> BlockLayoutEngine coordinates block layout through BlockLayoutRuleSet
+  -> block rules resolve UsedGeometry and route mutable writes through LayoutBoxStateWriter
+  -> PublishedLayoutWriter creates the published layout tree
   -> fragments copy published geometry
   -> pagination translates fragment coordinates
   -> renderer draws fragment rectangles
@@ -63,19 +64,26 @@ page.
 
 ## Block Flow Locality
 
-`BlockLayoutEngine` orchestrates block kind dispatch and publication. Block-flow
-locality lives in smaller internal modules:
+`BlockLayoutEngine` coordinates block layout, block-kind rule dispatch, and
+publication. Block-flow locality lives in smaller internal modules:
 
 - `BlockFlowLayoutExecutor` owns laid-out block-flow sequencing: cursor state,
   margin collapse, inline flushing, child ordering, and flow item ordering.
 - `BlockFlowMeasurementExecutor` owns non-mutating stacked block measurement so
   layout and measurement share the same block-flow policy.
+- `BlockLayoutRuleSet` selects the internal rule for supported block kinds.
+- `StandardBlockLayoutRule`, `ImageBlockLayoutRule`, `RuleBlockLayoutRule`, and
+  `TableBlockLayoutRule` localize block-kind behavior.
+- `BoxSizingRules` produces shared block sizing facts for layout and
+  measurement.
 - `ImageBlockLayoutApplier` applies image metadata and image block geometry.
+- `TableGridLayout` produces supported table row and cell geometry without
+  mutating source boxes.
 - `TableBlockLayoutApplier` owns table diagnostics and table placement.
-- `PublishedLayoutPublisher` owns published block caching, source order, and
+- `LayoutBoxStateWriter` owns mutable writes to block, image, table, and inline
+  object boxes.
+- `PublishedLayoutWriter` owns published block caching, source order, and
   inline publishing.
-- `BlockLayoutState` is the helper that writes shared mutable block
-  compatibility state for normal block layout.
 
 ## Compatibility Fields
 
@@ -85,7 +93,7 @@ Table layout may still expose scalar row and cell metadata for fragment projecti
 
 ## Validation Policy
 
-Layout construction is forgiving at the boundary where raw layout calculations enter `BoxGeometryFactory`. It may clamp or normalize invalid intermediate values.
+Layout construction is forgiving at the boundary where raw layout calculations enter `UsedGeometryCalculator`. It may clamp or normalize invalid intermediate values.
 
 Published geometry is strict. `UsedGeometry` and renderable fragments should reject non-finite coordinates and negative sizes so invalid geometry fails close to the producing stage.
 

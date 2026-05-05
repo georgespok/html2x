@@ -1,13 +1,11 @@
-using Html2x.LayoutEngine.Contracts.Style;
-
-namespace Html2x.LayoutEngine.Diagnostics;
+namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
 internal static class BoxNodePathBuilder
 {
     public static string Build(BoxNode node)
     {
         var segments = new Stack<string>();
-        BoxNode? current = node;
+        var current = node;
 
         while (current is not null)
         {

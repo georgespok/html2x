@@ -27,17 +27,25 @@ geometry algorithms directly.
 ## Internal Entry Points
 
 - `LayoutBuilder`
+- `LayoutStageRunner`
 - `IStyleTreeBuilder`
 - `StyleTreeBuilder`
 - `LayoutGeometryBuilder`
 - `FragmentBuilder`
-- `BoxToFragmentProjector`
 - `LayoutPaginator`
 
 ## Internal Boundaries
 
 `LayoutBuilder` constructs the concrete pipeline stages for the converter flow
-and is reached through the public `HtmlConverter` facade.
+and is reached through the public `HtmlConverter` facade. Its `BuildAsync`
+method should read as the stage handoff sequence: style tree, published
+geometry, fragments, pagination result, final layout.
+
+`LayoutStageRunner` owns the diagnostics lifecycle wrapper for geometry,
+fragment projection, and pagination. Diagnostics observe stage execution, but
+they do not define the composition flow. Layout-specific diagnostic payloads,
+including the geometry snapshot, live in focused diagnostics modules.
+
 The style stage is reached through `IStyleTreeBuilder`. The geometry stage is
 reached through `LayoutGeometryBuilder`.
 
@@ -46,7 +54,7 @@ responsibilities separable even when implementation classes coordinate multiple
 steps.
 
 Inside geometry, keep `BlockLayoutEngine` focused on block-flow orchestration.
-Move specialized image, table, inline publishing, or compatibility-state logic
+Move specialized image, table, inline publishing, or shared mutable layout logic
 behind focused internal modules when the logic can be tested through published
 layout behavior.
 

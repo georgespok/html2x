@@ -1,4 +1,7 @@
-namespace Html2x.RenderModel;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Represents an HTML &lt;img&gt; element after style resolution and basic validation.
@@ -7,10 +10,6 @@ namespace Html2x.RenderModel;
 public sealed class ImageFragment : Fragment
 {
     private readonly RectPt _contentRect;
-
-    public ImageFragment()
-    {
-    }
 
     /// <summary>Original src attribute value (data URI or file path relative to input HTML).</summary>
     public required string Src { get; init; }
@@ -40,9 +39,9 @@ public sealed class ImageFragment : Fragment
     /// <summary>Shared image resource load status carried from layout into rendering diagnostics.</summary>
     public ImageLoadStatus Status { get; init; }
 
-    /// <summary>True when the image failed validation or loading (e.g., out-of-scope path).</summary>
-    public bool IsMissing { get; init; }
+    /// <summary>True when the image failed validation or loading and should render as a missing placeholder.</summary>
+    public bool IsMissing => ImageLoadStatusFacts.IsMissing(Status);
 
     /// <summary>True when the image exceeded size caps and will be rendered as a placeholder.</summary>
-    public bool IsOversize { get; init; }
+    public bool IsOversize => ImageLoadStatusFacts.IsOversize(Status);
 }

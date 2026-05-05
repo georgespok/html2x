@@ -1,8 +1,8 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Fragments;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 

@@ -1,10 +1,12 @@
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -138,8 +140,7 @@ public sealed class GeometryDriftTests
             Src = "image.png",
             AuthoredSizePx = new SizePx(30d, 20d),
             IntrinsicSizePx = new SizePx(60d, 40d),
-            IsMissing = true,
-            IsOversize = false
+            Status = ImageLoadStatus.Missing
         };
         var rule = new RuleFragment
         {
@@ -270,9 +271,6 @@ public sealed class GeometryDriftTests
             </html>
             """);
 
-        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
-            .First(static box => box.IsInlineBlockContext);
-        var inlineBlockGeometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
         var inlineBlockFragment = result.Layout.Pages
             .SelectMany(static page => page.Children)
             .SelectMany(EnumerateFragments)
@@ -285,12 +283,8 @@ public sealed class GeometryDriftTests
             .First(static line => line.Runs.Any(run => run.Text.Contains("X", StringComparison.Ordinal)));
         var nestedRun = nestedLine.Runs.ShouldHaveSingleItem();
 
-        inlineBlockGeometry.ContentBoxRect.X.ShouldBe(inlineBlockGeometry.BorderBoxRect.X + 6f, 0.01f);
-        inlineBlockGeometry.ContentBoxRect.Y.ShouldBe(inlineBlockGeometry.BorderBoxRect.Y + 6f, 0.01f);
-        inlineBlockGeometry.Baseline.ShouldNotBeNull();
-        inlineBlockFragment.Rect.ShouldBe(inlineBlockGeometry.BorderBoxRect);
-        nestedLine.Rect.X.ShouldBe(inlineBlockGeometry.ContentBoxRect.X, 0.01f);
-        nestedLine.Rect.Y.ShouldBe(inlineBlockGeometry.ContentBoxRect.Y, 0.01f);
+        nestedLine.Rect.X.ShouldBe(inlineBlockFragment.Rect.X + 6f, 0.01f);
+        nestedLine.Rect.Y.ShouldBe(inlineBlockFragment.Rect.Y + 6f, 0.01f);
         nestedRun.Origin.X.ShouldBe(nestedLine.Rect.X, 0.01f);
         nestedRun.Origin.Y.ShouldBe(nestedLine.BaselineY, 0.01f);
     }
@@ -309,20 +303,19 @@ public sealed class GeometryDriftTests
             </html>
             """);
 
-        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
-            .First(static box => box.IsInlineBlockContext);
-        var geometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
         var inlineBlockFragment = result.Layout.Pages
             .SelectMany(static page => page.Children)
             .SelectMany(EnumerateFragments)
             .OfType<BlockFragment>()
             .First(static fragment => fragment.FormattingContext == FormattingContextKind.InlineBlock);
+        var nestedLine = inlineBlockFragment.Children
+            .OfType<LineBoxFragment>()
+            .ShouldHaveSingleItem();
 
-        geometry.BorderBoxRect.Width.ShouldBe(39f, 0.01f);
-        geometry.BorderBoxRect.Height.ShouldBe(24f, 0.01f);
-        geometry.ContentBoxRect.Width.ShouldBe(30f, 0.01f);
-        geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
-        inlineBlockFragment.Rect.ShouldBe(geometry.BorderBoxRect);
+        inlineBlockFragment.Rect.Width.ShouldBe(39f, 0.01f);
+        inlineBlockFragment.Rect.Height.ShouldBe(24f, 0.01f);
+        nestedLine.Rect.Width.ShouldBe(30f, 0.01f);
+        nestedLine.Rect.Height.ShouldBe(14.4f, 0.01f);
     }
 
     [Fact]
@@ -339,14 +332,19 @@ public sealed class GeometryDriftTests
             </html>
             """);
 
-        var inlineBlockBox = FlattenBoxes(result.BoxTree.Blocks)
-            .First(static box => box.IsInlineBlockContext);
-        var geometry = inlineBlockBox.UsedGeometry.ShouldNotBeNull();
+        var inlineBlockFragment = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .OfType<BlockFragment>()
+            .First(static fragment => fragment.FormattingContext == FormattingContextKind.InlineBlock);
+        var nestedLine = inlineBlockFragment.Children
+            .OfType<LineBoxFragment>()
+            .ShouldHaveSingleItem();
 
-        geometry.BorderBoxRect.Width.ShouldBe(31.5f, 0.01f);
-        geometry.ContentBoxRect.Width.ShouldBe(30f, 0.01f);
-        geometry.BorderBoxRect.Height.ShouldBe(16.5f, 0.01f);
-        geometry.ContentBoxRect.Height.ShouldBe(15f, 0.01f);
+        inlineBlockFragment.Rect.Width.ShouldBe(31.5f, 0.01f);
+        nestedLine.Rect.Width.ShouldBe(30f, 0.01f);
+        inlineBlockFragment.Rect.Height.ShouldBe(16.5f, 0.01f);
+        nestedLine.Rect.Height.ShouldBe(14.4f, 0.01f);
     }
 
     [Theory]
@@ -581,38 +579,6 @@ public sealed class GeometryDriftTests
         foreach (var child in box.Children.SelectMany(FlattenBoxes))
         {
             yield return child;
-        }
-    }
-
-    private static IEnumerable<BlockBox> FlattenBoxes(IEnumerable<BlockBox> boxes)
-    {
-        foreach (var box in boxes)
-        {
-            yield return box;
-
-            foreach (var child in box.Children)
-            {
-                foreach (var nested in FlattenNodes(child).OfType<BlockBox>())
-                {
-                    if (nested.UsedGeometry is not null)
-                    {
-                        yield return nested;
-                    }
-                }
-            }
-        }
-    }
-
-    private static IEnumerable<BoxNode> FlattenNodes(BoxNode node)
-    {
-        yield return node;
-
-        foreach (var child in node.Children)
-        {
-            foreach (var nested in FlattenNodes(child))
-            {
-                yield return nested;
-            }
         }
     }
 

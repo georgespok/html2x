@@ -1,11 +1,12 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test;
@@ -76,7 +77,7 @@ public class LayoutBuilderTests
             .SingleOrDefault(static e => e.Name == "layout/geometry-snapshot");
 
         geometryEvent.ShouldNotBeNull();
-        var snapshot = geometryEvent!.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
+        var snapshot = geometryEvent.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
         snapshot["boxes"].ShouldBeOfType<DiagnosticArray>().Count.ShouldBeGreaterThan(0);
         snapshot["fragments"].ShouldBeOfType<DiagnosticObject>()["pageCount"].ShouldBe(new DiagnosticNumberValue(1));
         var pagination = snapshot["pagination"].ShouldBeOfType<DiagnosticArray>();
@@ -84,6 +85,32 @@ public class LayoutBuilderTests
         var placements = pagination[0].ShouldBeOfType<DiagnosticObject>()["placements"].ShouldBeOfType<DiagnosticArray>();
         placements.Count.ShouldBeGreaterThan(0);
         placements[0].ShouldBeOfType<DiagnosticObject>()["decisionKind"].ShouldBe(new DiagnosticStringValue("Placed"));
+    }
+
+    [Fact]
+    public async Task BuildAsync_DiagnosticsSinkIsProvided_PublishesGeometrySnapshotBeforePaginationSucceeds()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <p>snapshot order</p>
+              </body>
+            </html>";
+        var diagnosticsSink = new RecordingDiagnosticsSink();
+
+        await CreateBuilder().BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter }, diagnosticsSink);
+
+        var indexedRecords = diagnosticsSink.Records
+            .Select((record, index) => new { Record = record, Index = index })
+            .ToArray();
+        var snapshotIndex = indexedRecords.Single(static item =>
+            item.Record.Stage == "stage/pagination" &&
+            item.Record.Name == "layout/geometry-snapshot").Index;
+        var paginationSucceededIndex = indexedRecords.Single(static item =>
+            item.Record.Stage == "stage/pagination" &&
+            item.Record.Name == "stage/succeeded").Index;
+
+        snapshotIndex.ShouldBeLessThan(paginationSucceededIndex);
     }
 
     [Fact]

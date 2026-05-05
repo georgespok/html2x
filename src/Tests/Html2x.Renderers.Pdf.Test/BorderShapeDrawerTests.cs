@@ -1,5 +1,5 @@
-using Html2x.RenderModel;
 using Html2x.Renderers.Pdf.Drawing;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 using SkiaSharp;
 

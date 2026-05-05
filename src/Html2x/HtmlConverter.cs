@@ -1,17 +1,18 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Style;
-using Html2x.Resources;
+using Html2x.Options;
 using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.RenderModel.Documents;
+using Html2x.Resources;
 using Html2x.Text;
 
 namespace Html2x;
 
-public class HtmlConverter
+public sealed class HtmlConverter
 {
     public async Task<Html2PdfResult> ToPdfAsync(
         string html,
@@ -63,11 +64,11 @@ public class HtmlConverter
         }
 
         using var measurer = new SkiaTextMeasurer(fontSource);
-        var imageMetadataResolver = new FileImageProvider();
+        var imageMetadataResolver = new ImageResourceMetadataResolver();
 
         DiagnosticStageEmitter.Started(
             diagnosticsSink,
-            "LayoutBuild",
+            FacadeDiagnosticNames.Stages.LayoutBuild,
             CreateLayoutStartFields(html, options.Diagnostics));
 
         var layoutBuilder = new LayoutBuilder(measurer, imageMetadataResolver);
@@ -84,31 +85,39 @@ public class HtmlConverter
         }
         catch (OperationCanceledException exception)
         {
-            DiagnosticStageEmitter.Cancelled(diagnosticsSink, "LayoutBuild", "LayoutBuild canceled.");
+            DiagnosticStageEmitter.Cancelled(
+                diagnosticsSink,
+                FacadeDiagnosticNames.Stages.LayoutBuild,
+                "LayoutBuild canceled.");
             DiagnosticStageEmitter.Skipped(
                 diagnosticsSink,
-                "PdfRender",
+                FacadeDiagnosticNames.Stages.PdfRender,
                 "Skipped because LayoutBuild was canceled.");
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
         catch (Exception exception)
         {
-            DiagnosticStageEmitter.Failed(diagnosticsSink, "LayoutBuild", exception.Message);
-            DiagnosticStageEmitter.Skipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
+            DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.LayoutBuild, exception.Message);
+            DiagnosticStageEmitter.Skipped(
+                diagnosticsSink,
+                FacadeDiagnosticNames.Stages.PdfRender,
+                FacadeDiagnosticNames.Messages.SkippedBecauseLayoutBuildFailed);
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
         DiagnosticStageEmitter.Succeeded(
             diagnosticsSink,
-            "LayoutBuild",
+            FacadeDiagnosticNames.Stages.LayoutBuild,
             DiagnosticFields.Create(
-                DiagnosticFields.Field("snapshot", LayoutSnapshotMapper.ToDiagnosticObject(layout))));
+                DiagnosticFields.Field(
+                    FacadeDiagnosticNames.Fields.Snapshot,
+                    LayoutSnapshotMapper.ToDiagnosticObject(layout))));
 
         var renderer = new PdfRenderer();
 
-        DiagnosticStageEmitter.Started(diagnosticsSink, "PdfRender");
+        DiagnosticStageEmitter.Started(diagnosticsSink, FacadeDiagnosticNames.Stages.PdfRender);
 
         byte[] pdfBytes;
         try
@@ -121,23 +130,26 @@ public class HtmlConverter
         }
         catch (OperationCanceledException exception)
         {
-            DiagnosticStageEmitter.Cancelled(diagnosticsSink, "PdfRender", "PdfRender canceled.");
+            DiagnosticStageEmitter.Cancelled(
+                diagnosticsSink,
+                FacadeDiagnosticNames.Stages.PdfRender,
+                "PdfRender canceled.");
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
         catch (Exception exception)
         {
-            DiagnosticStageEmitter.Failed(diagnosticsSink, "PdfRender", exception.Message);
+            DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.PdfRender, exception.Message);
             AttachDiagnosticsReport(exception, collector);
             throw;
         }
 
         DiagnosticStageEmitter.Succeeded(
             diagnosticsSink,
-            "PdfRender",
+            FacadeDiagnosticNames.Stages.PdfRender,
             DiagnosticFields.Create(
-                DiagnosticFields.Field("pdfSize", pdfBytes.Length),
-                DiagnosticFields.Field("pageCount", layout.Pages.Count)));
+                DiagnosticFields.Field(FacadeDiagnosticNames.Fields.PdfSize, pdfBytes.Length),
+                DiagnosticFields.Field(FacadeDiagnosticNames.Fields.PageCount, layout.Pages.Count)));
 
         var report = CompleteDiagnostics(collector);
 
@@ -154,7 +166,7 @@ public class HtmlConverter
         return new LayoutBuildSettings
         {
             PageSize = options.Page.Size,
-            HtmlDirectory = baseDirectory,
+            ResourceBaseDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
             Style = new StyleBuildSettings
             {
@@ -170,7 +182,7 @@ public class HtmlConverter
 
         return new PdfRenderSettings
         {
-            HtmlDirectory = baseDirectory,
+            ResourceBaseDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes
         };
     }
@@ -218,19 +230,19 @@ public class HtmlConverter
     {
         var fields = new List<KeyValuePair<string, DiagnosticValue?>>
         {
-            DiagnosticFields.Field("htmlLength", html.Length)
+            DiagnosticFields.Field(FacadeDiagnosticNames.Fields.HtmlLength, html.Length)
         };
 
         if (diagnosticsOptions.IncludeRawHtml)
         {
             var rawHtml = html.Trim();
             fields.Add(DiagnosticFields.Field(
-                "html",
+                FacadeDiagnosticNames.Fields.Html,
                 rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength
                     ? rawHtml[..diagnosticsOptions.MaxRawHtmlLength]
                     : rawHtml));
             fields.Add(DiagnosticFields.Field(
-                "htmlTruncated",
+                FacadeDiagnosticNames.Fields.HtmlTruncated,
                 rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength));
         }
 
@@ -244,12 +256,15 @@ public class HtmlConverter
         IDiagnosticsSink? diagnosticsSink = collector;
         DiagnosticStageEmitter.Emit(
             diagnosticsSink,
-            "Configuration",
-            "font-path/error",
+            FacadeDiagnosticNames.Stages.Configuration,
+            FacadeDiagnosticNames.Events.FontPathError,
             DiagnosticSeverity.Error,
             message);
-        DiagnosticStageEmitter.Failed(diagnosticsSink, "LayoutBuild", message);
-        DiagnosticStageEmitter.Skipped(diagnosticsSink, "PdfRender", "Skipped because LayoutBuild failed.");
+        DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.LayoutBuild, message);
+        DiagnosticStageEmitter.Skipped(
+            diagnosticsSink,
+            FacadeDiagnosticNames.Stages.PdfRender,
+            FacadeDiagnosticNames.Messages.SkippedBecauseLayoutBuildFailed);
 
         var exception = new InvalidOperationException(message);
         AttachDiagnosticsReport(exception, collector);
@@ -263,7 +278,7 @@ public class HtmlConverter
         var report = CompleteDiagnostics(collector);
         if (report is not null)
         {
-            exception.Data["DiagnosticsReport"] = report;
+            exception.Data[nameof(Html2PdfResult.DiagnosticsReport)] = report;
         }
     }
 
@@ -271,5 +286,35 @@ public class HtmlConverter
     {
         var endTime = DateTimeOffset.UtcNow;
         return collector?.ToReport(endTime);
+    }
+
+    private static class FacadeDiagnosticNames
+    {
+        public static class Stages
+        {
+            public const string LayoutBuild = "LayoutBuild";
+            public const string PdfRender = "PdfRender";
+            public const string Configuration = "Configuration";
+        }
+
+        public static class Events
+        {
+            public const string FontPathError = "font-path/error";
+        }
+
+        public static class Fields
+        {
+            public const string Snapshot = "snapshot";
+            public const string PdfSize = "pdfSize";
+            public const string PageCount = "pageCount";
+            public const string HtmlLength = "htmlLength";
+            public const string Html = "html";
+            public const string HtmlTruncated = "htmlTruncated";
+        }
+
+        public static class Messages
+        {
+            public const string SkippedBecauseLayoutBuildFailed = "Skipped because LayoutBuild failed.";
+        }
     }
 }

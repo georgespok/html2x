@@ -1,10 +1,11 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using static Html2x.LayoutEngine.Diagnostics.DiagnosticSnapshotValueMapper;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
@@ -37,93 +38,125 @@ internal static class GeometrySnapshotMapper
     private static DiagnosticObject MapGeometrySnapshot(GeometrySnapshot snapshot)
     {
         return DiagnosticObject.Create(
-            DiagnosticObject.Field("fragments", LayoutSnapshotMapper.MapLayoutSnapshot(snapshot.Fragments)),
-            DiagnosticObject.Field("boxes", new DiagnosticArray(snapshot.Boxes.Select(MapBoxSnapshot))),
-            DiagnosticObject.Field("pagination", new DiagnosticArray(snapshot.Pagination.Select(MapPaginationPage))));
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.Fragments,
+                LayoutSnapshotMapper.MapLayoutSnapshot(snapshot.Fragments)),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.Boxes, MapArray(snapshot.Boxes, MapBoxSnapshot)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.Pagination,
+                MapArray(snapshot.Pagination, MapPaginationPage)));
     }
 
     private static DiagnosticObject MapPaginationPage(PaginationPageSnapshot page)
     {
         return DiagnosticObject.Create(
-            DiagnosticObject.Field("pageNumber", page.PageNumber),
-            DiagnosticObject.Field("pageSize", LayoutSnapshotMapper.MapSize(page.PageSize)),
-            DiagnosticObject.Field("margin", LayoutSnapshotMapper.MapSpacing(page.Margin)),
-            DiagnosticObject.Field("contentTop", page.ContentTop),
-            DiagnosticObject.Field("contentBottom", page.ContentBottom),
-            DiagnosticObject.Field("placements", new DiagnosticArray(page.Placements.Select(MapPlacementSnapshot))));
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageNumber, page.PageNumber),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageSize, MapSize(page.PageSize)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Margin, MapSpacing(page.Margin)),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.ContentTop, page.ContentTop),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.ContentBottom, page.ContentBottom),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.Placements,
+                MapArray(page.Placements, MapPlacementSnapshot)));
     }
 
     private static DiagnosticObject MapPlacementSnapshot(PaginationPlacementSnapshot placement)
     {
         return DiagnosticObject.Create(
-            DiagnosticObject.Field("fragmentId", placement.FragmentId),
-            DiagnosticObject.Field("kind", placement.Kind),
-            DiagnosticObject.Field("pageNumber", placement.PageNumber),
-            DiagnosticObject.Field("orderIndex", placement.OrderIndex),
-            DiagnosticObject.Field("isOversized", placement.IsOversized),
-            DiagnosticObject.Field("decisionKind", DiagnosticValue.FromEnum(placement.DecisionKind)),
-            DiagnosticObject.Field("x", placement.X),
-            DiagnosticObject.Field("y", placement.Y),
-            DiagnosticObject.Field("size", LayoutSnapshotMapper.MapSize(placement.Size)),
-            DiagnosticObject.Field("displayRole", FromNullable(placement.DisplayRole)),
-            DiagnosticObject.Field("formattingContext", FromNullable(placement.FormattingContext)),
-            DiagnosticObject.Field("markerOffset", FromNullable(placement.MarkerOffset)),
-            DiagnosticObject.Field("derivedColumnCount", FromNullable(placement.DerivedColumnCount)),
-            DiagnosticObject.Field("rowIndex", FromNullable(placement.RowIndex)),
-            DiagnosticObject.Field("columnIndex", FromNullable(placement.ColumnIndex)),
-            DiagnosticObject.Field("isHeader", FromNullable(placement.IsHeader)),
-            DiagnosticObject.Field("metadataOwner", FromNullable(placement.MetadataOwner)),
-            DiagnosticObject.Field("metadataConsumer", FromNullable(placement.MetadataConsumer)));
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.FragmentId, placement.FragmentId),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Kind, placement.Kind),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageNumber, placement.PageNumber),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.OrderIndex, placement.OrderIndex),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.IsOversized, placement.IsOversized),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.DecisionKind,
+                DiagnosticValue.FromEnum(placement.DecisionKind)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.X, placement.X),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Y, placement.Y),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Size, MapSize(placement.Size)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.DisplayRole,
+                FromNullable(placement.DisplayRole)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.FormattingContext,
+                FromNullable(placement.FormattingContext)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.MarkerOffset,
+                FromNullable(placement.MarkerOffset)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.DerivedColumnCount,
+                FromNullable(placement.DerivedColumnCount)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.RowIndex,
+                FromNullable(placement.RowIndex)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.ColumnIndex,
+                FromNullable(placement.ColumnIndex)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.IsHeader,
+                FromNullable(placement.IsHeader)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.MetadataOwner,
+                FromNullable(placement.MetadataOwner)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.MetadataConsumer,
+                FromNullable(placement.MetadataConsumer)));
     }
 
     private static DiagnosticObject MapBoxSnapshot(BoxGeometrySnapshot box)
     {
         return DiagnosticObject.Create(
-            DiagnosticObject.Field("sequenceId", box.SequenceId),
-            DiagnosticObject.Field("path", box.Path),
-            DiagnosticObject.Field("kind", box.Kind),
-            DiagnosticObject.Field("tagName", FromNullable(box.TagName)),
-            DiagnosticObject.Field("sourceNodeId", FromNullable(box.SourceNodeId)),
-            DiagnosticObject.Field("sourceContentId", FromNullable(box.SourceContentId)),
-            DiagnosticObject.Field("sourcePath", FromNullable(box.SourcePath)),
-            DiagnosticObject.Field("sourceOrder", FromNullable(box.SourceOrder)),
-            DiagnosticObject.Field("sourceElementIdentity", FromNullable(box.SourceElementIdentity)),
-            DiagnosticObject.Field("generatedSourceKind", FromNullable(box.GeneratedSourceKind)),
-            DiagnosticObject.Field("x", box.X),
-            DiagnosticObject.Field("y", box.Y),
-            DiagnosticObject.Field("size", LayoutSnapshotMapper.MapSize(box.Size)),
-            DiagnosticObject.Field("contentX", FromNullable(box.ContentX)),
-            DiagnosticObject.Field("contentY", FromNullable(box.ContentY)),
-            DiagnosticObject.Field("contentSize", LayoutSnapshotMapper.MapSize(box.ContentSize)),
-            DiagnosticObject.Field("baseline", FromNullable(box.Baseline)),
-            DiagnosticObject.Field("markerOffset", box.MarkerOffset),
-            DiagnosticObject.Field("allowsOverflow", box.AllowsOverflow),
-            DiagnosticObject.Field("isAnonymous", box.IsAnonymous),
-            DiagnosticObject.Field("isInlineBlockContext", box.IsInlineBlockContext),
-            DiagnosticObject.Field("derivedColumnCount", FromNullable(box.DerivedColumnCount)),
-            DiagnosticObject.Field("rowIndex", FromNullable(box.RowIndex)),
-            DiagnosticObject.Field("columnIndex", FromNullable(box.ColumnIndex)),
-            DiagnosticObject.Field("isHeader", FromNullable(box.IsHeader)),
-            DiagnosticObject.Field("metadataOwner", FromNullable(box.MetadataOwner)),
-            DiagnosticObject.Field("metadataConsumer", FromNullable(box.MetadataConsumer)),
-            DiagnosticObject.Field("children", new DiagnosticArray(box.Children.Select(MapBoxSnapshot))));
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.SequenceId, box.SequenceId),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.Path, box.Path),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Kind, box.Kind),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.TagName, FromNullable(box.TagName)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.SourceNodeId,
+                FromNullable(box.SourceNodeId)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.SourceContentId,
+                FromNullable(box.SourceContentId)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.SourcePath,
+                FromNullable(box.SourcePath)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.SourceOrder,
+                FromNullable(box.SourceOrder)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.SourceElementIdentity,
+                FromNullable(box.SourceElementIdentity)),
+            DiagnosticObject.Field(
+                GeometrySnapshotSchema.Fields.GeneratedSourceKind,
+                FromNullable(box.GeneratedSourceKind)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.X, box.X),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Y, box.Y),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Size, MapSize(box.Size)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.ContentX, FromNullable(box.ContentX)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.ContentY, FromNullable(box.ContentY)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.ContentSize, MapSize(box.ContentSize)),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.Baseline, FromNullable(box.Baseline)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.MarkerOffset, box.MarkerOffset),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.AllowsOverflow, box.AllowsOverflow),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.IsAnonymous, box.IsAnonymous),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.IsInlineBlockContext, box.IsInlineBlockContext),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.DerivedColumnCount,
+                FromNullable(box.DerivedColumnCount)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.RowIndex, FromNullable(box.RowIndex)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.ColumnIndex,
+                FromNullable(box.ColumnIndex)),
+            DiagnosticObject.Field(LayoutSnapshotSchema.Fields.IsHeader, FromNullable(box.IsHeader)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.MetadataOwner,
+                FromNullable(box.MetadataOwner)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.MetadataConsumer,
+                FromNullable(box.MetadataConsumer)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.Children,
+                MapArray(box.Children, MapBoxSnapshot)));
     }
-
-    private static DiagnosticValue? FromNullable(string? value) =>
-        value is null ? null : DiagnosticValue.From(value);
-
-    private static DiagnosticValue? FromNullable(float? value) =>
-        value.HasValue ? DiagnosticValue.From(value.Value) : null;
-
-    private static DiagnosticValue? FromNullable(int? value) =>
-        value.HasValue ? DiagnosticValue.From(value.Value) : null;
-
-    private static DiagnosticValue? FromNullable(bool? value) =>
-        value.HasValue ? DiagnosticValue.From(value.Value) : null;
-
-    private static DiagnosticValue? FromNullable<TEnum>(TEnum? value)
-        where TEnum : struct, Enum =>
-        value.HasValue ? DiagnosticValue.FromEnum(value.Value) : null;
 
     private static PaginationPageSnapshot MapPage(PaginationPageAudit page)
     {
@@ -159,13 +192,12 @@ internal static class GeometrySnapshotMapper
             ColumnIndex = placement.ColumnIndex,
             IsHeader = placement.IsHeader,
             MetadataOwner = PublishedLayoutToFragmentProjector.MetadataOwnerName,
-            MetadataConsumer = "Pagination"
+            MetadataConsumer = GeometrySnapshotSchema.Metadata.PaginationConsumer
         };
     }
 
     private sealed class PublishedGeometrySnapshotMapper
     {
-        private const string BoxGeometryOwnerName = "BlockLayoutEngine";
         private int _sequenceId;
 
         public IReadOnlyList<BoxGeometrySnapshot> MapBoxes(IEnumerable<PublishedBlock> blocks)
@@ -211,7 +243,7 @@ internal static class GeometrySnapshotMapper
                 RowIndex = block.Table?.RowIndex,
                 ColumnIndex = block.Table?.ColumnIndex,
                 IsHeader = block.Table?.IsHeader,
-                MetadataOwner = BoxGeometryOwnerName,
+                MetadataOwner = GeometrySnapshotSchema.Metadata.BoxGeometryOwner,
                 MetadataConsumer = nameof(GeometrySnapshotMapper),
                 Children = MapBoxes(block.Children)
             };
@@ -251,13 +283,7 @@ internal static class GeometrySnapshotMapper
             return generatedKind switch
             {
                 GeometryGeneratedSourceKind.None => null,
-                GeometryGeneratedSourceKind.AnonymousText => "anonymous-text",
-                GeometryGeneratedSourceKind.ListMarker => "list-marker",
-                GeometryGeneratedSourceKind.InlineBlockContent => "inline-block-content",
-                GeometryGeneratedSourceKind.AnonymousBlock => "anonymous-block",
-                GeometryGeneratedSourceKind.InlineBlockBoundary => "inline-block-boundary",
-                GeometryGeneratedSourceKind.InlineSegment => "inline-segment",
-                _ => "generated"
+                _ => GeometrySourceKindNames.Resolve(generatedKind)
             };
         }
 

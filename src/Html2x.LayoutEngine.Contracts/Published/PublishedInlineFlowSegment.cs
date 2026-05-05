@@ -1,9 +1,5 @@
 namespace Html2x.LayoutEngine.Contracts.Published;
 
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Geometry;
-
-
 internal sealed record PublishedInlineFlowSegment
 {
     public PublishedInlineFlowSegment(

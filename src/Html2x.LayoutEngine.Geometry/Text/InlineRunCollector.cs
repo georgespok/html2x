@@ -1,31 +1,20 @@
-using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
-internal sealed class InlineRunCollector
+internal sealed class InlineRunCollector(
+    ComputedStyle blockStyle,
+    float availableWidth,
+    InlineRunFactory runFactory,
+    ITextMeasurer textMeasurer,
+    ILineHeightStrategy lineHeightStrategy)
 {
-    private readonly ComputedStyle _blockStyle;
-    private readonly float _availableWidth;
-    private readonly InlineRunFactory _runFactory;
-    private readonly ITextMeasurer _textMeasurer;
-    private readonly ILineHeightStrategy _lineHeightStrategy;
+    private readonly ComputedStyle _blockStyle = blockStyle ?? throw new ArgumentNullException(nameof(blockStyle));
+    private readonly InlineRunFactory _runFactory = runFactory ?? throw new ArgumentNullException(nameof(runFactory));
+    private readonly ITextMeasurer _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+    private readonly ILineHeightStrategy _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
     private readonly List<TextRunInput> _runs = [];
     private int _nextRunId = 1;
-
-    public InlineRunCollector(
-        ComputedStyle blockStyle,
-        float availableWidth,
-        InlineRunFactory runFactory,
-        ITextMeasurer textMeasurer,
-        ILineHeightStrategy lineHeightStrategy)
-    {
-        _blockStyle = blockStyle ?? throw new ArgumentNullException(nameof(blockStyle));
-        _availableWidth = availableWidth;
-        _runFactory = runFactory ?? throw new ArgumentNullException(nameof(runFactory));
-        _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
-        _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-    }
 
     public IReadOnlyList<TextRunInput> Runs => _runs;
 
@@ -37,13 +26,13 @@ internal sealed class InlineRunCollector
     {
         ArgumentNullException.ThrowIfNull(inline);
 
-        if (!_runFactory.TryBuildInlineBlockLayout(
-                inline,
-                _availableWidth,
-                _textMeasurer,
-                _lineHeightStrategy,
-                out var inlineLayout) ||
-            !_runFactory.TryBuildInlineBlockRun(inline, _nextRunId, inlineLayout, out var inlineRun))
+        var inlineLayout = _runFactory.BuildInlineBlockLayout(
+            inline,
+            availableWidth,
+            _textMeasurer,
+            _lineHeightStrategy);
+        var inlineRun = _runFactory.BuildInlineBlockRun(inline, _nextRunId, inlineLayout);
+        if (inlineRun is null)
         {
             return false;
         }
@@ -69,7 +58,8 @@ internal sealed class InlineRunCollector
         ArgumentNullException.ThrowIfNull(inline);
         ArgumentNullException.ThrowIfNull(blockStyle);
 
-        if (!_runFactory.TryBuildLineBreakRunFromBlockContext(inline, blockStyle, _nextRunId, out var lineBreakRun))
+        var lineBreakRun = _runFactory.BuildLineBreakRunFromBlockContext(inline, blockStyle, _nextRunId);
+        if (lineBreakRun is null)
         {
             return false;
         }
@@ -90,7 +80,8 @@ internal sealed class InlineRunCollector
     {
         ArgumentNullException.ThrowIfNull(inline);
 
-        if (!_runFactory.TryBuildTextRun(inline, _nextRunId, out var textRun))
+        var textRun = _runFactory.BuildTextRun(inline, _nextRunId);
+        if (textRun is null)
         {
             return false;
         }

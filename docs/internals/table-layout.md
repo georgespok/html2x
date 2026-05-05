@@ -31,8 +31,9 @@ Unsupported tables should emit diagnostics and avoid rendering an incorrect visi
 
 ```text
 HTML table
-  -> TableLayoutEngine derives rows, columns, widths, and support status
-  -> BlockLayoutEngine materializes table, row, and cell boxes
+  -> TableGridLayout derives rows, columns, widths, and support status
+  -> TableBlockLayoutRule places table behavior inside BlockLayoutEngine dispatch
+  -> LayoutBoxStateWriter materializes table, row, and cell boxes
   -> FragmentBuilder emits table fragments
   -> LayoutSnapshotMapper records table structure
   -> PDF renderer paints backgrounds, borders, and cell content

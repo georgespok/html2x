@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Text;
 
 /// <summary>
 /// Describes a resolved font without renderer-specific types.

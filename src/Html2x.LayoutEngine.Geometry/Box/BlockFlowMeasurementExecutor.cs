@@ -1,26 +1,20 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.RenderModel;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
 /// Owns non-mutating block-flow measurement for stacked block children.
 /// </summary>
-internal sealed class BlockFlowMeasurementExecutor
+internal sealed class BlockFlowMeasurementExecutor(IBlockFormattingContext blockFormattingContext)
 {
-    private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
 
-    public BlockFlowMeasurementExecutor(IBlockFormattingContext blockFormattingContext)
-    {
-        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
-    }
-
-    public bool TryMeasureStackedChildren(
+    public BlockFlowMeasurementResult MeasureStackedChildren(
         IEnumerable<BoxNode> children,
         float availableWidth,
-        out float totalHeight,
         Func<BlockBox, float, float>? blockHeightMeasurer = null,
         Func<TableBox, float, float>? tableHeightMeasurer = null,
         IDiagnosticsSink? diagnosticsSink = null,
@@ -32,11 +26,10 @@ internal sealed class BlockFlowMeasurementExecutor
         var blockChildren = children.OfType<BlockBox>().ToList();
         if (blockChildren.Count == 0)
         {
-            totalHeight = 0f;
-            return false;
+            return BlockFlowMeasurementResult.Empty;
         }
 
-        totalHeight = 0f;
+        var totalHeight = 0f;
         for (var i = 0; i < blockChildren.Count; i++)
         {
             var current = blockChildren[i];
@@ -65,7 +58,7 @@ internal sealed class BlockFlowMeasurementExecutor
 
         totalHeight += ResolveMargin(blockChildren[^1]).Bottom;
         totalHeight = Math.Max(0f, totalHeight);
-        return true;
+        return new BlockFlowMeasurementResult(true, totalHeight);
     }
 
     internal static float ResolveBlockHeight(
@@ -115,4 +108,9 @@ internal sealed class BlockFlowMeasurementExecutor
     {
         return spacing.Left > 0f || spacing.Right > 0f || spacing.Top > 0f || spacing.Bottom > 0f;
     }
+}
+
+internal readonly record struct BlockFlowMeasurementResult(bool HasBlocks, float TotalHeight)
+{
+    public static BlockFlowMeasurementResult Empty { get; } = new(false, 0f);
 }

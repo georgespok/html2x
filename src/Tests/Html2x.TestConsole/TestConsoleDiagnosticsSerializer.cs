@@ -85,7 +85,7 @@ internal sealed record TestConsoleEnvironmentDiagnostics(
     string FrameworkDescription,
     string ProcessArchitecture,
     string CurrentCulture,
-    string CurrentUICulture)
+    string CurrentUiCulture)
 {
     public static TestConsoleEnvironmentDiagnostics Capture()
     {

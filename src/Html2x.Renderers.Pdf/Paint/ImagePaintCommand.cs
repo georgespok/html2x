@@ -1,4 +1,7 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.Renderers.Pdf.Paint;
 
@@ -17,7 +20,5 @@ internal sealed record ImagePaintCommand(
     RectPt ContentRect,
     SizePx AuthoredSizePx,
     SizePx IntrinsicSizePx,
-    ImageLoadStatus Status,
-    bool IsMissing,
-    bool IsOversize)
+    ImageLoadStatus Status)
     : PaintCommand(PaintCommandKind.Image, PageNumber, FragmentId, Rect, ZOrder, CommandIndex);

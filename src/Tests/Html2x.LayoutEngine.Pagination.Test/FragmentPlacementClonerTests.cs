@@ -1,7 +1,9 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Pagination;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragment;
 
 namespace Html2x.LayoutEngine.Pagination.Test;
 
@@ -62,9 +64,7 @@ public sealed class FragmentPlacementClonerTests
             ContentRect = new RectPt(12f, 23f, 36f, 24f),
             AuthoredSizePx = new SizePx(40d, 30d),
             IntrinsicSizePx = new SizePx(80d, 60d),
-            Status = ImageLoadStatus.OutOfScope,
-            IsMissing = true,
-            IsOversize = true
+            Status = ImageLoadStatus.OutOfScope
         };
 
         var moved = CreateCloner().CloneWithPlacement(source, 2, 5f, 8f)
@@ -78,7 +78,7 @@ public sealed class FragmentPlacementClonerTests
         moved.IntrinsicSizePx.ShouldBe(source.IntrinsicSizePx);
         moved.Status.ShouldBe(ImageLoadStatus.OutOfScope);
         moved.IsMissing.ShouldBeTrue();
-        moved.IsOversize.ShouldBeTrue();
+        moved.IsOversize.ShouldBeFalse();
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public sealed class FragmentPlacementClonerTests
         };
     }
 
-    private sealed class CustomFragment : LayoutFragment
+    private sealed class CustomFragment : Fragment
     {
     }
 }

@@ -1,8 +1,3 @@
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
@@ -10,14 +5,12 @@ namespace Html2x.LayoutEngine.Test.Architecture;
 
 internal sealed class CSharpSourceSet
 {
-    private readonly IReadOnlyList<CSharpSourceFile> files;
-
     private CSharpSourceSet(IReadOnlyList<CSharpSourceFile> files)
     {
-        this.files = files;
+        Files = files;
     }
 
-    public IReadOnlyList<CSharpSourceFile> Files => files;
+    public IReadOnlyList<CSharpSourceFile> Files { get; }
 
     public static CSharpSourceSet FromDirectory(params string[] pathSegments)
     {
@@ -32,7 +25,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldDeclareNamespace(string expectedNamespace)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             file.ShouldDeclareNamespace(expectedNamespace);
         }
@@ -40,7 +33,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotDeclareNamespaces(params string[] forbiddenNamespaces)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var forbiddenNamespace in forbiddenNamespaces)
             {
@@ -51,7 +44,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotUseNamespaces(params string[] forbiddenNamespaces)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var forbiddenNamespace in forbiddenNamespaces)
             {
@@ -62,7 +55,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotUseIdentifiers(params string[] identifiers)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var identifier in identifiers)
             {
@@ -73,7 +66,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotContainPublicTypes(params string[] typeNames)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var typeName in typeNames)
             {
@@ -84,7 +77,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotUseObjectType()
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             file.ShouldNotUseObjectType();
         }
@@ -92,7 +85,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotConstructTypes(params string[] typeNames)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var typeName in typeNames)
             {
@@ -103,7 +96,7 @@ internal sealed class CSharpSourceSet
 
     public void ShouldNotInvokeMemberOn(string receiverName, params string[] memberNames)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var memberName in memberNames)
             {
@@ -114,13 +107,13 @@ internal sealed class CSharpSourceSet
 
     public void ShouldInvokeMemberOn(string receiverName, string memberName)
     {
-        files.Any(file => file.InvokesMemberOn(receiverName, memberName))
+        Files.Any(file => file.InvokesMemberOn(receiverName, memberName))
             .ShouldBeTrue($"Source set should invoke {receiverName}.{memberName}.");
     }
 
     public void ShouldNotContainStringLiterals(params string[] values)
     {
-        foreach (var file in files)
+        foreach (var file in Files)
         {
             foreach (var value in values)
             {

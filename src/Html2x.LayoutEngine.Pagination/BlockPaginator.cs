@@ -1,6 +1,9 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Geometry;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Pagination;
 
@@ -10,8 +13,6 @@ namespace Html2x.LayoutEngine.Pagination;
 /// </summary>
 internal sealed class BlockPaginator
 {
-    private const string InitialPageReason = "InitialPage";
-    private const string OverflowPageReason = "Overflow";
     private const float FitEpsilon = 0.001f;
     private readonly FragmentPlacementCloner _fragmentCloner;
 
@@ -47,7 +48,7 @@ internal sealed class BlockPaginator
         PaginationDiagnostics.EmitPageCreated(
             diagnosticsSink,
             paginationState.PageNumber,
-            InitialPageReason);
+            PaginationDiagnosticNames.Reasons.InitialPage);
 
         if (orderedBlocks.Count == 0)
         {
@@ -253,7 +254,7 @@ internal sealed class BlockPaginator
             PageNumber++;
             _placements = [];
             CursorY = contentArea.Y;
-            PaginationDiagnostics.EmitPageCreated(diagnosticsSink, PageNumber, OverflowPageReason);
+            PaginationDiagnostics.EmitPageCreated(diagnosticsSink, PageNumber, PaginationDiagnosticNames.Reasons.Overflow);
         }
 
         public IReadOnlyList<BlockPaginationPage> Complete()

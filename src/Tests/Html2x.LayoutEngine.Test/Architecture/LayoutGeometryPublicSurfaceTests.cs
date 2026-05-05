@@ -1,4 +1,19 @@
+using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Fragments;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Style;
+using Html2x.LayoutEngine.Style.Style;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Styles;
+using Html2x.Text;
 using Shouldly;
+using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
@@ -7,14 +22,14 @@ public sealed class LayoutGeometryPublicSurfaceTests
     [Fact]
     public void TextRuntimeAdapters_DoNotLeakThroughPublicConstructors()
     {
-        var fontPathSource = CSharpSourceFile.Load("src", "Html2x.Text", "FontPathSource.cs");
-        var textMeasurer = CSharpSourceFile.Load("src", "Html2x.Text", "SkiaTextMeasurer.cs");
-        var renderer = CSharpSourceFile.Load("src", "Html2x.Renderers.Pdf", "Pipeline", "PdfRenderer.cs");
+        var fontPathSource = SourceFileFor<FontPathSource>();
+        var textMeasurer = SourceFileFor<SkiaTextMeasurer>();
+        var renderer = CSharpSourceFile.Load("src", PdfRendererAssemblyName, "Pipeline", "PdfRenderer.cs");
 
-        fontPathSource.ShouldContainConstructor("FontPathSource", "public");
+        fontPathSource.ShouldContainConstructor(nameof(FontPathSource), PublicAccessibility);
         fontPathSource.ShouldNotHavePublicConstructorParameter("FontPathSource", "IFileDirectory");
         fontPathSource.ShouldNotHavePublicConstructorParameter("FontPathSource", "ISkiaTypefaceFactory");
-        textMeasurer.ShouldContainConstructor("SkiaTextMeasurer", "public");
+        textMeasurer.ShouldContainConstructor(nameof(SkiaTextMeasurer), PublicAccessibility);
         textMeasurer.ShouldNotHavePublicConstructorParameter("SkiaTextMeasurer", "IFileDirectory");
         textMeasurer.ShouldNotHavePublicConstructorParameter("SkiaTextMeasurer", "ISkiaTypefaceFactory");
         renderer.ShouldContainConstructor("PdfRenderer", "public");
@@ -25,185 +40,198 @@ public sealed class LayoutGeometryPublicSurfaceTests
     [Fact]
     public void TextImplementationHelpers_AreNotPublicSurface()
     {
-        CSharpSourceFile.Load("src", "Html2x.Text", "FontDirectoryIndex.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FontDirectoryIndex.cs")
             .ShouldContainType("FontDirectoryIndex", "internal");
-        CSharpSourceFile.Load("src", "Html2x.Text", "FontFaceEntry.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FontFaceEntry.cs")
             .ShouldContainType("FontFaceEntry", "internal");
-        CSharpSourceFile.Load("src", "Html2x.Text", "FileDirectory.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FileDirectory.cs")
             .ShouldContainType("FileDirectory", "internal", isSealed: true);
-        CSharpSourceFile.Load("src", "Html2x.Text", "IFileDirectory.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "IFileDirectory.cs")
             .ShouldContainType("IFileDirectory", "internal");
-        CSharpSourceFile.Load("src", "Html2x.Text", "SkiaTypefaceFactory.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "SkiaTypefaceFactory.cs")
             .ShouldContainType("SkiaTypefaceFactory", "internal", isSealed: true);
-        CSharpSourceFile.Load("src", "Html2x.Text", "ISkiaTypefaceFactory.cs")
+        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "ISkiaTypefaceFactory.cs")
             .ShouldContainType("ISkiaTypefaceFactory", "internal");
     }
 
     [Fact]
     public void PublicSurface_DoesNotExposeNonFacadeStageImplementations()
     {
-        var layoutEnginePublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine", "Html2x.LayoutEngine.csproj")
+        var layoutEnginePublic = SemanticProjectFor<LayoutBuilder>()
             .ExternallyVisibleTypeNames();
-        var contractsPublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine.Contracts", "Html2x.LayoutEngine.Contracts.csproj")
+        var contractsPublic = SemanticProjectFor<StyleNode>()
             .ExternallyVisibleTypeNames();
-        var stylePublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj")
+        var stylePublic = SemanticProjectFor<StyleTreeBuilder>()
             .ExternallyVisibleTypeNames();
-        var fragmentsPublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine.Fragments", "Html2x.LayoutEngine.Fragments.csproj")
+        var fragmentsPublic = SemanticProjectFor<FragmentBuilder>()
             .ExternallyVisibleTypeNames();
-        var paginationPublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine.Pagination", "Html2x.LayoutEngine.Pagination.csproj")
+        var paginationPublic = SemanticProjectFor<LayoutPaginator>()
             .ExternallyVisibleTypeNames();
-        var geometryPublic = ArchitectureSemanticProject
-            .Load("src", "Html2x.LayoutEngine.Geometry", "Html2x.LayoutEngine.Geometry.csproj")
+        var geometryPublic = SemanticProjectFor<LayoutGeometryBuilder>()
             .ExternallyVisibleTypeNames();
 
         layoutEnginePublic.ShouldBeEmpty();
         contractsPublic.ShouldBeEmpty();
-        layoutEnginePublic.ShouldNotContain("Html2x.LayoutEngine.LayoutBuilder");
-        layoutEnginePublic.ShouldNotContain("Html2x.LayoutEngine.Diagnostics.LayoutSnapshotMapper");
-        contractsPublic.ShouldNotContain("Html2x.LayoutEngine.Contracts.Style.ComputedStyle");
-        contractsPublic.ShouldNotContain("Html2x.LayoutEngine.Contracts.Style.StyleTree");
-        contractsPublic.ShouldNotContain("Html2x.LayoutEngine.Contracts.Geometry.LayoutGeometryRequest");
-        contractsPublic.ShouldNotContain("Html2x.LayoutEngine.Contracts.Geometry.Images.IImageMetadataResolver");
-        stylePublic.ShouldNotContain("Html2x.LayoutEngine.Style.StyleTreeBuilder");
-        stylePublic.ShouldNotContain("Html2x.LayoutEngine.Style.CssStyleComputer");
-        fragmentsPublic.ShouldNotContain("Html2x.LayoutEngine.Fragments.FragmentBuilder");
+        layoutEnginePublic.ShouldNotContain(FullTypeName<LayoutBuilder>());
+        layoutEnginePublic.ShouldNotContain(FullTypeName(typeof(LayoutSnapshotMapper)));
+        contractsPublic.ShouldNotContain(FullTypeName<ComputedStyle>());
+        contractsPublic.ShouldNotContain(FullTypeName<StyleTree>());
+        contractsPublic.ShouldNotContain(FullTypeName<LayoutGeometryRequest>());
+        contractsPublic.ShouldNotContain(FullTypeName<IImageMetadataResolver>());
+        stylePublic.ShouldNotContain(FullTypeName<StyleTreeBuilder>());
+        stylePublic.ShouldNotContain(FullTypeName<CssStyleComputer>());
+        fragmentsPublic.ShouldNotContain(FullTypeName<FragmentBuilder>());
         fragmentsPublic.ShouldNotContain("Html2x.LayoutEngine.Fragments.StyleConverter");
         paginationPublic.ShouldBeEmpty();
-        geometryPublic.ShouldNotContain("Html2x.LayoutEngine.Geometry.Models.BlockBox");
-        geometryPublic.ShouldNotContain("Html2x.LayoutEngine.Geometry.Models.InlineBox");
-        geometryPublic.ShouldNotContain("Html2x.LayoutEngine.Geometry.Box.BlockLayoutEngine");
+        geometryPublic.ShouldNotContain(FullTypeName<BlockBox>());
+        geometryPublic.ShouldNotContain(FullTypeName<InlineBox>());
+        geometryPublic.ShouldNotContain(FullTypeName<BlockLayoutEngine>());
     }
 
     [Fact]
     public void GeometryPublicSurface_DoesNotExposeMutableBoxTypes()
     {
-        CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine.Geometry")
-            .ShouldNotContainPublicTypes("BlockBox", "InlineBox");
+        SourceSetFor<LayoutGeometryBuilder>()
+            .ShouldNotContainPublicTypes(nameof(BlockBox), nameof(InlineBox));
 
-        var blockLayoutEngine = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Geometry", "Box", "BlockLayoutEngine.cs");
-        blockLayoutEngine.ShouldUseIdentifier("BlockFlowLayoutExecutor");
+        var blockLayoutEngine = SourceFileFor<BlockLayoutEngine>("Box");
+        blockLayoutEngine.ShouldUseIdentifier(nameof(BlockFlowLayoutExecutor));
+        blockLayoutEngine.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
+        blockLayoutEngine.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
         blockLayoutEngine.ShouldNotUseIdentifier("BuildTableRowContexts");
         blockLayoutEngine.ShouldNotUseIdentifier("BuildTableCellContexts");
 
-        var blockMeasurementService = CSharpSourceFile.Load(
-            "src",
-            "Html2x.LayoutEngine.Geometry",
-            "Box",
-            "BlockMeasurementService.cs");
-        blockMeasurementService.ShouldUseIdentifier("BlockFlowMeasurementExecutor");
+        var boxSizingRules = SourceFileFor<BoxSizingRules>("Box");
+        boxSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurementExecutor));
 
-        var blockFormattingContext = CSharpSourceFile.Load(
-            "src",
-            "Html2x.LayoutEngine.Geometry",
-            "Formatting",
-            "BlockFormattingContext.cs");
-        blockFormattingContext.ShouldUseIdentifier("BlockFlowMeasurementExecutor");
+        var blockFormattingContext = SourceFileFor<BlockFormattingContext>("Formatting");
+        blockFormattingContext.ShouldUseIdentifier(nameof(BlockFlowMeasurementExecutor));
     }
 
     [Fact]
     public void PublishedGeometryFacts_AvoidMutableBoxImplementationNamespace()
     {
-        CSharpSourceSet.FromDirectory("src", "Html2x.LayoutEngine.Contracts", "Published")
-            .ShouldNotUseNamespaces("Html2x.LayoutEngine.Geometry.Models", "Html2x.LayoutEngine.Box");
-        CSharpSourceSet.FromDirectory("src", "Html2x.RenderModel")
-            .ShouldNotUseNamespaces("Html2x.LayoutEngine.Geometry.Models", "Html2x.LayoutEngine.Box");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "GeometrySnapshotMapper.cs")
+        CSharpSourceSet.FromDirectory("src", AssemblyName<PublishedLayoutTree>(), "Published")
+            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockLayoutEngine>());
+        SourceSetFor<HtmlLayout>()
+            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockLayoutEngine>());
+        SourceFileFor(typeof(GeometrySnapshotMapper), "Diagnostics")
             .ShouldNotUseIdentifier("BoxTree");
     }
 
     [Fact]
     public void HtmlLayoutPages_AreReadOnlyAtRendererBoundary()
     {
-        var htmlLayout = CSharpSourceFile.Load("src", "Html2x.RenderModel", "Documents", "HtmlLayout.cs");
-        var paginator = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Pagination", "LayoutPaginator.cs");
+        var htmlLayout = SourceFileFor<HtmlLayout>("Documents");
+        var paginator = SourceFileFor<LayoutPaginator>();
 
-        htmlLayout.ShouldContainPropertyInType("HtmlLayout", "Pages", "IReadOnlyList<LayoutPage>", "public");
-        htmlLayout.ShouldContainMethodInType("HtmlLayout", "AddPage", "void", "public");
-        htmlLayout.ShouldNotContainPropertyInType("HtmlLayout", "Pages", "IList<LayoutPage>", "public");
-        paginator.ShouldInvoke("AddPage");
+        htmlLayout.ShouldContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages), ReadOnlyListTypeName<LayoutPage>(), PublicAccessibility);
+        htmlLayout.ShouldContainMethodInType(nameof(HtmlLayout), nameof(HtmlLayout.AddPage), VoidTypeName, PublicAccessibility);
+        htmlLayout.ShouldNotContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages), "IList<" + TypeName<LayoutPage>() + ">", PublicAccessibility);
+        paginator.ShouldInvoke(nameof(HtmlLayout.AddPage));
+    }
+
+    [Fact]
+    public void RenderModelColorFacts_DoNotOwnCssParsing()
+    {
+        var color = SourceFileFor<ColorRgba>("Styles");
+        var styleComputer = SourceFileFor<CssStyleComputer>("Style");
+        var borderMapper = SourceFileFor<BorderStyleMapper>("Style");
+
+        color.ShouldNotUseIdentifier("FromCss");
+        color.ShouldNotUseNamespace("System.Globalization");
+        styleComputer.ShouldUseIdentifier(nameof(CssColorParser));
+        borderMapper.ShouldUseIdentifier(nameof(CssColorParser));
     }
 
     [Fact]
     public void SourceIdentity_AssignmentAndSnapshotBoundaries_AreExplicit()
     {
-        var styleTraversal = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Style", "Style", "StyleTraversal.cs");
-        var initialBoxTreeBuilder = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Geometry", "Box", "InitialBoxTreeBuilder.cs");
+        var styleTraversal = SourceFileFor<StyleTraversal>("Style");
+        var styleTreeBoxProjector = SourceFileFor<StyleTreeBoxProjector>("Box");
         var snapshots = new[]
         {
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "LayoutSnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "LayoutPageSnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "FragmentSnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "GeometrySnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "BoxGeometrySnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "PaginationPageSnapshot.cs"),
-            CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Diagnostics", "PaginationPlacementSnapshot.cs")
+            SourceFileFor<LayoutSnapshot>("Diagnostics"),
+            SourceFileFor<LayoutPageSnapshot>("Diagnostics"),
+            SourceFileFor<FragmentSnapshot>("Diagnostics"),
+            SourceFileFor<GeometrySnapshot>("Diagnostics"),
+            SourceFileFor<BoxGeometrySnapshot>("Diagnostics"),
+            SourceFileFor<PaginationPageSnapshot>("Diagnostics"),
+            SourceFileFor<PaginationPlacementSnapshot>("Diagnostics")
         };
         var boxGeometrySnapshot = snapshots[4];
 
-        styleTraversal.ShouldConstructType("StyleSourceIdentity");
-        styleTraversal.ShouldConstructType("StyleContentIdentity");
-        initialBoxTreeBuilder.ShouldUseIdentifier("Identity");
-        initialBoxTreeBuilder.ShouldNotConstructType("StyleSourceIdentity");
-        initialBoxTreeBuilder.ShouldNotConstructType("StyleContentIdentity");
+        styleTraversal.ShouldConstructType(nameof(StyleSourceIdentity));
+        styleTraversal.ShouldConstructType(nameof(StyleContentIdentity));
+        styleTreeBoxProjector.ShouldUseIdentifier(nameof(StyleNode.Identity));
+        styleTreeBoxProjector.ShouldNotConstructType(nameof(StyleSourceIdentity));
+        styleTreeBoxProjector.ShouldNotConstructType(nameof(StyleContentIdentity));
         foreach (var snapshot in snapshots)
         {
-            snapshot.ShouldNotUseNamespaces("Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Geometry");
+            snapshot.ShouldNotUseNamespaces(NamespaceOf<StyleTreeBuilder>(), NamespaceOf<LayoutGeometryBuilder>());
         }
 
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "SourceNodeId", "int?", "public");
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "SourceContentId", "int?", "public");
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "SourcePath", "string?", "public");
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "SourceOrder", "int?", "public");
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "SourceElementIdentity", "string?", "public");
-        boxGeometrySnapshot.ShouldContainPropertyInType("BoxGeometrySnapshot", "GeneratedSourceKind", "string?", "public");
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceNodeId), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceContentId), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourcePath), NullableCSharpTypeName<string>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceOrder), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(
+            nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.SourceElementIdentity),
+            NullableCSharpTypeName<string>(),
+            PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(
+            nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.GeneratedSourceKind),
+            NullableCSharpTypeName<string>(),
+            PublicAccessibility);
     }
 
     [Fact]
     public void SupportedHtmlVocabulary_HasSingleStyleContractOwner()
     {
-        var styleTraversal = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Style", "Style", "StyleTraversal.cs");
-        var constants = CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Contracts", "Style", "HtmlCssConstants.cs");
+        var styleTraversal = SourceFileFor<StyleTraversal>("Style");
+        var constants = SourceFileFor(typeof(HtmlCssConstants), "Style");
 
-        constants.ShouldContainPropertyInType("HtmlCssConstants", "SupportedElementTags", "IReadOnlySet<string>", "public");
-        styleTraversal.ShouldUseIdentifier("SupportedElementTags");
+        constants.ShouldContainPropertyInType(
+            nameof(HtmlCssConstants),
+            nameof(HtmlCssConstants.SupportedElementTags),
+            "IReadOnlySet<string>",
+            PublicAccessibility);
+        styleTraversal.ShouldUseIdentifier(nameof(HtmlCssConstants.SupportedElementTags));
         styleTraversal.ShouldNotUseIdentifier("SupportedTags");
     }
 
     [Fact]
     public void FriendAssemblies_AreExplicitAndLimited()
     {
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Geometry", "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies("Html2x.LayoutEngine", "Html2x.LayoutEngine.Geometry.Test", "Html2x.LayoutEngine.Test");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine", "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies("Html2x", "Html2x.LayoutEngine.Geometry.Test", "Html2x.LayoutEngine.Test");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Fragments", "Properties", "InternalsVisibleTo.cs")
+        CSharpSourceFile.Load("src", AssemblyName<LayoutGeometryBuilder>(), "Properties", "InternalsVisibleTo.cs")
+            .ShouldContainFriendAssemblies(AssemblyName<LayoutBuilder>(), TestAssemblyNameFor<LayoutGeometryBuilder>(), CurrentAssemblyName());
+        CSharpSourceFile.Load("src", AssemblyName<LayoutBuilder>(), "Properties", "InternalsVisibleTo.cs")
+            .ShouldContainFriendAssemblies(FacadeAssemblyName, TestAssemblyNameFor<LayoutGeometryBuilder>(), CurrentAssemblyName());
+        CSharpSourceFile.Load("src", AssemblyName<FragmentBuilder>(), "Properties", "InternalsVisibleTo.cs")
             .ShouldContainFriendAssemblies(
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Fragments.Test",
-                "Html2x.LayoutEngine.Geometry.Test",
-                "Html2x.LayoutEngine.Test");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Contracts", "Properties", "InternalsVisibleTo.cs")
+                AssemblyName<LayoutBuilder>(),
+                TestAssemblyNameFor<FragmentBuilder>(),
+                TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                CurrentAssemblyName());
+        CSharpSourceFile.Load("src", AssemblyName<LayoutGeometryRequest>(), "Properties", "InternalsVisibleTo.cs")
             .ShouldContainFriendAssemblies(
-                "Html2x",
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Fragments.Test",
-                "Html2x.LayoutEngine.Geometry",
-                "Html2x.LayoutEngine.Geometry.Test",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.LayoutEngine.Style",
-                "Html2x.LayoutEngine.Style.Test",
-                "Html2x.LayoutEngine.Test");
-        CSharpSourceFile.Load("src", "Html2x.LayoutEngine.Pagination", "Properties", "InternalsVisibleTo.cs")
+                FacadeAssemblyName,
+                AssemblyName<LayoutBuilder>(),
+                AssemblyName<FragmentBuilder>(),
+                TestAssemblyNameFor<FragmentBuilder>(),
+                AssemblyName<LayoutGeometryBuilder>(),
+                TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                AssemblyName<LayoutPaginator>(),
+                AssemblyName<StyleTreeBuilder>(),
+                TestAssemblyNameFor<StyleTreeBuilder>(),
+                CurrentAssemblyName());
+        CSharpSourceFile.Load("src", AssemblyName<LayoutPaginator>(), "Properties", "InternalsVisibleTo.cs")
             .ShouldContainFriendAssemblies(
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Geometry.Test",
-                "Html2x.LayoutEngine.Pagination.Test",
-                "Html2x.LayoutEngine.Test");
+                AssemblyName<LayoutBuilder>(),
+                TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                TestAssemblyNameFor<LayoutPaginator>(),
+                CurrentAssemblyName());
     }
 }

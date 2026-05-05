@@ -1,4 +1,6 @@
-namespace Html2x.RenderModel;
+using Html2x.RenderModel.Geometry;
+
+namespace Html2x.RenderModel.Styles;
 
 public readonly record struct Spacing(float Top, float Right, float Bottom, float Left)
 {

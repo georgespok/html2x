@@ -1,5 +1,4 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Pagination;
+using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 

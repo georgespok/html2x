@@ -1,4 +1,7 @@
-namespace Html2x.RenderModel;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+
+namespace Html2x.RenderModel.Geometry;
 
 /// <summary>
 /// Represents a rectangle in PDF points.

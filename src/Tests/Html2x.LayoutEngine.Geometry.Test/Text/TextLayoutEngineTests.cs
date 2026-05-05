@@ -1,9 +1,7 @@
-using Html2x.LayoutEngine.Style;
-using Html2x.RenderModel;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Text;
 using Shouldly;
 using Html2x.Text;
 
@@ -104,6 +102,48 @@ public class TextLayoutEngineTests
     }
 
     [Fact]
+    public void Layout_InlineObject_WrapsAndUsesInlineObjectMetrics()
+    {
+        var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
+        var inlineObject = CreateInlineObject(width: 25f, height: 18f, baseline: 13f);
+        var input = BuildInput(
+            50f,
+            12f,
+            Run(1, "alpha"),
+            InlineObjectRun(2, inlineObject));
+
+        var result = engine.Layout(input);
+
+        result.Lines.Count.ShouldBe(2);
+        result.Lines[0].Runs.Single().Text.ShouldBe("alpha");
+        var objectLine = result.Lines[1];
+        objectLine.LineHeight.ShouldBe(18f);
+        objectLine.LineWidth.ShouldBe(25f);
+        var objectRun = objectLine.Runs.Single();
+        objectRun.Text.ShouldBeEmpty();
+        objectRun.Width.ShouldBe(25f);
+        objectRun.Ascent.ShouldBe(13f);
+        objectRun.Descent.ShouldBe(5f);
+        objectRun.InlineObject.ShouldBeSameAs(inlineObject);
+    }
+
+    [Fact]
+    public void Layout_WrappedRun_PreservesResolvedFontOnEachProducedRun()
+    {
+        var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
+        var font = new FontKey("Inter", FontWeight.W400, FontStyle.Normal);
+        var input = BuildInput(60f, 12f, Run(1, "alpha beta", font));
+
+        var result = engine.Layout(input);
+
+        var producedRuns = result.Lines.SelectMany(static line => line.Runs).ToList();
+        producedRuns.Select(static run => run.Text).ShouldBe(["alpha", "beta"]);
+        producedRuns.All(static run => run.ResolvedFont is not null).ShouldBeTrue();
+        producedRuns.Select(static run => run.ResolvedFont!.SourceId)
+            .ShouldAllBe(static sourceId => sourceId == "fallback://Inter/W400/Normal");
+    }
+
+    [Fact]
     public void Layout_NegativeWidth_Throws()
     {
         var engine = new TextLayoutEngine(new FakeTextMeasurer(10f, 9f, 3f));
@@ -188,6 +228,24 @@ public class TextLayoutEngineTests
             MarginRight: 0f);
     }
 
+    private static TextRunInput InlineObjectRun(int runId, InlineObjectLayout inlineObject)
+    {
+        var style = new ComputedStyle { FontSizePt = 12 };
+        return new TextRunInput(
+            runId,
+            new InlineBox(BoxRole.InlineBlock) { TextContent = string.Empty, Style = style },
+            string.Empty,
+            new FontKey("Default", FontWeight.W400, FontStyle.Normal),
+            12f,
+            style,
+            PaddingLeft: 0f,
+            PaddingRight: 0f,
+            MarginLeft: 0f,
+            MarginRight: 0f,
+            Kind: TextRunKind.InlineObject,
+            InlineObject: inlineObject);
+    }
+
     private static TextRunInput LineBreak(int runId)
     {
         var style = new ComputedStyle { FontSizePt = 12 };
@@ -203,6 +261,23 @@ public class TextLayoutEngineTests
             MarginLeft: 0f,
             MarginRight: 0f,
             Kind: TextRunKind.LineBreak);
+    }
+
+    private static InlineObjectLayout CreateInlineObject(float width, float height, float baseline)
+    {
+        var contentBox = new BlockBox(BoxRole.Block)
+        {
+            Style = new ComputedStyle()
+        };
+
+        return new InlineObjectLayout(
+            contentBox,
+            new TextLayoutResult([], TotalHeight: 0f, MaxLineWidth: 0f),
+            ContentWidth: width,
+            ContentHeight: height,
+            BorderBoxWidth: width,
+            BorderBoxHeight: height,
+            Baseline: baseline);
     }
 
     private static IEnumerable<string> Flatten(IReadOnlyList<FragmentSnapshot> fragments)

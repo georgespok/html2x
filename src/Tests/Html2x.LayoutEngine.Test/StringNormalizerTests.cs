@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Geometry.Box;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test;
@@ -34,11 +34,11 @@ public class StringNormalizerTests
 
     public static IEnumerable<object[]> CarryAcrossRunsCases()
     {
-        yield return new object[]
-        {
+        yield return
+        [
             new[] { "one ", " two", " three" },
             new[] { "one", " two", " three" },
             "one two three"
-        };
+        ];
     }
 }

@@ -1,58 +1,17 @@
 using System.Globalization;
 using AngleSharp.Css.Dom;
 using AngleSharp.Dom;
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Style.Dimensions;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Style.Models;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
 /// Maps raw CSS width/height declarations into the shared dimension contracts.
 /// </summary>
 internal sealed class DimensionStyleMapper(CssValueConverter converter)
 {
-    private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-
-    public RequestedDimension CreateRequestedDimension(IElement element, ICssStyleDeclaration styles)
-    {
-        ArgumentNullException.ThrowIfNull(element);
-        ArgumentNullException.ThrowIfNull(styles);
-
-        var (widthRaw, widthUnit) = ParseRawValue(styles.GetPropertyValue(HtmlCssConstants.CssProperties.Width));
-        var (heightRaw, heightUnit) = ParseRawValue(styles.GetPropertyValue(HtmlCssConstants.CssProperties.Height));
-
-        var chosenUnit = widthUnit != DimensionUnitEnum.Auto
-            ? widthUnit
-            : heightUnit;
-
-        return new RequestedDimension(
-            GetElementId(element),
-            widthRaw,
-            heightRaw,
-            chosenUnit,
-            element.GetAttribute(HtmlCssConstants.HtmlAttributes.Style));
-    }
-
-    public ResolvedDimension CreateResolvedDimension(
-        RequestedDimension requested,
-        float widthPt,
-        float heightPt,
-        bool percentageWidth,
-        bool percentageHeight,
-        int passCount,
-        string? fallback)
-    {
-        ArgumentNullException.ThrowIfNull(requested);
-        return new ResolvedDimension(
-            requested.ElementId,
-            new SizePt(widthPt, heightPt),
-            percentageWidth,
-            percentageHeight,
-            passCount,
-            fallback);
-    }
+    private readonly CssLengthDeclarationReader _lengthReader = new(converter);
 
     public void ApplyDimensions(
         ICssStyleDeclaration css,
@@ -131,7 +90,7 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         IElement element,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var rawValue = InlineStyleSource.GetValue(element, property) ?? css.GetPropertyValue(property);
+        var rawValue = _lengthReader.GetValue(css, element, property);
 
         if (string.IsNullOrWhiteSpace(rawValue))
         {
@@ -145,27 +104,14 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
             return null;
         }
 
-        var unsupportedUnit = CssLengthUnitClassifier.DetectUnsupportedUnit(trimmed);
-        if (unsupportedUnit != null)
+        if (!_lengthReader.TryParseLengthToken(
+            trimmed,
+            element,
+            property,
+            $"Unable to parse {property} as a supported length.",
+            diagnosticsSink,
+            out var points))
         {
-            StyleDiagnostics.EmitUnsupportedDeclaration(
-                diagnosticsSink,
-                element,
-                property,
-                trimmed,
-                $"Unsupported unit '{unsupportedUnit}' for {property}.");
-            return null;
-        }
-
-        if (!_converter.TryGetLengthPt(rawValue, out var points))
-        {
-            StyleDiagnostics.EmitIgnoredDeclaration(
-                diagnosticsSink,
-                element,
-                property,
-                trimmed,
-                null,
-                $"Unable to parse {property} as a supported length.");
             return null;
         }
 
@@ -184,42 +130,4 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         return points;
     }
 
-    private (float?, DimensionUnitEnum) ParseRawValue(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return (null, DimensionUnitEnum.Auto);
-        }
-
-        var trimmed = raw.Trim();
-
-        if (trimmed.EndsWith("%", StringComparison.OrdinalIgnoreCase))
-        {
-            return (TryParseFloat(trimmed[..^1]), DimensionUnitEnum.Percent);
-        }
-
-        if (_converter.TryGetLengthPt(trimmed, out var points))
-        {
-            // CssValueConverter normalizes px to pt already.
-            return (points, trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase)
-                ? DimensionUnitEnum.Px
-                : DimensionUnitEnum.Pt);
-        }
-
-        return (null, DimensionUnitEnum.Auto);
-    }
-
-    private static float? TryParseFloat(string raw)
-    {
-        return float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-            ? value
-            : null;
-    }
-
-    private static string GetElementId(IElement element)
-    {
-        return element.Id
-               ?? element.GetAttribute("data-html2x-id")
-               ?? element.TagName.ToLowerInvariant();
-    }
 }

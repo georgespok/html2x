@@ -1,4 +1,4 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Styles;
 using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Drawing;
@@ -84,12 +84,12 @@ internal sealed class BorderShapeDrawer
 
         if (isVertical)
         {
-            float midX = rect.Left + rect.Width / 2f;
+            var midX = rect.Left + rect.Width / 2f;
             canvas.DrawLine(midX, rect.Top, midX, rect.Bottom, paint);
         }
         else
         {
-            float midY = rect.Top + rect.Height / 2f;
+            var midY = rect.Top + rect.Height / 2f;
             canvas.DrawLine(rect.Left, midY, rect.Right, midY, paint);
         }
     }

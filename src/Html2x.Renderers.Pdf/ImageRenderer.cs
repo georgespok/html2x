@@ -1,7 +1,9 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
 using Html2x.Resources;
 using SkiaSharp;
 
@@ -12,10 +14,9 @@ namespace Html2x.Renderers.Pdf;
 /// </summary>
 internal sealed class ImageRenderer
 {
-    private readonly string _htmlDirectory;
+    private readonly string _resourceBaseDirectory;
     private readonly IDiagnosticsSink? _diagnosticsSink;
     private readonly long _maxImageSizeBytes;
-    private const string ImageRenderEvent = "image/render";
 
     public ImageRenderer(
         PdfRenderSettings settings,
@@ -23,7 +24,7 @@ internal sealed class ImageRenderer
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        _htmlDirectory = ImageResourceLoader.ResolveBaseDirectory(settings.HtmlDirectory);
+        _resourceBaseDirectory = ImageResourceLoader.ResolveBaseDirectory(settings.ResourceBaseDirectory);
         _maxImageSizeBytes = settings.MaxImageSizeBytes;
         _diagnosticsSink = diagnosticsSink;
     }
@@ -36,7 +37,7 @@ internal sealed class ImageRenderer
         var rect = command.ContentRect;
         var width = rect.Width;
         var height = rect.Height;
-        var status = ToRenderStatus(command);
+        var status = command.Status;
 
         if (width <= 0 || height <= 0)
         {
@@ -45,16 +46,16 @@ internal sealed class ImageRenderer
             return;
         }
 
-        if (status != ImageRenderStatus.Ok)
+        if (status != ImageLoadStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
             Record(command, status, width, height);
             return;
         }
 
-        var resource = ImageResourceLoader.Load(command.Src, _htmlDirectory, _maxImageSizeBytes);
-        status = ToRenderStatus(resource.Status);
-        if (resource.Bytes is null || status != ImageRenderStatus.Ok)
+        var resource = ImageResourceLoader.Load(command.Src, _resourceBaseDirectory, _maxImageSizeBytes);
+        status = resource.Status;
+        if (resource.Bytes is null || status != ImageLoadStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
             Record(command, status, width, height);
@@ -76,7 +77,7 @@ internal sealed class ImageRenderer
         }
 
         using var image = SKImage.FromBitmap(bitmap);
-        var dest = SkiaGeometryMapper.ToSKRect(rect);
+        var dest = SkiaGeometryMapper.ToSkRect(rect);
         canvas.DrawImage(image, dest);
     }
 
@@ -95,33 +96,33 @@ internal sealed class ImageRenderer
             IsAntialias = true
         };
 
-        canvas.DrawRect(SkiaGeometryMapper.ToSKRect(rect), paint);
+        canvas.DrawRect(SkiaGeometryMapper.ToSkRect(rect), paint);
     }
 
-    private void Record(ImagePaintCommand command, ImageRenderStatus status, float width, float height)
+    private void Record(ImagePaintCommand command, ImageLoadStatus status, float width, float height)
     {
-        var severity = status == ImageRenderStatus.Ok
+        var severity = status == ImageLoadStatus.Ok
             ? DiagnosticSeverity.Info
             : DiagnosticSeverity.Warning;
         var context = new DiagnosticContext(
             Selector: null,
-            ElementIdentity: "img",
+            ElementIdentity: ImageRenderDiagnosticNames.Context.ImageElement,
             StyleDeclaration: null,
             StructuralPath: $"image:{command.Src}",
             RawUserInput: command.Src);
 
         _diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/render",
-            Name: ImageRenderEvent,
+            Stage: ImageRenderDiagnosticNames.Stages.Render,
+            Name: ImageRenderDiagnosticNames.Events.Render,
             Severity: severity,
-            Message: status == ImageRenderStatus.Ok ? null : $"Image render status: {status}.",
+            Message: status == ImageLoadStatus.Ok ? null : $"Image render status: {status}.",
             Context: context,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("src", command.Src),
-                DiagnosticFields.Field("status", DiagnosticValue.FromEnum(status)),
-                DiagnosticFields.Field("renderedWidth", width),
-                DiagnosticFields.Field("renderedHeight", height),
-                DiagnosticFields.Field("borders", MapBorders(command.Style.Borders))),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Src, command.Src),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Status, DiagnosticValue.FromEnum(status)),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedWidth, width),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedHeight, height),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Borders, MapBorders(command.Style.Borders))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 
@@ -133,10 +134,10 @@ internal sealed class ImageRenderer
         }
 
         return DiagnosticObject.Create(
-            DiagnosticObject.Field("top", MapBorderSide(borders.Top)),
-            DiagnosticObject.Field("right", MapBorderSide(borders.Right)),
-            DiagnosticObject.Field("bottom", MapBorderSide(borders.Bottom)),
-            DiagnosticObject.Field("left", MapBorderSide(borders.Left)));
+            DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Top, MapBorderSide(borders.Top)),
+            DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Right, MapBorderSide(borders.Right)),
+            DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Bottom, MapBorderSide(borders.Bottom)),
+            DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Left, MapBorderSide(borders.Left)));
     }
 
     private static DiagnosticObject? MapBorderSide(BorderSide? side)
@@ -144,52 +145,11 @@ internal sealed class ImageRenderer
         return side is null
             ? null
             : DiagnosticObject.Create(
-                DiagnosticObject.Field("width", side.Width),
-                DiagnosticObject.Field("color", side.Color.ToHex()),
-                DiagnosticObject.Field("lineStyle", DiagnosticValue.FromEnum(side.LineStyle)));
+                DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Width, side.Width),
+                DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Color, side.Color.ToHex()),
+                DiagnosticObject.Field(
+                    ImageRenderDiagnosticNames.Fields.LineStyle,
+                    DiagnosticValue.FromEnum(side.LineStyle)));
     }
 
-    private static ImageRenderStatus ToRenderStatus(ImageResourceStatus status) =>
-        status switch
-        {
-            ImageResourceStatus.Ok => ImageRenderStatus.Ok,
-            ImageResourceStatus.Oversize => ImageRenderStatus.Oversize,
-            ImageResourceStatus.InvalidDataUri => ImageRenderStatus.InvalidDataUri,
-            ImageResourceStatus.DecodeFailed => ImageRenderStatus.DecodeFailed,
-            ImageResourceStatus.OutOfScope => ImageRenderStatus.OutOfScope,
-            _ => ImageRenderStatus.Missing
-        };
-
-    private static ImageRenderStatus ToRenderStatus(ImagePaintCommand command)
-    {
-        if (command.Status != ImageLoadStatus.Ok)
-        {
-            return ToRenderStatus(command.Status);
-        }
-
-        return command.IsOversize
-            ? ImageRenderStatus.Oversize
-            : command.IsMissing ? ImageRenderStatus.Missing : ImageRenderStatus.Ok;
-    }
-
-    private static ImageRenderStatus ToRenderStatus(ImageLoadStatus status) =>
-        status switch
-        {
-            ImageLoadStatus.Ok => ImageRenderStatus.Ok,
-            ImageLoadStatus.Oversize => ImageRenderStatus.Oversize,
-            ImageLoadStatus.InvalidDataUri => ImageRenderStatus.InvalidDataUri,
-            ImageLoadStatus.DecodeFailed => ImageRenderStatus.DecodeFailed,
-            ImageLoadStatus.OutOfScope => ImageRenderStatus.OutOfScope,
-            _ => ImageRenderStatus.Missing
-        };
-
-    private enum ImageRenderStatus
-    {
-        Ok,
-        Missing,
-        Oversize,
-        InvalidDataUri,
-        DecodeFailed,
-        OutOfScope
-    }
 }

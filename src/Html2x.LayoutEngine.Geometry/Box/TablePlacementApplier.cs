@@ -1,14 +1,21 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
 /// Applies table layout results back to table, row, and cell boxes before fragment projection.
 /// </summary>
-internal sealed class TablePlacementApplier
+internal sealed class TablePlacementApplier(LayoutBoxStateWriter stateWriter)
 {
+    private readonly LayoutBoxStateWriter _stateWriter =
+        stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
+
+    public TablePlacementApplier()
+        : this(new LayoutBoxStateWriter())
+    {
+    }
+
     public TableBox ApplySupported(
         TableBox table,
         TableLayoutResult result,
@@ -21,13 +28,9 @@ internal sealed class TablePlacementApplier
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(layoutChildBlocks);
 
-        table.Margin = margin;
         var padding = table.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(table.Style.Borders).Safe();
-        table.Padding = padding;
-        table.TextAlign = table.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        table.DerivedColumnCount = result.DerivedColumnCount;
-        var tableGeometry = BoxGeometryFactory.FromBorderBoxWithContentHeight(
+        var tableGeometry = UsedGeometryCalculator.FromBorderBoxWithContentHeight(
             x,
             y,
             result.ResolvedWidth,
@@ -35,9 +38,14 @@ internal sealed class TablePlacementApplier
             padding,
             border,
             markerOffset: table.MarkerOffset);
-        table.ApplyLayoutGeometry(tableGeometry);
+        _stateWriter.ApplyTableLayout(
+            table,
+            margin,
+            padding,
+            tableGeometry,
+            result.DerivedColumnCount);
 
-        var tableContent = BoxGeometryFactory.ResolveContentFlowArea(tableGeometry);
+        var tableContent = UsedGeometryCalculator.ResolveContentFlowArea(tableGeometry);
         foreach (var rowResult in result.Rows)
         {
             ApplyTableRowLayout(rowResult, tableContent.X, tableContent.Y, layoutChildBlocks);
@@ -46,7 +54,7 @@ internal sealed class TablePlacementApplier
         return table;
     }
 
-    public static TableBox ApplyUnsupportedPlaceholder(
+    public TableBox ApplyUnsupportedPlaceholder(
         TableBox sourceTable,
         float x,
         float y,
@@ -55,19 +63,17 @@ internal sealed class TablePlacementApplier
     {
         ArgumentNullException.ThrowIfNull(sourceTable);
 
-        sourceTable.Margin = margin;
-        sourceTable.Padding = sourceTable.Style.Padding.Safe();
-        sourceTable.TextAlign = sourceTable.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        sourceTable.DerivedColumnCount = 0;
-        sourceTable.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
-            x,
-            y,
-            width,
-            0f,
-            sourceTable.Style.Padding.Safe(),
-            Spacing.FromBorderEdges(sourceTable.Style.Borders).Safe(),
-            markerOffset: sourceTable.MarkerOffset));
-        sourceTable.Children.Clear();
+        _stateWriter.ApplyUnsupportedTablePlaceholder(
+            sourceTable,
+            margin,
+            UsedGeometryCalculator.FromBorderBox(
+                x,
+                y,
+                width,
+                0f,
+                sourceTable.Style.Padding.Safe(),
+                Spacing.FromBorderEdges(sourceTable.Style.Borders).Safe(),
+                markerOffset: sourceTable.MarkerOffset));
         return sourceTable;
     }
 
@@ -78,11 +84,10 @@ internal sealed class TablePlacementApplier
         Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
     {
         var rowBlock = rowResult.SourceRow;
-        rowBlock.Margin = rowBlock.Style.Margin.Safe();
-        rowBlock.Padding = rowBlock.Style.Padding.Safe();
-        rowBlock.RowIndex = rowResult.RowIndex;
-        rowBlock.TextAlign = rowBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        rowBlock.ApplyLayoutGeometry(GeometryTranslator.Translate(rowResult.UsedGeometry, tableX, tableY));
+        _stateWriter.ApplyTableRowLayout(
+            rowBlock,
+            rowResult.RowIndex,
+            GeometryTranslator.Translate(rowResult.UsedGeometry, tableX, tableY));
 
         foreach (var placement in rowResult.Cells)
         {
@@ -97,12 +102,11 @@ internal sealed class TablePlacementApplier
         Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
     {
         var cellBlock = placement.SourceCell;
-        cellBlock.Margin = cellBlock.Style.Margin.Safe();
-        cellBlock.Padding = cellBlock.Style.Padding.Safe();
-        cellBlock.ColumnIndex = placement.ColumnIndex;
-        cellBlock.IsHeader = placement.IsHeader;
-        cellBlock.TextAlign = cellBlock.Style.TextAlign ?? HtmlCssConstants.Defaults.TextAlign;
-        cellBlock.ApplyLayoutGeometry(GeometryTranslator.Translate(placement.UsedGeometry, tableX, tableY));
+        _stateWriter.ApplyTableCellLayout(
+            cellBlock,
+            placement.ColumnIndex,
+            placement.IsHeader,
+            GeometryTranslator.Translate(placement.UsedGeometry, tableX, tableY));
 
         LayoutTableCellContent(cellBlock, layoutChildBlocks);
     }
@@ -113,7 +117,7 @@ internal sealed class TablePlacementApplier
     {
         var geometry = cell.UsedGeometry ?? throw new InvalidOperationException(
             "Table cell content layout requires UsedGeometry to be applied before child placement.");
-        var contentArea = BoxGeometryFactory.ResolveContentFlowArea(geometry);
+        var contentArea = UsedGeometryCalculator.ResolveContentFlowArea(geometry);
         var contentX = contentArea.X;
         var contentY = contentArea.Y;
         var contentWidth = contentArea.Width;

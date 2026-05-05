@@ -1,7 +1,6 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Test;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.RenderModel.Fragments;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;

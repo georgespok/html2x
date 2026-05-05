@@ -1,6 +1,9 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Pagination;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Pagination.Test;

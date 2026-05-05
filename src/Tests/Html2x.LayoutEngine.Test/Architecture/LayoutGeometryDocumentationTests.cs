@@ -1,3 +1,11 @@
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Fragments;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Style;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Geometry;
 using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
@@ -10,38 +18,41 @@ public sealed class LayoutGeometryDocumentationTests
         ArchitectureDocument.Load("docs", "architecture", "pipeline.md")
             .ShouldMentionTopicsInSection(
                 "Composition",
-                "Html2x.LayoutEngine.Contracts",
-                "Html2x.LayoutEngine.Style",
-                "Html2x.LayoutEngine.Geometry",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.Resources");
+                AssemblyName<StyleNode>(),
+                AssemblyName<StyleTreeBuilder>(),
+                AssemblyName<BlockBox>(),
+                AssemblyName<FragmentBuilder>(),
+                AssemblyName<LayoutPaginator>(),
+                ResourcesAssemblyName);
         ArchitectureDocument.Load("docs", "architecture", "pipeline.md")
-            .ShouldMentionTopicsInSection("Fragment Projection", "PublishedLayoutTree", "FragmentTree");
+            .ShouldMentionTopicsInSection("Fragment Projection", nameof(PublishedLayoutTree), nameof(FragmentTree));
         ArchitectureDocument.Load("docs", "architecture", "stage-ownership.md")
             .ShouldMentionTopicsInSection(
                 "Ownership Matrix",
-                "Html2x.LayoutEngine.Contracts",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Pagination");
+                AssemblyName<StyleNode>(),
+                AssemblyName<FragmentBuilder>(),
+                AssemblyName<LayoutPaginator>());
         ArchitectureDocument.Load("docs", "architecture", "stage-ownership.md")
             .ShouldMentionTopicsInSection(
                 "Contracts Stage",
-                "Html2x.LayoutEngine.Geometry.Models",
-                "Html2x.LayoutEngine.Contracts.Published");
+                NamespaceOf<BlockBox>(),
+                NamespaceOf<PublishedLayoutTree>());
         ArchitectureDocument.Load("docs", "architecture", "geometry.md")
             .ShouldMentionTopicsInSection(
                 "Helper Ownership",
-                "Html2x.LayoutEngine.Contracts",
-                "RectPt",
-                "PointPt",
-                "UsedGeometry",
-                "PageContentArea");
+                AssemblyName<StyleNode>(),
+                nameof(RectPt),
+                nameof(PointPt),
+                nameof(UsedGeometry),
+                nameof(PageContentArea));
         ArchitectureDocument.Load("docs", "architecture", "geometry.md")
             .ShouldMentionTopicsInSection(
                 "Block Flow Locality",
-                "BlockFlowLayoutExecutor",
-                "BlockFlowMeasurementExecutor");
+                nameof(BlockFlowLayoutExecutor),
+                nameof(BlockFlowMeasurementExecutor),
+                nameof(BlockLayoutRuleSet),
+                nameof(LayoutBoxStateWriter),
+                nameof(PublishedLayoutWriter));
     }
 
     [Fact]
@@ -50,22 +61,22 @@ public sealed class LayoutGeometryDocumentationTests
         ArchitectureDocument.Load("docs", "development", "testing.md")
             .ShouldMentionTopicsInSection(
                 "Test Projects",
-                "Html2x.LayoutEngine.Style.Test",
-                "Html2x.LayoutEngine.Fragments.Test",
-                "Html2x.LayoutEngine.Pagination.Test");
+                TestAssemblyNameFor<StyleTreeBuilder>(),
+                TestAssemblyNameFor<FragmentBuilder>(),
+                TestAssemblyNameFor<LayoutPaginator>());
         ArchitectureDocument.Load("docs", "development", "testing.md")
             .ShouldMentionTopicsInSection(
                 "Ownership Rules",
                 "Geometry tests must not reference " + ParserPackageName(),
-                "PublishedLayoutTree",
-                "PaginationResult");
+                nameof(PublishedLayoutTree),
+                nameof(PaginationResult));
         ArchitectureDocument.Load("docs", "internals", "pagination.md")
             .ShouldMentionTopicsInSection(
                 "Module Seam",
-                "LayoutPaginator",
-                "PaginationOptions",
-                "PaginationResult",
-                "HtmlLayout");
+                nameof(LayoutPaginator),
+                nameof(PaginationOptions),
+                nameof(PaginationResult),
+                nameof(HtmlLayout));
         ArchitectureDocument.Load("docs", "reference", "diagnostics-events.md")
             .ShouldMentionTopicsInSection(
                 "Pagination",

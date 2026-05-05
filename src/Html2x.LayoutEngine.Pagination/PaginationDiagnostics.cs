@@ -4,12 +4,6 @@ namespace Html2x.LayoutEngine.Pagination;
 
 internal static class PaginationDiagnostics
 {
-    private const string PageCreatedEvent = "layout/pagination/page-created";
-    private const string BlockMovedNextPageEvent = "layout/pagination/block-moved-next-page";
-    private const string BlockPlacedEvent = "layout/pagination/block-placed";
-    private const string OversizedBlockEvent = "layout/pagination/oversized-block";
-    private const string EmptyDocumentEvent = "layout/pagination/empty-document";
-
     public static void EmitPageCreated(
         IDiagnosticsSink? diagnosticsSink,
         int pageNumber,
@@ -17,8 +11,12 @@ internal static class PaginationDiagnostics
     {
         Emit(
             diagnosticsSink,
-            PageCreatedEvent,
-            new PaginationDiagnostic(PageCreatedEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, null), pageNumber)
+            PaginationDiagnosticNames.Events.PageCreated,
+            new PaginationDiagnostic(
+                PaginationDiagnosticNames.Events.PageCreated,
+                DiagnosticSeverity.Info,
+                CreateContext(pageNumber, null),
+                pageNumber)
             {
                 Reason = reason
             });
@@ -34,8 +32,12 @@ internal static class PaginationDiagnostics
     {
         Emit(
             diagnosticsSink,
-            BlockMovedNextPageEvent,
-            new PaginationDiagnostic(BlockMovedNextPageEvent, DiagnosticSeverity.Info, CreateContext(toPage, fragmentId), toPage)
+            PaginationDiagnosticNames.Events.BlockMovedNextPage,
+            new PaginationDiagnostic(
+                PaginationDiagnosticNames.Events.BlockMovedNextPage,
+                DiagnosticSeverity.Info,
+                CreateContext(toPage, fragmentId),
+                toPage)
             {
                 FromPage = fromPage,
                 ToPage = toPage,
@@ -56,8 +58,12 @@ internal static class PaginationDiagnostics
     {
         Emit(
             diagnosticsSink,
-            BlockPlacedEvent,
-            new PaginationDiagnostic(BlockPlacedEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, fragmentId), pageNumber)
+            PaginationDiagnosticNames.Events.BlockPlaced,
+            new PaginationDiagnostic(
+                PaginationDiagnosticNames.Events.BlockPlaced,
+                DiagnosticSeverity.Info,
+                CreateContext(pageNumber, fragmentId),
+                pageNumber)
             {
                 FragmentId = fragmentId,
                 LocalY = localY,
@@ -76,8 +82,12 @@ internal static class PaginationDiagnostics
     {
         Emit(
             diagnosticsSink,
-            OversizedBlockEvent,
-            new PaginationDiagnostic(OversizedBlockEvent, DiagnosticSeverity.Warning, CreateContext(pageNumber, fragmentId), pageNumber)
+            PaginationDiagnosticNames.Events.OversizedBlock,
+            new PaginationDiagnostic(
+                PaginationDiagnosticNames.Events.OversizedBlock,
+                DiagnosticSeverity.Warning,
+                CreateContext(pageNumber, fragmentId),
+                pageNumber)
             {
                 FragmentId = fragmentId,
                 BlockHeight = blockHeight,
@@ -91,8 +101,12 @@ internal static class PaginationDiagnostics
     {
         Emit(
             diagnosticsSink,
-            EmptyDocumentEvent,
-            new PaginationDiagnostic(EmptyDocumentEvent, DiagnosticSeverity.Info, CreateContext(pageNumber, null), pageNumber));
+            PaginationDiagnosticNames.Events.EmptyDocument,
+            new PaginationDiagnostic(
+                PaginationDiagnosticNames.Events.EmptyDocument,
+                DiagnosticSeverity.Info,
+                CreateContext(pageNumber, null),
+                pageNumber));
     }
 
     private static void Emit(
@@ -101,24 +115,32 @@ internal static class PaginationDiagnostics
         PaginationDiagnostic payload)
     {
         diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: "stage/pagination",
+            Stage: PaginationDiagnosticNames.Stages.Pagination,
             Name: eventName,
             Severity: payload.Severity,
             Message: payload.Reason,
             Context: payload.Context,
             Fields: DiagnosticFields.Create(
-                DiagnosticFields.Field("eventName", payload.EventName),
-                DiagnosticFields.Field("pageNumber", payload.PageNumber),
-                DiagnosticFields.Field("fragmentId", FromNullable(payload.FragmentId)),
-                DiagnosticFields.Field("fromPage", FromNullable(payload.FromPage)),
-                DiagnosticFields.Field("toPage", FromNullable(payload.ToPage)),
-                DiagnosticFields.Field("localY", FromNullable(payload.LocalY)),
-                DiagnosticFields.Field("remainingSpace", FromNullable(payload.RemainingSpace)),
-                DiagnosticFields.Field("remainingSpaceBefore", FromNullable(payload.RemainingSpaceBefore)),
-                DiagnosticFields.Field("remainingSpaceAfter", FromNullable(payload.RemainingSpaceAfter)),
-                DiagnosticFields.Field("blockHeight", FromNullable(payload.BlockHeight)),
-                DiagnosticFields.Field("pageContentHeight", FromNullable(payload.PageContentHeight)),
-                DiagnosticFields.Field("reason", payload.Reason is null ? null : DiagnosticValue.From(payload.Reason))),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.EventName, payload.EventName),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.PageNumber, payload.PageNumber),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.FragmentId, FromNullable(payload.FragmentId)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.FromPage, FromNullable(payload.FromPage)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.ToPage, FromNullable(payload.ToPage)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.LocalY, FromNullable(payload.LocalY)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.RemainingSpace, FromNullable(payload.RemainingSpace)),
+                DiagnosticFields.Field(
+                    PaginationDiagnosticNames.Fields.RemainingSpaceBefore,
+                    FromNullable(payload.RemainingSpaceBefore)),
+                DiagnosticFields.Field(
+                    PaginationDiagnosticNames.Fields.RemainingSpaceAfter,
+                    FromNullable(payload.RemainingSpaceAfter)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.BlockHeight, FromNullable(payload.BlockHeight)),
+                DiagnosticFields.Field(
+                    PaginationDiagnosticNames.Fields.PageContentHeight,
+                    FromNullable(payload.PageContentHeight)),
+                DiagnosticFields.Field(
+                    PaginationDiagnosticNames.Fields.Reason,
+                    payload.Reason is null ? null : DiagnosticValue.From(payload.Reason))),
             Timestamp: DateTimeOffset.UtcNow));
     }
 
@@ -160,4 +182,43 @@ internal static class PaginationDiagnostics
         public string? Reason { get; init; }
     }
 
+}
+
+internal static class PaginationDiagnosticNames
+{
+    public static class Stages
+    {
+        public const string Pagination = "stage/pagination";
+    }
+
+    public static class Events
+    {
+        public const string PageCreated = "layout/pagination/page-created";
+        public const string BlockMovedNextPage = "layout/pagination/block-moved-next-page";
+        public const string BlockPlaced = "layout/pagination/block-placed";
+        public const string OversizedBlock = "layout/pagination/oversized-block";
+        public const string EmptyDocument = "layout/pagination/empty-document";
+    }
+
+    public static class Fields
+    {
+        public const string EventName = "eventName";
+        public const string PageNumber = "pageNumber";
+        public const string FragmentId = "fragmentId";
+        public const string FromPage = "fromPage";
+        public const string ToPage = "toPage";
+        public const string LocalY = "localY";
+        public const string RemainingSpace = "remainingSpace";
+        public const string RemainingSpaceBefore = "remainingSpaceBefore";
+        public const string RemainingSpaceAfter = "remainingSpaceAfter";
+        public const string BlockHeight = "blockHeight";
+        public const string PageContentHeight = "pageContentHeight";
+        public const string Reason = "reason";
+    }
+
+    public static class Reasons
+    {
+        public const string InitialPage = "InitialPage";
+        public const string Overflow = "Overflow";
+    }
 }

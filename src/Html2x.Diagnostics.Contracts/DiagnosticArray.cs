@@ -17,7 +17,7 @@ public sealed record DiagnosticArray : DiagnosticValue, IReadOnlyList<Diagnostic
 
     public DiagnosticValue? this[int index] => _values[index];
 
-    public static DiagnosticArray Empty { get; } = new(Array.Empty<DiagnosticValue?>());
+    public static DiagnosticArray Empty { get; } = new([]);
 
     public static DiagnosticArray Create(params DiagnosticValue?[] values) => new(values);
 

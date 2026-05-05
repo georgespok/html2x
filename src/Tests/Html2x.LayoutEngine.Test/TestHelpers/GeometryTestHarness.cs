@@ -1,17 +1,16 @@
+using System.Globalization;
 using System.Text;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box;
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
-using Moq;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.TestHelpers;
@@ -31,7 +30,6 @@ internal static class GeometryTestHarness
         var textMeasurer = CreateTextMeasurer();
         var imageMetadataResolver = new NoopImageMetadataResolver();
         var styleTreeBuilder = new StyleTreeBuilder();
-        var boxBuilder = new BoxTreeBuilder(textMeasurer);
         var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
         var fragmentBuilder = new FragmentBuilder();
 
@@ -40,10 +38,9 @@ internal static class GeometryTestHarness
         {
             PageSize = options.PageSize,
             ImageMetadataResolver = imageMetadataResolver,
-            HtmlDirectory = Directory.GetCurrentDirectory(),
+            ResourceBaseDirectory = Directory.GetCurrentDirectory(),
             MaxImageSizeBytes = 10 * 1024 * 1024
         };
-        var boxTree = boxBuilder.Build(styleTree, geometryRequest, diagnosticsSink);
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
             geometryRequest,
@@ -60,7 +57,6 @@ internal static class GeometryTestHarness
         var snapshot = GeometrySnapshotMapper.From(publishedLayout, pagination);
 
         return new GeometryPipelineResult(
-            boxTree,
             publishedLayout,
             fragments,
             pagination.Layout,
@@ -114,14 +110,7 @@ internal static class GeometryTestHarness
 
     public static ITextMeasurer CreateTextMeasurer()
     {
-        var textMeasurer = new Mock<ITextMeasurer>();
-        textMeasurer.Setup(x => x.Measure(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns((FontKey font, float _, string _) => TextMeasurement.CreateFallback(font, 10f, 9f, 3f));
-        textMeasurer.Setup(x => x.MeasureWidth(It.IsAny<FontKey>(), It.IsAny<float>(), It.IsAny<string>()))
-            .Returns(10f);
-        textMeasurer.Setup(x => x.GetMetrics(It.IsAny<FontKey>(), It.IsAny<float>()))
-            .Returns((9f, 3f));
-        return textMeasurer.Object;
+        return new ConstantTextMeasurer(10f, 9f, 3f);
     }
 
     private static void AppendBox(StringBuilder builder, BoxGeometrySnapshot box, int depth)
@@ -232,33 +221,17 @@ internal static class GeometryTestHarness
 
     private static string FormatFloat(float value)
     {
-        return value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        return value.ToString("0.##", CultureInfo.InvariantCulture);
     }
 }
 
 internal sealed record GeometryPipelineResult(
-    BoxTree BoxTree,
     PublishedLayoutTree PublishedLayout,
     FragmentTree Fragments,
     HtmlLayout Layout,
     PaginationResult Pagination,
     GeometrySnapshot Snapshot,
     IReadOnlyList<DiagnosticRecord> Diagnostics);
-
-internal sealed class ReferenceEqualityComparer : IEqualityComparer<BlockBox>
-{
-    public static ReferenceEqualityComparer Instance { get; } = new();
-
-    public bool Equals(BlockBox? x, BlockBox? y)
-    {
-        return ReferenceEquals(x, y);
-    }
-
-    public int GetHashCode(BlockBox obj)
-    {
-        return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
-    }
-}
 
 internal sealed class HarnessDiagnosticsSink : IDiagnosticsSink
 {

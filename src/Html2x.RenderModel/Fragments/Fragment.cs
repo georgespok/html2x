@@ -1,4 +1,8 @@
-namespace Html2x.RenderModel;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Base renderable fragment carrying page geometry, paint metadata, and validation at immutable boundaries.
@@ -6,11 +10,6 @@ namespace Html2x.RenderModel;
 public abstract class Fragment
 {
     private readonly RectPt _rect;
-    private readonly VisualStyle _style = new();
-
-    protected Fragment()
-    {
-    }
 
     public int FragmentId { get; init; }
 
@@ -30,10 +29,6 @@ public abstract class Fragment
 
     public int ZOrder { get; init; } // resolved stacking/z-index
 
-    public VisualStyle Style
-    {
-        get => _style;
-        init => _style = value ?? new VisualStyle();
-    } // minimal style needed to paint this box
+    public VisualStyle Style { get; init; } = new(); // minimal style needed to paint this box
 
 }

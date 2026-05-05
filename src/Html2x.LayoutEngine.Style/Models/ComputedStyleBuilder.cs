@@ -1,7 +1,7 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Models;
 
 /// <summary>
 /// Accumulates parsed CSS values before creating an immutable computed style snapshot.

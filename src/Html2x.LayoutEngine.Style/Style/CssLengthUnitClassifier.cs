@@ -1,4 +1,4 @@
-namespace Html2x.LayoutEngine.Style;
+namespace Html2x.LayoutEngine.Style.Style;
 
 internal static class CssLengthUnitClassifier
 {
@@ -22,9 +22,9 @@ internal static class CssLengthUnitClassifier
             return null;
         }
 
-        if (trimmed.EndsWith("%", StringComparison.Ordinal))
+        if (trimmed.EndsWith(HtmlCssConstants.CssUnits.Percent, StringComparison.Ordinal))
         {
-            return "%";
+            return HtmlCssConstants.CssUnits.Percent;
         }
 
         if (trimmed.Length < 3)
@@ -52,7 +52,7 @@ internal static class CssLengthUnitClassifier
 
     private static bool HasSupportedUnit(string trimmed)
     {
-        return trimmed.EndsWith("px", StringComparison.OrdinalIgnoreCase) ||
-               trimmed.EndsWith("pt", StringComparison.OrdinalIgnoreCase);
+        return trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase) ||
+               trimmed.EndsWith(HtmlCssConstants.CssUnits.Pt, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1,5 +1,4 @@
 using Html2x.Text;
-using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Test;
 

@@ -1,4 +1,4 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Styles;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
@@ -117,12 +117,12 @@ public static class PdfWordParser
         {
             var colorString = color.ToString();
             if (colorString?.StartsWith("RGB:") != true)
-        {
-            return DefaultBlackColor;
-        }
+            {
+                return DefaultBlackColor;
+            }
 
-        return ParseRgbString(colorString);
-    }
+            return ParseRgbString(colorString);
+        }
         catch
         {
             return DefaultBlackColor;

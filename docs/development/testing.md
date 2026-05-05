@@ -39,6 +39,12 @@ layout geometry or published layout facts. Geometry tests must not reference Ang
 Use parser-free builders with `StyledElementFacts` and `StyleContentNode` when
 constructing `StyleTree` input.
 
+Geometry redesign tests should prefer observable seams: `LayoutGeometryBuilder`,
+`PublishedLayoutTree`, geometry snapshots, and fragment output. Use architecture
+tests to pin ownership rules such as `StyleTreeBoxProjector` owning style-to-box
+projection, `LayoutBoxStateWriter` owning mutable writes, block layout rules not
+publishing directly, and downstream modules avoiding mutable box types.
+
 Geometry tests must not add parser references just because contracts moved to
 `Html2x.LayoutEngine.Contracts`. Use contract style input for geometry
 algorithms and reserve parser-backed traversal for Style.Test.
@@ -207,16 +213,17 @@ If a snapshot changes intentionally:
 - Explain the behavior change in the commit or PR summary.
 - Update nearby tests when the change crosses layers.
 
-## Commands
+## Focused Commands
+
+Use [Getting Started](../getting-started.md) for full restore, build, and test
+commands. After a successful build, use these commands to scope verification:
 
 ```powershell
-dotnet build src\Html2x.sln -c Release --no-restore
 dotnet test src\Tests\Html2x.LayoutEngine.Style.Test\Html2x.LayoutEngine.Style.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Geometry.Test\Html2x.LayoutEngine.Geometry.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Fragments.Test\Html2x.LayoutEngine.Fragments.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Pagination.Test\Html2x.LayoutEngine.Pagination.Test.csproj -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build
-dotnet test src\Html2x.sln -c Release --no-build
 dotnet test src\Tests\Html2x.LayoutEngine.Test\Html2x.LayoutEngine.Test.csproj -c Release --no-build --filter FullyQualifiedName~Architecture
 dotnet test src\Html2x.sln -c Release --no-build --filter Category=Integration
 ```

@@ -1,6 +1,7 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Text;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
@@ -8,7 +9,7 @@ namespace Html2x.LayoutEngine.Geometry.Test.Text;
 /// <summary>
 /// Verifies inline object placement publishes geometry and nested inline layout.
 /// </summary>
-public sealed class InlineObjectPlacementBuilderTests
+public sealed class AtomicInlineObjectPlacementTests
 {
     [Fact]
     public void Place_InlineObject_AppliesGeometryAndNestedInlineLayoutToContentBox()
@@ -34,20 +35,22 @@ public sealed class InlineObjectPlacementBuilderTests
             Baseline: 7f);
         BlockBox? capturedBlock = null;
         TextLayoutResult? capturedLayout = null;
-        float capturedLeft = 0f;
-        float capturedTop = 0f;
-        float capturedWidth = 0f;
+        var capturedLeft = 0f;
+        var capturedTop = 0f;
+        var capturedWidth = 0f;
         string? capturedAlign = null;
-        var builder = new InlineObjectPlacementBuilder((block, layout, left, top, width, align) =>
-        {
-            capturedBlock = block;
-            capturedLayout = layout;
-            capturedLeft = left;
-            capturedTop = top;
-            capturedWidth = width;
-            capturedAlign = align;
-            return new InlineFlowSegmentLayout([], top, 0f);
-        });
+        var builder = new AtomicInlineObjectPlacement(
+            (block, layout, left, top, width, align) =>
+            {
+                capturedBlock = block;
+                capturedLayout = layout;
+                capturedLeft = left;
+                capturedTop = top;
+                capturedWidth = width;
+                capturedAlign = align;
+                return new InlineFlowSegmentLayout([], top, 0f);
+            },
+            new LayoutBoxStateWriter());
 
         var rect = builder.Place(inlineObject, left: 30f, baselineY: 50f);
 

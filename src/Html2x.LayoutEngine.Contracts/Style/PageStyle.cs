@@ -1,4 +1,4 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Contracts.Style;
 

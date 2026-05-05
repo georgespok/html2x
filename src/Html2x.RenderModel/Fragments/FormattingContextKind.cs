@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Fragments;
 
 
 public enum FormattingContextKind

@@ -1,7 +1,10 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.RenderModel;
-using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -15,7 +18,7 @@ public class SkiaDiagnosticsTests
         var sink = new RecordingDiagnosticsSink();
         var layout = CreateLayoutWithMissingImage();
         var renderer = new PdfRenderer();
-        var options = new PdfRenderSettings { HtmlDirectory = "." };
+        var options = new PdfRenderSettings { ResourceBaseDirectory = "." };
 
         var pdf = await renderer.RenderAsync(layout, options, diagnosticsSink: sink);
 
@@ -40,7 +43,7 @@ public class SkiaDiagnosticsTests
             {
                 Src = "missing.png",
                 IntrinsicSizePx = new SizePx(50, 40),
-                IsMissing = true,
+                Status = ImageLoadStatus.Missing,
                 Rect = new RectPt(20, 30, 50, 40),
                 ContentRect = new RectPt(20, 30, 50, 40),
                 Style = new VisualStyle()

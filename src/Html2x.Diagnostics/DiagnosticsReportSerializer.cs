@@ -89,7 +89,7 @@ public static class DiagnosticsReportSerializer
 
         public DateTimeOffset EndTime { get; init; }
 
-        public IReadOnlyList<DiagnosticsRecordEnvelope> Records { get; init; } = Array.Empty<DiagnosticsRecordEnvelope>();
+        public IReadOnlyList<DiagnosticsRecordEnvelope> Records { get; init; } = [];
     }
 
     private sealed class DiagnosticsRecordEnvelope

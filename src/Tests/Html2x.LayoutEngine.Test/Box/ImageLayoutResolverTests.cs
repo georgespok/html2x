@@ -1,8 +1,8 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Box;
@@ -72,11 +72,34 @@ public sealed class ImageLayoutResolverTests
         result.TotalHeight.ShouldBe(45.5f, 0.01f);
     }
 
-    private static ImageLayoutResolver CreateResolver(SizePx intrinsicSize)
+    [Theory]
+    [InlineData(ImageLoadStatus.Missing, true, false)]
+    [InlineData(ImageLoadStatus.Oversize, false, true)]
+    [InlineData(ImageLoadStatus.InvalidDataUri, true, false)]
+    [InlineData(ImageLoadStatus.DecodeFailed, true, false)]
+    [InlineData(ImageLoadStatus.OutOfScope, true, false)]
+    public void Resolve_MetadataStatus_CarriesCanonicalStatus(
+        ImageLoadStatus status,
+        bool expectedMissing,
+        bool expectedOversize)
+    {
+        var resolver = CreateResolver(new SizePx(100d, 50d), status);
+        var image = CreateImage(new ComputedStyle());
+
+        var result = resolver.Resolve(image, availableWidth: 500f);
+
+        result.Status.ShouldBe(status);
+        ImageLoadStatusFacts.IsMissing(result.Status).ShouldBe(expectedMissing);
+        ImageLoadStatusFacts.IsOversize(result.Status).ShouldBe(expectedOversize);
+    }
+
+    private static ImageLayoutResolver CreateResolver(
+        SizePx intrinsicSize,
+        ImageLoadStatus status = ImageLoadStatus.Ok)
     {
         return new ImageLayoutResolver(new LayoutGeometryRequest
         {
-            ImageMetadataResolver = new FixedImageMetadataResolver(intrinsicSize)
+            ImageMetadataResolver = new FixedImageMetadataResolver(intrinsicSize, status)
         });
     }
 
@@ -89,14 +112,16 @@ public sealed class ImageLayoutResolverTests
         };
     }
 
-    private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
+    private sealed class FixedImageMetadataResolver(
+        SizePx intrinsicSize,
+        ImageLoadStatus status = ImageLoadStatus.Ok) : IImageMetadataResolver
     {
         public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
         {
             return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageMetadataStatus.Ok,
+                Status = status,
                 IntrinsicSizePx = intrinsicSize
             };
         }

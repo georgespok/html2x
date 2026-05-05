@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,26 +8,26 @@ namespace Html2x.LayoutEngine.Test.Architecture;
 
 internal sealed class ArchitectureSemanticProject
 {
-    private readonly CSharpCompilation compilation;
+    private readonly CSharpCompilation _compilation;
 
     private ArchitectureSemanticProject(CSharpCompilation compilation)
     {
-        this.compilation = compilation;
+        _compilation = compilation;
     }
 
     public static ArchitectureSemanticProject Load(params string[] projectPathSegments)
     {
         var projectPath = ArchitecturePaths.PathFromRoot(projectPathSegments);
-        var projectDirectory = System.IO.Path.GetDirectoryName(projectPath)
+        var projectDirectory = Path.GetDirectoryName(projectPath)
             ?? throw new InvalidOperationException($"Project path has no directory: {projectPath}");
         var syntaxTrees = Directory.GetFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !ArchitecturePaths.IsBuildOutputPath(System.IO.Path.GetRelativePath(projectDirectory, file)))
+            .Where(file => !ArchitecturePaths.IsBuildOutputPath(Path.GetRelativePath(projectDirectory, file)))
             .Select(file => CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file))
             .ToArray();
-        var references = MetadataReferences(projectDirectory);
+        var references = MetadataReferences();
 
         var compilation = CSharpCompilation.Create(
-            System.IO.Path.GetFileNameWithoutExtension(projectPath),
+            Path.GetFileNameWithoutExtension(projectPath),
             syntaxTrees,
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
@@ -77,9 +75,9 @@ internal sealed class ArchitectureSemanticProject
     {
         var references = new List<SymbolReference>();
 
-        foreach (var tree in compilation.SyntaxTrees)
+        foreach (var tree in _compilation.SyntaxTrees)
         {
-            var model = compilation.GetSemanticModel(tree);
+            var model = _compilation.GetSemanticModel(tree);
             var root = tree.GetRoot();
 
             foreach (var node in root.DescendantNodes())
@@ -114,10 +112,10 @@ internal sealed class ArchitectureSemanticProject
 
     private IReadOnlyList<INamedTypeSymbol> DeclaredTypeSymbols()
     {
-        return compilation.SyntaxTrees
+        return _compilation.SyntaxTrees
             .SelectMany(tree =>
             {
-                var model = compilation.GetSemanticModel(tree);
+                var model = _compilation.GetSemanticModel(tree);
                 return tree.GetRoot()
                     .DescendantNodes()
                     .OfType<BaseTypeDeclarationSyntax>()
@@ -160,7 +158,7 @@ internal sealed class ArchitectureSemanticProject
         };
     }
 
-    private static IReadOnlyList<MetadataReference> MetadataReferences(string projectDirectory)
+    private static IReadOnlyList<MetadataReference> MetadataReferences()
     {
         var referencePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
@@ -195,7 +193,7 @@ internal sealed class ArchitectureSemanticProject
             var fullPath = tree.FilePath;
 
             return new SymbolReference(
-                System.IO.Path.GetRelativePath(ArchitecturePaths.RepoRoot(), fullPath),
+                Path.GetRelativePath(ArchitecturePaths.RepoRoot(), fullPath),
                 lineSpan.StartLinePosition.Line + 1,
                 type.ContainingNamespace.ToDisplayString(),
                 type.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat));

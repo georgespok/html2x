@@ -1,8 +1,12 @@
-using Html2x.RenderModel;
+using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Html2x.Text;
 using Shouldly;
-using Html2x.Renderers.Pdf;
-using Html2x.Renderers.Pdf.Pipeline;
 using UglyToad.PdfPig;
 
 namespace Html2x.Renderers.Pdf.Test;
@@ -122,6 +126,24 @@ public class PdfRendererTests
         exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
         exception.RequestedFont.ShouldNotBeNull().Family.ShouldBe("Inter");
         exception.Text.ShouldBe("Missing");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task RenderAsync_InvalidMaxImageSizeBytes_Throws(long maxImageSizeBytes)
+    {
+        var renderer = new PdfRenderer();
+        var settings = new PdfRenderSettings
+        {
+            MaxImageSizeBytes = maxImageSizeBytes
+        };
+
+        var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(
+            () => renderer.RenderAsync(CreateSimpleLayout(), settings));
+
+        exception.Message.ShouldContain("PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
+        exception.ParamName.ShouldBe("settings");
     }
 
     private static HtmlLayout CreateSimpleLayout()

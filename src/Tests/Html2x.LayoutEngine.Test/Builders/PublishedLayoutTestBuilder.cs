@@ -1,7 +1,10 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Test.Builders;
@@ -30,7 +33,7 @@ internal static class PublishedLayoutTestBuilder
         IReadOnlyList<PublishedBlock>? children = null,
         IReadOnlyList<PublishedBlockFlowItem>? flow = null)
     {
-        var geometry = BoxGeometryFactory.FromBorderBox(
+        var geometry = UsedGeometryCalculator.FromBorderBox(
             rect ?? new RectPt(0f, 0f, 100f, 20f),
             new Spacing(),
             new Spacing(),

@@ -2,20 +2,14 @@ using Html2x.Diagnostics.Contracts;
 
 namespace Html2x.Diagnostics;
 
-public sealed class DiagnosticsCollector : IDiagnosticsSink
+public sealed class DiagnosticsCollector(DateTimeOffset startTime) : IDiagnosticsSink
 {
     private readonly object _gate = new();
     private readonly List<DiagnosticRecord> _records = [];
-    private readonly DateTimeOffset _startTime;
 
     public DiagnosticsCollector()
         : this(DateTimeOffset.UtcNow)
     {
-    }
-
-    public DiagnosticsCollector(DateTimeOffset startTime)
-    {
-        _startTime = startTime;
     }
 
     public void Emit(DiagnosticRecord record)
@@ -41,6 +35,6 @@ public sealed class DiagnosticsCollector : IDiagnosticsSink
             records = _records.ToArray();
         }
 
-        return new DiagnosticsReport(_startTime, endTime, records);
+        return new DiagnosticsReport(startTime, endTime, records);
     }
 }

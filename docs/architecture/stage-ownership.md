@@ -10,9 +10,9 @@ is for developers changing the codebase, not a public API contract.
 | Public Facade | `Html2x` | Consumer configuration consumed by the converter facade | Option contracts and mapping to stage-owned settings | `HtmlConverterOptions`, page options, resource options, CSS options, font options, diagnostics options, and facade mapping | Layout algorithms, renderer algorithms, runtime adapters, documents, fragments, layout contracts, geometry guards, diagnostics runtime, internal stage request models |
 | Render Model | `Html2x.RenderModel` | None | Pure render facts | Units, style value facts, font request facts, resolved font facts, documents, and fragments | Runtime adapters, parser traversal, CSS computation, mutable boxes, layout algorithms, pagination algorithms, renderer state |
 | Contracts | `Html2x.LayoutEngine.Contracts` | None | Internal pipeline handoff contracts | Immutable contract facts and validation helpers | Parser traversal, CSS computation, mutable boxes, layout algorithms, fragments, pagination pages, renderer state |
-| Resources | `Html2x.Resources` | Image source, base directory, and byte size limit | Loaded image bytes, load status, and intrinsic image size | Scoped path resolution, data URI parsing, byte limit checks, and intrinsic image dimension decoding | Layout geometry, PDF drawing, diagnostics collection, public converter options |
+| Resources | `Html2x.Resources` | Image source, base directory, and byte size limit | Image metadata, loaded image bytes, load status, and intrinsic image size | Scoped path resolution, data URI parsing, byte limit checks, byte loading, and intrinsic image dimension decoding | Layout geometry, PDF drawing, diagnostics collection, public converter options |
 | Text | `Html2x.Text` | Font requests, text measurement requests, file directory access, and diagnostics sink | Text measurement contracts and font resolution contracts | Text measurement seams, Skia-backed text measurement, font path resolution, font diagnostics, directory font matching, and typeface factory seams | Parser traversal, CSS computation, mutable boxes, layout engine implementation projects, fragment projection, pagination pages, renderer state |
-| Style | `Html2x.LayoutEngine.Style` | Raw HTML, `StyleBuildSettings`, optional diagnostics sink | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, CSS dimension request and resolution facts, style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
+| Style | `Html2x.LayoutEngine.Style` | Raw HTML, `StyleBuildSettings`, optional diagnostics sink | Contract `StyleTree` with `StyledElementFacts`, ordered `StyleContentNode` entries, and computed styles | AngleSharp document loading, user agent stylesheet application, CSS parsing, computed style construction, CSS length mapping, and style diagnostics | Box hierarchy, layout geometry, fragments, pagination pages, renderer state |
 | Layout Geometry | `Html2x.LayoutEngine.Geometry` | Contract `StyleTree`, layout geometry request, and image metadata resolver | Contract `PublishedLayoutTree` and internal box geometry | Box roles, text runs with resolved font facts, list markers, unsupported mode diagnostics, image metadata resolution, image layout facts, table placements, `UsedGeometry` | CSS parsing, DOM traversal, parser objects, fragments, pagination pages, renderer state |
 | Fragment | `Html2x.LayoutEngine.Fragments` | Contract `PublishedLayoutTree` | Fragment tree | Published layout traversal, fragment ID allocation, `VisualStyle` projection, and copying published text run facts | Mutable boxes, CSS, DOM, text or font adapter seams, pagination pages, renderer state |
 | Pagination | `Html2x.LayoutEngine.Pagination` | Render model block fragments and `PaginationOptions` | `PaginationResult` with final `HtmlLayout` and audit facts | Translated fragment clones, `LayoutPage` assembly, page audit facts, placement audit facts, and pagination diagnostics | Source fragments, mutable boxes, style facts, geometry implementation engines, fragment projection, parser state, renderer state |
@@ -23,14 +23,16 @@ is for developers changing the codebase, not a public API contract.
 Html2x.RenderModel owns pure render facts such as `SizePx`, `SizePt`,
 `PaperSizes`, `ColorRgba`, `Spacing`, borders, `VisualStyle`, `FontKey`,
 `FontWeight`, `FontStyle`, `ResolvedFont`, `HtmlLayout`, `LayoutPage`,
-`LayoutMetadata`, and renderer-facing fragments. These facts can be shared by
+and renderer-facing fragments. These facts can be shared by
 layout, text, fragment projection, pagination, renderers, options, and tests
 without taking a dependency on runtime behavior.
 
 The render model must not reference SkiaSharp, filesystem seams, diagnostics
 runtime, parser packages, layout implementation projects, fragment projection,
 or renderers. It may contain small value helpers on the facts themselves, but
-not behavior-changing adapters.
+not behavior-changing adapters or CSS parsers. `ColorRgba` is a pure color
+value fact; CSS color syntax is interpreted by the style stage before render
+facts are published.
 
 ## Public Facade
 
@@ -73,7 +75,7 @@ Contract namespaces mirror the ownership folders:
   `UsedGeometry`, `PageContentArea`, and geometry source identity facts.
 - `Html2x.LayoutEngine.Contracts.Geometry.Images` owns
   `IImageMetadataResolver`, `ImageMetadataResult`, and
-  `ImageMetadataStatus`.
+  `ImageLoadStatus` metadata outcomes.
 - `Html2x.LayoutEngine.Contracts.Published` owns `PublishedLayoutTree` and
   the published block, inline, image, rule, table, display, and page facts.
 
@@ -92,8 +94,10 @@ serializers.
 
 Image metadata contracts live under `Html2x.LayoutEngine.Contracts` because
 they are geometry inputs, not published render facts or renderer byte-loading
-adapters. Public facade options must not define image provider or image
-metadata resolver seams.
+adapters. `ImageLoadStatus` is the single image outcome vocabulary across
+resources, metadata, published facts, fragments, and rendering diagnostics.
+Public facade options must not define image provider or image metadata resolver
+seams.
 
 ## Text Stage
 
@@ -149,9 +153,11 @@ Style owns StyleNodeId, StyleContentId, StyleSourceIdentity, and StyleContentIde
 `StyleTraversal` assigns source identity while it still has parser context.
 Later stages must treat those identities as input facts.
 
-Style owns CSS dimension request and resolution facts used while interpreting
-width and height declarations. Those facts are implementation detail unless a
-later stage consumes them through an explicit handoff contract.
+Style owns CSS length interpretation while applying width and height
+declarations to `ComputedStyle`. It also owns CSS color interpretation before
+colors become render-model `ColorRgba` values. Stale dimension request and
+resolution records should not be reintroduced unless a later stage consumes
+them through an explicit handoff contract.
 
 ## Geometry Stage
 
@@ -164,22 +170,24 @@ Geometry owns geometry validation helpers such as `GeometryGuard`. These are
 implementation-local guards, not public option contracts.
 
 Geometry owns BoxNode.SourceIdentity propagation and generated source identity.
-`InitialBoxTreeBuilder` copies style-owned source identity into boxes. Geometry
+`StyleTreeBoxProjector` copies style-owned source identity into boxes. Geometry
 creates generated source identity for anonymous text, list markers,
 inline-block content boxes, normalization wrappers, and other layout nodes that
 do not directly correspond to a styled element.
 
 Geometry publishes contract `PublishedLayoutTree` instead of exposing mutable
 box internals to later stages. Mutable box types remain internal implementation
-details and compatibility surfaces for focused tests.
+details for construction and focused algorithm tests.
 
 Block kind dispatch and publication orchestration are owned by
-`BlockLayoutEngine`. Normal block-flow sequencing is owned by
+`BlockLayoutEngine`. Internal block-kind behavior is selected through
+`BlockLayoutRuleSet`. Normal block-flow sequencing is owned by
 `BlockFlowLayoutExecutor`, and non-mutating stacked block measurement is owned
 by `BlockFlowMeasurementExecutor` so layout and measurement share block-flow
-policy. Image block placement, table placement and diagnostics, published
-layout caching, inline publishing, and shared compatibility-state writes belong
-in focused internal modules rather than accumulating in the orchestrator.
+policy. `BoxSizingRules` owns shared block sizing facts. Image block placement,
+table grid calculation, table placement and diagnostics, published layout
+caching, inline publishing, and shared mutable layout writes belong in focused
+internal modules rather than accumulating in the orchestrator.
 
 Geometry measures normal inline text through `Html2x.Text` and publishes the
 resulting resolved font facts on each normal pipeline `TextRun`. Fragment

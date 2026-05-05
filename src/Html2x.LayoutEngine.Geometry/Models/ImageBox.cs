@@ -1,4 +1,5 @@
-using Html2x.RenderModel;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Geometry.Models;
 
@@ -12,24 +13,20 @@ internal sealed class ImageBox(BoxRole role) : BlockBox(role)
 
     public ImageLoadStatus Status { get; internal set; }
 
-    public bool IsMissing { get; internal set; }
+    public bool IsMissing => ImageLoadStatusFacts.IsMissing(Status);
 
-    public bool IsOversize { get; internal set; }
+    public bool IsOversize => ImageLoadStatusFacts.IsOversize(Status);
 
     internal void ApplyImageMetadata(
         string src,
         SizePx authoredSizePx,
         SizePx intrinsicSizePx,
-        ImageLoadStatus status,
-        bool isMissing,
-        bool isOversize)
+        ImageLoadStatus status)
     {
         Src = src;
         AuthoredSizePx = authoredSizePx;
         IntrinsicSizePx = intrinsicSizePx;
         Status = status;
-        IsMissing = isMissing;
-        IsOversize = isOversize;
     }
 
     protected override BoxNode CloneShallowForParent(BoxNode parent)
@@ -44,9 +41,7 @@ internal sealed class ImageBox(BoxRole role) : BlockBox(role)
             Src = Src,
             AuthoredSizePx = AuthoredSizePx,
             IntrinsicSizePx = IntrinsicSizePx,
-            Status = Status,
-            IsMissing = IsMissing,
-            IsOversize = IsOversize
+            Status = Status
         });
     }
 }

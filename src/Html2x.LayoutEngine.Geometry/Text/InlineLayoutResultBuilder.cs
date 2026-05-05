@@ -1,7 +1,7 @@
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
 /// Orchestrates inline line layout assembly by delegating alignment, justification, and placement concerns.
@@ -21,7 +21,7 @@ internal sealed class InlineLayoutResultBuilder
         _justificationPlanner = new InlineJustificationPlanner(measurer, _alignmentResolver);
         _boundsCalculator = new InlineLineBoundsCalculator();
         _placementBuilder = new TextRunPlacementBuilder(
-            new InlineObjectPlacementBuilder(BuildSegment),
+            new AtomicInlineObjectPlacement(BuildSegment, new LayoutBoxStateWriter()),
             _boundsCalculator);
     }
 

@@ -1,3 +1,10 @@
+using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Fragments;
+using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Style;
+using Html2x.RenderModel.Documents;
+using Html2x.Text;
 using Shouldly;
 using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
@@ -11,102 +18,86 @@ public sealed class LayoutGeometryProjectGraphTests
         ArchitectureSolution.Load("src", "Html2x.sln")
             .ProjectNames()
             .ShouldContainSet([
-                "Html2x.LayoutEngine.Contracts",
-                "Html2x.RenderModel",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.LayoutEngine.Pagination.Test",
-                "Html2x.LayoutEngine.Fragments.Test",
-                "Html2x.LayoutEngine.Style.Test"
+                AssemblyName<StyleNode>(),
+                AssemblyName<HtmlLayout>(),
+                AssemblyName<FragmentBuilder>(),
+                AssemblyName<LayoutPaginator>(),
+                TestAssemblyNameFor<LayoutPaginator>(),
+                TestAssemblyNameFor<FragmentBuilder>(),
+                TestAssemblyNameFor<StyleTreeBuilder>()
             ]);
     }
 
     [Fact]
     public void ProductionProjectGraph_FollowsOwnedModuleDirection()
     {
-        Project("src", "Html2x.LayoutEngine", "Html2x.LayoutEngine.csproj")
-            .ShouldReferenceProjects([
-                "Html2x.Diagnostics.Contracts",
-                "Html2x.LayoutEngine.Contracts",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Geometry",
-                "Html2x.LayoutEngine.Pagination",
-                "Html2x.LayoutEngine.Style",
-                "Html2x.RenderModel",
-                "Html2x.Text"
-            ]);
-        Project("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj")
-            .ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.LayoutEngine.Contracts", "Html2x.RenderModel"]);
-        Project("src", "Html2x.LayoutEngine.Style", "Html2x.LayoutEngine.Style.csproj")
-            .ShouldReferencePackages([ParserPackageName(), ParserPackageName() + ".Css"]);
-        Project("src", "Html2x.LayoutEngine.Geometry", "Html2x.LayoutEngine.Geometry.csproj")
-            .ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.LayoutEngine.Contracts", "Html2x.RenderModel", "Html2x.Text"]);
-        Project("src", "Html2x.LayoutEngine.Pagination", "Html2x.LayoutEngine.Pagination.csproj")
-            .ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.LayoutEngine.Contracts", "Html2x.RenderModel"]);
-        Project("src", "Html2x.LayoutEngine.Pagination", "Html2x.LayoutEngine.Pagination.csproj")
+        ProjectFor<LayoutBuilder>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<FragmentBuilder>(), AssemblyName<LayoutGeometryBuilder>(), AssemblyName<LayoutPaginator>(), AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+        ProjectFor<StyleTreeBuilder>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
+        ProjectFor<StyleTreeBuilder>()
+            .ShouldReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
+        ProjectFor<LayoutGeometryBuilder>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+        ProjectFor<LayoutPaginator>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
+        ProjectFor<LayoutPaginator>()
             .ShouldHaveNoPackageReferences();
-        Project("src", "Html2x.LayoutEngine.Contracts", "Html2x.LayoutEngine.Contracts.csproj")
-            .ShouldReferenceProjects(["Html2x.RenderModel"]);
-        Project("src", "Html2x.LayoutEngine.Contracts", "Html2x.LayoutEngine.Contracts.csproj")
+        ProjectFor<StyleNode>()
+            .ShouldReferenceProjects(AssemblyName<HtmlLayout>());
+        ProjectFor<StyleNode>()
             .ShouldHaveNoPackageReferences();
-        Project("src", "Html2x.RenderModel", "Html2x.RenderModel.csproj")
+        ProjectFor<HtmlLayout>()
             .ShouldHaveNoProjectReferences();
-        Project("src", "Html2x.RenderModel", "Html2x.RenderModel.csproj")
+        ProjectFor<HtmlLayout>()
             .ShouldHaveNoPackageReferences();
-        Project("src", "Html2x.LayoutEngine.Fragments", "Html2x.LayoutEngine.Fragments.csproj")
-            .ShouldReferenceProjects(["Html2x.LayoutEngine.Contracts", "Html2x.RenderModel"]);
-        Project("src", "Html2x.Text", "Html2x.Text.csproj")
-            .ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.RenderModel"]);
-        Project("src", "Html2x.Text", "Html2x.Text.csproj")
-            .ShouldReferencePackages(["SkiaSharp", "SkiaSharp.HarfBuzz"]);
+        ProjectFor<FragmentBuilder>()
+            .ShouldReferenceProjects(AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
+        ProjectFor<ITextMeasurer>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>());
+        ProjectFor<ITextMeasurer>()
+            .ShouldReferencePackages(SkiaSharpPackageName, SkiaSharpPackageName + ".HarfBuzz");
     }
 
     [Fact]
     public void RendererProjectGraph_StaysIndependentFromLayoutStages()
     {
-        var renderer = Project("src", "Html2x.Renderers.Pdf", "Html2x.Renderers.Pdf.csproj");
+        var renderer = Project("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj");
 
-        renderer.ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.RenderModel", "Html2x.Resources", "Html2x.Text"]);
+        renderer.ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>(), ResourcesAssemblyName, AssemblyName<ITextMeasurer>());
         renderer.ShouldNotReferenceProjects(
-            "Html2x.Abstractions",
-            "Html2x.LayoutEngine",
-            "Html2x.LayoutEngine.Contracts",
-            "Html2x.LayoutEngine.Fragments",
-            "Html2x.LayoutEngine.Geometry",
-            "Html2x.LayoutEngine.Style");
+            AssemblyName<LayoutBuilder>(),
+            AssemblyName<StyleNode>(),
+            AssemblyName<FragmentBuilder>(),
+            AssemblyName<LayoutGeometryBuilder>(),
+            AssemblyName<StyleTreeBuilder>());
     }
 
     [Fact]
     public void FocusedTestProjects_StayInOwningModules()
     {
-        Project("src", "Tests", "Html2x.LayoutEngine.Pagination.Test", "Html2x.LayoutEngine.Pagination.Test.csproj")
-            .ShouldReferenceProjects(["Html2x.Diagnostics.Contracts", "Html2x.LayoutEngine.Pagination", "Html2x.RenderModel"]);
-        Project("src", "Tests", "Html2x.LayoutEngine.Pagination.Test", "Html2x.LayoutEngine.Pagination.Test.csproj")
+        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(), TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<LayoutPaginator>(), AssemblyName<HtmlLayout>());
+        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(), TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
             .ShouldNotReferenceProjects(
-                "Html2x.LayoutEngine",
-                "Html2x.LayoutEngine.Fragments",
-                "Html2x.LayoutEngine.Geometry",
-                "Html2x.LayoutEngine.Style",
-                "Html2x.Renderers.Pdf",
-                "Html2x.Text");
-        Project("src", "Tests", "Html2x.LayoutEngine.Style.Test", "Html2x.LayoutEngine.Style.Test.csproj")
-            .ShouldNotReferenceProjects("Html2x.LayoutEngine", "Html2x.LayoutEngine.Geometry");
-        Project("src", "Tests", "Html2x.LayoutEngine.Geometry.Test", "Html2x.LayoutEngine.Geometry.Test.csproj")
+                AssemblyName<LayoutBuilder>(),
+                AssemblyName<FragmentBuilder>(),
+                AssemblyName<LayoutGeometryBuilder>(),
+                AssemblyName<StyleTreeBuilder>(),
+                PdfRendererAssemblyName,
+                AssemblyName<ITextMeasurer>());
+        Project("src", "Tests", TestAssemblyNameFor<StyleTreeBuilder>(), TestAssemblyNameFor<StyleTreeBuilder>() + ".csproj")
+            .ShouldNotReferenceProjects(AssemblyName<LayoutBuilder>(), AssemblyName<LayoutGeometryBuilder>());
+        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryBuilder>(), TestAssemblyNameFor<LayoutGeometryBuilder>() + ".csproj")
             .ShouldNotReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
     }
 
     [Fact]
-    public void RemovedCompatibilityModules_AreAbsent()
+    public void RemovedCompatibilityFolders_AreAbsent()
     {
-        Directory.Exists(PathFromRoot("src", "Html2x.Abstractions"))
-            .ShouldBeFalse("the obsolete options-only module should be deleted.");
-        Directory.Exists(PathFromRoot("src", "Html2x.LayoutEngine", "Pagination"))
+        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Pagination"))
             .ShouldBeFalse("pagination compatibility shims should not remain in the composition project.");
-        Directory.Exists(PathFromRoot("src", "Html2x.LayoutEngine", "Fragment"))
+        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Fragment"))
             .ShouldBeFalse("fragment compatibility shims should not remain in the composition project.");
-
-        ArchitectureSolution.Load("src", "Html2x.sln")
-            .ProjectNames()
-            .ShouldNotContain("Html2x.Abstractions");
     }
 }

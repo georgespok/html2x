@@ -1,15 +1,14 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Pagination;
-using Html2x.LayoutEngine.Test.TestDoubles;
-using Html2x.LayoutEngine.Test.TestHelpers;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
@@ -39,17 +38,16 @@ public sealed class GeometryContractTests
             Margin = new Spacing(0f, 0f, 0f, 10f)
         };
 
-        var tree = layoutEngine.Layout(table, page);
+        _ = layoutEngine.LayoutPublished(table, page);
 
-        var laidOutTable = tree.Blocks.ShouldHaveSingleItem().ShouldBeOfType<TableBox>();
-        laidOutTable.UsedGeometry.ShouldNotBeNull();
-        laidOutTable.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectPt(10f, 0f, 40f, 0f));
+        table.UsedGeometry.ShouldNotBeNull();
+        table.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectPt(10f, 0f, 40f, 0f));
     }
 
     [Fact]
     public void FromBorderBox_OversizedPaddingAndBorders_ClampsContentRectToZeroSize()
     {
-        var geometry = BoxGeometryFactory.FromBorderBox(
+        var geometry = UsedGeometryCalculator.FromBorderBox(
             1f,
             2f,
             10f,
@@ -79,10 +77,11 @@ public sealed class GeometryContractTests
             new FontMetricsProvider(),
             new FakeTextMeasurer(10f, 9f, 3f),
             new DefaultLineHeightStrategy());
-        var measurement = new BlockContentMeasurementService(
-            inlineEngine,
-            new BlockMeasurementService(),
-            new ImageLayoutResolver());
+        var heightCalculator = new BlockContentHeightCalculator(
+            new BlockContentMeasurer(
+                inlineEngine,
+                new BlockMeasurementCalculator(),
+                new ImageLayoutResolver()));
 
         var existingLayout = new InlineLayoutResult(
             [
@@ -92,9 +91,9 @@ public sealed class GeometryContractTests
             MaxLineWidth: 67f);
         block.InlineLayout = existingLayout;
 
-        var wideHeight = measurement.MeasureBorderBoxHeight(block, 200f, MeasureNoTables);
+        var wideHeight = heightCalculator.MeasureBorderBoxHeight(block, 200f, MeasureNoTables);
         block.InlineLayout.ShouldBeSameAs(existingLayout);
-        var narrowHeight = measurement.MeasureBorderBoxHeight(block, 25f, MeasureNoTables);
+        var narrowHeight = heightCalculator.MeasureBorderBoxHeight(block, 25f, MeasureNoTables);
 
         narrowHeight.ShouldBeGreaterThan(wideHeight);
         block.InlineLayout.ShouldBeSameAs(existingLayout);
@@ -133,7 +132,7 @@ public sealed class GeometryContractTests
     }
 
     [Fact]
-    public async Task Build_FragmentProjection_DoesNotLinkFragmentGeometryToSourceBox()
+    public async Task Build_FragmentProjection_UsesPublishedGeometryValue()
     {
         var result = await GeometryTestHarness.BuildAsync(
             """
@@ -143,26 +142,14 @@ public sealed class GeometryContractTests
               </body>
             </html>
             """);
-        var source = result.BoxTree.Blocks.First(block =>
-            block.UsedGeometry.HasValue &&
-            block.UsedGeometry.Value.Width > 0f &&
-            block.UsedGeometry.Value.Height > 0f);
+        var source = result.PublishedLayout.Blocks.First(block =>
+            block.Geometry.Width > 0f &&
+            block.Geometry.Height > 0f);
         var fragment = result.Fragments.Blocks.First(block =>
             block.Rect.Width > 0f &&
             block.Rect.Height > 0f);
-        var originalFragmentRect = fragment.Rect;
-        var sourceGeometry = source.UsedGeometry!.Value;
 
-        source.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
-            sourceGeometry.X + 25f,
-            sourceGeometry.Y + 25f,
-            sourceGeometry.Width + 5f,
-            sourceGeometry.Height + 5f,
-            source.Padding,
-            new Spacing()));
-
-        source.UsedGeometry.Value.BorderBoxRect.ShouldNotBe(originalFragmentRect);
-        fragment.Rect.ShouldBe(originalFragmentRect);
+        fragment.Rect.ShouldBe(source.Geometry.BorderBoxRect);
     }
 
     [Fact]
@@ -219,10 +206,9 @@ public sealed class GeometryContractTests
             Src = "before.png",
             AuthoredSizePx = new SizePx(1d, 2d),
             IntrinsicSizePx = new SizePx(3d, 4d),
-            IsMissing = true,
-            IsOversize = true
+            Status = ImageLoadStatus.Oversize
         };
-        image.ApplyLayoutGeometry(BoxGeometryFactory.FromBorderBox(
+        image.ApplyLayoutGeometry(UsedGeometryCalculator.FromBorderBox(
             1f,
             2f,
             3f,
@@ -253,14 +239,14 @@ public sealed class GeometryContractTests
         image.Src.ShouldBe("before.png");
         image.AuthoredSizePx.ShouldBe(new SizePx(1d, 2d));
         image.IntrinsicSizePx.ShouldBe(new SizePx(3d, 4d));
-        image.IsMissing.ShouldBeTrue();
+        image.IsMissing.ShouldBeFalse();
         image.IsOversize.ShouldBeTrue();
     }
 
     [Fact]
     public void UsedGeometry_Transformations_ReturnNewGeometry()
     {
-        var geometry = BoxGeometryFactory.FromBorderBox(
+        var geometry = UsedGeometryCalculator.FromBorderBox(
             10f,
             20f,
             100f,
@@ -370,13 +356,12 @@ public sealed class GeometryContractTests
             Margin = new Spacing(-5f, -10f, -15f, -20f)
         };
 
-        var tree = layoutEngine.Layout(root, page);
+        var published = layoutEngine.LayoutPublished(root, page);
 
-        var laidOutBlock = tree.Blocks.ShouldHaveSingleItem();
-        laidOutBlock.UsedGeometry.ShouldNotBeNull();
-        laidOutBlock.UsedGeometry.Value.BorderBoxRect.X.ShouldBe(0f);
-        laidOutBlock.UsedGeometry.Value.BorderBoxRect.Y.ShouldBe(0f);
-        laidOutBlock.UsedGeometry.Value.BorderBoxRect.Width.ShouldBe(100f);
+        var laidOutBlock = published.Blocks.ShouldHaveSingleItem();
+        laidOutBlock.Geometry.BorderBoxRect.X.ShouldBe(0f);
+        laidOutBlock.Geometry.BorderBoxRect.Y.ShouldBe(0f);
+        laidOutBlock.Geometry.BorderBoxRect.Width.ShouldBe(100f);
     }
 
     [Fact]
@@ -540,7 +525,7 @@ public sealed class GeometryContractTests
             return new ImageMetadataResult
             {
                 Src = src,
-                Status = ImageMetadataStatus.Ok,
+                Status = ImageLoadStatus.Ok,
                 IntrinsicSizePx = intrinsicSize
             };
         }

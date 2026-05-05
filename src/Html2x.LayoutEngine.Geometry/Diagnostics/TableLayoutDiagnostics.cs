@@ -1,14 +1,11 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Diagnostics;
+namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
 
 internal static class TableLayoutDiagnostics
 {
-    private const string SupportedTableEvent = "layout/table";
-    private const string UnsupportedTableEvent = "layout/table/unsupported-structure";
-
     public static void EmitSupportedTable(
         string nodePath,
         int rowCount,
@@ -29,17 +26,17 @@ internal static class TableLayoutDiagnostics
             DerivedColumnCount = derivedColumnCount,
             RequestedWidth = requestedWidth,
             ResolvedWidth = resolvedWidth,
-            Outcome = "Supported",
+            Outcome = TableLayoutDiagnosticNames.Outcomes.Supported,
             RowContexts = rowContexts ?? [],
             CellContexts = cellContexts ?? [],
             ColumnContexts = columnContexts ?? [],
             GroupContexts = groupContexts ?? []
         };
 
-        Emit(
+        EmitTable(
             diagnosticsSink,
             DiagnosticSeverity.Info,
-            SupportedTableEvent,
+            TableLayoutDiagnosticNames.Events.Table,
             payload);
     }
 
@@ -72,7 +69,7 @@ internal static class TableLayoutDiagnostics
             DerivedColumnCount = null,
             RequestedWidth = requestedWidth,
             ResolvedWidth = resolvedWidth,
-            Outcome = "Unsupported",
+            Outcome = TableLayoutDiagnosticNames.Outcomes.Unsupported,
             Reason = reason,
             RowContexts = rowContexts ?? [],
             CellContexts = cellContexts ?? [],
@@ -80,94 +77,99 @@ internal static class TableLayoutDiagnostics
             GroupContexts = groupContexts ?? []
         };
 
-        Emit(
+        EmitUnsupportedStructure(
             diagnosticsSink,
-            DiagnosticSeverity.Error,
-            UnsupportedTableEvent,
+            TableLayoutDiagnosticNames.Events.UnsupportedStructure,
             unsupportedPayload);
 
-        Emit(
+        EmitTable(
             diagnosticsSink,
             DiagnosticSeverity.Info,
-            SupportedTableEvent,
+            TableLayoutDiagnosticNames.Events.Table,
             tablePayload);
     }
 
-    private static void Emit(
+    private static void EmitTable(
         IDiagnosticsSink? diagnosticsSink,
         DiagnosticSeverity severity,
         string eventName,
-        object payload)
+        TableLayoutDiagnostic table)
     {
-        switch (payload)
-        {
-            case TableLayoutDiagnostic table:
-                diagnosticsSink?.Emit(new DiagnosticRecord(
-                    Stage: "stage/box-tree",
-                    Name: eventName,
-                    Severity: severity,
-                    Message: table.Reason,
-                    Context: null,
-                    Fields: MapTableFields(table),
-                    Timestamp: DateTimeOffset.UtcNow));
-                break;
-            case UnsupportedStructureDiagnostic unsupported:
-                diagnosticsSink?.Emit(new DiagnosticRecord(
-                    Stage: "stage/box-tree",
-                    Name: eventName,
-                    Severity: DiagnosticSeverity.Error,
-                    Message: unsupported.Reason,
-                    Context: null,
-                    Fields: DiagnosticFields.Create(
-                        DiagnosticFields.Field("nodePath", unsupported.NodePath),
-                        DiagnosticFields.Field("structureKind", unsupported.StructureKind),
-                        DiagnosticFields.Field("reason", unsupported.Reason),
-                        DiagnosticFields.Field("formattingContext", DiagnosticValue.FromEnum(unsupported.FormattingContext))),
-                    Timestamp: DateTimeOffset.UtcNow));
-                break;
-        }
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: GeometryDiagnosticNames.Stages.BoxTree,
+            Name: eventName,
+            Severity: severity,
+            Message: table.Reason,
+            Context: null,
+            Fields: MapTableFields(table),
+            Timestamp: DateTimeOffset.UtcNow));
+    }
+
+    private static void EmitUnsupportedStructure(
+        IDiagnosticsSink? diagnosticsSink,
+        string eventName,
+        UnsupportedStructureDiagnostic unsupported)
+    {
+        diagnosticsSink?.Emit(new DiagnosticRecord(
+            Stage: GeometryDiagnosticNames.Stages.BoxTree,
+            Name: eventName,
+            Severity: DiagnosticSeverity.Error,
+            Message: unsupported.Reason,
+            Context: null,
+            Fields: DiagnosticFields.Create(
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, unsupported.NodePath),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, unsupported.StructureKind),
+                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
+                DiagnosticFields.Field(
+                    GeometryDiagnosticNames.Fields.FormattingContext,
+                    DiagnosticValue.FromEnum(unsupported.FormattingContext))),
+            Timestamp: DateTimeOffset.UtcNow));
     }
 
     private static DiagnosticFields MapTableFields(TableLayoutDiagnostic table)
     {
         return DiagnosticFields.Create(
-            DiagnosticFields.Field("nodePath", table.NodePath),
-            DiagnosticFields.Field("tablePath", table.TablePath),
-            DiagnosticFields.Field("rowCount", table.RowCount),
-            DiagnosticFields.Field("derivedColumnCount", FromNullable(table.DerivedColumnCount)),
-            DiagnosticFields.Field("requestedWidth", FromNullable(table.RequestedWidth)),
-            DiagnosticFields.Field("resolvedWidth", FromNullable(table.ResolvedWidth)),
-            DiagnosticFields.Field("outcome", table.Outcome),
-            DiagnosticFields.Field("reason", table.Reason is null ? null : DiagnosticValue.From(table.Reason)),
-            DiagnosticFields.Field("rows", MapRows(table.RowContexts)),
-            DiagnosticFields.Field("cells", MapCells(table.CellContexts)),
-            DiagnosticFields.Field("columns", MapColumns(table.ColumnContexts)),
-            DiagnosticFields.Field("groups", MapGroups(table.GroupContexts)));
+            DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, table.NodePath),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.TablePath, table.TablePath),
+            DiagnosticFields.Field(GeometryDiagnosticNames.Fields.RowCount, table.RowCount),
+            DiagnosticFields.Field(
+                TableLayoutDiagnosticNames.Fields.DerivedColumnCount,
+                FromNullable(table.DerivedColumnCount)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.RequestedWidth, FromNullable(table.RequestedWidth)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.ResolvedWidth, FromNullable(table.ResolvedWidth)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.Outcome, table.Outcome),
+            DiagnosticFields.Field(
+                GeometryDiagnosticNames.Fields.Reason,
+                table.Reason is null ? null : DiagnosticValue.From(table.Reason)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.Rows, MapRows(table.RowContexts)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.Cells, MapCells(table.CellContexts)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.Columns, MapColumns(table.ColumnContexts)),
+            DiagnosticFields.Field(TableLayoutDiagnosticNames.Fields.Groups, MapGroups(table.GroupContexts)));
     }
 
     private static DiagnosticArray MapRows(IReadOnlyList<TableRowDiagnosticContext> rows) =>
         new(rows.Select(static row => DiagnosticObject.Create(
-            DiagnosticObject.Field("rowIndex", row.RowIndex),
-            DiagnosticObject.Field("cellCount", row.CellCount),
-            DiagnosticObject.Field("height", row.Height))));
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.RowIndex, row.RowIndex),
+            DiagnosticObject.Field(TableLayoutDiagnosticNames.Fields.CellCount, row.CellCount),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Height, row.Height))));
 
     private static DiagnosticArray MapCells(IReadOnlyList<TableCellDiagnosticContext> cells) =>
         new(cells.Select(static cell => DiagnosticObject.Create(
-            DiagnosticObject.Field("rowIndex", cell.RowIndex),
-            DiagnosticObject.Field("columnIndex", cell.ColumnIndex),
-            DiagnosticObject.Field("isHeader", cell.IsHeader),
-            DiagnosticObject.Field("width", cell.Width),
-            DiagnosticObject.Field("height", cell.Height))));
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.RowIndex, cell.RowIndex),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.ColumnIndex, cell.ColumnIndex),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.IsHeader, cell.IsHeader),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Width, cell.Width),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Height, cell.Height))));
 
     private static DiagnosticArray MapColumns(IReadOnlyList<TableColumnDiagnosticContext> columns) =>
         new(columns.Select(static column => DiagnosticObject.Create(
-            DiagnosticObject.Field("columnIndex", column.ColumnIndex),
-            DiagnosticObject.Field("width", column.Width))));
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.ColumnIndex, column.ColumnIndex),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Width, column.Width))));
 
     private static DiagnosticArray MapGroups(IReadOnlyList<TableGroupDiagnosticContext> groups) =>
         new(groups.Select(static group => DiagnosticObject.Create(
-            DiagnosticObject.Field("groupKind", group.GroupKind),
-            DiagnosticObject.Field("rowCount", group.RowCount))));
+            DiagnosticObject.Field(TableLayoutDiagnosticNames.Fields.GroupKind, group.GroupKind),
+            DiagnosticObject.Field(GeometryDiagnosticNames.Fields.RowCount, group.RowCount))));
 
     private static DiagnosticValue? FromNullable(int? value) =>
         value.HasValue ? DiagnosticValue.From(value.Value) : null;

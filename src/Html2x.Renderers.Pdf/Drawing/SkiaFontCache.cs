@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Text;
 using Html2x.Text;
 using SkiaSharp;
 

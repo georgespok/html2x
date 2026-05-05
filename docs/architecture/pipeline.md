@@ -8,6 +8,15 @@ This document explains how Html2x turns HTML and CSS into PDF bytes.
 fragment projection, pagination, and final layout assembly, but it does not own
 HTML parsing or CSS computation directly.
 
+The composition flow is stage-first. `LayoutBuilder.BuildAsync` names the
+handoff facts between stages: `StyleTree`, `LayoutGeometryRequest`,
+`PublishedLayoutTree`, `FragmentTree`, `PaginationOptions`, and
+`PaginationResult`. `LayoutStageRunner` wraps the geometry, fragment, and
+pagination calls with lifecycle diagnostics so diagnostic plumbing does not
+become the visible structure of the pipeline. Producer-specific diagnostic
+payloads, such as the geometry snapshot, are emitted by focused diagnostics
+modules.
+
 Production dependency direction:
 
 ```text
@@ -72,8 +81,8 @@ project-owned models and must not depend on parser objects.
 Image metadata contracts live in `Html2x.LayoutEngine.Contracts` because they
 are geometry inputs. Geometry consumes `IImageMetadataResolver` for source,
 status, and intrinsic size only. `Html2x.Resources` owns image path scope, data
-URI parsing, byte limits, byte loading, and intrinsic dimension decoding. PDF
-rendering consumes the same resource policy for image bytes.
+URI parsing, byte limits, metadata-only intrinsic dimension decoding, and byte
+loading. PDF rendering consumes the same resource policy for image bytes.
 
 Fragment projection lives in `Html2x.LayoutEngine.Fragments`. Composition calls
 that internal module after geometry publishes layout facts. Renderer-facing
@@ -153,15 +162,16 @@ and ordered style content from `Html2x.LayoutEngine.Contracts`. It must not read
 DOM nodes, `IElement`, `INode`, child node collections, or AngleSharp types.
 Geometry validation helpers stay inside the geometry module.
 
-`InitialBoxTreeBuilder` converts styled nodes into `BoxRole` values such as
+`StyleTreeBoxProjector` converts styled nodes into `BoxRole` values such as
 block, inline, inline-block, table, row, cell, image, list item, and rule. The
 geometry pass then resolves dimensions, margins, padding, borders, inline
 layout, image layout, and table placements.
 
-`BlockLayoutEngine` coordinates block kind dispatch and publication. Specialized
-internal modules own normal block-flow sequencing, non-mutating block-flow
-measurement, image block placement, table diagnostics and placement, published
-layout caching, inline publishing, and shared mutable compatibility writes.
+`BlockLayoutEngine` coordinates block layout through `BlockLayoutRuleSet`.
+Specialized internal modules own normal block-flow sequencing, non-mutating
+block-flow measurement, shared block sizing, image block placement, table grid
+calculation, table diagnostics and placement, mutable layout writes, published
+layout caching, and inline publishing.
 
 Input: `StyleTree` and layout geometry options.
 

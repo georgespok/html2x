@@ -1,6 +1,4 @@
-using Html2x.RenderModel;
-
-namespace Html2x;
+namespace Html2x.Options;
 
 
 /// <summary>

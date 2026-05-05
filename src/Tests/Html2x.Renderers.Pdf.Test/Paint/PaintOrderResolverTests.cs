@@ -1,5 +1,9 @@
-using Html2x.RenderModel;
 using Html2x.Renderers.Pdf.Paint;
+using Html2x.RenderModel.Documents;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Geometry;
+using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.Renderers.Pdf.Test.Paint;

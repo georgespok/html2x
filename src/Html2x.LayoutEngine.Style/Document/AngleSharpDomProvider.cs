@@ -2,9 +2,8 @@ using System.Reflection;
 using AngleSharp;
 using AngleSharp.Css;
 using AngleSharp.Dom;
-using Html2x.LayoutEngine.Style;
 
-namespace Html2x.LayoutEngine.Dom;
+namespace Html2x.LayoutEngine.Style.Document;
 
 internal sealed class AngleSharpDomProvider(IConfiguration config)
 {

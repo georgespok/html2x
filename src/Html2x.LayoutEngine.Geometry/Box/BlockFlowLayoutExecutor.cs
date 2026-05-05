@@ -1,55 +1,39 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box.Publishing;
-using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.RenderModel;
+using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Box;
+namespace Html2x.LayoutEngine.Geometry.Box;
 
 
 /// <summary>
 /// Owns normal block-flow sequencing for laid-out block content.
 /// </summary>
-internal sealed class BlockFlowLayoutExecutor
+internal sealed class BlockFlowLayoutExecutor(
+    InlineLayoutEngine inlineEngine,
+    IBlockFormattingContext blockFormattingContext,
+    PublishedLayoutWriter publisher,
+    Func<BlockBox, BlockLayoutRequest, PublishedBlock> layoutBlock,
+    IDiagnosticsSink? diagnosticsSink = null)
 {
-    private readonly InlineLayoutEngine _inlineEngine;
-    private readonly IBlockFormattingContext _blockFormattingContext;
-    private readonly PublishedLayoutPublisher _publisher;
-    private readonly IDiagnosticsSink? _diagnosticsSink;
-    private readonly Func<BlockBox, BlockLayoutRequest, PublishedBlock> _layoutBlock;
-
-    public BlockFlowLayoutExecutor(
-        InlineLayoutEngine inlineEngine,
-        IBlockFormattingContext blockFormattingContext,
-        PublishedLayoutPublisher publisher,
-        Func<BlockBox, BlockLayoutRequest, PublishedBlock> layoutBlock,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
-        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
-        _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
-        _layoutBlock = layoutBlock ?? throw new ArgumentNullException(nameof(layoutBlock));
-        _diagnosticsSink = diagnosticsSink;
-    }
+    private readonly InlineLayoutEngine _inlineEngine = inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
+    private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+    private readonly PublishedLayoutWriter _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+    private readonly Func<BlockBox, BlockLayoutRequest, PublishedBlock> _layoutBlock = layoutBlock ?? throw new ArgumentNullException(nameof(layoutBlock));
 
     public BlockFlowLayoutResult Layout(BlockFlowLayoutRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         var parent = request.Parent;
-        var currentY = request.CursorY;
-        var previousBottomMargin = 0f;
+        var state = new BlockFlowLayoutState(request.CursorY);
         var pendingInlineFlow = new InlineFlowBuffer();
         var inlineSegments = new List<InlineFlowSegmentLayout>();
         var publishedInlineSegments = new List<PublishedInlineFlowSegment>();
         var publishedChildren = new List<PublishedBlock>();
         var publishedFlow = new List<PublishedBlockFlowItem>();
-        var maxLineWidth = 0f;
-        var includeSyntheticListMarker = true;
-        var nextFlowOrder = 0;
 
         for (var i = 0; i < parent.Children.Count; i++)
         {
@@ -64,13 +48,9 @@ internal sealed class BlockFlowLayoutExecutor
                 inlineSegments,
                 request.ContentX,
                 request.ContentWidth,
-                ref currentY,
-                ref previousBottomMargin,
-                ref maxLineWidth,
-                ref includeSyntheticListMarker,
+                state,
                 publishedInlineSegments,
-                publishedFlow,
-                ref nextFlowOrder);
+                publishedFlow);
 
             if (parent.Children[i] is not BlockBox childBlock)
             {
@@ -80,25 +60,25 @@ internal sealed class BlockFlowLayoutExecutor
             var marginTop = childBlock.Style.Margin.Safe().Top;
             var collapsedTop = VerticalFlowPolicy.CollapseTopMargin(
                 _blockFormattingContext,
-                previousBottomMargin,
+                state.PreviousBottomMargin,
                 marginTop,
                 ResolveFormattingContext(parent),
                 nameof(BlockLayoutEngine),
-                _diagnosticsSink);
+                diagnosticsSink);
             var childRequest = new BlockLayoutRequest(
                 request.ContentX,
-                currentY,
+                state.CurrentY,
                 request.ContentWidth,
                 request.ParentContentTop,
-                previousBottomMargin,
+                state.PreviousBottomMargin,
                 collapsedTop);
             var publishedChild = _layoutBlock(childBlock, childRequest);
             publishedChildren.Add(publishedChild);
-            publishedFlow.Add(new PublishedChildBlockItem(nextFlowOrder++, publishedChild));
+            publishedFlow.Add(new PublishedChildBlockItem(state.ReserveFlowOrder(), publishedChild));
 
             parent.Children[i] = childBlock;
-            currentY = AdvanceCursorPastUsedGeometry(childBlock);
-            previousBottomMargin = childBlock.Margin.Bottom;
+            state.CurrentY = AdvanceCursorPastUsedGeometry(childBlock);
+            state.PreviousBottomMargin = childBlock.Margin.Bottom;
         }
 
         FlushInlineFlow(
@@ -107,17 +87,13 @@ internal sealed class BlockFlowLayoutExecutor
             inlineSegments,
             request.ContentX,
             request.ContentWidth,
-            ref currentY,
-            ref previousBottomMargin,
-            ref maxLineWidth,
-            ref includeSyntheticListMarker,
+            state,
             publishedInlineSegments,
-            publishedFlow,
-            ref nextFlowOrder);
+            publishedFlow);
 
-        var contentHeight = VerticalFlowPolicy.ResolveStackHeight(currentY, previousBottomMargin, request.CursorY);
-        parent.InlineLayout = new InlineLayoutResult(inlineSegments, contentHeight, maxLineWidth);
-        var publishedInlineLayout = new PublishedInlineLayout(publishedInlineSegments, contentHeight, maxLineWidth);
+        var contentHeight = VerticalFlowPolicy.ResolveStackHeight(state.CurrentY, state.PreviousBottomMargin, request.CursorY);
+        parent.InlineLayout = new InlineLayoutResult(inlineSegments, contentHeight, state.MaxLineWidth);
+        var publishedInlineLayout = new PublishedInlineLayout(publishedInlineSegments, contentHeight, state.MaxLineWidth);
 
         return new BlockFlowLayoutResult(
             contentHeight,
@@ -149,7 +125,7 @@ internal sealed class BlockFlowLayoutExecutor
                 marginTop,
                 FormattingContextKind.Block,
                 nameof(BlockLayoutEngine),
-                _diagnosticsSink);
+                diagnosticsSink);
             var publishedBlock = _layoutBlock(
                 block,
                 new BlockLayoutRequest(
@@ -183,32 +159,28 @@ internal sealed class BlockFlowLayoutExecutor
         List<InlineFlowSegmentLayout> inlineSegments,
         float contentX,
         float contentWidth,
-        ref float currentY,
-        ref float previousBottomMargin,
-        ref float maxLineWidth,
-        ref bool includeSyntheticListMarker,
+        BlockFlowLayoutState state,
         ICollection<PublishedInlineFlowSegment> publishedInlineSegments,
-        ICollection<PublishedBlockFlowItem> publishedFlow,
-        ref int nextFlowOrder)
+        ICollection<PublishedBlockFlowItem> publishedFlow)
     {
         if (pendingInlineFlow.Count == 0)
         {
             return;
         }
 
-        var contentTop = currentY + previousBottomMargin;
+        var contentTop = state.CurrentY + state.PreviousBottomMargin;
         var segmentBlock = CreateInlineSegmentBlock(blockContext, pendingInlineFlow.Nodes);
-        var inlineLayout = _inlineEngine.Layout(
+        var inlineLayout = _inlineEngine.LayoutInlineFlow(
             segmentBlock,
             new InlineLayoutRequest(
                 contentX,
                 contentTop,
                 contentWidth,
-                includeSyntheticListMarker));
+                state.IncludeSyntheticListMarker));
 
         pendingInlineFlow.Clear();
-        includeSyntheticListMarker = false;
-        previousBottomMargin = 0f;
+        state.IncludeSyntheticListMarker = false;
+        state.PreviousBottomMargin = 0f;
 
         if (inlineLayout.Segments.Count > 0)
         {
@@ -217,12 +189,12 @@ internal sealed class BlockFlowLayoutExecutor
             {
                 var publishedSegment = _publisher.CreateInlineSegment(segment);
                 publishedInlineSegments.Add(publishedSegment);
-                publishedFlow.Add(new PublishedInlineFlowSegmentItem(nextFlowOrder++, publishedSegment));
+                publishedFlow.Add(new PublishedInlineFlowSegmentItem(state.ReserveFlowOrder(), publishedSegment));
             }
         }
 
-        currentY = contentTop + inlineLayout.TotalHeight;
-        maxLineWidth = Math.Max(maxLineWidth, inlineLayout.MaxLineWidth);
+        state.CurrentY = contentTop + inlineLayout.TotalHeight;
+        state.MaxLineWidth = Math.Max(state.MaxLineWidth, inlineLayout.MaxLineWidth);
     }
 
     private static BlockBox CreateInlineSegmentBlock(BlockBox blockContext, IReadOnlyList<BoxNode> inlineFlow)
@@ -264,4 +236,22 @@ internal sealed class BlockFlowLayoutExecutor
 
     private static FormattingContextKind ResolveFormattingContext(BlockBox block) =>
         block.IsInlineBlockContext ? FormattingContextKind.InlineBlock : FormattingContextKind.Block;
+
+    private sealed class BlockFlowLayoutState(float currentY)
+    {
+        private int _nextFlowOrder;
+
+        public float CurrentY { get; set; } = currentY;
+
+        public float PreviousBottomMargin { get; set; }
+
+        public float MaxLineWidth { get; set; }
+
+        public bool IncludeSyntheticListMarker { get; set; } = true;
+
+        public int ReserveFlowOrder()
+        {
+            return _nextFlowOrder++;
+        }
+    }
 }

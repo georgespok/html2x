@@ -1,6 +1,4 @@
-using Html2x.LayoutEngine.Contracts.Style;
-
-namespace Html2x.LayoutEngine.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 internal sealed record BlockFormattingResult
 {
@@ -33,7 +31,7 @@ internal sealed record BlockFormattingResult
     public float? Baseline { get; }
 
     public static BlockFormattingResult Empty { get; } =
-        new BlockFormattingResult(Array.Empty<BlockBox>(), 0f, 0f);
+        new BlockFormattingResult([], 0f, 0f);
 
     private static void ValidateMetric(float value, string name)
     {

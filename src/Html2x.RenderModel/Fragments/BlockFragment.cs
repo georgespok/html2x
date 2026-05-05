@@ -1,20 +1,15 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Represents a block-level fragment that can own child fragments in normal flow or table cell content.
 /// </summary>
-public class BlockFragment : Fragment
+public class BlockFragment(IEnumerable<Fragment>? children) : Fragment
 {
-    private readonly List<Fragment> _children;
+    private readonly List<Fragment> _children = children?.ToList() ?? [];
 
     public BlockFragment()
         : this([])
     {
-    }
-
-    public BlockFragment(IEnumerable<Fragment>? children)
-    {
-        _children = children?.ToList() ?? [];
     }
 
     public IReadOnlyList<Fragment> Children => _children;

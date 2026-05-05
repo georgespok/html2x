@@ -1,11 +1,10 @@
-using Html2x.RenderModel;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Box;
-using Html2x.LayoutEngine.Formatting;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.RenderModel.Styles;
 using Html2x.Text;
 
-namespace Html2x.LayoutEngine.Text;
+namespace Html2x.LayoutEngine.Geometry.Text;
 
 internal sealed class InlineRunFactory
 {
@@ -31,54 +30,51 @@ internal sealed class InlineRunFactory
         _diagnosticsSink = diagnosticsSink;
     }
 
-    public bool TryBuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout, out TextRunInput run)
+    public TextRunInput? BuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout)
     {
-        run = default!;
         if (inline.Role != BoxRole.InlineBlock || inlineLayout is null)
         {
-            return false;
+            return null;
         }
 
         var margin = inline.Style.Margin.Safe();
-        run = CreateRun(
+        return CreateRun(
             runId,
             inline,
             string.Empty,
             inline.Style,
-            PaddingLeft: 0f,
-            PaddingRight: 0f,
-            MarginLeft: margin.Left,
-            MarginRight: margin.Right,
-            Kind: TextRunKind.InlineObject,
-            InlineObject: inlineLayout);
-        return true;
+            paddingLeft: 0f,
+            paddingRight: 0f,
+            marginLeft: margin.Left,
+            marginRight: margin.Right,
+            kind: TextRunKind.InlineObject,
+            inlineObject: inlineLayout);
     }
 
-    public bool TryBuildLineBreakRunFromInlineStyle(InlineBox inline, int runId, out TextRunInput run)
+    public TextRunInput? BuildLineBreakRunFromInlineStyle(InlineBox inline, int runId)
     {
-        return TryBuildLineBreakRun(inline, inline.Style, runId, out run);
+        return BuildLineBreakRun(inline, inline.Style, runId);
     }
 
-    public bool TryBuildInlineBlockLayout(
+    public InlineObjectLayout? BuildInlineBlockLayout(
         InlineBox inline,
         float availableWidth,
         ITextMeasurer measurer,
-        ILineHeightStrategy lineHeightStrategy,
-        out InlineObjectLayout layout)
+        ILineHeightStrategy lineHeightStrategy)
     {
-        var builder = new InlineObjectLayoutBuilder(
+        var builder = new AtomicInlineObjectLayout(
             measurer,
             _metrics,
             lineHeightStrategy,
             _blockFormattingContext,
             _imageResolver,
             _diagnosticsSink);
-        return builder.TryBuildInlineBlockLayout(inline, availableWidth, out layout);
+        return builder.MeasureInlineBlock(inline, availableWidth);
     }
 
-    public bool TryBuildLineBreakRunFromBlockContext(InlineBox inline, ComputedStyle blockStyle, int runId, out TextRunInput run)
+    public TextRunInput? BuildLineBreakRunFromBlockContext(InlineBox inline, ComputedStyle blockStyle, int runId)
     {
-        return TryBuildLineBreakRun(inline, blockStyle, runId, out run);
+        return BuildLineBreakRun(inline, blockStyle, runId);
     }
 
     internal TextRunInput CreateSyntheticLineBreakRun(ComputedStyle style, int runId)
@@ -93,44 +89,41 @@ internal sealed class InlineRunFactory
             source,
             string.Empty,
             style,
-            PaddingLeft: 0f,
-            PaddingRight: 0f,
-            MarginLeft: 0f,
-            MarginRight: 0f,
-            Kind: TextRunKind.LineBreak);
+            paddingLeft: 0f,
+            paddingRight: 0f,
+            marginLeft: 0f,
+            marginRight: 0f,
+            kind: TextRunKind.LineBreak);
     }
 
-    private bool TryBuildLineBreakRun(InlineBox inline, ComputedStyle style, int runId, out TextRunInput run)
+    private TextRunInput? BuildLineBreakRun(InlineBox inline, ComputedStyle style, int runId)
     {
         if (!IsLineBreak(inline))
         {
-            run = default!;
-            return false;
+            return null;
         }
 
-        run = CreateRun(
+        return CreateRun(
             runId,
             inline,
             string.Empty,
             style,
-            PaddingLeft: 0f,
-            PaddingRight: 0f,
-            MarginLeft: 0f,
-            MarginRight: 0f,
-            Kind: TextRunKind.LineBreak);
-        return true;
+            paddingLeft: 0f,
+            paddingRight: 0f,
+            marginLeft: 0f,
+            marginRight: 0f,
+            kind: TextRunKind.LineBreak);
     }
 
-    public bool TryBuildTextRun(InlineBox inline, int runId, out TextRunInput run)
+    public TextRunInput? BuildTextRun(InlineBox inline, int runId)
     {
         if (string.IsNullOrEmpty(inline.TextContent))
         {
-            run = default!;
-            return false;
+            return null;
         }
 
         var (paddingLeft, paddingRight, marginLeft, marginRight) = GetInlineSpacing(inline);
-        run = CreateRun(
+        return CreateRun(
             runId,
             inline,
             inline.TextContent,
@@ -139,7 +132,6 @@ internal sealed class InlineRunFactory
             paddingRight,
             marginLeft,
             marginRight);
-        return true;
     }
 
     private static bool IsLineBreak(InlineBox inline)
@@ -150,12 +142,12 @@ internal sealed class InlineRunFactory
         InlineBox source,
         string text,
         ComputedStyle style,
-        float PaddingLeft,
-        float PaddingRight,
-        float MarginLeft,
-        float MarginRight,
-        TextRunKind Kind = TextRunKind.Normal,
-        InlineObjectLayout? InlineObject = null)
+        float paddingLeft,
+        float paddingRight,
+        float marginLeft,
+        float marginRight,
+        TextRunKind kind = TextRunKind.Normal,
+        InlineObjectLayout? inlineObject = null)
     {
         var font = _metrics.GetFontKey(style);
         var fontSize = _metrics.GetFontSize(style);
@@ -166,12 +158,12 @@ internal sealed class InlineRunFactory
             font,
             fontSize,
             style,
-            PaddingLeft,
-            PaddingRight,
-            MarginLeft,
-            MarginRight,
-            Kind,
-            InlineObject);
+            paddingLeft,
+            paddingRight,
+            marginLeft,
+            marginRight,
+            kind,
+            inlineObject);
     }
 
     private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(InlineBox inline)

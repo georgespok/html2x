@@ -1,4 +1,4 @@
-namespace Html2x.RenderModel;
+namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
 /// Represents a table fragment with row children and derived table metadata.
@@ -18,7 +18,7 @@ public sealed class TableFragment : BlockFragment
     }
 
     private TableFragment(List<TableRowFragment> rows)
-        : base(rows.Cast<Fragment>())
+        : base(rows)
     {
         _rows = rows;
     }

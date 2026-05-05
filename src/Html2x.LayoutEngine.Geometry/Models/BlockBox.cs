@@ -1,6 +1,4 @@
-using Html2x.RenderModel;
-
-using Html2x.LayoutEngine.Geometry;
+using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Models;
 
@@ -9,7 +7,6 @@ namespace Html2x.LayoutEngine.Geometry.Models;
 /// </summary>
 internal class BlockBox(BoxRole role) : BoxNode(role)
 {
-    private Spacing _padding = new();
     private UsedGeometry? _usedGeometry;
 
     /// <summary>
@@ -23,16 +20,12 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     /// <summary>
     /// Gets or sets the margin resolved for the current layout pass.
     /// </summary>
-    public Spacing Margin { get; internal set; } = new();
+    public Spacing Margin { get; internal set; }
 
     /// <summary>
     /// Gets or sets the padding resolved for the current layout pass.
     /// </summary>
-    public Spacing Padding
-    {
-        get => _padding;
-        internal set => _padding = value;
-    }
+    public Spacing Padding { get; internal set; }
 
     /// <summary>
     /// Gets or sets the text alignment resolved for inline layout.

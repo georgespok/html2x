@@ -9,53 +9,27 @@ Html2x is a modern, cross-platform .NET 8 library for converting static HTML and
 - Preserve clear module boundaries between public API, layout, diagnostics, and rendering.
 - Make unsupported input observable through diagnostics instead of silent behavior drift.
 
-## Repository Layout
+## Repository Guidance
 
-```text
-src/
-  Html2x/                     Public composition facade
-  Html2x.Diagnostics/         Diagnostics JSON serialization
-  Html2x.Diagnostics.Contracts/
-                               Diagnostics contracts and sink abstractions
-  Html2x.LayoutEngine.Contracts/
-                               Internal style, geometry, and publication handoff facts
-  Html2x.LayoutEngine.Style/   HTML parsing and CSS computation
-  Html2x.LayoutEngine.Geometry/
-                               Box construction and layout geometry
-  Html2x.LayoutEngine.Fragments/
-                               Published layout to render model projection
-  Html2x.LayoutEngine.Pagination/
-                               Page placement for render fragments
-  Html2x.LayoutEngine/        Layout pipeline composition
-  Html2x.RenderModel/         Public renderer input facts
-  Html2x.Renderers.Pdf/       Fragment to PDF rendering
-  Html2x.Resources/           File and data URI resource loading
-  Html2x.Text/                Font resolution and text measurement runtime
-  Tests/
-    Html2x.LayoutEngine.Test/
-    Html2x.Renderers.Pdf.Test/
-    Html2x.Test/
-    Html2x.TestConsole/
-    Html2x.TestConsole.Test/
-docs/                         Developer documentation
-build/                        Local generated artifacts
-```
+The current project map, module responsibilities, and build commands live in
+[developer documentation](docs/README.md). Agent workflow rules live in
+[AGENTS.md](AGENTS.md).
 
-## Build And Test
+Primary source documents:
 
-Run commands from the repository root.
+- [Architecture Overview](docs/architecture/overview.md): project map, module
+  ownership, and primary data flow.
+- [Getting Started](docs/getting-started.md): restore, build, and test
+  commands.
+- [Testing](docs/development/testing.md): test project ownership, practices, and
+  focused commands.
+- [Coding Standards](docs/development/coding-standards.md): implementation
+  conventions, naming, layering, diagnostics, and review checks.
+- [Agent Guidance](AGENTS.md): feature records, validation, commits, PRs,
+  local artifacts, and shell guidance.
 
-```powershell
-dotnet restore src/Html2x.sln
-dotnet build src/Html2x.sln -c Release
-dotnet test src/Html2x.sln -c Release
-```
-
-Manual PDF smoke test:
-
-```powershell
-dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- --input src/Tests/Html2x.TestConsole/html/example.html --output build/example.pdf
-```
+For public API, supported HTML/CSS, internals, and extension docs, start with
+the [developer documentation index](docs/README.md).
 
 ## Minimal Usage
 
@@ -78,20 +52,6 @@ await File.WriteAllBytesAsync("invoice.pdf", result.PdfBytes);
 ```
 
 `HtmlConverterOptions.Fonts.FontPath` must point to a font file or directory before layout begins.
-
-## Documentation
-
-Start with the [developer documentation index](docs/README.md). It links the architecture, internals, development, extension, and reference docs.
-
-Key entry points:
-
-- [Getting Started](docs/getting-started.md)
-- [Architecture Overview](docs/architecture/overview.md)
-- [Processing Pipeline](docs/architecture/pipeline.md)
-- [Coding Standards](docs/development/coding-standards.md)
-- [Testing](docs/development/testing.md)
-- [Supported HTML And CSS](docs/reference/supported-html-css.md)
-- [Public API](docs/reference/public-api.md)
 
 ## Scope
 

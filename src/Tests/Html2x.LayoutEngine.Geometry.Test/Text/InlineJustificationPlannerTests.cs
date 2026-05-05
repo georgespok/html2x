@@ -1,9 +1,8 @@
-using Html2x.RenderModel;
-using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.LayoutEngine.Text;
-using Html2x.LayoutEngine.Test.TestDoubles;
+using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Text;
 using Shouldly;
-using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 

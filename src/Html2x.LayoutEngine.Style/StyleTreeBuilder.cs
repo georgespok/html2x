@@ -1,7 +1,7 @@
 using AngleSharp;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Dom;
-using Html2x.LayoutEngine.Contracts.Style;
+using Html2x.LayoutEngine.Style.Document;
+using Html2x.LayoutEngine.Style.Style;
 
 namespace Html2x.LayoutEngine.Style;
 
@@ -32,7 +32,7 @@ internal sealed class StyleTreeBuilder : IStyleTreeBuilder
 
         var document = await DiagnosticStage.RunAsync(
             diagnosticsSink,
-            "stage/dom",
+            StyleDiagnosticNames.Stages.Dom,
             async () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -44,7 +44,7 @@ internal sealed class StyleTreeBuilder : IStyleTreeBuilder
 
         return DiagnosticStage.Run(
             diagnosticsSink,
-            "stage/style",
+            StyleDiagnosticNames.Stages.Style,
             () =>
             {
                 cancellationToken.ThrowIfCancellationRequested();

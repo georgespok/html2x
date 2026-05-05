@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,22 +9,18 @@ namespace Html2x.LayoutEngine.Test.Architecture;
 
 internal sealed class CSharpSourceFile
 {
-    private readonly string path;
-    private readonly SyntaxTree tree;
-    private readonly CompilationUnitSyntax root;
-
     private CSharpSourceFile(string path, SyntaxTree tree, CompilationUnitSyntax root)
     {
-        this.path = path;
-        this.tree = tree;
-        this.root = root;
+        Path = path;
+        Tree = tree;
+        Root = root;
     }
 
-    public string Path => path;
+    public string Path { get; }
 
-    public SyntaxTree Tree => tree;
+    public SyntaxTree Tree { get; }
 
-    public CompilationUnitSyntax Root => root;
+    public CompilationUnitSyntax Root { get; }
 
     public static CSharpSourceFile Load(params string[] pathSegments) =>
         Load(ArchitecturePaths.PathFromRoot(pathSegments));
@@ -102,7 +97,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainRecordStruct(string typeName, string accessibility)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<RecordDeclarationSyntax>()
             .FirstOrDefault(type => type.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal));
 
@@ -113,7 +108,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainEnum(string typeName, string accessibility)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<EnumDeclarationSyntax>()
             .FirstOrDefault(type => type.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal));
 
@@ -123,7 +118,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainEnumMembers(string enumName, params string[] memberNames)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<EnumDeclarationSyntax>()
             .FirstOrDefault(type => type.Identifier.ValueText.Equals(enumName, StringComparison.Ordinal));
 
@@ -140,7 +135,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainProperty(string propertyName, string? propertyType = null, string? accessibility = null)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
             .FirstOrDefault(property => property.Identifier.ValueText.Equals(propertyName, StringComparison.Ordinal));
 
@@ -184,7 +179,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldNotContainProperty(string propertyName, string? propertyType = null, string? accessibility = null)
     {
-        var matches = root.DescendantNodes()
+        var matches = Root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
             .Where(property => property.Identifier.ValueText.Equals(propertyName, StringComparison.Ordinal))
             .Where(property => propertyType is null || NormalizeType(property.Type.ToString()) == NormalizeType(propertyType))
@@ -209,7 +204,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainMethod(string methodName, string? returnType = null, string? accessibility = null)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .FirstOrDefault(method => method.Identifier.ValueText.Equals(methodName, StringComparison.Ordinal));
 
@@ -253,7 +248,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldContainConstructor(string typeName, string accessibility)
     {
-        var declaration = root.DescendantNodes()
+        var declaration = Root.DescendantNodes()
             .OfType<ConstructorDeclarationSyntax>()
             .FirstOrDefault(constructor => constructor.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal));
 
@@ -263,7 +258,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldHaveParameter(string methodOrConstructorName, string parameterName, string parameterType)
     {
-        var parameter = root.DescendantNodes()
+        var parameter = Root.DescendantNodes()
             .OfType<BaseMethodDeclarationSyntax>()
             .Where(method => MethodName(method).Equals(methodOrConstructorName, StringComparison.Ordinal))
             .SelectMany(method => method.ParameterList.Parameters)
@@ -277,7 +272,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldNotHavePublicConstructorParameter(string typeName, string parameterType)
     {
-        var matches = root.DescendantNodes()
+        var matches = Root.DescendantNodes()
             .OfType<ConstructorDeclarationSyntax>()
             .Where(constructor => constructor.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal))
             .Where(constructor => AccessibilityOf(constructor) == "public")
@@ -310,7 +305,7 @@ internal sealed class CSharpSourceFile
 
     public void ShouldNotUseObjectType()
     {
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<PredefinedTypeSyntax>()
             .Any(type => type.Keyword.IsKind(SyntaxKind.ObjectKeyword))
             .ShouldBeFalse($"{RelativePath()} should not use arbitrary object values.");
@@ -376,7 +371,7 @@ internal sealed class CSharpSourceFile
 
     public IReadOnlyList<string> FriendAssemblies()
     {
-        return root.DescendantNodes()
+        return Root.DescendantNodes()
             .OfType<AttributeSyntax>()
             .Where(static attribute => attribute.Name.ToString().EndsWith("InternalsVisibleTo", StringComparison.Ordinal))
             .Select(attribute => attribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression)
@@ -387,12 +382,12 @@ internal sealed class CSharpSourceFile
     }
 
     private IEnumerable<string> Namespaces() =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<BaseNamespaceDeclarationSyntax>()
             .Select(static declaration => declaration.Name.ToString());
 
     private IEnumerable<BaseTypeDeclarationSyntax> TypeDeclarations() =>
-        root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>();
+        Root.DescendantNodes().OfType<BaseTypeDeclarationSyntax>();
 
     private BaseTypeDeclarationSyntax FindType(string typeName)
     {
@@ -405,25 +400,25 @@ internal sealed class CSharpSourceFile
 
     private bool UsesNamespace(string namespaceName)
     {
-        return root.Usings.Any(usingDirective =>
+        return Root.Usings.Any(usingDirective =>
             usingDirective.Name?.ToString().StartsWith(namespaceName, StringComparison.Ordinal) == true) ||
-            root.DescendantNodes()
+            Root.DescendantNodes()
                 .OfType<QualifiedNameSyntax>()
                 .Any(name => name.ToString().StartsWith(namespaceName, StringComparison.Ordinal));
     }
 
     private bool UsesIdentifier(string identifier) =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<IdentifierNameSyntax>()
             .Any(node => node.Identifier.ValueText.Equals(identifier, StringComparison.Ordinal));
 
     private bool ConstructsType(string typeName) =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<ObjectCreationExpressionSyntax>()
             .Any(node => LastTypeName(node.Type).Equals(typeName, StringComparison.Ordinal));
 
     private bool Invokes(string memberName) =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
             .Any(invocation => InvocationName(invocation).Equals(memberName, StringComparison.Ordinal));
 
@@ -431,7 +426,7 @@ internal sealed class CSharpSourceFile
         FindInvocationMemberOn(receiverName, memberName) is not null;
 
     private InvocationExpressionSyntax? FindInvocationMemberOn(string receiverName, string memberName) =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
             .FirstOrDefault(invocation =>
                 invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
@@ -439,22 +434,22 @@ internal sealed class CSharpSourceFile
                 MemberName(memberAccess.Expression).Equals(receiverName, StringComparison.Ordinal));
 
     private bool AssignsToMember(string memberName) =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<AssignmentExpressionSyntax>()
             .Any(assignment => MemberName(assignment.Left).Equals(memberName, StringComparison.Ordinal));
 
     private IReadOnlyList<string> StringLiterals() =>
-        root.DescendantNodes()
+        Root.DescendantNodes()
             .OfType<LiteralExpressionSyntax>()
             .Where(static literal => literal.IsKind(SyntaxKind.StringLiteralExpression))
             .Select(static literal => literal.Token.ValueText)
             .ToArray();
 
     private string RelativePath() =>
-        System.IO.Path.GetRelativePath(ArchitecturePaths.RepoRoot(), path);
+        System.IO.Path.GetRelativePath(ArchitecturePaths.RepoRoot(), Path);
 
     private int LineNumber(SyntaxNode node) =>
-        tree.GetLineSpan(node.Span).StartLinePosition.Line + 1;
+        Tree.GetLineSpan(node.Span).StartLinePosition.Line + 1;
 
     private static string MethodName(BaseMethodDeclarationSyntax declaration) =>
         declaration switch

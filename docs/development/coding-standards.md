@@ -24,6 +24,7 @@ serialization live in `Html2x.Diagnostics`.
 
 ## Implementation Conventions
 
+- Target .NET 8 across all projects.
 - Keep classes single-purpose and name the responsibility clearly.
 - Prefer immutable records or readonly structs for value contracts.
 - Use option objects and injected services instead of static mutable state.
@@ -31,6 +32,16 @@ serialization live in `Html2x.Diagnostics`.
 - Keep public APIs documented with XML comments.
 - Keep methods short enough that validation, calculation, and projection steps are visible.
 - Use guard clauses for required dependencies and invalid options.
+- Use braces for all control-flow blocks.
+- Keep layout, rendering, and diagnostics concerns separated by module ownership.
+- Do not add OpenAPI, YAML, or web API contracts. Html2x is an in-process
+  library with a console harness.
+
+## Naming
+
+- Use PascalCase for public APIs and types.
+- Use camelCase for private fields, locals, and parameters.
+- Suffix async methods with `Async`.
 
 ## Logging And Diagnostics
 

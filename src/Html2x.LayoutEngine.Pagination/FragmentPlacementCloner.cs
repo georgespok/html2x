@@ -1,5 +1,5 @@
-using Html2x.RenderModel;
-using LayoutFragment = Html2x.RenderModel.Fragment;
+using Html2x.RenderModel.Fragments;
+using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Pagination;
 
@@ -128,9 +128,7 @@ internal sealed class FragmentPlacementCloner
             ContentRect = source.ContentRect.Translate(deltaX, deltaY),
             AuthoredSizePx = source.AuthoredSizePx,
             IntrinsicSizePx = source.IntrinsicSizePx,
-            Status = source.Status,
-            IsMissing = source.IsMissing,
-            IsOversize = source.IsOversize
+            Status = source.Status
         };
     }
 
