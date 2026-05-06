@@ -3,7 +3,6 @@ using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.Resources;
 
-
 internal sealed class ImageResourceResult
 {
     public required string Src { get; init; }

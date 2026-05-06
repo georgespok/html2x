@@ -1,8 +1,8 @@
-using Html2x.Text;
 using Html2x.Renderers.Pdf.Drawing;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Text;
+using Html2x.Text;
 using Shouldly;
 using SkiaSharp;
 
@@ -18,7 +18,7 @@ public sealed class SkiaFontCacheTests
             .AddEnumeration(
                 "fonts",
                 "*.*",
-                recursive: true,
+                true,
                 [
                     "fonts\\a.ttf",
                     "fonts\\b.otf",
@@ -39,15 +39,15 @@ public sealed class SkiaFontCacheTests
         var faces = FontDirectoryIndex.Build(fileDirectory, typefaceFactory, "fonts");
 
         faces.Count.ShouldBe(3);
-        faces.Select(face => face.Path).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], ignoreOrder: true);
+        faces.Select(face => face.Path).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], true);
         fileDirectory.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
-        fileDirectory.EnumerateFilesCalls.ShouldBe([new TestFileDirectory.FileEnumerationKey("fonts", "*.*", true)]);
+        fileDirectory.EnumerateFilesCalls.ShouldBe([new("fonts", "*.*", true)]);
         typefaceFactory.FromFileCalls.ShouldBe(["fonts\\a.ttf", "fonts\\b.otf"]);
         typefaceFactory.FromFileWithFaceIndexCalls.ShouldBe(
-            [
-                new TestSkiaTypefaceFactory.FileFaceKey("fonts\\c.ttc", 0),
-                new TestSkiaTypefaceFactory.FileFaceKey("fonts\\c.ttc", 1)
-            ]);
+        [
+            new("fonts\\c.ttc", 0),
+            new("fonts\\c.ttc", 1)
+        ]);
     }
 
     public static IEnumerable<object[]> BestMatchCases()
@@ -59,8 +59,8 @@ public sealed class SkiaFontCacheTests
             true,
             new[]
             {
-                new FontFaceEntry("regular.ttf", 0, "Inter", 700, IsItalic: false),
-                new FontFaceEntry("italic.ttf", 0, "Inter", 400, IsItalic: true)
+                new FontFaceEntry("regular.ttf", 0, "Inter", 700, false),
+                new FontFaceEntry("italic.ttf", 0, "Inter", 400, true)
             },
             "italic.ttf",
             0
@@ -73,8 +73,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new FontFaceEntry("w400.ttf", 0, "Inter", 400, IsItalic: false),
-                new FontFaceEntry("w700.ttf", 0, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("w400.ttf", 0, "Inter", 400, false),
+                new FontFaceEntry("w700.ttf", 0, "Inter", 700, false)
             },
             "w700.ttf",
             0
@@ -87,8 +87,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new FontFaceEntry("b.ttf", 0, "Inter", 600, IsItalic: false),
-                new FontFaceEntry("a.ttf", 0, "Inter", 700, IsItalic: false)
+                new FontFaceEntry("b.ttf", 0, "Inter", 600, false),
+                new FontFaceEntry("a.ttf", 0, "Inter", 700, false)
             },
             "a.ttf",
             0
@@ -101,8 +101,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new FontFaceEntry("a.ttc", 1, "Inter", 600, IsItalic: false),
-                new FontFaceEntry("a.ttc", 0, "Inter", 600, IsItalic: false)
+                new FontFaceEntry("a.ttc", 1, "Inter", 600, false),
+                new FontFaceEntry("a.ttc", 0, "Inter", 600, false)
             },
             "a.ttc",
             0
@@ -115,8 +115,8 @@ public sealed class SkiaFontCacheTests
             false,
             new[]
             {
-                new FontFaceEntry("b.ttf", 0, "Beta", 500, IsItalic: false),
-                new FontFaceEntry("a.ttf", 0, "Alpha", 700, IsItalic: false)
+                new FontFaceEntry("b.ttf", 0, "Beta", 500, false),
+                new FontFaceEntry("a.ttf", 0, "Alpha", 700, false)
             },
             "a.ttf",
             0
@@ -129,8 +129,8 @@ public sealed class SkiaFontCacheTests
             true,
             new[]
             {
-                new FontFaceEntry("upright.ttf", 0, "Alpha", 400, IsItalic: false),
-                new FontFaceEntry("italic.ttf", 0, "Beta", 900, IsItalic: true)
+                new FontFaceEntry("upright.ttf", 0, "Alpha", 400, false),
+                new FontFaceEntry("italic.ttf", 0, "Beta", 900, true)
             },
             "italic.ttf",
             0
@@ -165,7 +165,7 @@ public sealed class SkiaFontCacheTests
             FontWeight.W700,
             FontStyle.Normal,
             resolvedPath,
-            FilePath: resolvedPath,
+            resolvedPath,
             ConfiguredPath: "fonts");
         var run = new TextRun(
             "Trace",

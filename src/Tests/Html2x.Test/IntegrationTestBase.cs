@@ -29,10 +29,8 @@ public abstract class IntegrationTestBase(ITestOutputHelper output)
         return string.Concat(name.Select(ch => invalidChars.Contains(ch) ? '_' : ch)).Trim();
     }
 
-    private static string EnsurePdfExtension(string fileName)
-    {
-        return fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
+    private static string EnsurePdfExtension(string fileName) =>
+        fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase)
             ? fileName
             : $"{fileName}.pdf";
-    }
 }

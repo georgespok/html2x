@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class ArchitectureSolution
 {
     private readonly string _path;

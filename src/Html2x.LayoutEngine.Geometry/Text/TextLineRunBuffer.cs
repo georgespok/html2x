@@ -3,7 +3,7 @@ using System.Text;
 namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
-/// Buffers one source run while text is accumulated for a line.
+///     Buffers one source run while text is accumulated for a line.
 /// </summary>
 internal sealed class TextLineRunBuffer(TextRunInput source, InlineObjectLayout? inlineObject = null)
 {

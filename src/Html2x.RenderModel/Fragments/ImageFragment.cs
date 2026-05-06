@@ -4,8 +4,8 @@ using Html2x.RenderModel.Measurements.Units;
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Represents an HTML &lt;img&gt; element after style resolution and basic validation.
-/// Values are immutable and passed to layout/rendering stages.
+///     Represents an HTML &lt;img&gt; element after style resolution and basic validation.
+///     Values are immutable and passed to layout/rendering stages.
 /// </summary>
 public sealed class ImageFragment : Fragment
 {
@@ -15,8 +15,8 @@ public sealed class ImageFragment : Fragment
     public required string Src { get; init; }
 
     /// <summary>
-    /// Content box rect after applying padding and borders to the outer rect.
-    /// Used for image drawing and placeholders.
+    ///     Content box rect after applying padding and borders to the outer rect.
+    ///     Used for image drawing and placeholders.
     /// </summary>
     public required RectPt ContentRect
     {

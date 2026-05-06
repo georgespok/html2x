@@ -2,9 +2,8 @@ using Html2x.RenderModel.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Text;
 
-
 /// <summary>
-/// Carries source text, spacing, and font data for inline measurement.
+///     Carries source text, spacing, and font data for inline measurement.
 /// </summary>
 internal sealed record TextRunInput(
     int RunId,

@@ -22,7 +22,7 @@ internal sealed class LayoutBuilderFixture
 
         var layoutBuilder = new LayoutBuilder(
             textMeasurer,
-            imageMetadataResolver ?? new Html2x.LayoutEngine.Test.TestDoubles.NoopImageMetadataResolver());
+            imageMetadataResolver ?? new NoopImageMetadataResolver());
         var layoutOptions = options ?? new LayoutBuildSettings { PageSize = PaperSizes.A4 };
 
         return layoutBuilder.BuildAsync(html, layoutOptions);

@@ -1,7 +1,8 @@
-using Html2x.RenderModel.Styles;
-
 namespace Html2x.LayoutEngine.Geometry.Box;
 
+/// <summary>
+///  Normalizes block children into the box sequence expected by block flow layout.
+/// </summary>
 internal static class BlockFlowNormalization
 {
     public static void NormalizeChildrenForBlock(BlockBox parent)
@@ -147,9 +148,8 @@ internal static class BlockFlowNormalization
         return boundary;
     }
 
-    private static ComputedStyle CreateAnonymousStyle(ComputedStyle parentStyle)
-    {
-        return new ComputedStyle
+    private static ComputedStyle CreateAnonymousStyle(ComputedStyle parentStyle) =>
+        new()
         {
             FontFamily = parentStyle.FontFamily,
             FontSizePt = parentStyle.FontSizePt,
@@ -158,8 +158,8 @@ internal static class BlockFlowNormalization
             TextAlign = parentStyle.TextAlign,
             Color = parentStyle.Color,
             BackgroundColor = parentStyle.BackgroundColor,
-            Margin = new Spacing(0, 0, 0, 0),
-            Padding = new Spacing(0, 0, 0, 0),
+            Margin = new(0, 0, 0, 0),
+            Padding = new(0, 0, 0, 0),
             WidthPt = null,
             MinWidthPt = null,
             MaxWidthPt = null,
@@ -168,5 +168,4 @@ internal static class BlockFlowNormalization
             MaxHeightPt = null,
             Borders = parentStyle.Borders
         };
-    }
 }

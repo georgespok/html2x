@@ -4,9 +4,8 @@ using Html2x.RenderModel.Text;
 
 namespace Html2x.RenderModel.Fragments;
 
-
 /// <summary>
-/// Represents a measured run of text with absolute baseline origin and resolved font data.
+///     Represents a measured run of text with absolute baseline origin and resolved font data.
 /// </summary>
 public sealed record TextRun(
     string Text, // exact substring for this run (post line-wrapping)
@@ -20,13 +19,15 @@ public sealed record TextRun(
     ColorRgba? Color = null,
     ResolvedFont? ResolvedFont = null)
 {
-    private readonly string _text = Text ?? throw new ArgumentNullException(nameof(Text));
+    private readonly float _advanceWidth =
+        FragmentGeometryGuard.RequireNonNegativeFinite(nameof(AdvanceWidth), AdvanceWidth);
+
+    private readonly float _ascent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Ascent), Ascent);
+    private readonly float _descent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Descent), Descent);
     private readonly FontKey _font = Font ?? throw new ArgumentNullException(nameof(Font));
     private readonly float _fontSizePt = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(FontSizePt), FontSizePt);
     private readonly PointPt _origin = FragmentGeometryGuard.RequirePoint(nameof(Origin), Origin);
-    private readonly float _advanceWidth = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(AdvanceWidth), AdvanceWidth);
-    private readonly float _ascent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Ascent), Ascent);
-    private readonly float _descent = FragmentGeometryGuard.RequireNonNegativeFinite(nameof(Descent), Descent);
+    private readonly string _text = Text ?? throw new ArgumentNullException(nameof(Text));
 
     public string Text
     {

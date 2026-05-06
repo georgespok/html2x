@@ -1,19 +1,16 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
-using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
 /// <summary>
-/// Verifies layout geometry creation, projection, and measurement contracts.
+///     Verifies layout geometry creation, projection, and measurement contracts.
 /// </summary>
 public sealed class GeometryContractTests
 {
@@ -22,41 +19,44 @@ public sealed class GeometryContractTests
     {
         var table = new TableBox(BoxRole.Table)
         {
-            Style = new ComputedStyle
+            Style = new()
             {
-                Margin = new Spacing(0f, 0f, 0f, -8f),
+                Margin = new(0f, 0f, 0f, -8f),
                 WidthPt = 40f
             }
         };
-        var inlineEngine = new InlineLayoutEngine();
-        var layoutEngine = new BlockLayoutEngine(
+        var inlineEngine = new InlineFlowLayout();
+        var imageResolver = new ImageSizingRules();
+        var layoutEngine = new BlockBoxLayout(
             inlineEngine,
-            new TableLayoutEngine(inlineEngine));
+            new(inlineEngine, imageResolver),
+            new(),
+            imageResolver);
         var page = new PageBox
         {
-            Size = new SizePt(100f, 200f),
-            Margin = new Spacing(0f, 0f, 0f, 10f)
+            Size = new(100f, 200f),
+            Margin = new(0f, 0f, 0f, 10f)
         };
 
-        _ = layoutEngine.LayoutPublished(table, page);
+        _ = PublishedLayoutTestResolver.Resolve(layoutEngine, table, page);
 
         table.UsedGeometry.ShouldNotBeNull();
-        table.UsedGeometry.Value.BorderBoxRect.ShouldBe(new RectPt(10f, 0f, 40f, 0f));
+        table.UsedGeometry.Value.BorderBoxRect.ShouldBe(new(10f, 0f, 40f, 0f));
     }
 
     [Fact]
     public void FromBorderBox_OversizedPaddingAndBorders_ClampsContentRectToZeroSize()
     {
-        var geometry = UsedGeometryCalculator.FromBorderBox(
+        var geometry = UsedGeometryRules.FromBorderBox(
             1f,
             2f,
             10f,
             6f,
-            new Spacing(4f, 4f, 4f, 4f),
-            new Spacing(3f, 3f, 3f, 3f));
+            new(4f, 4f, 4f, 4f),
+            new(3f, 3f, 3f, 3f));
 
-        geometry.BorderBoxRect.ShouldBe(new RectPt(1f, 2f, 10f, 6f));
-        geometry.ContentBoxRect.ShouldBe(new RectPt(8f, 9f, 0f, 0f));
+        geometry.BorderBoxRect.ShouldBe(new(1f, 2f, 10f, 6f));
+        geometry.ContentBoxRect.ShouldBe(new(8f, 9f, 0f, 0f));
     }
 
     [Fact]
@@ -73,22 +73,22 @@ public sealed class GeometryContractTests
             Style = style,
             TextContent = "abcd efgh"
         });
-        var inlineEngine = new InlineLayoutEngine(
+        var inlineEngine = new InlineFlowLayout(
             new FontMetricsProvider(),
             new FakeTextMeasurer(10f, 9f, 3f),
             new DefaultLineHeightStrategy());
-        var heightCalculator = new BlockContentHeightCalculator(
-            new BlockContentMeasurer(
+        var heightCalculator = new BlockContentHeightMeasurement(
+            new(
                 inlineEngine,
-                new BlockMeasurementCalculator(),
-                new ImageLayoutResolver()));
+                new(),
+                new ImageSizingRules()));
 
         var existingLayout = new InlineLayoutResult(
             [
-                new InlineFlowSegmentLayout([], Top: 123f, Height: 45f)
+                new([], 123f, 45f)
             ],
-            TotalHeight: 45f,
-            MaxLineWidth: 67f);
+            45f,
+            67f);
         block.InlineLayout = existingLayout;
 
         var wideHeight = heightCalculator.MeasureBorderBoxHeight(block, 200f, MeasureNoTables);
@@ -153,18 +153,18 @@ public sealed class GeometryContractTests
     }
 
     [Fact]
-    public void InlineLayoutEngineMeasure_TextBlock_PreservesInlineLayout()
+    public void InlineFlowLayoutMeasure_TextBlock_PreservesInlineLayout()
     {
         var style = new ComputedStyle();
         var block = new BlockBox(BoxRole.Block)
         {
             Style = style,
-            InlineLayout = new InlineLayoutResult(
+            InlineLayout = new(
                 [
-                    new InlineFlowSegmentLayout([], Top: 40f, Height: 12f)
+                    new([], 40f, 12f)
                 ],
-                TotalHeight: 12f,
-                MaxLineWidth: 30f)
+                12f,
+                30f)
         };
         block.Children.Add(new InlineBox(BoxRole.Inline)
         {
@@ -173,7 +173,7 @@ public sealed class GeometryContractTests
             TextContent = "abcd efgh"
         });
         var originalLayout = block.InlineLayout;
-        var engine = new InlineLayoutEngine(
+        var engine = new InlineFlowLayout(
             new FontMetricsProvider(),
             new FakeTextMeasurer(10f, 9f, 3f),
             new DefaultLineHeightStrategy());
@@ -187,7 +187,7 @@ public sealed class GeometryContractTests
     }
 
     [Fact]
-    public void InlineLayoutEngineMeasure_InlineBlockImage_SkipsImageFacts()
+    public void InlineFlowLayoutMeasure_InlineBlockImage_SkipsImageFacts()
     {
         var style = new ComputedStyle();
         var root = new BlockBox(BoxRole.Block)
@@ -204,31 +204,31 @@ public sealed class GeometryContractTests
             Parent = inline,
             Style = style,
             Src = "before.png",
-            AuthoredSizePx = new SizePx(1d, 2d),
-            IntrinsicSizePx = new SizePx(3d, 4d),
+            AuthoredSizePx = new(1d, 2d),
+            IntrinsicSizePx = new(3d, 4d),
             Status = ImageLoadStatus.Oversize
         };
-        image.ApplyLayoutGeometry(UsedGeometryCalculator.FromBorderBox(
+        image.ApplyLayoutGeometry(UsedGeometryRules.FromBorderBox(
             1f,
             2f,
             3f,
             4f,
-            new Spacing(),
-            new Spacing()));
+            new(),
+            new()));
         var originalGeometry = image.UsedGeometry;
 
         inline.Children.Add(image);
         root.Children.Add(inline);
 
-        var imageResolver = new ImageLayoutResolver(new LayoutGeometryRequest
+        var imageResolver = new ImageSizingRules(new()
         {
-            ImageMetadataResolver = new FixedImageMetadataResolver(new SizePx(40d, 20d))
+            ImageMetadataResolver = new FixedImageMetadataResolver(new(40d, 20d))
         });
-        var engine = new InlineLayoutEngine(
+        var engine = new InlineFlowLayout(
             new FontMetricsProvider(),
             new FakeTextMeasurer(10f, 9f, 3f),
             new DefaultLineHeightStrategy(),
-            new BlockFormattingContext(),
+            new(),
             imageResolver);
 
         var measured = engine.Measure(root, InlineLayoutRequest.ForMeasurement(100f));
@@ -237,8 +237,8 @@ public sealed class GeometryContractTests
         measured.Segments.ShouldBeEmpty();
         image.UsedGeometry.ShouldBe(originalGeometry);
         image.Src.ShouldBe("before.png");
-        image.AuthoredSizePx.ShouldBe(new SizePx(1d, 2d));
-        image.IntrinsicSizePx.ShouldBe(new SizePx(3d, 4d));
+        image.AuthoredSizePx.ShouldBe(new(1d, 2d));
+        image.IntrinsicSizePx.ShouldBe(new(3d, 4d));
         image.IsMissing.ShouldBeFalse();
         image.IsOversize.ShouldBeTrue();
     }
@@ -246,38 +246,38 @@ public sealed class GeometryContractTests
     [Fact]
     public void UsedGeometry_Transformations_ReturnNewGeometry()
     {
-        var geometry = UsedGeometryCalculator.FromBorderBox(
+        var geometry = UsedGeometryRules.FromBorderBox(
             10f,
             20f,
             100f,
             50f,
-            new Spacing(2f, 3f, 4f, 5f),
-            new Spacing(1f, 1f, 1f, 1f),
-            baseline: 30f,
-            markerOffset: 7f);
+            new(2f, 3f, 4f, 5f),
+            new(1f, 1f, 1f, 1f),
+            30f,
+            7f);
 
         var translated = geometry.Translate(4f, -6f);
         var resized = geometry.WithBorderWidth(8f);
 
-        geometry.BorderBoxRect.ShouldBe(new RectPt(10f, 20f, 100f, 50f));
-        geometry.ContentBoxRect.ShouldBe(new RectPt(16f, 23f, 90f, 42f));
+        geometry.BorderBoxRect.ShouldBe(new(10f, 20f, 100f, 50f));
+        geometry.ContentBoxRect.ShouldBe(new(16f, 23f, 90f, 42f));
         geometry.Baseline.ShouldBe(30f);
-        translated.BorderBoxRect.ShouldBe(new RectPt(14f, 14f, 100f, 50f));
-        translated.ContentBoxRect.ShouldBe(new RectPt(20f, 17f, 90f, 42f));
+        translated.BorderBoxRect.ShouldBe(new(14f, 14f, 100f, 50f));
+        translated.ContentBoxRect.ShouldBe(new(20f, 17f, 90f, 42f));
         translated.Baseline.ShouldBe(24f);
-        resized.BorderBoxRect.ShouldBe(new RectPt(10f, 20f, 8f, 50f));
-        resized.ContentBoxRect.ShouldBe(new RectPt(16f, 23f, 0f, 42f));
+        resized.BorderBoxRect.ShouldBe(new(10f, 20f, 8f, 50f));
+        resized.ContentBoxRect.ShouldBe(new(16f, 23f, 0f, 42f));
     }
 
     [Fact]
     public void UsedGeometry_InvalidConstructorInput_Throws()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new UsedGeometry(
-            new RectPt(float.NaN, 0f, 10f, 10f),
-            new RectPt(0f, 0f, 10f, 10f),
-            baseline: null,
-            markerOffset: 0f,
-            allowsOverflow: false));
+            new(float.NaN, 0f, 10f, 10f),
+            new(0f, 0f, 10f, 10f),
+            null,
+            0f,
+            false));
     }
 
     [Theory]
@@ -291,7 +291,7 @@ public sealed class GeometryContractTests
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new BlockFragment
         {
-            Rect = new RectPt(x, y, width, height)
+            Rect = new(x, y, width, height)
         });
     }
 
@@ -315,7 +315,7 @@ public sealed class GeometryContractTests
             "x",
             font,
             fontSize,
-            new PointPt(originX, 20f),
+            new(originX, 20f),
             advanceWidth,
             ascent,
             descent));
@@ -329,7 +329,7 @@ public sealed class GeometryContractTests
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new LineBoxFragment
         {
-            Rect = new RectPt(0f, 0f, 10f, 12f),
+            Rect = new(0f, 0f, 10f, 12f),
             BaselineY = baselineY,
             LineHeight = lineHeight
         });
@@ -340,23 +340,28 @@ public sealed class GeometryContractTests
     {
         var root = new BlockBox(BoxRole.Block)
         {
-            Style = new ComputedStyle()
+            Style = new()
         };
         var block = new BlockBox(BoxRole.Block)
         {
             Parent = root,
-            Style = new ComputedStyle()
+            Style = new()
         };
         root.Children.Add(block);
-        var inlineEngine = new InlineLayoutEngine();
-        var layoutEngine = new BlockLayoutEngine(inlineEngine, new TableLayoutEngine(inlineEngine));
+        var inlineEngine = new InlineFlowLayout();
+        var imageResolver = new ImageSizingRules();
+        var layoutEngine = new BlockBoxLayout(
+            inlineEngine,
+            new(inlineEngine, imageResolver),
+            new(),
+            imageResolver);
         var page = new PageBox
         {
-            Size = new SizePt(100f, 200f),
-            Margin = new Spacing(-5f, -10f, -15f, -20f)
+            Size = new(100f, 200f),
+            Margin = new(-5f, -10f, -15f, -20f)
         };
 
-        var published = layoutEngine.LayoutPublished(root, page);
+        var published = PublishedLayoutTestResolver.Resolve(layoutEngine, root, page);
 
         var laidOutBlock = published.Blocks.ShouldHaveSingleItem();
         laidOutBlock.Geometry.BorderBoxRect.X.ShouldBe(0f);
@@ -369,10 +374,10 @@ public sealed class GeometryContractTests
     {
         var result = new LayoutPaginator().Paginate(
             [],
-            new PaginationOptions
+            new()
             {
-                PageSize = new SizePt(100f, 200f),
-                Margin = new Spacing(-5f, -10f, -15f, -20f)
+                PageSize = new(100f, 200f),
+                Margin = new(-5f, -10f, -15f, -20f)
             });
 
         var page = result.AuditPages.ShouldHaveSingleItem();
@@ -383,7 +388,7 @@ public sealed class GeometryContractTests
     [Fact]
     public async Task Build_NestedInlineBlockImage_UsesConfiguredImageMetadataResolver()
     {
-        var imageMetadataResolver = new FixedImageMetadataResolver(new SizePx(32d, 16d));
+        var imageMetadataResolver = new FixedImageMetadataResolver(new(32d, 16d));
         var layout = await new LayoutBuilderFixture().BuildLayoutAsync(
             """
             <html>
@@ -399,7 +404,7 @@ public sealed class GeometryContractTests
             </html>
             """,
             GeometryTestHarness.CreateTextMeasurer(),
-            new LayoutBuildSettings { PageSize = PaperSizes.A4 },
+            new() { PageSize = PaperSizes.A4 },
             imageMetadataResolver);
 
         var image = layout.Pages
@@ -483,10 +488,7 @@ public sealed class GeometryContractTests
         block.Children.ShouldHaveSingleItem().ShouldBeOfType<RuleFragment>();
     }
 
-    private static float MeasureNoTables(TableBox table, float availableWidth)
-    {
-        return 0f;
-    }
+    private static float MeasureNoTables(TableBox table, float availableWidth) => 0f;
 
     private static IEnumerable<Fragment> EnumerateFragments(
         Fragment fragment)
@@ -516,19 +518,16 @@ public sealed class GeometryContractTests
     }
 
     /// <summary>
-    /// Provides deterministic intrinsic dimensions for image geometry tests.
+    ///     Provides deterministic intrinsic dimensions for image geometry tests.
     /// </summary>
     private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
-        {
-            return new ImageMetadataResult
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+            new()
             {
                 Src = src,
                 Status = ImageLoadStatus.Ok,
                 IntrinsicSizePx = intrinsicSize
             };
-        }
     }
-
 }

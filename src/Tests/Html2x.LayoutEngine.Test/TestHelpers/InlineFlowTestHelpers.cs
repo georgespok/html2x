@@ -8,16 +8,11 @@ internal static class InlineFlowTestHelpers
 {
     private static readonly LayoutBuilderFixture Fixture = new();
 
-    public static Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
-    {
-        return Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutBuildSettings
+    public static Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer) =>
+        Fixture.BuildLayoutAsync(html, textMeasurer, new()
         {
             PageSize = PaperSizes.A4
         });
-    }
 
-    public static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
-    {
-        return new Html2x.LayoutEngine.Test.TestDoubles.FakeTextMeasurer(widthPerChar, 8f, 2f);
-    }
+    public static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
 }

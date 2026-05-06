@@ -6,8 +6,8 @@ namespace Html2x.Renderers.Pdf.Drawing;
 internal sealed class BorderShapeDrawer
 {
     /// <summary>
-    /// Calculates the drawing rectangles for each border side using Horizontal Dominance strategy.
-    /// Top/Bottom take full width. Left/Right fit between them.
+    ///     Calculates the drawing rectangles for each border side using Horizontal Dominance strategy.
+    ///     Top/Bottom take full width. Left/Right fit between them.
     /// </summary>
     public (SKRect Top, SKRect Right, SKRect Bottom, SKRect Left) CalculateRects(SKSize size, BorderEdges borders)
     {
@@ -49,10 +49,10 @@ internal sealed class BorderShapeDrawer
     {
         var (topRect, rightRect, bottomRect, leftRect) = CalculateRects(size, borders);
 
-        DrawSide(canvas, topRect, borders.Top, isVertical: false);
-        DrawSide(canvas, rightRect, borders.Right, isVertical: true);
-        DrawSide(canvas, bottomRect, borders.Bottom, isVertical: false);
-        DrawSide(canvas, leftRect, borders.Left, isVertical: true);
+        DrawSide(canvas, topRect, borders.Top, false);
+        DrawSide(canvas, rightRect, borders.Right, true);
+        DrawSide(canvas, bottomRect, borders.Bottom, false);
+        DrawSide(canvas, leftRect, borders.Left, true);
     }
 
     private static void DrawSide(SKCanvas canvas, SKRect rect, BorderSide? side, bool isVertical)
@@ -64,7 +64,7 @@ internal sealed class BorderShapeDrawer
 
         using var paint = new SKPaint
         {
-            Color = new SKColor(side.Color.R, side.Color.G, side.Color.B, side.Color.A),
+            Color = new(side.Color.R, side.Color.G, side.Color.B, side.Color.A),
             Style = SKPaintStyle.Stroke,
             StrokeCap = SKStrokeCap.Butt,
             StrokeWidth = isVertical ? rect.Width : rect.Height

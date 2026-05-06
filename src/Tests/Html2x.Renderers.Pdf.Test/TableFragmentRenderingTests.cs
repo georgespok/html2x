@@ -2,8 +2,6 @@ using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 using SkiaSharp;
@@ -21,35 +19,35 @@ public sealed class TableFragmentRenderingTests
 
         var page = CreatePage(
             new TableFragment([
-                new TableRowFragment([
-                    new TableCellFragment
+                new([
+                    new()
                     {
-                        Rect = new RectPt(20, 20, 80, 60),
+                        Rect = new(20, 20, 80, 60),
                         ColumnIndex = 0,
-                        Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, cellBorder, BorderLineStyle.Solid)))
+                        Style = new(Borders: BorderEdges.Uniform(new(2, cellBorder, BorderLineStyle.Solid)))
                     },
-                    new TableCellFragment
+                    new()
                     {
-                        Rect = new RectPt(100, 20, 80, 60),
+                        Rect = new(100, 20, 80, 60),
                         ColumnIndex = 1,
-                        Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, cellBorder, BorderLineStyle.Solid)))
+                        Style = new(Borders: BorderEdges.Uniform(new(2, cellBorder, BorderLineStyle.Solid)))
                     }
                 ])
                 {
-                    Rect = new RectPt(20, 20, 160, 60),
+                    Rect = new(20, 20, 160, 60),
                     RowIndex = 0
                 }
             ])
             {
-                Rect = new RectPt(20, 20, 160, 80),
-                Style = new VisualStyle(Borders: BorderEdges.Uniform(new BorderSide(2, tableBorder, BorderLineStyle.Solid))),
+                Rect = new(20, 20, 160, 80),
+                Style = new(Borders: BorderEdges.Uniform(new(2, tableBorder, BorderLineStyle.Solid))),
                 DerivedColumnCount = 2
             });
 
         using var bitmap = Draw(page);
 
-        AssertColorClose(bitmap.GetPixel(100, 99), new SKColor(tableBorder.R, tableBorder.G, tableBorder.B, tableBorder.A));
-        AssertColorClose(bitmap.GetPixel(99, 60), new SKColor(cellBorder.R, cellBorder.G, cellBorder.B, cellBorder.A));
+        AssertColorClose(bitmap.GetPixel(100, 99), new(tableBorder.R, tableBorder.G, tableBorder.B, tableBorder.A));
+        AssertColorClose(bitmap.GetPixel(99, 60), new(cellBorder.R, cellBorder.G, cellBorder.B, cellBorder.A));
     }
 
     [Fact]
@@ -60,34 +58,36 @@ public sealed class TableFragmentRenderingTests
 
         var page = CreatePage(
             new TableFragment([
-                new TableRowFragment([
-                    new TableCellFragment
+                new([
+                    new()
                     {
-                        Rect = new RectPt(20, 20, 80, 80),
+                        Rect = new(20, 20, 80, 80),
                         ColumnIndex = 0,
-                        Style = new VisualStyle(BackgroundColor: cellBackground)
+                        Style = new(cellBackground)
                     },
-                    new TableCellFragment
+                    new()
                     {
-                        Rect = new RectPt(100, 20, 80, 80),
+                        Rect = new(100, 20, 80, 80),
                         ColumnIndex = 1
                     }
                 ])
                 {
-                    Rect = new RectPt(20, 20, 160, 80),
+                    Rect = new(20, 20, 160, 80),
                     RowIndex = 0
                 }
             ])
             {
-                Rect = new RectPt(20, 20, 160, 80),
-                Style = new VisualStyle(BackgroundColor: tableBackground),
+                Rect = new(20, 20, 160, 80),
+                Style = new(tableBackground),
                 DerivedColumnCount = 2
             });
 
         using var bitmap = Draw(page);
 
-        AssertColorClose(bitmap.GetPixel(60, 60), new SKColor(cellBackground.R, cellBackground.G, cellBackground.B, cellBackground.A));
-        AssertColorClose(bitmap.GetPixel(140, 60), new SKColor(tableBackground.R, tableBackground.G, tableBackground.B, tableBackground.A));
+        AssertColorClose(bitmap.GetPixel(60, 60),
+            new(cellBackground.R, cellBackground.G, cellBackground.B, cellBackground.A));
+        AssertColorClose(bitmap.GetPixel(140, 60),
+            new(tableBackground.R, tableBackground.G, tableBackground.B, tableBackground.A));
     }
 
     [Fact]
@@ -99,50 +99,50 @@ public sealed class TableFragmentRenderingTests
 
         var page = CreatePage(
             new TableFragment([
-                new TableRowFragment([
-                    new TableCellFragment
+                new([
+                    new()
                     {
-                        Rect = new RectPt(20, 20, 80, 80),
+                        Rect = new(20, 20, 80, 80),
                         ColumnIndex = 0,
-                        Style = new VisualStyle(
-                            BackgroundColor: cellBackground,
-                            Borders: BorderEdges.Uniform(new BorderSide(2, borderColor, BorderLineStyle.Solid)))
+                        Style = new(
+                            cellBackground,
+                            BorderEdges.Uniform(new(2, borderColor, BorderLineStyle.Solid)))
                     },
-                    new TableCellFragment
+                    new()
                     {
-                        Rect = new RectPt(100, 20, 80, 80),
+                        Rect = new(100, 20, 80, 80),
                         ColumnIndex = 1,
-                        Style = new VisualStyle(
-                            Borders: BorderEdges.Uniform(new BorderSide(2, borderColor, BorderLineStyle.Solid)))
+                        Style = new(
+                            Borders: BorderEdges.Uniform(new(2, borderColor, BorderLineStyle.Solid)))
                     }
                 ])
                 {
-                    Rect = new RectPt(20, 20, 160, 80),
+                    Rect = new(20, 20, 160, 80),
                     RowIndex = 0,
-                    Style = new VisualStyle(BackgroundColor: rowBackground)
+                    Style = new(rowBackground)
                 }
             ])
             {
-                Rect = new RectPt(20, 20, 160, 80),
+                Rect = new(20, 20, 160, 80),
                 DerivedColumnCount = 2
             });
 
         using var bitmap = Draw(page);
 
-        AssertColorClose(bitmap.GetPixel(60, 60), new SKColor(cellBackground.R, cellBackground.G, cellBackground.B, cellBackground.A));
-        AssertColorClose(bitmap.GetPixel(140, 60), new SKColor(rowBackground.R, rowBackground.G, rowBackground.B, rowBackground.A));
-        AssertColorClose(bitmap.GetPixel(99, 60), new SKColor(borderColor.R, borderColor.G, borderColor.B, borderColor.A));
+        AssertColorClose(bitmap.GetPixel(60, 60),
+            new(cellBackground.R, cellBackground.G, cellBackground.B, cellBackground.A));
+        AssertColorClose(bitmap.GetPixel(140, 60),
+            new(rowBackground.R, rowBackground.G, rowBackground.B, rowBackground.A));
+        AssertColorClose(bitmap.GetPixel(99, 60), new(borderColor.R, borderColor.G, borderColor.B, borderColor.A));
     }
 
-    private static LayoutPage CreatePage(Fragment fragment)
-    {
-        return new LayoutPage(
-            new SizePt(200, 200),
-            new Spacing(0, 0, 0, 0),
+    private static LayoutPage CreatePage(Fragment fragment) =>
+        new(
+            new(200, 200),
+            new(0, 0, 0, 0),
             new List<Fragment> { fragment },
-            PageNumber: 1,
-            PageBackground: new ColorRgba(255, 255, 255, 255));
-    }
+            1,
+            new ColorRgba(255, 255, 255, 255));
 
     private static SKBitmap Draw(LayoutPage page)
     {

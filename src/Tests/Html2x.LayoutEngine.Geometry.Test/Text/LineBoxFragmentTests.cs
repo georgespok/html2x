@@ -1,8 +1,8 @@
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
-using Shouldly;
 using Html2x.Text;
+using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
@@ -13,8 +13,9 @@ public class LineBoxFragmentTests
     [Fact]
     public async Task ParagraphWithLongText_ComputesHeightFromMultipleLines()
     {
-        const string html = "<html><body><div style=\"max-width: 80px; font-size: 10px; line-height: 1.4;\">alpha beta gamma delta</div></body></html>";
-        
+        const string html =
+            "<html><body><div style=\"max-width: 80px; font-size: 10px; line-height: 1.4;\">alpha beta gamma delta</div></body></html>";
+
         var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
 
         var block = (BlockFragment)layout.Pages[0].Children[0];
@@ -59,7 +60,8 @@ public class LineBoxFragmentTests
     [Fact]
     public async Task LongToken_WrapsByGraphemeFallback()
     {
-        const string html = "<html><body><div style=\"max-width: 40px\">Supercalifragilisticexpialidocious</div></body></html>";
+        const string html =
+            "<html><body><div style=\"max-width: 40px\">Supercalifragilisticexpialidocious</div></body></html>";
 
         var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
 
@@ -87,7 +89,8 @@ public class LineBoxFragmentTests
     [Fact]
     public async Task ParagraphWithUnderlineStrikethroughAndSpan_EmitsAllTextRuns()
     {
-        const string html = "<html><body><p>This is <u>underlined</u> text <s>struck</s> and <span>spanned</span>.</p></body></html>";
+        const string html =
+            "<html><body><p>This is <u>underlined</u> text <s>struck</s> and <span>spanned</span>.</p></body></html>";
 
         var layout = await BuildLayoutAsync(html, CreateLinearMeasurer(10f));
 
@@ -125,16 +128,11 @@ public class LineBoxFragmentTests
         line.Runs[0].Font.Family.ShouldBe("Inter");
     }
 
-    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
-    {
-        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutBuildSettings
+    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer) =>
+        await Fixture.BuildLayoutAsync(html, textMeasurer, new()
         {
             PageSize = PaperSizes.A4
         });
-    }
 
-    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
-    {
-        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
-    }
+    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
 }

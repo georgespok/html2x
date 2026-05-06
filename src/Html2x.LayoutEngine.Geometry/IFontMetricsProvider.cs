@@ -3,7 +3,7 @@ using Html2x.RenderModel.Text;
 namespace Html2x.LayoutEngine.Geometry;
 
 /// <summary>
-/// Provides font metrics and crude width estimation for layout calculations.
+///     Provides font metrics and crude width estimation for layout calculations.
 /// </summary>
 internal interface IFontMetricsProvider
 {

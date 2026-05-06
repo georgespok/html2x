@@ -2,8 +2,6 @@ using Html2x.Renderers.Pdf.Drawing;
 using Html2x.Renderers.Pdf.Paint;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 using SkiaSharp;
@@ -18,24 +16,24 @@ public sealed class BordersRenderingTests
     {
         var borders = new BorderEdges
         {
-            Top = new BorderSide(4, new ColorRgba(0xBE, 0x12, 0x3C, 0xFF), BorderLineStyle.Solid),
-            Right = new BorderSide(12, new ColorRgba(0x1D, 0x4E, 0xD8, 0xFF), BorderLineStyle.Dashed),
-            Bottom = new BorderSide(6, new ColorRgba(0x0F, 0x17, 0x2A, 0xFF), BorderLineStyle.Dotted),
-            Left = new BorderSide(2, new ColorRgba(0x16, 0xA3, 0x4A, 0xFF), BorderLineStyle.Solid)
+            Top = new(4, new(0xBE, 0x12, 0x3C, 0xFF), BorderLineStyle.Solid),
+            Right = new(12, new(0x1D, 0x4E, 0xD8, 0xFF), BorderLineStyle.Dashed),
+            Bottom = new(6, new(0x0F, 0x17, 0x2A, 0xFF), BorderLineStyle.Dotted),
+            Left = new(2, new(0x16, 0xA3, 0x4A, 0xFF), BorderLineStyle.Solid)
         };
 
         var block = new BlockFragment
         {
-            Rect = new RectPt(20, 20, 160, 100),
-            Style = new VisualStyle(Borders: borders)
+            Rect = new(20, 20, 160, 100),
+            Style = new(Borders: borders)
         };
 
         var page = new LayoutPage(
-            new SizePt(200, 200),
-            new Spacing(0, 0, 0, 0),
+            new(200, 200),
+            new(0, 0, 0, 0),
             new List<Fragment> { block },
-            PageNumber: 1,
-            PageBackground: new ColorRgba(255, 255, 255, 255));
+            1,
+            new ColorRgba(255, 255, 255, 255));
 
         var options = new PdfRenderSettings();
         using var fontCache = new SkiaFontCache(new TestFileDirectory(), new TestSkiaTypefaceFactory());
@@ -51,10 +49,10 @@ public sealed class BordersRenderingTests
         image.ReadPixels(bitmap.Info, bitmap.GetPixels(), bitmap.RowBytes, 0, 0).ShouldBeTrue();
 
         // Sample points are chosen at mid-stroke locations based on BorderShapeDrawer geometry.
-        AssertColorClose(bitmap.GetPixel(100, 22), new SKColor(0xBE, 0x12, 0x3C, 0xFF)); // top
-        AssertColorClose(bitmap.GetPixel(174, 34), new SKColor(0x1D, 0x4E, 0xD8, 0xFF)); // right (dashed, near start)
-        AssertColorClose(bitmap.GetPixel(23, 117), new SKColor(0x0F, 0x17, 0x2A, 0xFF)); // bottom (dotted, near start)
-        AssertColorClose(bitmap.GetPixel(21, 44), new SKColor(0x16, 0xA3, 0x4A, 0xFF)); // left
+        AssertColorClose(bitmap.GetPixel(100, 22), new(0xBE, 0x12, 0x3C, 0xFF)); // top
+        AssertColorClose(bitmap.GetPixel(174, 34), new(0x1D, 0x4E, 0xD8, 0xFF)); // right (dashed, near start)
+        AssertColorClose(bitmap.GetPixel(23, 117), new(0x0F, 0x17, 0x2A, 0xFF)); // bottom (dotted, near start)
+        AssertColorClose(bitmap.GetPixel(21, 44), new(0x16, 0xA3, 0x4A, 0xFF)); // left
     }
 
     private static void AssertColorClose(SKColor actual, SKColor expected, byte tolerance = 30)

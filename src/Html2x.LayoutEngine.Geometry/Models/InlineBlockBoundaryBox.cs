@@ -5,11 +5,11 @@ internal sealed class InlineBlockBoundaryBox(InlineBox sourceInline, BlockBox so
 {
     public InlineBox SourceInline { get; } = sourceInline ?? throw new ArgumentNullException(nameof(sourceInline));
 
-    public BlockBox SourceContentBox { get; } = sourceContentBox ?? throw new ArgumentNullException(nameof(sourceContentBox));
+    public BlockBox SourceContentBox { get; } =
+        sourceContentBox ?? throw new ArgumentNullException(nameof(sourceContentBox));
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new InlineBlockBoundaryBox(SourceInline, SourceContentBox)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new InlineBlockBoundaryBox(SourceInline, SourceContentBox)
         {
             Element = Element,
             Style = Style,
@@ -17,5 +17,4 @@ internal sealed class InlineBlockBoundaryBox(InlineBox sourceInline, BlockBox so
             IsAnonymous = IsAnonymous,
             SourceIdentity = SourceIdentity
         });
-    }
 }

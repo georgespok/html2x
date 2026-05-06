@@ -5,8 +5,5 @@ namespace Html2x.Renderers.Pdf.Drawing;
 
 internal static class SkiaGeometryMapper
 {
-    public static SKRect ToSkRect(RectPt rect)
-    {
-        return new SKRect(rect.Left, rect.Top, rect.Right, rect.Bottom);
-    }
+    public static SKRect ToSkRect(RectPt rect) => new(rect.Left, rect.Top, rect.Right, rect.Bottom);
 }

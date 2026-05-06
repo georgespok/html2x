@@ -53,9 +53,14 @@ resharper_braces_for_foreach = required
 resharper_braces_for_ifelse = required
 resharper_braces_for_while = required
 resharper_instance_members_qualify_declared_in = base_class
+resharper_local_function_body = expression_body
+resharper_method_or_operator_body = expression_body
 resharper_object_creation_when_type_not_evident = target_typed
 
 # ReSharper inspection severities
+resharper_arrange_constructor_or_destructor_body_highlighting = suggestion
+resharper_arrange_local_function_body_highlighting = suggestion
+resharper_arrange_method_or_operator_body_highlighting = suggestion
 resharper_arrange_redundant_parentheses_highlighting = hint
 resharper_arrange_this_qualifier_highlighting = suggestion
 resharper_arrange_type_member_modifiers_highlighting = hint

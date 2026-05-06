@@ -1,11 +1,9 @@
-using Html2x.LayoutEngine.Geometry.Primitives;
-using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
-/// Owns all mutable writes to layout boxes after geometry facts have been resolved.
+///     Owns all mutable writes to layout boxes after geometry facts have been resolved.
 /// </summary>
 internal sealed class LayoutBoxStateWriter
 {
@@ -72,7 +70,7 @@ internal sealed class LayoutBoxStateWriter
             margin,
             table.Style.Padding.Safe(),
             geometry,
-            derivedColumnCount: 0);
+            0);
         table.Children.Clear();
     }
 

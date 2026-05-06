@@ -18,40 +18,40 @@ public sealed class GeometrySnapshotMapperTests
     public void From_PublishedGeometryAndPagination_MapsSingleSnapshot()
     {
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+            new(PaperSizes.A4, new()),
             [
                 CreatePublishedBlock(
                     "div",
                     "div",
-                    new RectPt(10f, 20f, 120f, 40f),
+                    new(10f, 20f, 120f, 40f),
                     new Spacing(2f, 3f, 4f, 5f),
                     new Spacing(1f, 1f, 1f, 1f),
-                    markerOffset: 8f)
+                    8f)
             ]);
         var fragment = new BlockFragment
         {
             FragmentId = 7,
             PageNumber = 1,
-            Rect = new RectPt(10f, 20f, 120f, 40f),
+            Rect = new(10f, 20f, 120f, 40f),
             DisplayRole = FragmentDisplayRole.Block,
-            Style = new VisualStyle()
+            Style = new()
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(PaperSizes.A4, new Spacing(), [fragment]));
+        layout.AddPage(new(PaperSizes.A4, new(), [fragment]));
         var pagination = new PaginationResult
         {
             Layout = layout,
             AuditPages =
             [
-                new PaginationPageAudit
+                new()
                 {
                     PageNumber = 1,
                     PageSize = PaperSizes.A4,
-                    Margin = new Spacing(),
-                    ContentArea = new RectPt(0f, 0f, PaperSizes.A4.Width, PaperSizes.A4.Height),
+                    Margin = new(),
+                    ContentArea = new(0f, 0f, PaperSizes.A4.Width, PaperSizes.A4.Height),
                     Placements =
                     [
-                        new PaginationPlacementAudit
+                        new()
                         {
                             FragmentId = fragment.FragmentId,
                             PageNumber = 1,
@@ -74,7 +74,7 @@ public sealed class GeometrySnapshotMapperTests
         var boxSnapshot = snapshot.Boxes.ShouldHaveSingleItem();
         boxSnapshot.Path.ShouldBe("div");
         boxSnapshot.Kind.ShouldBe("block");
-        boxSnapshot.Size.ShouldBe(new SizePt(120f, 40f));
+        boxSnapshot.Size.ShouldBe(new(120f, 40f));
         boxSnapshot.ContentX.ShouldBe(16f);
         boxSnapshot.ContentY.ShouldBe(23f);
         boxSnapshot.ContentSize.ShouldBe(new SizePt(110f, 32f));
@@ -92,7 +92,7 @@ public sealed class GeometrySnapshotMapperTests
         placement.FragmentId.ShouldBe(7);
         placement.Kind.ShouldBe("Block");
         placement.DecisionKind.ShouldBe(PaginationDecisionKind.Placed);
-        placement.Size.ShouldBe(new SizePt(120f, 40f));
+        placement.Size.ShouldBe(new(120f, 40f));
         placement.MetadataConsumer.ShouldBe("Pagination");
     }
 
@@ -107,42 +107,42 @@ public sealed class GeometrySnapshotMapperTests
             3,
             GeometryGeneratedSourceKind.AnonymousBlock);
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing(10, 11, 12, 13)),
+            new(PaperSizes.A4, new(10, 11, 12, 13)),
             [
                 CreatePublishedBlock(
                     "layout/section",
                     "section.card",
-                    new RectPt(10f, 20f, 120f, 40f),
+                    new(10f, 20f, 120f, 40f),
                     new Spacing(2f, 3f, 4f, 5f),
                     new Spacing(1f, 1f, 1f, 1f),
-                    markerOffset: 8f,
+                    8f,
                     sourceIdentity: sourceIdentity)
             ]);
         var fragment = new BlockFragment
         {
             FragmentId = 42,
             PageNumber = 1,
-            Rect = new RectPt(15f, 25f, 100f, 30f),
+            Rect = new(15f, 25f, 100f, 30f),
             DisplayRole = FragmentDisplayRole.Block,
             FormattingContext = FormattingContextKind.Block,
-            Style = new VisualStyle()
+            Style = new()
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(PaperSizes.A4, new Spacing(10, 11, 12, 13), [fragment]));
+        layout.AddPage(new(PaperSizes.A4, new(10, 11, 12, 13), [fragment]));
         var pagination = new PaginationResult
         {
             Layout = layout,
             AuditPages =
             [
-                new PaginationPageAudit
+                new()
                 {
                     PageNumber = 1,
                     PageSize = PaperSizes.A4,
-                    Margin = new Spacing(10, 11, 12, 13),
-                    ContentArea = new RectPt(11f, 10f, 574f, 820f),
+                    Margin = new(10, 11, 12, 13),
+                    ContentArea = new(11f, 10f, 574f, 820f),
                     Placements =
                     [
-                        new PaginationPlacementAudit
+                        new()
                         {
                             FragmentId = fragment.FragmentId,
                             PageNumber = 1,
@@ -273,20 +273,20 @@ public sealed class GeometrySnapshotMapperTests
     [Fact]
     public void From_NestedAndSiblingPublishedBlocks_AssignsDepthFirstSequenceIds()
     {
-        var child = CreatePublishedBlock("div/p[1]", "p", new RectPt(0f, 0f, 80f, 20f));
+        var child = CreatePublishedBlock("div/p[1]", "p", new(0f, 0f, 80f, 20f));
         var root = CreatePublishedBlock(
             "div",
             "div",
-            new RectPt(0f, 0f, 100f, 50f),
+            new(0f, 0f, 100f, 50f),
             children: [child]);
-        var sibling = CreatePublishedBlock("section", "section", new RectPt(0f, 60f, 100f, 30f));
+        var sibling = CreatePublishedBlock("section", "section", new(0f, 60f, 100f, 30f));
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+            new(PaperSizes.A4, new()),
             [root, sibling]);
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
+            new() { Layout = new(), AuditPages = [] });
 
         snapshot.Boxes[0].SequenceId.ShouldBe(1);
         snapshot.Boxes[0].Children.ShouldHaveSingleItem().SequenceId.ShouldBe(2);
@@ -304,18 +304,18 @@ public sealed class GeometrySnapshotMapperTests
             12,
             GeometryGeneratedSourceKind.None);
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+            new(PaperSizes.A4, new()),
             [
                 CreatePublishedBlock(
                     "layout/section",
                     "section#summary",
-                    new RectPt(0f, 0f, 100f, 20f),
+                    new(0f, 0f, 100f, 20f),
                     sourceIdentity: sourceIdentity)
             ]);
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
+            new() { Layout = new(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.Path.ShouldBe("layout/section");
@@ -339,18 +339,18 @@ public sealed class GeometrySnapshotMapperTests
             15,
             GeometryGeneratedSourceKind.AnonymousBlock);
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+            new(PaperSizes.A4, new()),
             [
                 CreatePublishedBlock(
                     "layout/div/anonymous[0]",
                     "div.card",
-                    new RectPt(0f, 0f, 100f, 20f),
+                    new(0f, 0f, 100f, 20f),
                     sourceIdentity: sourceIdentity)
             ]);
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
+            new() { Layout = new(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.Path.ShouldBe("layout/div/anonymous[0]");
@@ -366,17 +366,17 @@ public sealed class GeometrySnapshotMapperTests
     public void From_BlockWithoutSourceIdentity_LeavesSourceFieldsNull()
     {
         var layoutTree = new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+            new(PaperSizes.A4, new()),
             [
                 CreatePublishedBlock(
                     "layout/div",
                     "div",
-                    new RectPt(0f, 0f, 100f, 20f))
+                    new(0f, 0f, 100f, 20f))
             ]);
 
         var snapshot = GeometrySnapshotMapper.From(
             layoutTree,
-            new PaginationResult { Layout = new HtmlLayout(), AuditPages = [] });
+            new() { Layout = new(), AuditPages = [] });
 
         var box = snapshot.Boxes.ShouldHaveSingleItem();
         box.SourceNodeId.ShouldBeNull();
@@ -395,26 +395,24 @@ public sealed class GeometrySnapshotMapperTests
         Spacing? border = null,
         float markerOffset = 0f,
         IReadOnlyList<PublishedBlock>? children = null,
-        GeometrySourceIdentity? sourceIdentity = null)
-    {
-        return new PublishedBlock(
-            new PublishedBlockIdentity(nodePath, elementIdentity, sourceOrder: 0, sourceIdentity),
-            new PublishedDisplayFacts(
+        GeometrySourceIdentity? sourceIdentity = null) =>
+        new(
+            new(nodePath, elementIdentity, 0, sourceIdentity),
+            new(
                 FragmentDisplayRole.Block,
                 FormattingContextKind.Block,
                 markerOffset > 0f ? markerOffset : null),
-            new VisualStyle(),
-            UsedGeometryCalculator.FromBorderBox(
+            new(),
+            UsedGeometryRules.FromBorderBox(
                 borderBox,
                 padding ?? new Spacing(),
                 border ?? new Spacing(),
                 markerOffset: markerOffset),
-            inlineLayout: null,
-            image: null,
-            rule: null,
-            table: null,
+            null,
+            null,
+            null,
+            null,
             children ?? []);
-    }
 
     private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
         value[fieldName].ShouldBeOfType<DiagnosticArray>();

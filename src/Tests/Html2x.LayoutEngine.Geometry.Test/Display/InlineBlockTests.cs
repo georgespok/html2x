@@ -1,12 +1,10 @@
-using Html2x.LayoutEngine.Diagnostics;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Diagnostics;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.Text;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
-using Html2x.Text;
 using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
@@ -257,9 +255,12 @@ public class InlineBlockTests
             .SelectMany(block => block.Children.OfType<LineBoxFragment>())
             .ToList();
 
-        var alphaLine = inlineBlockLines.First(line => line.Runs.Any(run => run.Text.Contains("Alpha inline-block", StringComparison.OrdinalIgnoreCase)));
-        var descendantLine = inlineBlockLines.First(line => line.Runs.Any(run => run.Text.Contains("Third block descendant with", StringComparison.OrdinalIgnoreCase)));
-        var suffixLine = inlineBlockLines.First(line => line.Runs.Any(run => run.Text.Contains("suffix text", StringComparison.OrdinalIgnoreCase)));
+        var alphaLine = inlineBlockLines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("Alpha inline-block", StringComparison.OrdinalIgnoreCase)));
+        var descendantLine = inlineBlockLines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("Third block descendant with", StringComparison.OrdinalIgnoreCase)));
+        var suffixLine = inlineBlockLines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("suffix text", StringComparison.OrdinalIgnoreCase)));
 
         descendantLine.Rect.Y.ShouldBeGreaterThanOrEqualTo(alphaLine.Rect.Bottom - 0.1f);
         suffixLine.Rect.Y.ShouldBeGreaterThanOrEqualTo(descendantLine.Rect.Bottom - 0.1f);
@@ -323,7 +324,8 @@ public class InlineBlockTests
         var root = (BlockFragment)layout.Pages[0].Children[0];
         var row = FindContainerWithDirectChildren(root, "Prefix text", "Alpha inline-block", "suffix text");
         var prefix = row.Children.First(child => ContainsText(child, "Prefix text")).ShouldBeOfType<LineBoxFragment>();
-        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block")).ShouldBeOfType<BlockFragment>();
+        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block"))
+            .ShouldBeOfType<BlockFragment>();
         var suffix = row.Children.First(child => ContainsText(child, "suffix text")).ShouldBeOfType<LineBoxFragment>();
         var prefixRun = prefix.Runs.First(run => run.Text.Contains("Prefix text", StringComparison.OrdinalIgnoreCase));
         var suffixRun = suffix.Runs.First(run => run.Text.Contains("suffix text", StringComparison.OrdinalIgnoreCase));
@@ -396,7 +398,8 @@ public class InlineBlockTests
         var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
         var root = (BlockFragment)layout.Pages[0].Children[0];
         var row = FindContainerWithDirectChildren(root, "Prefix text", "Alpha inline-block", "suffix text");
-        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block")).ShouldBeOfType<BlockFragment>();
+        var inlineBlock = row.Children.First(child => ContainsText(child, "Alpha inline-block"))
+            .ShouldBeOfType<BlockFragment>();
 
         var prefixRun = FindRun(row, "Prefix text");
         var alphaRun = FindRun(inlineBlock, "Alpha inline-block");
@@ -527,11 +530,16 @@ public class InlineBlockTests
         var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(6f));
         var root = (BlockFragment)layout.Pages[0].Children[0];
         var row = FindContainerWithDirectChildren(root, "text-before", "outer-start", "text-after");
-        var leadingText = row.Children.First(child => ContainsText(child, "text-before")).ShouldBeOfType<LineBoxFragment>();
-        var inlineBlock = row.Children.First(child => ContainsText(child, "outer-start")).ShouldBeOfType<BlockFragment>();
-        var trailingText = row.Children.First(child => ContainsText(child, "text-after")).ShouldBeOfType<LineBoxFragment>();
-        var leadingRun = leadingText.Runs.First(run => run.Text.Contains("text-before", StringComparison.OrdinalIgnoreCase));
-        var trailingRun = trailingText.Runs.First(run => run.Text.Contains("text-after", StringComparison.OrdinalIgnoreCase));
+        var leadingText = row.Children.First(child => ContainsText(child, "text-before"))
+            .ShouldBeOfType<LineBoxFragment>();
+        var inlineBlock = row.Children.First(child => ContainsText(child, "outer-start"))
+            .ShouldBeOfType<BlockFragment>();
+        var trailingText = row.Children.First(child => ContainsText(child, "text-after"))
+            .ShouldBeOfType<LineBoxFragment>();
+        var leadingRun =
+            leadingText.Runs.First(run => run.Text.Contains("text-before", StringComparison.OrdinalIgnoreCase));
+        var trailingRun =
+            trailingText.Runs.First(run => run.Text.Contains("text-after", StringComparison.OrdinalIgnoreCase));
 
         leadingText.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
         trailingText.Rect.Y.ShouldBe(inlineBlock.Rect.Y, 0.1f);
@@ -560,11 +568,14 @@ public class InlineBlockTests
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink));
+            await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
         diagnosticsSink.Records
             .Any(e => e.Name == "layout/inline-block/unsupported-structure" &&
-                      e.Fields["formattingContext"] is DiagnosticStringValue { Value: nameof(FormattingContextKind.InlineBlock) })
+                      e.Fields["formattingContext"] is DiagnosticStringValue
+                      {
+                          Value: nameof(FormattingContextKind.InlineBlock)
+                      })
             .ShouldBeTrue();
     }
 
@@ -597,8 +608,10 @@ public class InlineBlockTests
         var inlineBlockDiagnostics = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
-        var topLevelLayout = await layoutBuilder.BuildAsync(topLevelHtml, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
-        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, inlineBlockDiagnostics);
+        var topLevelLayout =
+            await layoutBuilder.BuildAsync(topLevelHtml, new() { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
+        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new() { PageSize = PaperSizes.A4 },
+            inlineBlockDiagnostics);
 
         var topLevelContainer = FindContainerWithDirectChildren(
             (BlockFragment)topLevelLayout.Pages[0].Children[0],
@@ -622,8 +635,8 @@ public class InlineBlockTests
         topLevelDiagnostics.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
-                StringField(payload, "consumer") == nameof(BlockLayoutEngine) &&
+                StringField(payload, "owner") == "BlockFormattingContext" &&
+                StringField(payload, "consumer") == "BlockLayoutEngine" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
@@ -631,8 +644,8 @@ public class InlineBlockTests
         inlineBlockDiagnostics.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
-                StringField(payload, "consumer") == nameof(InlineLayoutEngine) &&
+                StringField(payload, "owner") == "BlockFormattingContext" &&
+                StringField(payload, "consumer") == "InlineLayoutEngine" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.InlineBlock) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
@@ -660,12 +673,10 @@ public class InlineBlockTests
         }
     }
 
-    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer)
-    {
-        return new LayoutBuilder(
+    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer) =>
+        new(
             textMeasurer,
             new NoopImageMetadataResolver());
-    }
 
     private static bool ContainsLineText(BlockFragment fragment, string text)
     {
@@ -767,7 +778,8 @@ public class InlineBlockTests
         {
             var nextIndex = texts
                 .Select((text, index) => (text, index))
-                .First(pair => pair.index > currentIndex && pair.text.Contains(expected, StringComparison.OrdinalIgnoreCase))
+                .First(pair =>
+                    pair.index > currentIndex && pair.text.Contains(expected, StringComparison.OrdinalIgnoreCase))
                 .index;
 
             nextIndex.ShouldBeGreaterThan(currentIndex);

@@ -1,7 +1,7 @@
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
-/// Selects the internal layout rule for a supported block kind.
+///     Selects the internal layout rule for a supported block kind.
 /// </summary>
 internal sealed class BlockLayoutRuleSet
 {

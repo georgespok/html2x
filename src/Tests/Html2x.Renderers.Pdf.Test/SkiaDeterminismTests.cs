@@ -1,7 +1,6 @@
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
@@ -47,8 +46,8 @@ public class SkiaDeterminismTests
         var layout = new HtmlLayout();
 
         var page = new LayoutPage(
-            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
-            new Spacing(50, 50, 50, 50),
+            new(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new(50, 50, 50, 50),
             CreateSimpleContent(),
             1,
             new ColorRgba(255, 255, 255, 255));
@@ -65,7 +64,7 @@ public class SkiaDeterminismTests
             "Hello,",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
-            new PointPt(60, 100),
+            new(60, 100),
             40f,
             11f,
             3f);
@@ -74,16 +73,16 @@ public class SkiaDeterminismTests
             "Skia!",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             16f,
-            new PointPt(110, 100),
+            new(110, 100),
             40f,
             11f,
             3f);
 
         var line = new LineBoxFragment
         {
-            Rect = new RectPt(50, 90, 200, 24),
+            Rect = new(50, 90, 200, 24),
             ZOrder = 1,
-            Style = new VisualStyle(),
+            Style = new(),
             BaselineY = 110,
             LineHeight = 24,
             Runs = [hello, world]

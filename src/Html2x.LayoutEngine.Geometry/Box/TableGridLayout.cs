@@ -4,27 +4,28 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
-/// Produces the supported table grid row and cell geometry model.
+///     Produces the supported table grid row and cell geometry model.
 /// </summary>
 internal sealed class TableGridLayout
 {
     private const float DefaultRowHeight = 20f;
-    private readonly BoxSizingRules _sizingRules;
-    private readonly BlockContentMeasurer _contentMeasurement;
+    private readonly TableCellMeasurement _cellMeasurement;
+    private readonly BlockSizingRules _sizingRules;
 
     public TableGridLayout()
-        : this(new InlineLayoutEngine(), new ImageLayoutResolver())
+        : this(new(), new ImageSizingRules())
     {
     }
 
-    internal TableGridLayout(InlineLayoutEngine inlineEngine, IImageLayoutResolver? imageResolver = null)
+    internal TableGridLayout(InlineFlowLayout inlineEngine, IImageSizingRules? imageResolver = null)
     {
         ArgumentNullException.ThrowIfNull(inlineEngine);
-        _sizingRules = new BoxSizingRules();
-        _contentMeasurement = new BlockContentMeasurer(
-            inlineEngine,
-            _sizingRules,
-            imageResolver ?? new ImageLayoutResolver());
+        _sizingRules = new();
+        _cellMeasurement = new(
+            new(
+                inlineEngine,
+                _sizingRules,
+                imageResolver ?? new ImageSizingRules()));
     }
 
     public TableLayoutResult Layout(TableBox table, float availableWidth)
@@ -35,7 +36,7 @@ internal sealed class TableGridLayout
         var requestedWidth = table.Style.WidthPt;
         var resolvedWidth = measurement.BorderBoxWidth;
         var contentWidth = measurement.ContentFlowWidth;
-        var rowModel = TableRowModel.Build(table);
+        var rowModel = TableStructure.Build(table);
         if (!rowModel.IsSupported)
         {
             return TableLayoutResult.Unsupported(
@@ -55,7 +56,7 @@ internal sealed class TableGridLayout
             ? 0f
             : rowResults.Max(static row => row.UsedGeometry.Y + row.UsedGeometry.Height);
 
-        return new TableLayoutResult
+        return new()
         {
             RequestedWidth = requestedWidth,
             ResolvedWidth = resolvedWidth,
@@ -64,7 +65,7 @@ internal sealed class TableGridLayout
             ColumnWidths = columnWidths,
             Rows = rowResults,
             ContentHeight = contentHeight,
-            BorderBoxHeight = UsedGeometryCalculator.ResolveBorderBoxHeight(
+            BorderBoxHeight = UsedGeometryRules.ResolveBorderBoxHeight(
                 contentHeight,
                 measurement.Padding,
                 measurement.Border)
@@ -112,7 +113,7 @@ internal sealed class TableGridLayout
         var rowContentWidth = ResolveRowContentFlowWidth(row, rowBorderWidth, rowPadding, rowBorder);
         var rowColumnWidths = ScaleColumnWidths(tableColumnWidths, rowContentWidth);
         var rowContentHeight = MeasureRowContentHeight(cells, rowColumnWidths);
-        var rowGeometry = UsedGeometryCalculator.FromBorderBoxWithContentHeight(
+        var rowGeometry = UsedGeometryRules.FromBorderBoxWithContentHeight(
             0f,
             rowY,
             rowBorderWidth,
@@ -120,12 +121,12 @@ internal sealed class TableGridLayout
             rowPadding,
             rowBorder,
             markerOffset: row.MarkerOffset);
-        var rowContent = UsedGeometryCalculator.ResolveContentFlowArea(rowGeometry);
+        var rowContent = UsedGeometryRules.ResolveContentFlowArea(rowGeometry);
         var placements = BuildCellPlacements(cells, rowColumnWidths, rowContent);
-        var rowHeight = UsedGeometryCalculator.ResolveBorderBoxHeight(rowContentHeight, rowPadding, rowBorder);
+        var rowHeight = UsedGeometryRules.ResolveBorderBoxHeight(rowContentHeight, rowPadding, rowBorder);
 
-        return new RowPlacementBuildResult(
-            new TableLayoutRowResult(row, rowIndex, rowGeometry, placements),
+        return new(
+            new(row, rowIndex, rowGeometry, placements),
             rowHeight);
     }
 
@@ -133,14 +134,12 @@ internal sealed class TableGridLayout
         TableRowBox row,
         float rowBorderWidth,
         Spacing rowPadding,
-        Spacing rowBorder)
-    {
-        return BoxDimensionResolver.ResolveContentFlowWidth(
+        Spacing rowBorder) =>
+        BoxDimensionRules.ResolveContentFlowWidth(
             rowBorderWidth,
             rowPadding,
             rowBorder,
             row.MarkerOffset);
-    }
 
     private float MeasureRowContentHeight(
         IReadOnlyList<TableCellBox> cells,
@@ -186,13 +185,12 @@ internal sealed class TableGridLayout
         float x,
         float y,
         float width,
-        float height)
-    {
-        return new TableLayoutCellPlacement(
+        float height) =>
+        new(
             sourceCell,
             columnIndex,
-            HtmlElementClassifier.IsTableHeaderCell(sourceCell.Element),
-            UsedGeometryCalculator.FromBorderBox(
+            HtmlElementRules.IsTableHeaderCell(sourceCell.Element),
+            UsedGeometryRules.FromBorderBox(
                 x,
                 y,
                 width,
@@ -200,7 +198,6 @@ internal sealed class TableGridLayout
                 sourceCell.Style.Padding.Safe(),
                 Spacing.FromBorderEdges(sourceCell.Style.Borders).Safe(),
                 markerOffset: sourceCell.MarkerOffset));
-    }
 
     private static IReadOnlyList<float> ScaleColumnWidths(IReadOnlyList<float> columnWidths, float targetWidth)
     {
@@ -219,15 +216,13 @@ internal sealed class TableGridLayout
         return columnWidths.Select(width => width * scale).ToList();
     }
 
-    private float MeasureTableCellHeight(TableCellBox cell, float assignedWidth)
-    {
-        return _contentMeasurement.Measure(cell, assignedWidth, MeasureNestedTable).BorderBoxHeight;
-    }
+    private float MeasureTableCellHeight(TableCellBox cell, float assignedWidth) =>
+        _cellMeasurement.MeasureContentHeight(cell, assignedWidth, MeasureNestedTable);
 
-    private BlockContentMeasurement MeasureNestedTable(TableBox table, float availableWidth)
+    private BlockContentSizeFacts MeasureNestedTable(TableBox table, float availableWidth)
     {
         var result = Layout(table, availableWidth);
-        return BlockContentMeasurement.ForTable(result);
+        return BlockContentSizeFacts.ForTable(result);
     }
 
     private readonly record struct RowPlacementBuildResult(

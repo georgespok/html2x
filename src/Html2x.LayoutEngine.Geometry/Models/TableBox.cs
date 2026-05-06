@@ -4,9 +4,8 @@ internal sealed class TableBox(BoxRole role) : BlockBox(role)
 {
     public int DerivedColumnCount { get; set; } = -1;
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new TableBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new TableBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -15,5 +14,4 @@ internal sealed class TableBox(BoxRole role) : BlockBox(role)
             SourceIdentity = SourceIdentity,
             DerivedColumnCount = DerivedColumnCount
         });
-    }
 }

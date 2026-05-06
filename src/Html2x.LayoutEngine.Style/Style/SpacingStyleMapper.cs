@@ -8,7 +8,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
-/// Maps CSS margin and padding declarations into layout spacing values and diagnostics.
+///     Maps CSS margin and padding declarations into layout spacing values and diagnostics.
 /// </summary>
 internal sealed class SpacingStyleMapper(CssValueConverter converter)
 {
@@ -42,7 +42,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             element,
             diagnosticsSink);
 
-        style.Padding = new Spacing(
+        style.Padding = new(
             Math.Max(0, padding.Top),
             Math.Max(0, padding.Right),
             Math.Max(0, padding.Bottom),
@@ -78,7 +78,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
             value => bottom = value,
             value => left = value);
 
-        return new Spacing(top, right, bottom, left);
+        return new(top, right, bottom, left);
     }
 
     private void ApplySpacingWithOverrides(
@@ -145,10 +145,10 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         }
 
         var parsedValues = ParseSpacingValues(
-                shorthandProperty,
-                shorthandValue,
-                element,
-                diagnosticsSink);
+            shorthandProperty,
+            shorthandValue,
+            element,
+            diagnosticsSink);
         if (parsedValues is null)
         {
             return;
@@ -179,8 +179,6 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
                 setRight(parsedValues[1]);
                 setBottom(parsedValues[2]);
                 setLeft(parsedValues[3]);
-                break;
-            default:
                 break;
         }
     }
@@ -218,12 +216,12 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         foreach (var token in tokens)
         {
             if (!_lengthReader.TryParseLengthToken(
-                token,
-                element,
-                property,
-                $"Unable to parse {property} token as a supported length.",
-                diagnosticsSink,
-                out var points))
+                    token,
+                    element,
+                    property,
+                    $"Unable to parse {property} token as a supported length.",
+                    diagnosticsSink,
+                    out var points))
             {
                 return null;
             }
@@ -265,12 +263,12 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         var trimmed = rawValue.Trim();
 
         if (!_lengthReader.TryParseLengthToken(
-            trimmed,
-            element,
-            property,
-            $"Unable to parse {property} as a supported length.",
-            diagnosticsSink,
-            out var points))
+                trimmed,
+                element,
+                property,
+                $"Unable to parse {property} as a supported length.",
+                diagnosticsSink,
+                out var points))
         {
             return 0;
         }

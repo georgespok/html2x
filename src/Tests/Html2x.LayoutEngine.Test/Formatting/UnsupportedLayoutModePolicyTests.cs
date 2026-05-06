@@ -14,7 +14,7 @@ public sealed class UnsupportedLayoutModePolicyTests
         root.Children.Add(new FloatBox(BoxRole.Float)
         {
             Parent = root,
-            Style = new ComputedStyle
+            Style = new()
             {
                 FloatDirection = HtmlCssConstants.CssValues.Left
             }
@@ -22,7 +22,7 @@ public sealed class UnsupportedLayoutModePolicyTests
         root.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = root,
-            Style = new ComputedStyle
+            Style = new()
             {
                 Display = HtmlCssConstants.CssValues.Flex
             }
@@ -30,7 +30,7 @@ public sealed class UnsupportedLayoutModePolicyTests
         root.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = root,
-            Style = new ComputedStyle
+            Style = new()
             {
                 Position = HtmlCssConstants.CssValues.Absolute
             }

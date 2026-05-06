@@ -9,12 +9,12 @@ public sealed class ConsolePathResolverTests
     {
         var settings = new RenderSettings
         {
-            OutputOption = Path.Combine("build", "example.pdf")
+            OutputOption = Path.Combine("build", "all-supported-features.pdf")
         };
 
-        var paths = ConsolePathResolver.Resolve(settings, "input.html", selectedSamplePath: null);
+        var paths = ConsolePathResolver.Resolve(settings, "input.html", null);
 
-        paths.OutputPath.ShouldBe(Path.GetFullPath(Path.Combine("build", "example.pdf")));
+        paths.OutputPath.ShouldBe(Path.GetFullPath(Path.Combine("build", "all-supported-features.pdf")));
     }
 
     [Fact]
@@ -22,7 +22,7 @@ public sealed class ConsolePathResolverTests
     {
         var settings = new RenderSettings();
 
-        var paths = ConsolePathResolver.Resolve(settings, "sample.html", selectedSamplePath: null);
+        var paths = ConsolePathResolver.Resolve(settings, "sample.html", null);
 
         paths.OutputPath.ShouldBe(Path.Combine(Path.GetTempPath(), "sample.pdf"));
     }

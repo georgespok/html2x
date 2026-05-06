@@ -13,10 +13,13 @@ internal static class TableStructureDiagnosticNames
     public static class Reasons
     {
         public const string UnsupportedTableStructure = "Unsupported table structure.";
+
         public const string MixedDirectRowsAndSections =
             "Tables cannot mix direct rows with explicit table sections.";
+
         public const string NestedTableSections =
             "Table sections cannot contain nested table sections.";
+
         public const string UnsupportedColspan = "Table cell colspan is not supported.";
         public const string UnsupportedRowspan = "Table cell rowspan is not supported.";
     }

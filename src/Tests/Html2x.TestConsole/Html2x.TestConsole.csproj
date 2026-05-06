@@ -16,7 +16,7 @@
     <None Remove="html\borders.html" />
     <None Remove="html\centralize-layout-font-policy.html" />
     <None Remove="html\diagnostics-gap.html" />
-    <None Remove="html\example.html" />
+    <None Remove="html\all-supported-features.html" />
     <None Remove="html\font-measurement.html" />
     <None Remove="html\headlines.html" />
     <None Remove="html\images.html" />
@@ -94,7 +94,7 @@
     <Content Include="html\padding.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="html\example.html">
+    <Content Include="html\all-supported-features.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="html\grid.html">

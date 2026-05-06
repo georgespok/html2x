@@ -1,6 +1,6 @@
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Geometry;
@@ -31,7 +31,8 @@ internal static class GeometryInvariantValidator
 
         foreach (var parent in boxes)
         {
-            if (parent.AllowsOverflow || parent.ContentX is null || parent.ContentY is null || parent.ContentSize is null)
+            if (parent.AllowsOverflow || parent.ContentX is null || parent.ContentY is null ||
+                parent.ContentSize is null)
             {
                 continue;
             }
@@ -62,7 +63,8 @@ internal static class GeometryInvariantValidator
             .SelectMany(EnumerateFragments)
             .ToDictionary(static fragment => fragment.FragmentId);
 
-        foreach (var snapshot in result.Snapshot.Fragments.Pages.SelectMany(static page => FlattenSnapshots(page.Fragments)))
+        foreach (var snapshot in result.Snapshot.Fragments.Pages.SelectMany(static page =>
+                     FlattenSnapshots(page.Fragments)))
         {
             if (snapshot.Kind is not ("block" or "table" or "table-row" or "table-cell"))
             {
@@ -209,8 +211,8 @@ internal static class GeometryInvariantValidator
         placed.FragmentId.ShouldBe(source.FragmentId, snapshotText);
         placed.ZOrder.ShouldBe(source.ZOrder, snapshotText);
         RectEquals(
-                new RectPt(source.Rect.X, source.Rect.Y, source.Rect.Width, source.Rect.Height),
-                new RectPt(source.Rect.X, source.Rect.Y, placed.Rect.Width, placed.Rect.Height))
+                new(source.Rect.X, source.Rect.Y, source.Rect.Width, source.Rect.Height),
+                new(source.Rect.X, source.Rect.Y, placed.Rect.Width, placed.Rect.Height))
             .ShouldBeTrue(snapshotText);
 
         var deltaX = placed.Rect.X - source.Rect.X;
@@ -317,13 +319,11 @@ internal static class GeometryInvariantValidator
         (placed.ContentRect.Y - source.ContentRect.Y).ShouldBe(deltaY, 0.01f, snapshotText);
     }
 
-    private static bool RectEquals(RectPt expected, RectPt actual)
-    {
-        return Math.Abs(expected.X - actual.X) <= 0.01f &&
-               Math.Abs(expected.Y - actual.Y) <= 0.01f &&
-               Math.Abs(expected.Width - actual.Width) <= 0.01f &&
-               Math.Abs(expected.Height - actual.Height) <= 0.01f;
-    }
+    private static bool RectEquals(RectPt expected, RectPt actual) =>
+        Math.Abs(expected.X - actual.X) <= 0.01f &&
+        Math.Abs(expected.Y - actual.Y) <= 0.01f &&
+        Math.Abs(expected.Width - actual.Width) <= 0.01f &&
+        Math.Abs(expected.Height - actual.Height) <= 0.01f;
 
     private static bool RectContainedBy(RectPt child, RectPt parent)
     {

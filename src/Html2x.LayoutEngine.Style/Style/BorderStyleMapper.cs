@@ -7,7 +7,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
-/// Maps CSS border declarations into the computed visual border model.
+///     Maps CSS border declarations into the computed visual border model.
 /// </summary>
 internal sealed class BorderStyleMapper(CssValueConverter converter)
 {

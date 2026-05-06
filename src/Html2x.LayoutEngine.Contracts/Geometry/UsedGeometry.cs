@@ -42,15 +42,13 @@ internal readonly record struct UsedGeometry
 
     public float Height => BorderBoxRect.Height;
 
-    public UsedGeometry Translate(float deltaX, float deltaY)
-    {
-        return new UsedGeometry(
+    public UsedGeometry Translate(float deltaX, float deltaY) =>
+        new(
             Translate(BorderBoxRect, deltaX, deltaY),
             Translate(ContentBoxRect, deltaX, deltaY),
             Baseline.HasValue ? Baseline.Value + deltaY : null,
             MarkerOffset,
             AllowsOverflow);
-    }
 
     public UsedGeometry WithBorderX(float value)
     {
@@ -64,20 +62,14 @@ internal readonly record struct UsedGeometry
         return Translate(0f, delta);
     }
 
-    public UsedGeometry WithBorderWidth(float value)
-    {
-        return Resize(value, BorderBoxRect.Height);
-    }
+    public UsedGeometry WithBorderWidth(float value) => Resize(value, BorderBoxRect.Height);
 
-    public UsedGeometry WithBorderHeight(float value)
-    {
-        return Resize(BorderBoxRect.Width, value);
-    }
+    public UsedGeometry WithBorderHeight(float value) => Resize(BorderBoxRect.Width, value);
 
     public UsedGeometry WithContentInsets(Spacing padding, Spacing border)
     {
         var contentInsets = border.Safe().Add(padding.Safe());
-        return new UsedGeometry(
+        return new(
             BorderBoxRect,
             Inset(BorderBoxRect, contentInsets),
             Baseline,
@@ -85,15 +77,13 @@ internal readonly record struct UsedGeometry
             AllowsOverflow);
     }
 
-    public UsedGeometry WithMarkerOffset(float value)
-    {
-        return new UsedGeometry(
+    public UsedGeometry WithMarkerOffset(float value) =>
+        new(
             BorderBoxRect,
             ContentBoxRect,
             Baseline,
             value,
             AllowsOverflow);
-    }
 
     private UsedGeometry Resize(float borderWidth, float borderHeight)
     {
@@ -108,9 +98,9 @@ internal readonly record struct UsedGeometry
             GuardNonNegativeFinite(nameof(borderHeight), borderHeight));
         var contentRect = Inset(
             borderRect,
-            new Spacing(topInset, rightInset, bottomInset, leftInset));
+            new(topInset, rightInset, bottomInset, leftInset));
 
-        return new UsedGeometry(
+        return new(
             borderRect,
             contentRect,
             Baseline,
@@ -126,14 +116,12 @@ internal readonly record struct UsedGeometry
         return rect.Translate(deltaX, deltaY);
     }
 
-    private static RectPt Inset(RectPt rect, Spacing inset)
-    {
-        return new RectPt(
+    private static RectPt Inset(RectPt rect, Spacing inset) =>
+        new(
             rect.X + inset.Left,
             rect.Y + inset.Top,
             Math.Max(0f, rect.Width - inset.Horizontal),
             Math.Max(0f, rect.Height - inset.Vertical));
-    }
 
     private static void GuardRect(string name, RectPt rect)
     {

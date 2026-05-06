@@ -2,7 +2,6 @@ using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Style;
 using Html2x.Options;
 using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
@@ -24,14 +23,14 @@ public sealed class HtmlConverter
             throw new ArgumentNullException(nameof(html));
         }
 
-        options ??= new HtmlConverterOptions();
+        options ??= new();
 
         DiagnosticsCollector? collector = null;
         IDiagnosticsSink? diagnosticsSink = null;
         if (options.Diagnostics.EnableDiagnostics)
         {
             var diagnosticsStartTime = DateTimeOffset.UtcNow;
-            collector = new DiagnosticsCollector(diagnosticsStartTime);
+            collector = new(diagnosticsStartTime);
             diagnosticsSink = collector;
         }
 
@@ -125,8 +124,8 @@ public sealed class HtmlConverter
             pdfBytes = await renderer.RenderAsync(
                 layout,
                 ToPdfRenderSettings(options, baseDirectory),
-                diagnosticsSink: diagnosticsSink,
-                cancellationToken: cancellationToken);
+                diagnosticsSink,
+                cancellationToken);
         }
         catch (OperationCanceledException exception)
         {
@@ -153,7 +152,7 @@ public sealed class HtmlConverter
 
         var report = CompleteDiagnostics(collector);
 
-        return new Html2PdfResult(pdfBytes)
+        return new(pdfBytes)
         {
             DiagnosticsReport = report
         };
@@ -163,12 +162,12 @@ public sealed class HtmlConverter
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        return new LayoutBuildSettings
+        return new()
         {
             PageSize = options.Page.Size,
             ResourceBaseDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
-            Style = new StyleBuildSettings
+            Style = new()
             {
                 UseDefaultUserAgentStyleSheet = options.Css.UseDefaultUserAgentStyleSheet,
                 UserAgentStyleSheet = options.Css.UserAgentStyleSheet
@@ -180,7 +179,7 @@ public sealed class HtmlConverter
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        return new PdfRenderSettings
+        return new()
         {
             ResourceBaseDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes
@@ -246,7 +245,7 @@ public sealed class HtmlConverter
                 rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength));
         }
 
-        return new DiagnosticFields(fields);
+        return new(fields);
     }
 
     private static InvalidOperationException CreateFontPathException(

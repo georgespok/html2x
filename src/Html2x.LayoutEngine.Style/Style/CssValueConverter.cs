@@ -16,12 +16,10 @@ internal sealed class CssValueConverter
         return string.IsNullOrWhiteSpace(value) ? fallback ?? string.Empty : value;
     }
 
-    public string NormalizeAlign(string? value, string fallback)
-    {
-        return string.IsNullOrWhiteSpace(value)
+    public string NormalizeAlign(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value)
             ? fallback
             : value.ToLowerInvariant();
-    }
 
     public bool IsBold(string? value)
     {
@@ -38,11 +36,9 @@ internal sealed class CssValueConverter
         return int.TryParse(value, out var weight) && weight >= 600;
     }
 
-    public bool IsItalic(string? value)
-    {
-        return string.Equals(value, HtmlCssConstants.CssValues.Italic, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(value, HtmlCssConstants.CssValues.Oblique, StringComparison.OrdinalIgnoreCase);
-    }
+    public bool IsItalic(string? value) =>
+        string.Equals(value, HtmlCssConstants.CssValues.Italic, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(value, HtmlCssConstants.CssValues.Oblique, StringComparison.OrdinalIgnoreCase);
 
     public float? ParseLengthPt(string? raw)
     {

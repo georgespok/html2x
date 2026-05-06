@@ -15,16 +15,16 @@ internal static class GeometrySnapshotDiagnostics
         PaginationResult pagination,
         IDiagnosticsSink? diagnosticsSink)
     {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: LayoutStageNames.Pagination,
-            Name: EventName,
-            Severity: DiagnosticSeverity.Info,
-            Message: null,
-            Context: null,
-            Fields: DiagnosticFields.Create(
+        diagnosticsSink?.Emit(new(
+            LayoutStageNames.Pagination,
+            EventName,
+            DiagnosticSeverity.Info,
+            null,
+            null,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(
                     SnapshotFieldName,
                     GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
 }

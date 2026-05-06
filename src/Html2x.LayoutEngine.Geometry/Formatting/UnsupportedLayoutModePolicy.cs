@@ -5,7 +5,7 @@ using Html2x.RenderModel.Fragments;
 namespace Html2x.LayoutEngine.Geometry.Formatting;
 
 /// <summary>
-/// Reports layout modes that are parsed today but do not have implemented formatting contexts.
+///     Reports layout modes that are parsed today but do not have implemented formatting contexts.
 /// </summary>
 internal sealed class UnsupportedLayoutModePolicy
 {
@@ -27,26 +27,28 @@ internal sealed class UnsupportedLayoutModePolicy
     private static IEnumerable<UnsupportedLayoutMode> ResolveUnsupportedModes(BoxNode node)
     {
         if (node is FloatBox ||
-            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Left, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Right, StringComparison.OrdinalIgnoreCase))
+            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Left,
+                StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Right,
+                StringComparison.OrdinalIgnoreCase))
         {
-            yield return new UnsupportedLayoutMode(
-                StructureKind: UnsupportedDiagnosticNames.StructureKinds.Float,
-                Reason: UnsupportedDiagnosticNames.Reasons.CssFloats);
+            yield return new(
+                UnsupportedDiagnosticNames.StructureKinds.Float,
+                UnsupportedDiagnosticNames.Reasons.CssFloats);
         }
 
         if (string.Equals(node.Style.Display, HtmlCssConstants.CssValues.Flex, StringComparison.OrdinalIgnoreCase))
         {
-            yield return new UnsupportedLayoutMode(
-                StructureKind: UnsupportedDiagnosticNames.StructureKinds.DisplayFlex,
-                Reason: UnsupportedDiagnosticNames.Reasons.CssFlex);
+            yield return new(
+                UnsupportedDiagnosticNames.StructureKinds.DisplayFlex,
+                UnsupportedDiagnosticNames.Reasons.CssFlex);
         }
 
         if (string.Equals(node.Style.Position, HtmlCssConstants.CssValues.Absolute, StringComparison.OrdinalIgnoreCase))
         {
-            yield return new UnsupportedLayoutMode(
-                StructureKind: UnsupportedDiagnosticNames.StructureKinds.PositionAbsolute,
-                Reason: UnsupportedDiagnosticNames.Reasons.AbsolutePosition);
+            yield return new(
+                UnsupportedDiagnosticNames.StructureKinds.PositionAbsolute,
+                UnsupportedDiagnosticNames.Reasons.AbsolutePosition);
         }
     }
 
@@ -55,31 +57,29 @@ internal sealed class UnsupportedLayoutModePolicy
         BoxNode node,
         UnsupportedLayoutMode unsupported)
     {
-        var nodePath = BoxNodePathBuilder.Build(node);
+        var nodePath = BoxNodePath.Build(node);
         var formattingContext = ResolveFormattingContext(node);
 
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: GeometryDiagnosticNames.Stages.BoxTree,
-            Name: UnsupportedDiagnosticNames.Events.UnsupportedMode,
-            Severity: DiagnosticSeverity.Warning,
-            Message: unsupported.Reason,
-            Context: null,
-            Fields: DiagnosticFields.Create(
+        diagnosticsSink?.Emit(new(
+            GeometryDiagnosticNames.Stages.BoxTree,
+            UnsupportedDiagnosticNames.Events.UnsupportedMode,
+            DiagnosticSeverity.Warning,
+            unsupported.Reason,
+            null,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, nodePath),
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, unsupported.StructureKind),
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
                     DiagnosticValue.FromEnum(formattingContext))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
 
-    private static FormattingContextKind ResolveFormattingContext(BoxNode node)
-    {
-        return node is BlockBox { IsInlineBlockContext: true }
+    private static FormattingContextKind ResolveFormattingContext(BoxNode node) =>
+        node is BlockBox { IsInlineBlockContext: true }
             ? FormattingContextKind.InlineBlock
             : FormattingContextKind.Block;
-    }
 
     private static IEnumerable<BoxNode> Enumerate(BoxNode root)
     {

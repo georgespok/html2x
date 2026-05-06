@@ -2,12 +2,11 @@ using Html2x.Text;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-
 internal sealed class TestFileDirectory : IFileDirectory
 {
-    private readonly Dictionary<string, bool> _files = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, bool> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<FileEnumerationKey, IReadOnlyList<string>> _enumerations = new();
+    private readonly Dictionary<string, bool> _files = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> FileExistsCalls { get; } = [];
 
@@ -16,28 +15,6 @@ internal sealed class TestFileDirectory : IFileDirectory
     public List<FileEnumerationKey> EnumerateFilesCalls { get; } = [];
 
     public List<string> GetExtensionCalls { get; } = [];
-
-    public TestFileDirectory AddFile(string path, bool exists = true)
-    {
-        _files[path] = exists;
-        return this;
-    }
-
-    public TestFileDirectory AddDirectory(string path, bool exists = true)
-    {
-        _directories[path] = exists;
-        return this;
-    }
-
-    public TestFileDirectory AddEnumeration(
-        string directory,
-        string searchPattern,
-        bool recursive,
-        IReadOnlyList<string> files)
-    {
-        _enumerations[new FileEnumerationKey(directory, searchPattern, recursive)] = files;
-        return this;
-    }
 
     public bool FileExists(string path)
     {
@@ -72,6 +49,28 @@ internal sealed class TestFileDirectory : IFileDirectory
     {
         GetExtensionCalls.Add(path);
         return Path.GetExtension(path);
+    }
+
+    public TestFileDirectory AddFile(string path, bool exists = true)
+    {
+        _files[path] = exists;
+        return this;
+    }
+
+    public TestFileDirectory AddDirectory(string path, bool exists = true)
+    {
+        _directories[path] = exists;
+        return this;
+    }
+
+    public TestFileDirectory AddEnumeration(
+        string directory,
+        string searchPattern,
+        bool recursive,
+        IReadOnlyList<string> files)
+    {
+        _enumerations[new(directory, searchPattern, recursive)] = files;
+        return this;
     }
 
     internal readonly record struct FileEnumerationKey(

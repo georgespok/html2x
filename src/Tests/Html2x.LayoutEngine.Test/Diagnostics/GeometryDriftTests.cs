@@ -1,9 +1,9 @@
+using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
@@ -11,10 +11,114 @@ using Shouldly;
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
 /// <summary>
-/// Verifies geometry snapshots stay aligned with the ownership contract.
+///     Verifies geometry snapshots stay aligned with the ownership contract.
 /// </summary>
 public sealed class GeometryDriftTests
 {
+    [Fact]
+    public async Task Build_PublishedLayoutCharacterizesMixedGeometryFactsAndSourceOrder()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div id='mixed' style='margin: 0;'>
+                  Alpha
+                  <span id='chip' style='display: inline-block; padding: 1pt;'>Chip</span>
+                  Omega
+                </div>
+                <ul style='margin: 0; padding: 0;'>
+                  <li style='margin: 0;'>One</li>
+                </ul>
+                <hr style='margin: 0; padding: 2pt;' />
+                <img id='hero' src='hero.png' width='20' height='10' style='display: block; margin: 0;' />
+                <table id='supported' style='margin: 0; width: 160px;'>
+                  <tr><th>A</th><td>B</td></tr>
+                </table>
+                <table id='unsupported' style='margin: 0; width: 160px;'>
+                  <tr><td colspan='2'>C</td></tr>
+                </table>
+              </body>
+            </html>
+            """);
+
+        var blocks = result.PublishedLayout.Blocks;
+        blocks.Select(static block => block.Identity.ElementIdentity)
+            .ShouldBe(["div#mixed", "ul", "hr", "img#hero", "table#supported", "table#unsupported"]);
+        blocks.Select(static block => block.Identity.SourceOrder)
+            .ShouldBe(blocks.Select(static block => block.Identity.SourceOrder).Order().ToArray());
+        blocks.Select(static block => block.Identity.SourceOrder)
+            .Distinct()
+            .Count()
+            .ShouldBe(blocks.Count);
+
+        var mixed = blocks[0];
+        var mixedItems = mixed.InlineLayout
+            .ShouldNotBeNull()
+            .Segments
+            .ShouldHaveSingleItem()
+            .Lines
+            .ShouldHaveSingleItem()
+            .Items;
+        mixedItems.Select(static item => item.Order).ShouldBe([0, 1, 2]);
+        mixedItems[0].ShouldBeOfType<PublishedInlineTextItem>()
+            .Runs
+            .ShouldHaveSingleItem()
+            .Text
+            .ShouldContain("Alpha");
+        mixedItems[1].ShouldBeOfType<PublishedInlineObjectItem>()
+            .Content
+            .Display
+            .FormattingContext
+            .ShouldBe(FormattingContextKind.InlineBlock);
+        mixedItems[2].ShouldBeOfType<PublishedInlineTextItem>()
+            .Runs
+            .ShouldHaveSingleItem()
+            .Text
+            .ShouldContain("Omega");
+
+        var listItem = blocks[1].Children.ShouldHaveSingleItem();
+        listItem.Display.MarkerOffset.ShouldBe(12f);
+        var listRuns = listItem.InlineLayout
+            .ShouldNotBeNull()
+            .Segments
+            .ShouldHaveSingleItem()
+            .Lines
+            .ShouldHaveSingleItem()
+            .Items
+            .OfType<PublishedInlineTextItem>()
+            .SelectMany(static item => item.Runs)
+            .Select(static run => run.Text)
+            .ToArray();
+        string.Concat(listRuns).ShouldContain("One");
+
+        blocks[2].Rule.ShouldNotBeNull();
+        blocks[3].Image.ShouldNotBeNull().Src.ShouldBe("hero.png");
+
+        var supportedTable = blocks[4];
+        supportedTable.Table.ShouldNotBeNull().DerivedColumnCount.ShouldBe(2);
+        supportedTable.Children.ShouldHaveSingleItem()
+            .Table
+            .ShouldNotBeNull()
+            .RowIndex
+            .ShouldBe(0);
+        supportedTable.Children[0].Children[0].Table.ShouldNotBeNull().ColumnIndex.ShouldBe(0);
+        supportedTable.Children[0].Children[0].Table!.IsHeader.ShouldBe(true);
+        supportedTable.Children[0].Children[1].Table.ShouldNotBeNull().ColumnIndex.ShouldBe(1);
+        supportedTable.Children[0].Children[1].Table!.IsHeader.ShouldBe(false);
+
+        var unsupportedTable = blocks[5];
+        unsupportedTable.Table.ShouldNotBeNull().DerivedColumnCount.ShouldBe(0);
+        unsupportedTable.Geometry.Height.ShouldBe(0f);
+        unsupportedTable.Children.ShouldBeEmpty();
+        result.Diagnostics
+            .Any(static record =>
+                record.Name == "layout/table" &&
+                record.Fields.ContainsKey("outcome") &&
+                record.Fields["outcome"] is DiagnosticStringValue { Value: "Unsupported" })
+            .ShouldBeTrue();
+    }
+
     [Fact]
     public async Task Build_GeometrySnapshotPreservesFragmentMetadataOwnerAndConsumers()
     {
@@ -47,7 +151,8 @@ public sealed class GeometryDriftTests
 
         var table = fragmentSnapshots.First(static fragment => fragment.Kind == "table");
         var row = fragmentSnapshots.First(static fragment => fragment.Kind == "table-row");
-        var header = fragmentSnapshots.First(static fragment => fragment.Kind == "table-cell" && fragment.IsHeader == true);
+        var header =
+            fragmentSnapshots.First(static fragment => fragment.Kind == "table-cell" && fragment.IsHeader == true);
 
         table.DerivedColumnCount.ShouldBe(2);
         row.RowIndex.ShouldBe(0);
@@ -101,15 +206,15 @@ public sealed class GeometryDriftTests
     public void Paginate_MetadataRichSubtree_PreservesGeometryAndMetadata()
     {
         var style = new VisualStyle(
-            BackgroundColor: new ColorRgba(240, 240, 240, 255),
-            Borders: BorderEdges.Uniform(new BorderSide(1f, ColorRgba.Black, BorderLineStyle.Solid)),
+            new ColorRgba(240, 240, 240, 255),
+            BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid)),
             Padding: new Spacing(1f, 2f, 3f, 4f));
         var font = new FontKey("Arial", FontWeight.W400, FontStyle.Normal);
         var line = new LineBoxFragment
         {
             FragmentId = 500,
             PageNumber = 1,
-            Rect = new RectPt(12f, 120f, 25f, 14f),
+            Rect = new(12f, 120f, 25f, 14f),
             ZOrder = 5,
             Style = style,
             BaselineY = 130f,
@@ -117,11 +222,11 @@ public sealed class GeometryDriftTests
             TextAlign = "center",
             Runs =
             [
-                new TextRun(
+                new(
                     "A",
                     font,
                     12f,
-                    new PointPt(12f, 130f),
+                    new(12f, 130f),
                     10f,
                     9f,
                     3f,
@@ -133,20 +238,20 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 501,
             PageNumber = 1,
-            Rect = new RectPt(40f, 121f, 30f, 20f),
-            ContentRect = new RectPt(42f, 123f, 26f, 16f),
+            Rect = new(40f, 121f, 30f, 20f),
+            ContentRect = new(42f, 123f, 26f, 16f),
             ZOrder = 6,
             Style = style,
             Src = "image.png",
-            AuthoredSizePx = new SizePx(30d, 20d),
-            IntrinsicSizePx = new SizePx(60d, 40d),
+            AuthoredSizePx = new(30d, 20d),
+            IntrinsicSizePx = new(60d, 40d),
             Status = ImageLoadStatus.Missing
         };
         var rule = new RuleFragment
         {
             FragmentId = 502,
             PageNumber = 1,
-            Rect = new RectPt(10f, 145f, 80f, 2f),
+            Rect = new(10f, 145f, 80f, 2f),
             ZOrder = 7,
             Style = style
         };
@@ -154,7 +259,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 400,
             PageNumber = 1,
-            Rect = new RectPt(10f, 118f, 90f, 32f),
+            Rect = new(10f, 118f, 90f, 32f),
             ZOrder = 4,
             Style = style,
             DisplayRole = FragmentDisplayRole.TableCell,
@@ -167,7 +272,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 300,
             PageNumber = 1,
-            Rect = new RectPt(8f, 116f, 100f, 36f),
+            Rect = new(8f, 116f, 100f, 36f),
             ZOrder = 3,
             Style = style,
             DisplayRole = FragmentDisplayRole.TableRow,
@@ -179,7 +284,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 200,
             PageNumber = 1,
-            Rect = new RectPt(6f, 114f, 110f, 40f),
+            Rect = new(6f, 114f, 110f, 40f),
             ZOrder = 2,
             Style = style,
             DisplayRole = FragmentDisplayRole.Table,
@@ -191,7 +296,7 @@ public sealed class GeometryDriftTests
         {
             FragmentId = 100,
             PageNumber = 1,
-            Rect = new RectPt(0f, 95f, 120f, 60f),
+            Rect = new(0f, 95f, 120f, 60f),
             ZOrder = 1,
             Style = style,
             DisplayRole = FragmentDisplayRole.Block,
@@ -201,17 +306,17 @@ public sealed class GeometryDriftTests
 
         var pagination = new LayoutPaginator().Paginate(
             [
-                new BlockFragment
+                new()
                 {
                     FragmentId = 1,
-                    Rect = new RectPt(0f, 10f, 100f, 75f)
+                    Rect = new(0f, 10f, 100f, 75f)
                 },
                 sourceBlock
             ],
-            new PaginationOptions
+            new()
             {
-                PageSize = new SizePt(200f, 100f),
-                Margin = new Spacing(10f, 10f, 10f, 10f)
+                PageSize = new(200f, 100f),
+                Margin = new(10f, 10f, 10f, 10f)
             });
 
         var movedBlock = pagination.Layout.Pages[1].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
@@ -224,13 +329,13 @@ public sealed class GeometryDriftTests
         var movedImage = movedCell.Children.OfType<ImageFragment>().ShouldHaveSingleItem();
         var movedRule = movedCell.Children.OfType<RuleFragment>().ShouldHaveSingleItem();
 
-        AssertCommonTranslation(sourceBlock, movedBlock, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(table, movedTable, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(row, movedRow, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(cell, movedCell, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(line, movedLine, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(image, movedImage, deltaX, deltaY, expectedPageNumber: 2);
-        AssertCommonTranslation(rule, movedRule, deltaX, deltaY, expectedPageNumber: 2);
+        AssertCommonTranslation(sourceBlock, movedBlock, deltaX, deltaY, 2);
+        AssertCommonTranslation(table, movedTable, deltaX, deltaY, 2);
+        AssertCommonTranslation(row, movedRow, deltaX, deltaY, 2);
+        AssertCommonTranslation(cell, movedCell, deltaX, deltaY, 2);
+        AssertCommonTranslation(line, movedLine, deltaX, deltaY, 2);
+        AssertCommonTranslation(image, movedImage, deltaX, deltaY, 2);
+        AssertCommonTranslation(rule, movedRule, deltaX, deltaY, 2);
 
         movedBlock.DisplayRole.ShouldBe(sourceBlock.DisplayRole);
         movedBlock.FormattingContext.ShouldBe(sourceBlock.FormattingContext);
@@ -242,8 +347,9 @@ public sealed class GeometryDriftTests
         movedLine.BaselineY.ShouldBe(line.BaselineY + deltaY);
         movedLine.LineHeight.ShouldBe(line.LineHeight);
         movedLine.TextAlign.ShouldBe(line.TextAlign);
-        movedLine.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointPt(line.Runs[0].Origin.X + deltaX, line.Runs[0].Origin.Y + deltaY));
-        movedImage.ContentRect.ShouldBe(new RectPt(
+        movedLine.Runs.ShouldHaveSingleItem().Origin
+            .ShouldBe(new(line.Runs[0].Origin.X + deltaX, line.Runs[0].Origin.Y + deltaY));
+        movedImage.ContentRect.ShouldBe(new(
             image.ContentRect.X + deltaX,
             image.ContentRect.Y + deltaY,
             image.ContentRect.Width,
@@ -619,7 +725,7 @@ public sealed class GeometryDriftTests
         moved.PageNumber.ShouldBe(expectedPageNumber);
         moved.ZOrder.ShouldBe(source.ZOrder);
         moved.Style.ShouldBe(source.Style);
-        moved.Rect.ShouldBe(new RectPt(
+        moved.Rect.ShouldBe(new(
             source.Rect.X + deltaX,
             source.Rect.Y + deltaY,
             source.Rect.Width,

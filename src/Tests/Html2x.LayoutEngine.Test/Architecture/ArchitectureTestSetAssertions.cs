@@ -2,7 +2,6 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal static class ArchitectureTestSetAssertions
 {
     public static void ShouldBeSet(this IEnumerable<string> actual, IEnumerable<string> expected)

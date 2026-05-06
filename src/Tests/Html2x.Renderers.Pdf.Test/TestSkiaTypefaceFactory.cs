@@ -3,29 +3,16 @@ using SkiaSharp;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-
 internal sealed class TestSkiaTypefaceFactory : ISkiaTypefaceFactory
 {
-    private readonly Dictionary<string, SKTypeface?> _fileTypefaces = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<FileFaceKey, SKTypeface?> _fileFaceTypefaces = new();
+    private readonly Dictionary<string, SKTypeface?> _fileTypefaces = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> FromFileCalls { get; } = [];
 
     public List<FileFaceKey> FromFileWithFaceIndexCalls { get; } = [];
 
     public List<string> FromFamilyNameCalls { get; } = [];
-
-    public TestSkiaTypefaceFactory AddFileTypeface(string path, SKTypeface? typeface)
-    {
-        _fileTypefaces[path] = typeface;
-        return this;
-    }
-
-    public TestSkiaTypefaceFactory AddFileTypeface(string path, int faceIndex, SKTypeface? typeface)
-    {
-        _fileFaceTypefaces[new FileFaceKey(path, faceIndex)] = typeface;
-        return this;
-    }
 
     public SKTypeface? FromFile(string path)
     {
@@ -50,6 +37,18 @@ internal sealed class TestSkiaTypefaceFactory : ISkiaTypefaceFactory
     {
         FromFamilyNameCalls.Add(family);
         throw new InvalidOperationException($"Unexpected FromFamilyName call for '{family}'.");
+    }
+
+    public TestSkiaTypefaceFactory AddFileTypeface(string path, SKTypeface? typeface)
+    {
+        _fileTypefaces[path] = typeface;
+        return this;
+    }
+
+    public TestSkiaTypefaceFactory AddFileTypeface(string path, int faceIndex, SKTypeface? typeface)
+    {
+        _fileFaceTypefaces[new(path, faceIndex)] = typeface;
+        return this;
     }
 
     internal readonly record struct FileFaceKey(string Path, int FaceIndex);

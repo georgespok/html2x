@@ -3,7 +3,7 @@ using Html2x.RenderModel.Geometry;
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Centralizes fragment rectangle validation so published geometry rejects non-finite or negative dimensions.
+///     Centralizes fragment rectangle validation so published geometry rejects non-finite or negative dimensions.
 /// </summary>
 internal static class FragmentGeometryGuard
 {

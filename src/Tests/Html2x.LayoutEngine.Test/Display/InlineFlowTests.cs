@@ -16,7 +16,8 @@ public class InlineFlowTests
               </body>
             </html>";
 
-        var layout = await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(10f));
+        var layout =
+            await InlineFlowTestHelpers.BuildLayoutAsync(html, InlineFlowTestHelpers.CreateLinearMeasurer(10f));
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(1);

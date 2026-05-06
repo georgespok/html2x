@@ -112,7 +112,8 @@ public sealed class BehaviorBaselineGeometryTests
             .ToList();
 
         fragments.OfType<LineBoxFragment>()
-            .ShouldContain(static line => line.Runs.Any(static run => run.Text.Contains("Alpha", StringComparison.Ordinal)));
+            .ShouldContain(static line =>
+                line.Runs.Any(static run => run.Text.Contains("Alpha", StringComparison.Ordinal)));
 
         var image = fragments.OfType<ImageFragment>().ShouldHaveSingleItem();
         image.ContentRect.Width.ShouldBe(30f, 0.01f);
@@ -161,15 +162,11 @@ public sealed class BehaviorBaselineGeometryTests
         return lines.First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static IEnumerable<LineBoxFragment> EnumerateLines(LayoutFragment fragment)
-    {
-        return EnumerateFragments(fragment).OfType<LineBoxFragment>();
-    }
+    private static IEnumerable<LineBoxFragment> EnumerateLines(LayoutFragment fragment) =>
+        EnumerateFragments(fragment).OfType<LineBoxFragment>();
 
-    private static IEnumerable<LineBoxFragment> EnumerateLines(IEnumerable<LayoutFragment> fragments)
-    {
-        return fragments.SelectMany(EnumerateFragments).OfType<LineBoxFragment>();
-    }
+    private static IEnumerable<LineBoxFragment> EnumerateLines(IEnumerable<LayoutFragment> fragments) =>
+        fragments.SelectMany(EnumerateFragments).OfType<LineBoxFragment>();
 
     private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
     {

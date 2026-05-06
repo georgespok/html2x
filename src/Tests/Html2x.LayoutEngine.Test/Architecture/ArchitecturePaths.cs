@@ -1,6 +1,5 @@
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal static class ArchitecturePaths
 {
     public static string RepoRoot()
@@ -27,7 +26,7 @@ internal static class ArchitecturePaths
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         return segments.Length > 0 &&
-            (segments[0].Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-             segments[0].Equals("obj", StringComparison.OrdinalIgnoreCase));
+               (segments[0].Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+                segments[0].Equals("obj", StringComparison.OrdinalIgnoreCase));
     }
 }

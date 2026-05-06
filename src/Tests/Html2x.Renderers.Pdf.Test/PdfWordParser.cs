@@ -5,7 +5,6 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-
 /// <summary>
 ///     Parses PDF documents to extract structured word information including text and styling attributes.
 /// </summary>
@@ -53,12 +52,12 @@ public static class PdfWordParser
         var isItalic = IsItalic(word);
         var fontSize = GetAverageFontSize(word);
 
-        return new PdfWord(cleanText, hexColor, isBold, isItalic, fontSize);
+        return new(cleanText, hexColor, isBold, isItalic, fontSize);
     }
 
     private static string CleanWordText(string text)
     {
-        return new string([.. text.Where(ch => ch != 0)]);
+        return new([.. text.Where(ch => ch != 0)]);
     }
 
     private static string GetMostCommonTextColor(Word word)
@@ -150,7 +149,7 @@ public static class PdfWordParser
         var green = (int)(g * 255);
         var blue = (int)(b * 255);
 
-        return new ColorRgba((byte)red, (byte)green, (byte)blue, 255).ToHex(includeAlpha: false);
+        return new ColorRgba((byte)red, (byte)green, (byte)blue, 255).ToHex(false);
     }
 
     private static bool IsBold(Word word)
@@ -217,7 +216,7 @@ public static class PdfWordParser
             foundWords[searchText] = word;
         }
 
-        return new WordLookupResult(foundWords);
+        return new(foundWords);
     }
 
     /// <summary>

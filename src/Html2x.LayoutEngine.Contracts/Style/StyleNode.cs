@@ -6,7 +6,7 @@ internal sealed class StyleNode
         : this(
             StyleSourceIdentity.Unspecified,
             StyledElementFacts.Empty,
-            new ComputedStyle())
+            new())
     {
     }
 

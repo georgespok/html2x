@@ -58,7 +58,7 @@ internal static class GeometryLayoutStructureValidator
         }
 
         var payload = new UnsupportedStructureDiagnostic(
-            BoxNodePathBuilder.Build(unsupportedNode),
+            BoxNodePath.Build(unsupportedNode),
             unsupportedNode.Role.ToString(),
             UnsupportedDiagnosticNames.Reasons.InlineBlockUnsupportedStructure,
             FormattingContextKind.InlineBlock);
@@ -73,27 +73,21 @@ internal static class GeometryLayoutStructureValidator
         IDiagnosticsSink? diagnosticsSink,
         UnsupportedStructureDiagnostic payload)
     {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: GeometryDiagnosticNames.Stages.BoxTree,
-            Name: UnsupportedDiagnosticNames.Events.InlineBlockUnsupportedStructure,
-            Severity: DiagnosticSeverity.Error,
-            Message: payload.Reason,
-            Context: null,
-            Fields: DiagnosticFields.Create(
+        diagnosticsSink?.Emit(new(
+            GeometryDiagnosticNames.Stages.BoxTree,
+            UnsupportedDiagnosticNames.Events.InlineBlockUnsupportedStructure,
+            DiagnosticSeverity.Error,
+            payload.Reason,
+            null,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, payload.NodePath),
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, payload.StructureKind),
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, payload.Reason),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
                     DiagnosticValue.FromEnum(payload.FormattingContext))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
-
-    private sealed record UnsupportedStructureDiagnostic(
-        string NodePath,
-        string StructureKind,
-        string Reason,
-        FormattingContextKind FormattingContext);
 
     private static BoxNode? FindUnsupportedInlineBlockStructure(BoxNode root)
     {
@@ -177,4 +171,10 @@ internal static class GeometryLayoutStructureValidator
             _ => BoxRole.Block
         };
     }
+
+    private sealed record UnsupportedStructureDiagnostic(
+        string NodePath,
+        string StructureKind,
+        string Reason,
+        FormattingContextKind FormattingContext);
 }

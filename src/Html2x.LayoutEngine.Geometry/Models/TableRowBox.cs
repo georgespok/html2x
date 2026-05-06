@@ -4,9 +4,8 @@ internal sealed class TableRowBox(BoxRole role) : BlockBox(role)
 {
     public int RowIndex { get; set; } = -1;
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new TableRowBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new TableRowBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -15,5 +14,4 @@ internal sealed class TableRowBox(BoxRole role) : BlockBox(role)
             SourceIdentity = SourceIdentity,
             RowIndex = RowIndex
         });
-    }
 }

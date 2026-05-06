@@ -1,7 +1,6 @@
+using Html2x.LayoutEngine.Contracts.Geometry;
+
 namespace Html2x.LayoutEngine.Contracts.Published;
-
-using Geometry;
-
 
 internal sealed record PublishedInlineSource
 {

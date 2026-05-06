@@ -96,7 +96,7 @@ public partial class LayoutIntegrationTests
         var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions.Style);
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
-            new LayoutGeometryRequest
+            new()
             {
                 PageSize = layoutOptions.PageSize,
                 ImageMetadataResolver = new NoopImageMetadataResolver(),
@@ -186,7 +186,7 @@ public partial class LayoutIntegrationTests
 
         // Act
         var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
-        
+
         // Assert
         layout.Pages.Count.ShouldBe(1);
         var page = layout.Pages[0];
@@ -195,7 +195,7 @@ public partial class LayoutIntegrationTests
         var div = (BlockFragment)page.Children[0];
 
         div.Style.Borders.ShouldNotBeNull();
-        
+
         // Assert border widths (1px at 96 DPI is 0.75pt)
         div.Style.Borders.Left!.Width.ShouldBe(0.75f);
         div.Style.Borders.Right!.Width.ShouldBe(0.75f);
@@ -203,10 +203,10 @@ public partial class LayoutIntegrationTests
         div.Style.Borders.Bottom!.Width.ShouldBe(0.75f);
 
         // Assert border colors
-        div.Style.Borders.Left.Color.ShouldBe(new ColorRgba(255, 0, 0, 255));
-        div.Style.Borders.Right.Color.ShouldBe(new ColorRgba(0, 0, 255, 255));
-        div.Style.Borders.Top.Color.ShouldBe(new ColorRgba(0, 128, 0, 255));
-        div.Style.Borders.Bottom.Color.ShouldBe(new ColorRgba(255, 255, 0, 255));
+        div.Style.Borders.Left.Color.ShouldBe(new(255, 0, 0, 255));
+        div.Style.Borders.Right.Color.ShouldBe(new(0, 0, 255, 255));
+        div.Style.Borders.Top.Color.ShouldBe(new(0, 128, 0, 255));
+        div.Style.Borders.Bottom.Color.ShouldBe(new(255, 255, 0, 255));
 
         // Assert border styles
         div.Style.Borders.Left.LineStyle.ShouldBe(BorderLineStyle.Solid);
@@ -404,7 +404,7 @@ public partial class LayoutIntegrationTests
         second.Rect.Y.ShouldBe(expectedTop, 0.5f);
     }
 
-    
+
     [Fact]
     public async Task LayoutBlockWithPadding_AdjustsContentWidth()
     {
@@ -417,7 +417,7 @@ public partial class LayoutIntegrationTests
               </body>
             </html>";
 
-       var layoutOptions = new LayoutBuildSettings
+        var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
         };
@@ -429,7 +429,7 @@ public partial class LayoutIntegrationTests
         layout.Pages.Count.ShouldBe(1);
         var div = (BlockFragment)layout.Pages[0].Children[0];
         var lineBox = (LineBoxFragment)div.Children[0];
-        
+
         lineBox.Rect.X.ShouldBe(15f, 0.5f);
         lineBox.Rect.Y.ShouldBe(15f, 0.5f);
     }
@@ -602,19 +602,10 @@ public partial class LayoutIntegrationTests
         return null;
     }
 
-    private static ITextMeasurer CreateTextMeasurer()
-    {
-        return new ConstantTextMeasurer(10f, 9f, 3f);
-    }
+    private static ITextMeasurer CreateTextMeasurer() => new ConstantTextMeasurer(10f, 9f, 3f);
 
-    private static LayoutBuilder CreateLayoutBuilder()
-    {
-        return CreateLayoutBuilder(new NoopImageMetadataResolver());
-    }
+    private static LayoutBuilder CreateLayoutBuilder() => CreateLayoutBuilder(new NoopImageMetadataResolver());
 
-    private static LayoutBuilder CreateLayoutBuilder(IImageMetadataResolver imageMetadataResolver)
-    {
-        return new LayoutBuilder(CreateTextMeasurer(), imageMetadataResolver);
-    }
-
+    private static LayoutBuilder CreateLayoutBuilder(IImageMetadataResolver imageMetadataResolver) =>
+        new(CreateTextMeasurer(), imageMetadataResolver);
 }

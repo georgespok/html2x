@@ -1,8 +1,7 @@
 namespace Html2x.Options;
 
-
 /// <summary>
-/// Public conversion request options for HTML to PDF conversion.
+///     Public conversion request options for HTML to PDF conversion.
 /// </summary>
 public sealed class HtmlConverterOptions
 {

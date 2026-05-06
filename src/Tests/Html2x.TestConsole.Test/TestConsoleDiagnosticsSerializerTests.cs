@@ -16,7 +16,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             startTime,
             endTime,
             [
-                new DiagnosticRecord(
+                new(
                     "LayoutBuild",
                     "stage/started",
                     DiagnosticSeverity.Info,
@@ -28,10 +28,9 @@ public sealed class TestConsoleDiagnosticsSerializerTests
         var options = new ConsoleOptions(
             Path.GetFullPath("input.html"),
             Path.Combine(Path.GetTempPath(), "output.pdf"),
-            DiagnosticsEnabled: false,
-            DiagnosticsJson: "build/diagnostics/session.json",
-            EnableDebugging: true,
-            RawArguments:
+            false,
+            "build/diagnostics/session.json",
+            true,
             [
                 "input.html",
                 "output.pdf",
@@ -39,8 +38,8 @@ public sealed class TestConsoleDiagnosticsSerializerTests
                 "build/diagnostics/session.json",
                 "--debug"
             ],
-            Interactive: true,
-            SelectedSamplePath: Path.GetFullPath("sample.html"));
+            true,
+            Path.GetFullPath("sample.html"));
 
         var json = TestConsoleDiagnosticsSerializer.ToJson(report, options);
 
@@ -126,17 +125,16 @@ public sealed class TestConsoleDiagnosticsSerializerTests
         var options = new ConsoleOptions(
             Path.GetFullPath(Path.Combine("html", "centralize-layout-font-policy.html")),
             Path.GetFullPath(Path.Combine("build", "centralize-layout-font-policy.pdf")),
-            DiagnosticsEnabled: true,
-            DiagnosticsJson: diagnosticsJson,
-            EnableDebugging: false,
-            RawArguments:
+            true,
+            diagnosticsJson,
+            false,
             [
                 "--diagnostics",
                 "--diagnostics-json",
                 diagnosticsJson
             ],
-            Interactive: false,
-            SelectedSamplePath: null);
+            false,
+            null);
 
         var json = TestConsoleDiagnosticsSerializer.ToJson(report, options);
 

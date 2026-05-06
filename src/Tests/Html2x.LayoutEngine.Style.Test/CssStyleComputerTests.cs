@@ -1,10 +1,10 @@
 using AngleSharp;
 using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Style.Document;
 using Html2x.LayoutEngine.Style.Style;
+using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 
@@ -21,7 +21,7 @@ public class CssStyleComputerTests
 
         var red = new ColorRgba(255, 0, 0, 255); // red #ff0000
         const float bodyFontSize = 18f; // 18pt
-        const string fontHelvetica = "Helvetica"; 
+        const string fontHelvetica = "Helvetica";
 
         var document = await CreateHtmlDocument(@"
             <html>
@@ -37,16 +37,16 @@ public class CssStyleComputerTests
 
         var actual = StyleTreeSnapshot.FromTree(tree);
 
-        actual.ShouldMatch(new ("body",
-            new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red},
+        actual.ShouldMatch(new("body",
+            new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red },
             [
-                new ("h1", new()
+                new("h1", new()
                 {
                     FontFamily = fontHelvetica, FontSizePt = 30, Color = red,
                     TextAlign = "right", Bold = true
                 }),
-                new ("p", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red }),
-                new ("div", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red })
+                new("p", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red }),
+                new("div", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red })
             ]));
     }
 
@@ -135,7 +135,7 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new("body", null, [
-            new("div", new() { Padding = new Spacing(0f, 0f, 0f, 0f) })
+            new("div", new() { Padding = new(0f, 0f, 0f, 0f) })
         ]));
     }
 
@@ -161,15 +161,15 @@ public class CssStyleComputerTests
         // AngleSharp auto-closes <p> when it encounters <div> inside it (invalid HTML nesting).
         // This results in: <p>Paragraph inside Div</p><div>...</div><p></p>
         actual.ShouldMatch(new("body", null, [
-            new("div", null, 
+            new("div", null,
             [
-                new("span"),  // Span inside Div
-                new("p"),      // Paragraph inside Div (auto-closed before nested div)
-                new("div", null,     // Nested Div inside Paragraph (now sibling, not nested)
+                new("span"), // Span inside Div
+                new("p"), // Paragraph inside Div (auto-closed before nested div)
+                new("div", null, // Nested Div inside Paragraph (now sibling, not nested)
                 [
                     new("span") // Nested Span inside nested Div
                 ]),
-                new("p")       // Empty <p> created by parser after closing div
+                new("p") // Empty <p> created by parser after closing div
             ])
         ]));
     }
@@ -194,7 +194,7 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new("body", null, [
-            new("p", new() { Color = new ColorRgba(r, g, b, a) })
+            new("p", new() { Color = new(r, g, b, a) })
         ]));
     }
 
@@ -209,8 +209,8 @@ public class CssStyleComputerTests
         var tree = _sut.Compute(document);
         var actual = StyleTreeSnapshot.FromTree(tree);
 
-        actual.ShouldMatch(new("body", new() { Color = new ColorRgba(17, 34, 51, 255) }, [
-            new("p", new() { Color = new ColorRgba(17, 34, 51, 255) })
+        actual.ShouldMatch(new("body", new() { Color = new(17, 34, 51, 255) }, [
+            new("p", new() { Color = new(17, 34, 51, 255) })
         ]));
     }
 
@@ -226,8 +226,8 @@ public class CssStyleComputerTests
         var tree = _sut.Compute(document, sink);
         var actual = StyleTreeSnapshot.FromTree(tree);
 
-        actual.ShouldMatch(new("body", new() { Color = new ColorRgba(17, 34, 51, 255) }, [
-            new("p", new() { Color = new ColorRgba(17, 34, 51, 255) })
+        actual.ShouldMatch(new("body", new() { Color = new(17, 34, 51, 255) }, [
+            new("p", new() { Color = new(17, 34, 51, 255) })
         ]));
         var diagnostic = SingleDiagnostic(sink, "style/ignored-declaration");
         AssertStringField(diagnostic, "propertyName", "color");
@@ -290,14 +290,14 @@ public class CssStyleComputerTests
         var actual = StyleTreeSnapshot.FromTree(tree);
 
         actual.ShouldMatch(new("body", null, [
-            new("ul", null, 
+            new("ul", null,
             [
-                new("li"),  
+                new("li"),
                 new("li")
             ]),
-            new("ol", null, 
+            new("ol", null,
             [
-                new("li"),  
+                new("li"),
                 new("li")
             ])
         ]));
@@ -362,11 +362,11 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Padding = new Spacing(15f, 11.25f, 7.5f, 3.75f)
+                Padding = new(15f, 11.25f, 7.5f, 3.75f)
             }, [
                 new("p", new()
                 {
-                    Padding = new Spacing(0f, 0f, 0f, 0f)
+                    Padding = new(0f, 0f, 0f, 0f)
                 })
             ])
         ]));
@@ -377,7 +377,8 @@ public class CssStyleComputerTests
     [InlineData("10px 20px", 7.5f, 15f, 7.5f, 15f)]
     [InlineData("10px 20px 15px", 7.5f, 15f, 11.25f, 15f)]
     [InlineData("10px 20px 15px 5px", 7.5f, 15f, 11.25f, 3.75f)]
-    public async Task ParsePaddingShorthand_ResolvesToPoints(string shorthand, float top, float right, float bottom, float left)
+    public async Task ParsePaddingShorthand_ResolvesToPoints(string shorthand, float top, float right, float bottom,
+        float left)
     {
         // Arrange
         var document = await CreateHtmlDocument(
@@ -396,7 +397,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Padding = new Spacing(top, right, bottom, left)
+                Padding = new(top, right, bottom, left)
             })
         ]));
     }
@@ -423,7 +424,7 @@ public class CssStyleComputerTests
         actual.ShouldMatch(new("body", null, [
             new("div", new()
             {
-                Padding = new Spacing(18.75f, 7.5f, 7.5f, 7.5f)
+                Padding = new(18.75f, 7.5f, 7.5f, 7.5f)
             })
         ]));
     }
@@ -482,7 +483,7 @@ public class CssStyleComputerTests
             </body></html>");
         var sink = new RecordingDiagnosticsSink();
 
-        _sut.Compute(document, diagnosticsSink: sink);
+        _sut.Compute(document, sink);
 
         var record = SingleDiagnostic(sink, "style/unsupported-declaration");
         record.Stage.ShouldBe("stage/style");
@@ -607,16 +608,16 @@ public class CssStyleComputerTests
 
         var actual = await ComputeStyleTreeAsync(html, options);
 
-        actual.ShouldMatch(new StyleSnapshot("body", null,
+        actual.ShouldMatch(new("body", null,
         [
-            new StyleSnapshot("h1", new ComputedStyle
+            new("h1", new()
             {
                 FontSizePt = 18,
                 Bold = true
             }),
-            new StyleSnapshot("p", new ComputedStyle
+            new("p", new()
             {
-                Margin = new Spacing(6f, 0f, 6f, 0f)
+                Margin = new(6f, 0f, 6f, 0f)
             })
         ]));
     }
@@ -634,15 +635,15 @@ public class CssStyleComputerTests
 
         var actual = await ComputeStyleTreeAsync(html, options);
 
-        actual.ShouldMatch(new StyleSnapshot("body", null,
+        actual.ShouldMatch(new("body", null,
         [
-            new StyleSnapshot("h1", new ComputedStyle
+            new("h1", new()
             {
                 FontSizePt = 22
             }),
-            new StyleSnapshot("p", new ComputedStyle
+            new("p", new()
             {
-                Margin = new Spacing(2f, 0f, 2f, 0f)
+                Margin = new(2f, 0f, 2f, 0f)
             })
         ]));
     }
@@ -659,15 +660,15 @@ public class CssStyleComputerTests
 
         var actual = await ComputeStyleTreeAsync(html, options);
 
-        actual.ShouldMatch(new StyleSnapshot("body", null,
+        actual.ShouldMatch(new("body", null,
         [
-            new StyleSnapshot("h1", new ComputedStyle
+            new("h1", new()
             {
                 FontSizePt = 12
             }),
-            new StyleSnapshot("p", new ComputedStyle
+            new("p", new()
             {
-                Margin = new Spacing(0f, 0f, 0f, 0f)
+                Margin = new(0f, 0f, 0f, 0f)
             })
         ]));
     }
@@ -701,7 +702,7 @@ public class CssStyleComputerTests
 
     public static IEnumerable<object[]> BorderCases()
     {
-        var expected = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Dashed));
+        var expected = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Dashed));
 
         yield return
         [
@@ -730,7 +731,7 @@ public class CssStyleComputerTests
                     Text
                 </div>
             </body></html>",
-            BorderEdges.Uniform(new BorderSide(0.75f, new ColorRgba(18, 52, 86, 255), BorderLineStyle.Solid))
+            BorderEdges.Uniform(new(0.75f, new(18, 52, 86, 255), BorderLineStyle.Solid))
         ];
     }
 
@@ -776,5 +777,4 @@ public class CssStyleComputerTests
             new Spacing(0f, 0f, 0f, 0f)
         ];
     }
-
 }

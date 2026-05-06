@@ -6,16 +6,16 @@ namespace Html2x.LayoutEngine.Geometry.Formatting;
 internal static class VerticalFlowPolicy
 {
     public static float CollapseTopMargin(
-        IBlockFormattingContext formattingContext,
+        MarginCollapseRules marginCollapseRules,
         float previousBottomMargin,
         float nextTopMargin,
         FormattingContextKind contextKind,
         string consumerName,
         IDiagnosticsSink? diagnosticsSink = null)
     {
-        ArgumentNullException.ThrowIfNull(formattingContext);
+        ArgumentNullException.ThrowIfNull(marginCollapseRules);
 
-        return formattingContext.CollapseMargins(
+        return marginCollapseRules.Collapse(
             previousBottomMargin,
             nextTopMargin,
             contextKind,
@@ -23,21 +23,14 @@ internal static class VerticalFlowPolicy
             diagnosticsSink);
     }
 
-    public static float AdvanceCursorPast(float boxY, float boxHeight)
-    {
-        return boxY + Math.Max(0f, boxHeight);
-    }
+    public static float AdvanceCursorPast(float boxY, float boxHeight) => boxY + Math.Max(0f, boxHeight);
 
     public static float ResolveStackHeight(
         float currentY,
         float previousBottomMargin,
-        float startY)
-    {
-        return Math.Max(0f, currentY + previousBottomMargin - startY);
-    }
+        float startY) =>
+        Math.Max(0f, currentY + previousBottomMargin - startY);
 
-    public static float ResolveContentHeight(float childBlockFlowHeight, float inlineFlowHeight)
-    {
-        return Math.Max(Math.Max(0f, childBlockFlowHeight), Math.Max(0f, inlineFlowHeight));
-    }
+    public static float ResolveContentHeight(float childBlockFlowHeight, float inlineFlowHeight) =>
+        Math.Max(Math.Max(0f, childBlockFlowHeight), Math.Max(0f, inlineFlowHeight));
 }

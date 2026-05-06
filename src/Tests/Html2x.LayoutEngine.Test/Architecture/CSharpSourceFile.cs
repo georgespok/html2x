@@ -6,7 +6,6 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class CSharpSourceFile
 {
     private CSharpSourceFile(string path, SyntaxTree tree, CompilationUnitSyntax root)
@@ -30,7 +29,7 @@ internal sealed class CSharpSourceFile
         var source = File.ReadAllText(path);
         var tree = CSharpSyntaxTree.ParseText(source, path: path);
 
-        return new CSharpSourceFile(path, tree, tree.GetCompilationUnitRoot());
+        return new(path, tree, tree.GetCompilationUnitRoot());
     }
 
     public void ShouldDeclareNamespace(string expectedNamespace)
@@ -102,7 +101,8 @@ internal sealed class CSharpSourceFile
             .FirstOrDefault(type => type.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal));
 
         declaration.ShouldNotBeNull($"{RelativePath()} should declare record {typeName}.");
-        declaration.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword).ShouldBeTrue($"{typeName} should be a record struct.");
+        declaration.ClassOrStructKeyword.IsKind(SyntaxKind.StructKeyword)
+            .ShouldBeTrue($"{typeName} should be a record struct.");
         AccessibilityOf(declaration).ShouldBe(accessibility, $"{typeName} should be {accessibility}.");
     }
 
@@ -182,20 +182,23 @@ internal sealed class CSharpSourceFile
         var matches = Root.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
             .Where(property => property.Identifier.ValueText.Equals(propertyName, StringComparison.Ordinal))
-            .Where(property => propertyType is null || NormalizeType(property.Type.ToString()) == NormalizeType(propertyType))
+            .Where(property =>
+                propertyType is null || NormalizeType(property.Type.ToString()) == NormalizeType(propertyType))
             .Where(property => accessibility is null || AccessibilityOf(property) == accessibility)
             .ToArray();
 
         matches.ShouldBeEmpty($"{RelativePath()} should not declare matching property {propertyName}.");
     }
 
-    public void ShouldNotContainPropertyInType(string typeName, string propertyName, string? propertyType = null, string? accessibility = null)
+    public void ShouldNotContainPropertyInType(string typeName, string propertyName, string? propertyType = null,
+        string? accessibility = null)
     {
         var type = FindType(typeName);
         var matches = type.DescendantNodes()
             .OfType<PropertyDeclarationSyntax>()
             .Where(property => property.Identifier.ValueText.Equals(propertyName, StringComparison.Ordinal))
-            .Where(property => propertyType is null || NormalizeType(property.Type.ToString()) == NormalizeType(propertyType))
+            .Where(property =>
+                propertyType is null || NormalizeType(property.Type.ToString()) == NormalizeType(propertyType))
             .Where(property => accessibility is null || AccessibilityOf(property) == accessibility)
             .ToArray();
 
@@ -262,7 +265,8 @@ internal sealed class CSharpSourceFile
             .OfType<BaseMethodDeclarationSyntax>()
             .Where(method => MethodName(method).Equals(methodOrConstructorName, StringComparison.Ordinal))
             .SelectMany(method => method.ParameterList.Parameters)
-            .FirstOrDefault(parameter => parameter.Identifier.ValueText.Equals(parameterName, StringComparison.Ordinal));
+            .FirstOrDefault(parameter =>
+                parameter.Identifier.ValueText.Equals(parameterName, StringComparison.Ordinal));
 
         parameter.ShouldNotBeNull($"{RelativePath()} should declare parameter {parameterName}.");
         NormalizeType(parameter.Type?.ToString() ?? string.Empty).ShouldBe(
@@ -277,7 +281,8 @@ internal sealed class CSharpSourceFile
             .Where(constructor => constructor.Identifier.ValueText.Equals(typeName, StringComparison.Ordinal))
             .Where(constructor => AccessibilityOf(constructor) == "public")
             .SelectMany(constructor => constructor.ParameterList.Parameters)
-            .Where(parameter => NormalizeType(parameter.Type?.ToString() ?? string.Empty) == NormalizeType(parameterType))
+            .Where(parameter =>
+                NormalizeType(parameter.Type?.ToString() ?? string.Empty) == NormalizeType(parameterType))
             .ToArray();
 
         matches.ShouldBeEmpty($"{typeName} should not expose public constructor parameter type {parameterType}.");
@@ -373,7 +378,8 @@ internal sealed class CSharpSourceFile
     {
         return Root.DescendantNodes()
             .OfType<AttributeSyntax>()
-            .Where(static attribute => attribute.Name.ToString().EndsWith("InternalsVisibleTo", StringComparison.Ordinal))
+            .Where(static attribute =>
+                attribute.Name.ToString().EndsWith("InternalsVisibleTo", StringComparison.Ordinal))
             .Select(attribute => attribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression)
             .OfType<LiteralExpressionSyntax>()
             .Select(static expression => expression.Token.ValueText)
@@ -401,10 +407,10 @@ internal sealed class CSharpSourceFile
     private bool UsesNamespace(string namespaceName)
     {
         return Root.Usings.Any(usingDirective =>
-            usingDirective.Name?.ToString().StartsWith(namespaceName, StringComparison.Ordinal) == true) ||
-            Root.DescendantNodes()
-                .OfType<QualifiedNameSyntax>()
-                .Any(name => name.ToString().StartsWith(namespaceName, StringComparison.Ordinal));
+                   usingDirective.Name?.ToString().StartsWith(namespaceName, StringComparison.Ordinal) == true) ||
+               Root.DescendantNodes()
+                   .OfType<QualifiedNameSyntax>()
+                   .Any(name => name.ToString().StartsWith(namespaceName, StringComparison.Ordinal));
     }
 
     private bool UsesIdentifier(string identifier) =>

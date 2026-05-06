@@ -3,15 +3,15 @@ using Html2x.RenderModel.Geometry;
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Represents one line slot of inline content, including tight occupied bounds, text runs, and line metrics.
+///     Represents one line slot of inline content, including tight occupied bounds, text runs, and line metrics.
 /// </summary>
 public sealed class LineBoxFragment : Fragment
 {
-    private readonly bool _hasOccupiedRect;
-    private readonly RectPt _occupiedRect;
     private readonly float _baselineY;
+    private readonly bool _hasOccupiedRect;
     private readonly float _lineHeight;
-    private IReadOnlyList<TextRun> _runs = [];
+    private readonly RectPt _occupiedRect;
+    private readonly IReadOnlyList<TextRun> _runs = [];
 
     public RectPt OccupiedRect
     {

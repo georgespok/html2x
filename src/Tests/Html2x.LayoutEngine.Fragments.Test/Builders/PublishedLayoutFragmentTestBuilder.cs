@@ -11,12 +11,10 @@ namespace Html2x.LayoutEngine.Fragments.Test.Builders;
 
 internal static class PublishedLayoutFragmentTestBuilder
 {
-    public static PublishedLayoutTree Tree(params PublishedBlock[] blocks)
-    {
-        return new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+    public static PublishedLayoutTree Tree(params PublishedBlock[] blocks) =>
+        new(
+            new(PaperSizes.A4, new()),
             blocks);
-    }
 
     public static PublishedBlock Block(
         string nodePath = "body/div",
@@ -38,13 +36,13 @@ internal static class PublishedLayoutFragmentTestBuilder
         var geometry = new UsedGeometry(
             borderRect,
             contentRect ?? borderRect,
-            baseline: null,
-            markerOffset: markerOffset.GetValueOrDefault(),
-            allowsOverflow: false);
+            null,
+            markerOffset.GetValueOrDefault(),
+            false);
 
-        return new PublishedBlock(
-            new PublishedBlockIdentity(nodePath, elementIdentity: null, sourceOrder),
-            new PublishedDisplayFacts(role, formattingContext, markerOffset),
+        return new(
+            new(nodePath, null, sourceOrder),
+            new(role, formattingContext, markerOffset),
             ToVisualStyle(style ?? new ComputedStyle()),
             geometry,
             inlineLayout,
@@ -64,20 +62,17 @@ internal static class PublishedLayoutFragmentTestBuilder
             .DefaultIfEmpty(0f)
             .Max();
 
-        return new PublishedInlineLayout(segments, totalHeight, maxLineWidth);
+        return new(segments, totalHeight, maxLineWidth);
     }
 
-    public static PublishedInlineFlowSegment Segment(params PublishedInlineItem[] items)
-    {
-        return Segment(Line(items: items));
-    }
+    public static PublishedInlineFlowSegment Segment(params PublishedInlineItem[] items) => Segment(Line(items: items));
 
     public static PublishedInlineFlowSegment Segment(params PublishedInlineLine[] lines)
     {
         var top = lines.Select(static line => line.Rect.Top).DefaultIfEmpty(0f).Min();
         var bottom = lines.Select(static line => line.Rect.Bottom).DefaultIfEmpty(0f).Max();
 
-        return new PublishedInlineFlowSegment(lines, top, bottom - top);
+        return new(lines, top, bottom - top);
     }
 
     public static PublishedInlineLine Line(
@@ -87,9 +82,8 @@ internal static class PublishedLayoutFragmentTestBuilder
         float baselineY = 9f,
         float lineHeight = 12f,
         string? textAlign = "left",
-        params PublishedInlineItem[] items)
-    {
-        return new PublishedInlineLine(
+        params PublishedInlineItem[] items) =>
+        new(
             lineIndex,
             rect ?? new RectPt(0f, 0f, 100f, 12f),
             occupiedRect ?? new RectPt(0f, 0f, 100f, 12f),
@@ -97,51 +91,44 @@ internal static class PublishedLayoutFragmentTestBuilder
             lineHeight,
             textAlign,
             items);
-    }
 
     public static PublishedInlineTextItem TextItem(
         int order,
         string text,
         RectPt? rect = null,
         FontKey? font = null,
-        ResolvedFont? resolvedFont = null)
-    {
-        return new PublishedInlineTextItem(
+        ResolvedFont? resolvedFont = null) =>
+        new(
             order,
             rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             [CreateRun(text, font, resolvedFont)],
-            [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
-    }
+            [new($"body/span[{order}]", "span", order)]);
 
-    public static PublishedInlineTextItem EmptyTextItem(int order, RectPt? rect = null)
-    {
-        return new PublishedInlineTextItem(
+    public static PublishedInlineTextItem EmptyTextItem(int order, RectPt? rect = null) =>
+        new(
             order,
             rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             [],
-            [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
-    }
+            [new($"body/span[{order}]", "span", order)]);
 
     public static PublishedInlineObjectItem ObjectItem(
         int order,
         PublishedBlock content,
-        RectPt? rect = null)
-    {
-        return new PublishedInlineObjectItem(
+        RectPt? rect = null) =>
+        new(
             order,
             rect ?? new RectPt(order * 20f, 0f, 20f, 12f),
             content);
-    }
 
     private static TextRun CreateRun(string text, FontKey? font, ResolvedFont? resolvedFont)
     {
         var fontKey = font ?? new FontKey("Test", FontWeight.W400, FontStyle.Normal);
 
-        return new TextRun(
+        return new(
             text,
             fontKey,
             12f,
-            new PointPt(0f, 9f),
+            new(0f, 9f),
             20f,
             8f,
             3f,
@@ -156,14 +143,14 @@ internal static class PublishedLayoutFragmentTestBuilder
     {
         var hasBorders = style.Borders?.HasAny == true;
 
-        return new VisualStyle(
-            BackgroundColor: style.BackgroundColor,
-            Borders: hasBorders ? style.Borders : null,
-            Color: style.Color,
-            Margin: style.Margin,
-            Padding: style.Padding,
-            WidthPt: style.WidthPt,
-            HeightPt: style.HeightPt,
-            Display: style.Display);
+        return new(
+            style.BackgroundColor,
+            hasBorders ? style.Borders : null,
+            style.Color,
+            style.Margin,
+            style.Padding,
+            style.WidthPt,
+            style.HeightPt,
+            style.Display);
     }
 }

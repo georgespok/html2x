@@ -1,15 +1,15 @@
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
+
 namespace Html2x.LayoutEngine.Geometry.Box.Publishing;
 
-using Contracts.Published;
-using Diagnostics;
-
 /// <summary>
-/// Writes resolved mutable box state into immutable published layout facts.
+///     Writes resolved mutable box state into immutable published layout facts.
 /// </summary>
 internal sealed class PublishedLayoutWriter
 {
-    private readonly Dictionary<BoxNode, int> _sourceOrders = [];
     private readonly Dictionary<BlockBox, PublishedBlock> _blocks = [];
+    private readonly Dictionary<BoxNode, int> _sourceOrders = [];
     private int _nextSourceOrder;
 
     public void Reset()
@@ -31,7 +31,7 @@ internal sealed class PublishedLayoutWriter
         if (block.UsedGeometry == null)
         {
             throw new InvalidOperationException(
-                $"Published layout requires UsedGeometry for '{BoxNodePathBuilder.Build(block)}'.");
+                $"Published layout requires UsedGeometry for '{BoxNodePath.Build(block)}'.");
         }
 
         var children = WriteResolvedChildren(block);
@@ -50,11 +50,11 @@ internal sealed class PublishedLayoutWriter
         ArgumentNullException.ThrowIfNull(children);
 
         var geometry = block.UsedGeometry ?? throw new InvalidOperationException(
-            $"Published layout requires UsedGeometry for '{BoxNodePathBuilder.Build(block)}'.");
+            $"Published layout requires UsedGeometry for '{BoxNodePath.Build(block)}'.");
 
-        var published = PublishedBlockMapper.CreateBlock(
+        var published = PublishedBlockFacts.CreateBlock(
             block,
-            PublishedBlockMapper.CreateIdentity(block, GetSourceOrder(block)),
+            PublishedBlockFacts.CreateIdentity(block, GetSourceOrder(block)),
             geometry,
             inlineLayout,
             children,
@@ -71,26 +71,49 @@ internal sealed class PublishedLayoutWriter
             return null;
         }
 
-        return new PublishedInlineLayout(
+        return new(
             inlineLayout.Segments.Select(CreateInlineSegment).ToArray(),
             inlineLayout.TotalHeight,
             inlineLayout.MaxLineWidth);
     }
 
-    public PublishedInlineFlowSegment CreateInlineSegment(InlineFlowSegmentLayout segment)
+    public PublishedInlineFlowWriteResult WriteInlineFlow(
+        IReadOnlyList<InlineFlowSegmentLayout> segments,
+        Func<int> reserveFlowOrder)
     {
-        return new PublishedInlineFlowSegment(
+        ArgumentNullException.ThrowIfNull(segments);
+        ArgumentNullException.ThrowIfNull(reserveFlowOrder);
+
+        if (segments.Count == 0)
+        {
+            return PublishedInlineFlowWriteResult.Empty;
+        }
+
+        var publishedSegments = new List<PublishedInlineFlowSegment>(segments.Count);
+        var publishedFlow = new List<PublishedBlockFlowItem>(segments.Count);
+
+        foreach (var segment in segments)
+        {
+            var publishedSegment = CreateInlineSegment(segment);
+            publishedSegments.Add(publishedSegment);
+            publishedFlow.Add(new PublishedInlineFlowSegmentItem(reserveFlowOrder(), publishedSegment));
+        }
+
+        return new(publishedSegments, publishedFlow);
+    }
+
+    private PublishedInlineFlowSegment CreateInlineSegment(InlineFlowSegmentLayout segment) =>
+        new(
             segment.Lines.Select(CreateInlineLine).ToArray(),
             segment.Top,
             segment.Height);
-    }
 
     private IReadOnlyList<PublishedBlock> WriteResolvedChildren(BlockBox block)
     {
         var children = new List<PublishedBlock>();
         foreach (var child in BoxNodeTraversal.EnumerateBlockChildren(block))
         {
-            if (InlineFlowClassifier.IsInlineFlowMember(child))
+            if (InlineFlowRules.IsInlineFlowMember(child))
             {
                 continue;
             }
@@ -109,23 +132,22 @@ internal sealed class PublishedLayoutWriter
         }
 
         var geometry = block.UsedGeometry ?? throw new InvalidOperationException(
-            $"Published inline object requires UsedGeometry for '{BoxNodePathBuilder.Build(block)}'.");
+            $"Published inline object requires UsedGeometry for '{BoxNodePath.Build(block)}'.");
         var inlineLayout = CreateInlineLayout(block.InlineLayout);
 
-        var published = PublishedBlockMapper.CreateBlock(
+        var published = PublishedBlockFacts.CreateBlock(
             block,
-            PublishedBlockMapper.CreateIdentity(block, GetSourceOrder(block)),
+            PublishedBlockFacts.CreateIdentity(block, GetSourceOrder(block)),
             geometry,
             inlineLayout,
-            children: []);
+            []);
 
         _blocks[block] = published;
         return published;
     }
 
-    private PublishedInlineLine CreateInlineLine(InlineLineLayout line)
-    {
-        return new PublishedInlineLine(
+    private PublishedInlineLine CreateInlineLine(InlineLineLayout line) =>
+        new(
             line.LineIndex,
             line.Rect,
             line.OccupiedRect,
@@ -133,7 +155,6 @@ internal sealed class PublishedLayoutWriter
             line.LineHeight,
             line.TextAlign,
             line.Items.Select(CreateInlineItem).ToArray());
-    }
 
     private PublishedInlineItem CreateInlineItem(InlineLineItemLayout item)
     {
@@ -144,7 +165,7 @@ internal sealed class PublishedLayoutWriter
                 text.Rect,
                 text.Runs.ToArray(),
                 text.Sources
-                    .Select(source => PublishedBlockMapper.CreateInlineSource(
+                    .Select(source => PublishedBlockFacts.CreateInlineSource(
                         source,
                         GetSourceOrder(source)))
                     .ToArray()),
@@ -168,4 +189,11 @@ internal sealed class PublishedLayoutWriter
         _sourceOrders.Add(node, sourceOrder);
         return sourceOrder;
     }
+}
+
+internal readonly record struct PublishedInlineFlowWriteResult(
+    IReadOnlyList<PublishedInlineFlowSegment> Segments,
+    IReadOnlyList<PublishedBlockFlowItem> FlowItems)
+{
+    public static PublishedInlineFlowWriteResult Empty { get; } = new([], []);
 }

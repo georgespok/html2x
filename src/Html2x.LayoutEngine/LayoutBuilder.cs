@@ -3,8 +3,6 @@ using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
@@ -14,14 +12,14 @@ using Html2x.Text;
 namespace Html2x.LayoutEngine;
 
 /// <summary>
-/// Coordinates the deterministic HTML layout pipeline from DOM and style resolution
-/// through box tree layout, fragment projection, pagination, and layout assembly.
+///     Coordinates the deterministic HTML layout pipeline from DOM and style resolution
+///     through box tree layout, fragment projection, pagination, and layout assembly.
 /// </summary>
 internal sealed class LayoutBuilder
 {
-    private readonly IStyleTreeBuilder _styleTreeBuilder;
-    private readonly LayoutStageRunner _stageRunner;
     private readonly IImageMetadataResolver _imageMetadataResolver;
+    private readonly LayoutStageRunner _stageRunner;
+    private readonly IStyleTreeBuilder _styleTreeBuilder;
 
     public LayoutBuilder(
         ITextMeasurer textMeasurer,
@@ -30,14 +28,14 @@ internal sealed class LayoutBuilder
         ArgumentNullException.ThrowIfNull(textMeasurer);
         ArgumentNullException.ThrowIfNull(imageMetadataResolver);
 
-        var blockFormattingContext = new BlockFormattingContext();
+        var contentMeasurement = new BlockContentExtentMeasurement();
 
         _imageMetadataResolver = imageMetadataResolver;
         _styleTreeBuilder = new StyleTreeBuilder();
-        _stageRunner = new LayoutStageRunner(
-            new LayoutGeometryBuilder(textMeasurer, blockFormattingContext),
-            new FragmentBuilder(),
-            new LayoutPaginator());
+        _stageRunner = new(
+            new(textMeasurer, contentMeasurement),
+            new(),
+            new());
     }
 
     public async Task<HtmlLayout> BuildAsync(

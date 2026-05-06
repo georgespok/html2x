@@ -12,15 +12,15 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
 {
     private static HtmlConverterOptions Options => new()
     {
-        Diagnostics = new DiagnosticsOptions
+        Diagnostics = new()
         {
             EnableDiagnostics = true
         },
-        Fonts = new FontOptions
+        Fonts = new()
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         },
-        Resources = new ResourceOptions
+        Resources = new()
         {
             BaseDirectory = Path.Combine(GetRepositoryRoot(), "src", "Tests", "Html2x.TestConsole", "html")
         }

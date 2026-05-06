@@ -5,7 +5,6 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class ArchitectureSemanticProject
 {
     private readonly CSharpCompilation _compilation;
@@ -19,7 +18,7 @@ internal sealed class ArchitectureSemanticProject
     {
         var projectPath = ArchitecturePaths.PathFromRoot(projectPathSegments);
         var projectDirectory = Path.GetDirectoryName(projectPath)
-            ?? throw new InvalidOperationException($"Project path has no directory: {projectPath}");
+                               ?? throw new InvalidOperationException($"Project path has no directory: {projectPath}");
         var syntaxTrees = Directory.GetFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
             .Where(file => !ArchitecturePaths.IsBuildOutputPath(Path.GetRelativePath(projectDirectory, file)))
             .Select(file => CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file))
@@ -30,9 +29,9 @@ internal sealed class ArchitectureSemanticProject
             Path.GetFileNameWithoutExtension(projectPath),
             syntaxTrees,
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new(OutputKind.DynamicallyLinkedLibrary));
 
-        return new ArchitectureSemanticProject(compilation);
+        return new(compilation);
     }
 
     public void ShouldNotReferenceNamespaces(params string[] namespaces)
@@ -41,7 +40,8 @@ internal sealed class ArchitectureSemanticProject
             .Where(reference => namespaces.Any(reference.IsInNamespace))
             .ToArray();
 
-        references.ShouldBeEmpty("Forbidden namespace references were found:\n" + string.Join("\n", references.Select(static reference => reference.ToString())));
+        references.ShouldBeEmpty("Forbidden namespace references were found:\n" +
+                                 string.Join("\n", references.Select(static reference => reference.ToString())));
     }
 
     public void ShouldNotReferenceTypes(params string[] fullTypeNames)
@@ -50,7 +50,8 @@ internal sealed class ArchitectureSemanticProject
             .Where(reference => fullTypeNames.Contains(reference.FullTypeName, StringComparer.Ordinal))
             .ToArray();
 
-        references.ShouldBeEmpty("Forbidden type references were found:\n" + string.Join("\n", references.Select(static reference => reference.ToString())));
+        references.ShouldBeEmpty("Forbidden type references were found:\n" +
+                                 string.Join("\n", references.Select(static reference => reference.ToString())));
     }
 
     public IReadOnlyList<string> PublicTypeNames()
@@ -89,10 +90,10 @@ internal sealed class ArchitectureSemanticProject
                 }
 
                 var namedType = symbol as INamedTypeSymbol ??
-                    symbol.ContainingType ??
-                    (symbol as IMethodSymbol)?.ContainingType ??
-                    (symbol as IPropertySymbol)?.ContainingType ??
-                    (symbol as IFieldSymbol)?.ContainingType;
+                                symbol.ContainingType ??
+                                (symbol as IMethodSymbol)?.ContainingType ??
+                                (symbol as IPropertySymbol)?.ContainingType ??
+                                (symbol as IFieldSymbol)?.ContainingType;
                 if (namedType is null)
                 {
                     continue;
@@ -170,7 +171,8 @@ internal sealed class ArchitectureSemanticProject
 
         var repoRoot = ArchitecturePaths.RepoRoot();
         foreach (var assembly in Directory.GetFiles(repoRoot, "*.dll", SearchOption.AllDirectories)
-            .Where(path => path.Contains(Path.Combine("bin", "Release", "net8.0"), StringComparison.OrdinalIgnoreCase)))
+                     .Where(path => path.Contains(Path.Combine("bin", "Release", "net8.0"),
+                         StringComparison.OrdinalIgnoreCase)))
         {
             referencePaths.Add(assembly);
         }
@@ -192,7 +194,7 @@ internal sealed class ArchitectureSemanticProject
             var lineSpan = tree.GetLineSpan(node.Span);
             var fullPath = tree.FilePath;
 
-            return new SymbolReference(
+            return new(
                 Path.GetRelativePath(ArchitecturePaths.RepoRoot(), fullPath),
                 lineSpan.StartLinePosition.Line + 1,
                 type.ContainingNamespace.ToDisplayString(),

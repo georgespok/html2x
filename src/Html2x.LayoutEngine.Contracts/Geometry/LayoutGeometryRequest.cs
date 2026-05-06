@@ -4,7 +4,7 @@ using Html2x.RenderModel.Measurements.Units;
 namespace Html2x.LayoutEngine.Contracts.Geometry;
 
 /// <summary>
-/// Carries per-build inputs required to compute layout geometry for one document.
+///     Carries per-build inputs required to compute layout geometry for one document.
 /// </summary>
 internal sealed class LayoutGeometryRequest
 {

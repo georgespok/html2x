@@ -1,13 +1,11 @@
-using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
-using Html2x.RenderModel.Styles;
+using Html2x.Text;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
-using Html2x.Text;
 using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
@@ -100,7 +98,7 @@ public class BlockFlowTests
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        _ = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        _ = await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         var marginEvents = diagnosticsSink.Records
             .Where(e => e.Name == "layout/margin-collapse")
@@ -171,7 +169,8 @@ public class BlockFlowTests
         var childOrder = container.Children
             .Select(child => child switch
             {
-                LineBoxFragment line when line.Runs.Any(run => run.Text.Contains("Inline", StringComparison.OrdinalIgnoreCase)) => "Inline",
+                LineBoxFragment line when line.Runs.Any(run =>
+                    run.Text.Contains("Inline", StringComparison.OrdinalIgnoreCase)) => "Inline",
                 BlockFragment block when block.Children.OfType<LineBoxFragment>()
                     .SelectMany(line => line.Runs)
                     .Any(run => run.Text.Contains("Block", StringComparison.OrdinalIgnoreCase)) => "Block",
@@ -214,39 +213,39 @@ public class BlockFlowTests
     public void NormalizeChildrenForBlock_MixedInlineFlow_PreservesChildOrder()
     {
         var prefixIdentity = CreateContentSourceIdentity(
-            nodeId: 10,
-            contentId: 20,
-            sourcePath: "body[0]/div[0]/text[0]",
-            elementIdentity: "div");
+            10,
+            20,
+            "body[0]/div[0]/text[0]",
+            "div");
         var inlineBlockIdentity = CreateNodeSourceIdentity(
-            nodeId: 11,
-            sourcePath: "body[0]/div[0]/span[0]",
-            elementIdentity: "span");
+            11,
+            "body[0]/div[0]/span[0]",
+            "span");
         var inlineBlockContentIdentity = inlineBlockIdentity.AsGenerated(
             GeometryGeneratedSourceKind.InlineBlockContent);
         var suffixIdentity = CreateContentSourceIdentity(
-            nodeId: 10,
-            contentId: 21,
-            sourcePath: "body[0]/div[0]/text[1]",
-            elementIdentity: "div");
+            10,
+            21,
+            "body[0]/div[0]/text[1]",
+            "div");
         var row = new BlockBox(BoxRole.Block)
         {
             IsInlineBlockContext = true,
-            Style = new ComputedStyle()
+            Style = new()
         };
 
         row.Children.Add(new InlineBox(BoxRole.Inline)
         {
             Parent = row,
             TextContent = "Prefix text",
-            Style = new ComputedStyle(),
+            Style = new(),
             SourceIdentity = prefixIdentity
         });
 
         var inlineBlock = new InlineBox(BoxRole.InlineBlock)
         {
             Parent = row,
-            Style = new ComputedStyle(),
+            Style = new(),
             SourceIdentity = inlineBlockIdentity
         };
 
@@ -255,7 +254,7 @@ public class BlockFlowTests
             Parent = inlineBlock,
             IsAnonymous = true,
             IsInlineBlockContext = true,
-            Style = new ComputedStyle(),
+            Style = new(),
             SourceIdentity = inlineBlockContentIdentity
         };
 
@@ -263,7 +262,7 @@ public class BlockFlowTests
         {
             Parent = inlineBlockContent,
             TextContent = "Alpha inline-block",
-            Style = new ComputedStyle()
+            Style = new()
         });
 
         inlineBlock.Children.Add(inlineBlockContent);
@@ -273,7 +272,7 @@ public class BlockFlowTests
         {
             Parent = row,
             TextContent = "suffix text",
-            Style = new ComputedStyle(),
+            Style = new(),
             SourceIdentity = suffixIdentity
         });
 
@@ -296,7 +295,8 @@ public class BlockFlowTests
         leadingAnonymous.SourceIdentity.SourcePath.ShouldBe($"{prefixIdentity.SourcePath}::anonymous-block");
         boundaryBlock.SourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.InlineBlockBoundary);
         boundaryBlock.SourceIdentity.NodeId.ShouldBe(inlineBlockContentIdentity.NodeId);
-        boundaryBlock.SourceIdentity.SourcePath.ShouldBe($"{inlineBlockContentIdentity.SourcePath}::inline-block-boundary");
+        boundaryBlock.SourceIdentity.SourcePath.ShouldBe(
+            $"{inlineBlockContentIdentity.SourcePath}::inline-block-boundary");
         trailingAnonymous.SourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.AnonymousBlock);
         trailingAnonymous.SourceIdentity.ContentId.ShouldBe(suffixIdentity.ContentId);
         trailingAnonymous.SourceIdentity.SourcePath.ShouldBe($"{suffixIdentity.SourcePath}::anonymous-block");
@@ -310,19 +310,19 @@ public class BlockFlowTests
     public void NormalizeChildrenForBlock_ClonedInlineFlow_CopiesInlineMetadata()
     {
         var sourceIdentity = CreateContentSourceIdentity(
-            nodeId: 12,
-            contentId: 22,
-            sourcePath: "body[0]/div[0]/text[2]",
-            elementIdentity: "div");
+            12,
+            22,
+            "body[0]/div[0]/text[2]",
+            "div");
         var parent = new BlockBox(BoxRole.Block)
         {
-            Style = new ComputedStyle()
+            Style = new()
         };
         var inline = new InlineBox(BoxRole.Inline)
         {
             Parent = parent,
             TextContent = "metadata",
-            Style = new ComputedStyle(),
+            Style = new(),
             Width = 25f,
             Height = 8f,
             BaselineOffset = 6f,
@@ -332,7 +332,7 @@ public class BlockFlowTests
         parent.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
-            Style = new ComputedStyle()
+            Style = new()
         });
 
         BlockFlowNormalization.NormalizeChildrenForBlock(parent);
@@ -380,15 +380,18 @@ public class BlockFlowTests
         const float expectedCollapsedGap = 12f;
         const float expectedSecondBlockHeight = 8f;
         const float expectedOuterPaddingAndBorder = 2f + 2f + 1f + 1f;
-        var expectedTotalHeight = expectedFirstBlockHeight + expectedCollapsedGap + expectedSecondBlockHeight + expectedOuterPaddingAndBorder;
+        var expectedTotalHeight = expectedFirstBlockHeight + expectedCollapsedGap + expectedSecondBlockHeight +
+                                  expectedOuterPaddingAndBorder;
 
         inlineBlock.Rect.Height.ShouldBe(expectedTotalHeight, 0.5f);
 
         var lines = inlineBlock.Children.OfType<LineBoxFragment>().ToList();
         lines.Count.ShouldBeGreaterThanOrEqualTo(2);
 
-        var firstLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
-        var secondLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
+        var firstLine = lines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
+        var secondLine = lines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
 
         secondLine.Rect.Y.ShouldBeGreaterThan(firstLine.Rect.Y);
         secondLine.Rect.Y.ShouldBeGreaterThanOrEqualTo(firstLine.Rect.Bottom - 0.1f);
@@ -409,7 +412,7 @@ public class BlockFlowTests
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
         var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        var layout = await layoutBuilder.BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        var layout = await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         layout.Pages.Count.ShouldBe(1);
         diagnosticsSink.Records
@@ -445,8 +448,10 @@ public class BlockFlowTests
         var topLevelLayout = await BuildLayoutAsync(topLevelHtml, CreateLinearMeasurer(10f));
         var inlineBlockLayout = await BuildLayoutAsync(inlineBlockHtml, CreateLinearMeasurer(10f));
 
-        var topLevelContainer = FindContainerWithTexts((BlockFragment)topLevelLayout.Pages[0].Children[0], "First", "Second");
-        var inlineBlockContainer = FindContainerWithTexts((BlockFragment)inlineBlockLayout.Pages[0].Children[0], "First", "Second");
+        var topLevelContainer =
+            FindContainerWithTexts((BlockFragment)topLevelLayout.Pages[0].Children[0], "First", "Second");
+        var inlineBlockContainer =
+            FindContainerWithTexts((BlockFragment)inlineBlockLayout.Pages[0].Children[0], "First", "Second");
 
         topLevelContainer.ShouldNotBeNull();
         inlineBlockContainer.ShouldNotBeNull();
@@ -463,20 +468,20 @@ public class BlockFlowTests
     public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
     {
         var diagnosticsSink = new RecordingDiagnosticsSink();
-        var formattingContext = new BlockFormattingContext();
-        var measurementService = new BlockMeasurementCalculator(formattingContext);
-        var imageResolver = new ImageLayoutResolver();
-        var inlineEngine = new InlineLayoutEngine(
+        var formattingContext = new BlockContentExtentMeasurement();
+        var sizingRules = new BlockSizingRules(formattingContext.MarginCollapseRules);
+        var imageResolver = new ImageSizingRules();
+        var inlineEngine = new InlineFlowLayout(
             new FontMetricsProvider(),
             CreateLinearMeasurer(10f),
             new DefaultLineHeightStrategy(),
             formattingContext,
             imageResolver);
-        var tableLayoutEngine = new TableLayoutEngine(inlineEngine, imageResolver);
+        var tableGridLayout = new TableGridLayout(inlineEngine, imageResolver);
 
         var container = new BlockBox(BoxRole.Block)
         {
-            Style = new ComputedStyle
+            Style = new()
             {
                 WidthPt = 300f
             }
@@ -485,44 +490,44 @@ public class BlockFlowTests
         container.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = container,
-            Style = new ComputedStyle
+            Style = new()
             {
                 HeightPt = 10f,
-                Margin = new Spacing(0f, 0f, 12f, 0f)
+                Margin = new(0f, 0f, 12f, 0f)
             }
         });
 
         container.Children.Add(new BlockBox(BoxRole.Block)
         {
             Parent = container,
-            Style = new ComputedStyle
+            Style = new()
             {
                 HeightPt = 8f,
-                Margin = new Spacing(6f, 0f, 0f, 0f)
+                Margin = new(6f, 0f, 0f, 0f)
             }
         });
 
         var root = new BlockBox(BoxRole.Block)
         {
-            Style = new ComputedStyle()
+            Style = new()
         };
         root.Children.Add(container);
 
-        var engine = new BlockLayoutEngine(
+        var engine = new BlockBoxLayout(
             inlineEngine,
-            tableLayoutEngine,
+            tableGridLayout,
             formattingContext,
             imageResolver,
             diagnosticsSink);
 
-        _ = engine.LayoutPublished(root, new PageBox
+        _ = PublishedLayoutTestResolver.Resolve(engine, root, new()
         {
-            Margin = new Spacing(),
-            Size = new SizePt(400f, 400f)
+            Margin = new(),
+            Size = new(400f, 400f)
         });
 
         var laidOutContainer = root.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
-        var measuredHeight = measurementService.MeasureStackedChildBlocks(
+        var measuredHeight = sizingRules.MeasureStackedChildBlocks(
             laidOutContainer.Children,
             300f,
             static (block, _) => block.UsedGeometry?.Height ?? 0f,
@@ -534,8 +539,8 @@ public class BlockFlowTests
         diagnosticsSink.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "consumer") == nameof(BlockLayoutEngine) &&
-                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "consumer") == "BlockLayoutEngine" &&
+                StringField(payload, "owner") == "BlockFormattingContext" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
@@ -543,32 +548,25 @@ public class BlockFlowTests
         diagnosticsSink.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "consumer") == nameof(BoxSizingRules) &&
-                StringField(payload, "owner") == nameof(BlockFormattingContext) &&
+                StringField(payload, "consumer") == nameof(BlockSizingRules) &&
+                StringField(payload, "owner") == "BlockFormattingContext" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
     }
 
-    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
-    {
-        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutBuildSettings
+    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer) =>
+        await Fixture.BuildLayoutAsync(html, textMeasurer, new()
         {
             PageSize = PaperSizes.A4
         });
-    }
 
-    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer)
-    {
-        return new LayoutBuilder(
+    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer) =>
+        new(
             textMeasurer,
             new NoopImageMetadataResolver());
-    }
 
-    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
-    {
-        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
-    }
+    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
 
     private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
     {
@@ -591,9 +589,9 @@ public class BlockFlowTests
     private static BlockFragment FindContainerWithTexts(BlockFragment root, string firstText, string secondText)
     {
         return EnumerateFragments(root)
-            .OfType<BlockFragment>()
-            .FirstOrDefault(fragment => ContainsText(fragment, firstText) && ContainsText(fragment, secondText))
-            ?? throw new ShouldAssertException("Expected to find a container with both text runs.");
+                   .OfType<BlockFragment>()
+                   .FirstOrDefault(fragment => ContainsText(fragment, firstText) && ContainsText(fragment, secondText))
+               ?? throw new ShouldAssertException("Expected to find a container with both text runs.");
     }
 
     private static bool ContainsText(BlockFragment fragment, string text)
@@ -616,7 +614,8 @@ public class BlockFlowTests
         return text?.ToLowerInvariant();
     }
 
-    private static (float TotalHeight, float FirstBlockHeight, float SecondBlockHeight) ExtractTwoBlockMetrics(BlockFragment container)
+    private static (float TotalHeight, float FirstBlockHeight, float SecondBlockHeight) ExtractTwoBlockMetrics(
+        BlockFragment container)
     {
         var lines = EnumerateFragments(container)
             .OfType<BlockFragment>()
@@ -624,8 +623,10 @@ public class BlockFlowTests
             .ToList();
         lines.Count.ShouldBeGreaterThanOrEqualTo(2);
 
-        var firstLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
-        var secondLine = lines.First(line => line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
+        var firstLine = lines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("First", StringComparison.OrdinalIgnoreCase)));
+        var secondLine = lines.First(line =>
+            line.Runs.Any(run => run.Text.Contains("Second", StringComparison.OrdinalIgnoreCase)));
 
         return (
             container.Rect.Height,
@@ -646,29 +647,25 @@ public class BlockFlowTests
     private static GeometrySourceIdentity CreateNodeSourceIdentity(
         int nodeId,
         string sourcePath,
-        string elementIdentity)
-    {
-        return new GeometrySourceIdentity(
+        string elementIdentity) =>
+        new(
             new StyleNodeId(nodeId),
             null,
             sourcePath,
             elementIdentity,
             nodeId,
             GeometryGeneratedSourceKind.None);
-    }
 
     private static GeometrySourceIdentity CreateContentSourceIdentity(
         int nodeId,
         int contentId,
         string sourcePath,
-        string elementIdentity)
-    {
-        return new GeometrySourceIdentity(
+        string elementIdentity) =>
+        new(
             new StyleNodeId(nodeId),
             new StyleContentId(contentId),
             sourcePath,
             elementIdentity,
             contentId,
             GeometryGeneratedSourceKind.AnonymousText);
-    }
 }

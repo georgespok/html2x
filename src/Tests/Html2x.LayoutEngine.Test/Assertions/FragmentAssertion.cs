@@ -23,6 +23,7 @@ internal sealed class FragmentAssertion(Fragment fragment)
         {
             block.Children.Count.ShouldBe(expected);
         }
+
         return this;
     }
 
@@ -32,6 +33,7 @@ internal sealed class FragmentAssertion(Fragment fragment)
         {
             throw new InvalidOperationException("Can only get children from BlockFragment");
         }
+
         return block.Children[index].ShouldBeOfType<T>();
     }
 }

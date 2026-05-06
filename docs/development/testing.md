@@ -41,8 +41,8 @@ constructing `StyleTree` input.
 
 Geometry redesign tests should prefer observable seams: `LayoutGeometryBuilder`,
 `PublishedLayoutTree`, geometry snapshots, and fragment output. Use architecture
-tests to pin ownership rules such as `StyleTreeBoxProjector` owning style-to-box
-projection, `LayoutBoxStateWriter` owning mutable writes, block layout rules not
+tests to pin ownership rules such as `BoxTreeConstruction` owning style-to-box
+construction, `LayoutBoxStateWriter` owning mutable writes, block layout rules not
 publishing directly, and downstream modules avoiding mutable box types.
 
 Geometry tests must not add parser references just because contracts moved to

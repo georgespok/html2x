@@ -5,18 +5,18 @@ using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 namespace Html2x.LayoutEngine.Fragments;
 
 /// <summary>
-/// Projects published layout facts into renderer-visible fragments.
+///     Projects published layout facts into renderer-visible fragments.
 /// </summary>
 /// <remarks>
-/// Fragment projection consumes only <see cref="PublishedLayoutTree"/>. Layout may
-/// mutate boxes internally, but rendering must not depend on box internals.
+///     Fragment projection consumes only <see cref="PublishedLayoutTree" />. Layout may
+///     mutate boxes internally, but rendering must not depend on box internals.
 /// </remarks>
 internal sealed class FragmentBuilder
 {
     private readonly PublishedLayoutToFragmentProjector _projector;
 
     internal FragmentBuilder()
-        : this(new PublishedLayoutToFragmentProjector())
+        : this(new())
     {
     }
 
@@ -30,7 +30,7 @@ internal sealed class FragmentBuilder
         ArgumentNullException.ThrowIfNull(layout);
 
         var fragments = new FragmentTree();
-        var context = new FragmentProjectionContext(pageNumber: 1);
+        var context = new FragmentProjectionContext(1);
 
         CreateBlockFragments(layout, fragments, context);
         AppendFlowFragments(layout, context);
@@ -222,9 +222,8 @@ internal sealed class FragmentBuilder
     private LineBoxFragment CreateLineBoxFragment(
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
-        FragmentProjectionContext context)
-    {
-        return new LineBoxFragment
+        FragmentProjectionContext context) =>
+        new()
         {
             FragmentId = context.ReserveFragmentId(),
             PageNumber = context.PageNumber,
@@ -235,7 +234,6 @@ internal sealed class FragmentBuilder
             Runs = textItem.Runs.ToList(),
             TextAlign = line.TextAlign
         };
-    }
 
     private LayoutFragment CreateInlineObjectFragment(
         PublishedBlock content,
@@ -253,10 +251,7 @@ internal sealed class FragmentBuilder
         return CreateInlineObjectBlockFragment(content, context);
     }
 
-    private static bool HasSpecialFragment(PublishedBlock block)
-    {
-        return block.Image is not null || block.Rule is not null;
-    }
+    private static bool HasSpecialFragment(PublishedBlock block) => block.Image is not null || block.Rule is not null;
 
     private void AppendOwnSpecialFragment(
         PublishedBlock block,
@@ -280,45 +275,38 @@ internal sealed class FragmentBuilder
 
     private sealed class FragmentProjectionContext(int pageNumber)
     {
-        private int _nextFragmentId = 1;
         private readonly List<PublishedBlockFragmentBinding> _blockBindings = [];
+
         private readonly Dictionary<PublishedBlock, BlockFragment> _blockFragments = new(
             ReferenceEqualityComparer<PublishedBlock>.Instance);
+
         private readonly HashSet<PublishedBlock> _flowVisited = new(
             ReferenceEqualityComparer<PublishedBlock>.Instance);
+
         private readonly HashSet<PublishedBlock> _specialVisited = new(
             ReferenceEqualityComparer<PublishedBlock>.Instance);
+
+        private int _nextFragmentId = 1;
 
         public int PageNumber { get; } = pageNumber;
 
         public IReadOnlyList<PublishedBlockFragmentBinding> BlockBindings => _blockBindings;
 
-        public int ReserveFragmentId()
-        {
-            return _nextFragmentId++;
-        }
+        public int ReserveFragmentId() => _nextFragmentId++;
 
         public void BindBlock(PublishedBlock block, BlockFragment fragment)
         {
-            _blockBindings.Add(new PublishedBlockFragmentBinding(block, fragment));
+            _blockBindings.Add(new(block, fragment));
             _blockFragments[block] = fragment;
         }
 
-        public BlockFragment? FindBlockFragment(PublishedBlock block)
-        {
-            return _blockFragments.TryGetValue(block, out var fragment)
+        public BlockFragment? FindBlockFragment(PublishedBlock block) =>
+            _blockFragments.TryGetValue(block, out var fragment)
                 ? fragment
                 : null;
-        }
 
-        public bool VisitFlowBlock(PublishedBlock block)
-        {
-            return _flowVisited.Add(block);
-        }
+        public bool VisitFlowBlock(PublishedBlock block) => _flowVisited.Add(block);
 
-        public bool VisitSpecialBlock(PublishedBlock block)
-        {
-            return _specialVisited.Add(block);
-        }
+        public bool VisitSpecialBlock(PublishedBlock block) => _specialVisited.Add(block);
     }
 }

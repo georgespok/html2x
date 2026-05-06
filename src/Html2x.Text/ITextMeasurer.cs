@@ -3,7 +3,7 @@ using Html2x.RenderModel.Text;
 namespace Html2x.Text;
 
 /// <summary>
-/// Provides font-accurate text measurement in points.
+///     Provides font-accurate text measurement in points.
 /// </summary>
 public interface ITextMeasurer
 {

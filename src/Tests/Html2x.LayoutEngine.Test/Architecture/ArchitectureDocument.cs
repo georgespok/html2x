@@ -3,11 +3,10 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class ArchitectureDocument
 {
-    private readonly string _path;
     private readonly string _content;
+    private readonly string _path;
 
     private ArchitectureDocument(string path)
     {

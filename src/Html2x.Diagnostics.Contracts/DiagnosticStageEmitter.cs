@@ -37,13 +37,13 @@ public static class DiagnosticStageEmitter
         string? message,
         DiagnosticFields? fields = null)
     {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: stage,
-            Name: name,
-            Severity: severity,
-            Message: message,
-            Context: null,
-            Fields: fields ?? DiagnosticFields.Empty,
-            Timestamp: DateTimeOffset.UtcNow));
+        diagnosticsSink?.Emit(new(
+            stage,
+            name,
+            severity,
+            message,
+            null,
+            fields ?? DiagnosticFields.Empty,
+            DateTimeOffset.UtcNow));
     }
 }

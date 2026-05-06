@@ -11,35 +11,36 @@ internal static class GeometryPipelineComposer
         StyleTree styles,
         LayoutGeometryRequest? request,
         ITextMeasurer? textMeasurer,
-        IBlockFormattingContext blockFormattingContext,
+        BlockContentExtentMeasurement contentMeasurement,
         IDiagnosticsSink? diagnosticsSink)
     {
         ArgumentNullException.ThrowIfNull(styles);
-        ArgumentNullException.ThrowIfNull(blockFormattingContext);
+        ArgumentNullException.ThrowIfNull(contentMeasurement);
 
         var geometryRequest = request ?? LayoutGeometryRequest.Default;
-        var imageResolver = new ImageLayoutResolver(geometryRequest);
-        var inlineEngine = new InlineLayoutEngine(
+        var imageResolver = new ImageSizingRules(geometryRequest);
+        var inlineEngine = new InlineFlowLayout(
             new FontMetricsProvider(),
             textMeasurer,
             new DefaultLineHeightStrategy(),
-            blockFormattingContext,
+            contentMeasurement,
             imageResolver,
             diagnosticsSink);
-        var blockEngine = new BlockLayoutEngine(
+        var blockBoxLayout = new BlockBoxLayout(
             inlineEngine,
-            new TableGridLayout(inlineEngine, imageResolver),
-            blockFormattingContext,
+            new(inlineEngine, imageResolver),
+            contentMeasurement,
             imageResolver,
             diagnosticsSink);
+        var boxTreeLayout = new BoxTreeLayout(blockBoxLayout);
         var page = new PageBox
         {
             Margin = styles.Page.Margin,
             Size = geometryRequest.PageSize
         };
 
-        return new GeometryPipeline(blockEngine, page);
+        return new(boxTreeLayout, page);
     }
 }
 
-internal sealed record GeometryPipeline(BlockLayoutEngine BlockEngine, PageBox Page);
+internal sealed record GeometryPipeline(BoxTreeLayout BoxTreeLayout, PageBox Page);

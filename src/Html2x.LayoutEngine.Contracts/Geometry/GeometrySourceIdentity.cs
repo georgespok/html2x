@@ -64,7 +64,7 @@ internal sealed record GeometrySourceIdentity
             return Unspecified;
         }
 
-        return new GeometrySourceIdentity(
+        return new(
             identity.NodeId,
             null,
             identity.SourcePath,
@@ -93,7 +93,7 @@ internal sealed record GeometrySourceIdentity
             ? identity.SourceOrder
             : (int?)null;
 
-        return new GeometrySourceIdentity(
+        return new(
             nodeId,
             contentId,
             sourcePath,
@@ -111,7 +111,7 @@ internal sealed record GeometrySourceIdentity
                 nameof(generatedKind));
         }
 
-        return new GeometrySourceIdentity(
+        return new(
             NodeId,
             ContentId,
             AppendGeneratedSourcePath(SourcePath, generatedKind),
@@ -122,17 +122,13 @@ internal sealed record GeometrySourceIdentity
 
     public static GeometrySourceIdentity FirstSpecified(
         GeometrySourceIdentity first,
-        GeometrySourceIdentity second)
-    {
-        return first.IsSpecified ? first : second;
-    }
+        GeometrySourceIdentity second) =>
+        first.IsSpecified ? first : second;
 
     private static string? AppendGeneratedSourcePath(
         string? sourcePath,
-        GeometryGeneratedSourceKind generatedKind)
-    {
-        return string.IsNullOrWhiteSpace(sourcePath)
+        GeometryGeneratedSourceKind generatedKind) =>
+        string.IsNullOrWhiteSpace(sourcePath)
             ? null
             : $"{sourcePath}::{GeometrySourceKindNames.Resolve(generatedKind)}";
-    }
 }

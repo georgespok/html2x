@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Measurements.Units;
 
 /// <summary>
-/// Represents a width and height in points.
+///     Represents a width and height in points.
 /// </summary>
 public readonly record struct SizePt(float Width, float Height)
 {

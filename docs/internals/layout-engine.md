@@ -53,7 +53,7 @@ The layout engine should keep style, geometry, fragment, and pagination
 responsibilities separable even when implementation classes coordinate multiple
 steps.
 
-Inside geometry, keep `BlockLayoutEngine` focused on block-flow orchestration.
+Inside geometry, keep `BlockBoxLayout` focused on block-flow orchestration.
 Move specialized image, table, inline publishing, or shared mutable layout logic
 behind focused internal modules when the logic can be tested through published
 layout behavior.

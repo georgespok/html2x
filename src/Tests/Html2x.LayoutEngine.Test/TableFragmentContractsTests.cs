@@ -1,5 +1,4 @@
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test;
@@ -11,26 +10,26 @@ public class TableFragmentContractsTests
     {
         var line = new LineBoxFragment
         {
-            Rect = new RectPt(12f, 18f, 40f, 10f),
+            Rect = new(12f, 18f, 40f, 10f),
             Runs = []
         };
 
         var cell = new TableCellFragment([line])
         {
-            Rect = new RectPt(10f, 16f, 80f, 24f),
+            Rect = new(10f, 16f, 80f, 24f),
             ColumnIndex = 1,
             IsHeader = true
         };
 
         var row = new TableRowFragment([cell])
         {
-            Rect = new RectPt(8f, 14f, 160f, 28f),
+            Rect = new(8f, 14f, 160f, 28f),
             RowIndex = 0
         };
 
         var table = new TableFragment([row])
         {
-            Rect = new RectPt(6f, 12f, 160f, 56f),
+            Rect = new(6f, 12f, 160f, 56f),
             DerivedColumnCount = 2
         };
 

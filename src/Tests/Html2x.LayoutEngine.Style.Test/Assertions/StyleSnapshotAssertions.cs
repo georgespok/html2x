@@ -1,9 +1,9 @@
 using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.RenderModel.Fragments;
 using Shouldly;
+using Xunit.Sdk;
 
 namespace Html2x.LayoutEngine.Style.Test.Assertions;
-
 
 internal static class StyleSnapshotAssertions
 {
@@ -34,7 +34,7 @@ internal static class StyleSnapshotAssertions
     {
         if (actual is null)
         {
-            throw new Xunit.Sdk.XunitException("Actual style is null");
+            throw new XunitException("Actual style is null");
         }
 
         actual.FontFamily.ShouldBe(expected.FontFamily, "FontFamily mismatch");

@@ -170,7 +170,7 @@ Geometry owns geometry validation helpers such as `GeometryGuard`. These are
 implementation-local guards, not public option contracts.
 
 Geometry owns BoxNode.SourceIdentity propagation and generated source identity.
-`StyleTreeBoxProjector` copies style-owned source identity into boxes. Geometry
+`BoxTreeConstruction` copies style-owned source identity into boxes. Geometry
 creates generated source identity for anonymous text, list markers,
 inline-block content boxes, normalization wrappers, and other layout nodes that
 do not directly correspond to a styled element.
@@ -180,11 +180,11 @@ box internals to later stages. Mutable box types remain internal implementation
 details for construction and focused algorithm tests.
 
 Block kind dispatch and publication orchestration are owned by
-`BlockLayoutEngine`. Internal block-kind behavior is selected through
+`BlockBoxLayout`. Internal block-kind behavior is selected through
 `BlockLayoutRuleSet`. Normal block-flow sequencing is owned by
-`BlockFlowLayoutExecutor`, and non-mutating stacked block measurement is owned
-by `BlockFlowMeasurementExecutor` so layout and measurement share block-flow
-policy. `BoxSizingRules` owns shared block sizing facts. Image block placement,
+`BlockFlowLayout`, and non-mutating stacked block measurement is owned
+by `BlockFlowMeasurement` so layout and measurement share block-flow
+policy. `BlockSizingRules` owns shared block sizing facts. Image block placement,
 table grid calculation, table placement and diagnostics, published layout
 caching, inline publishing, and shared mutable layout writes belong in focused
 internal modules rather than accumulating in the orchestrator.

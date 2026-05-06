@@ -3,9 +3,8 @@ using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Geometry.Box;
 
-
 /// <summary>
-/// Carries resolved image dimensions and load status for layout consumers.
+///     Carries resolved image dimensions and load status for layout consumers.
 /// </summary>
 internal readonly record struct ImageLayoutResolution(
     string Src,

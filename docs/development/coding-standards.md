@@ -42,6 +42,45 @@ serialization live in `Html2x.Diagnostics`.
 - Use PascalCase for public APIs and types.
 - Use camelCase for private fields, locals, and parameters.
 - Suffix async methods with `Async`.
+- Name types by the domain fact they represent or the transformation they
+  perform. A reader should understand the module role from the type name before
+  opening the file.
+- Prefer a small, repeatable vocabulary of type roles across the codebase:
+  `Construction`, `Layout`, `Measurement`, `Rules`, `Writer`, `Reader`,
+  `Request`, `Result`, `Facts`, `Options`, `Settings`, `Snapshot`, `Record`,
+  `Adapter`, and narrowly scoped `Rule`.
+- Use `Construction` for modules that create an internal object graph from
+  input facts.
+- Use `Layout` for modules that place visual structures or produce geometry.
+- Use `Measurement` for modules that compute sizes, extents, or metrics without
+  mutating the measured source.
+- Use `Rules` for pure domain decisions, scalar calculations, normalization
+  policy, or selection logic.
+- Use `Writer` only for modules that mutate internal state, write output facts,
+  or emit serialized output. Prefer `Reader` only for modules whose main role is
+  loading or reading input from a source.
+- Use `Adapter` for wrappers over external dependencies, compatibility seams, or
+  alternate concrete implementations. Name the adapted thing, not just the
+  pattern.
+- Use `Request`, `Result`, `Facts`, `Options`, `Settings`, `Snapshot`, and
+  `Record` for data types crossing seams or describing observable state.
+- Use singular `Rule` for an adapter selected from a rule set, such as a
+  block-kind rule. Use plural `Rules` for pure rule collections with no hidden
+  state.
+- Avoid broad implementation-pattern suffixes as primary type names:
+  `Manager`, `Helper`, `Utility`, `Processor`, `Handler`, `Service`, `Factory`,
+  `Builder`, `Projector`, `Appender`, `Inserter`, `Resolver`, `Engine`,
+  `Executor`, `Applier`, `Classifier`, `Calculator`, `Context`, `Mapper`,
+  `Planner`, and `Materializer`.
+- Existing types with broad suffixes may remain during incremental redesign.
+  New types should use them only when the module has a real seam, the suffix is
+  already established in that module, and a clearer domain role would be
+  misleading.
+- Apply the deletion test before extracting a type. If deleting the type only
+  moves one short method back to its caller, keep the behavior in the deeper
+  module.
+- Prefer fewer deeper modules over many shallow modules named after local
+  implementation steps.
 
 ## Logging And Diagnostics
 

@@ -2,7 +2,6 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
@@ -20,7 +19,7 @@ public class SkiaDiagnosticsTests
         var renderer = new PdfRenderer();
         var options = new PdfRenderSettings { ResourceBaseDirectory = "." };
 
-        var pdf = await renderer.RenderAsync(layout, options, diagnosticsSink: sink);
+        var pdf = await renderer.RenderAsync(layout, options, sink);
 
         pdf.ShouldNotBeNull();
         var record = sink.Records.Single(static x => x.Name == "image/render");
@@ -42,17 +41,17 @@ public class SkiaDiagnosticsTests
             new ImageFragment
             {
                 Src = "missing.png",
-                IntrinsicSizePx = new SizePx(50, 40),
+                IntrinsicSizePx = new(50, 40),
                 Status = ImageLoadStatus.Missing,
-                Rect = new RectPt(20, 30, 50, 40),
-                ContentRect = new RectPt(20, 30, 50, 40),
-                Style = new VisualStyle()
+                Rect = new(20, 30, 50, 40),
+                ContentRect = new(20, 30, 50, 40),
+                Style = new()
             }
         };
 
         var page = new LayoutPage(
-            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
-            new Spacing(0, 0, 0, 0),
+            new(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new(0, 0, 0, 0),
             fragments,
             1,
             new ColorRgba(255, 255, 255, 255));

@@ -1,18 +1,18 @@
 namespace Html2x.TestConsole;
 
-
 internal static class ConsolePathResolver
 {
     public static ConsolePaths Resolve(RenderSettings settings, string inputPath, string? selectedSamplePath)
     {
         var output = ResolveRequestedOutputPath(settings, inputPath);
-        return new ConsolePaths(
+        return new(
             Path.GetFullPath(inputPath),
             ResolveActualOutputPath(output.Path, output.WasExplicit),
             string.IsNullOrWhiteSpace(selectedSamplePath) ? null : Path.GetFullPath(selectedSamplePath));
     }
 
-    private static (string Path, bool WasExplicit) ResolveRequestedOutputPath(RenderSettings settings, string? inputPath)
+    private static (string Path, bool WasExplicit) ResolveRequestedOutputPath(RenderSettings settings,
+        string? inputPath)
     {
         if (!string.IsNullOrWhiteSpace(settings.OutputOption))
         {

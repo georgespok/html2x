@@ -50,9 +50,7 @@ internal static class CssLengthUnitClassifier
         return null;
     }
 
-    private static bool HasSupportedUnit(string trimmed)
-    {
-        return trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase) ||
-               trimmed.EndsWith(HtmlCssConstants.CssUnits.Pt, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool HasSupportedUnit(string trimmed) =>
+        trimmed.EndsWith(HtmlCssConstants.CssUnits.Px, StringComparison.OrdinalIgnoreCase) ||
+        trimmed.EndsWith(HtmlCssConstants.CssUnits.Pt, StringComparison.OrdinalIgnoreCase);
 }

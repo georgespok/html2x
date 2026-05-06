@@ -1,11 +1,10 @@
+using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Contracts.Published;
 
-using Geometry;
-
 /// <summary>
-/// Carries the immutable block facts that fragment projection consumes after layout geometry completes.
+///     Carries the immutable block facts that fragment projection consumes after layout geometry completes.
 /// </summary>
 internal sealed record PublishedBlock
 {

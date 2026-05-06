@@ -1,6 +1,5 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Style.Test;
@@ -22,14 +21,14 @@ public sealed class StyleTreeBuilderTests
     {
         var tree = await BuildAsync(
             "<html><body><h1>Title</h1><p>Text</p></body></html>",
-            new StyleBuildSettings { UseDefaultUserAgentStyleSheet = true });
+            new() { UseDefaultUserAgentStyleSheet = true });
 
         var heading = tree.Root!.Children[0];
         var paragraph = tree.Root.Children[1];
 
         heading.Style.FontSizePt.ShouldBe(18f);
         heading.Style.Bold.ShouldBeTrue();
-        paragraph.Style.Margin.ShouldBe(new Spacing(6f, 0f, 6f, 0f));
+        paragraph.Style.Margin.ShouldBe(new(6f, 0f, 6f, 0f));
     }
 
     [Fact]
@@ -37,7 +36,7 @@ public sealed class StyleTreeBuilderTests
     {
         var tree = await BuildAsync(
             "<html><body><h1>Title</h1><p>Text</p></body></html>",
-            new StyleBuildSettings
+            new()
             {
                 UseDefaultUserAgentStyleSheet = true,
                 UserAgentStyleSheet = "h1 { font-size: 22pt; } p { margin: 2pt 0; }"
@@ -47,7 +46,7 @@ public sealed class StyleTreeBuilderTests
         var paragraph = tree.Root.Children[1];
 
         heading.Style.FontSizePt.ShouldBe(22f);
-        paragraph.Style.Margin.ShouldBe(new Spacing(2f, 0f, 2f, 0f));
+        paragraph.Style.Margin.ShouldBe(new(2f, 0f, 2f, 0f));
     }
 
     [Fact]
@@ -85,7 +84,8 @@ public sealed class StyleTreeBuilderTests
         records.ShouldContain(static record => record.Stage == "stage/dom" && record.Name == "stage/succeeded");
         records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/started");
         records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/succeeded");
-        records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "style/unsupported-declaration");
+        records.ShouldContain(static record =>
+            record.Stage == "stage/style" && record.Name == "style/unsupported-declaration");
     }
 
     [Fact]
@@ -353,19 +353,15 @@ public sealed class StyleTreeBuilderTests
     private static Task<StyleTree> BuildAsync(
         string html,
         StyleBuildSettings options,
-        IDiagnosticsSink? diagnostics = null)
-    {
-        return new StyleTreeBuilder()
+        IDiagnosticsSink? diagnostics = null) =>
+        new StyleTreeBuilder()
             .BuildAsync(html, options, diagnosticsSink: diagnostics);
-    }
 
-    private static StyleBuildSettings DefaultOptions()
-    {
-        return new StyleBuildSettings
+    private static StyleBuildSettings DefaultOptions() =>
+        new()
         {
             UseDefaultUserAgentStyleSheet = false
         };
-    }
 
     private static string GetSingleTextContent(StyleNode node)
     {

@@ -10,11 +10,11 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
 {
     private HtmlConverterOptions DefaultOptions => new()
     {
-        Diagnostics = new DiagnosticsOptions
+        Diagnostics = new()
         {
             EnableDiagnostics = true
         },
-        Fonts = new FontOptions
+        Fonts = new()
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -46,13 +46,13 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
     public async Task ToPdf_OversizedAndEmptyContent_EmitsPaginationDiagnostics()
     {
         var oversizedHtml = """
-            <html>
-              <body style='margin: 0;'>
-                <div style='height: 100px;'>intro</div>
-                <div style='height: 1400px;'>oversized</div>
-              </body>
-            </html>
-            """;
+                            <html>
+                              <body style='margin: 0;'>
+                                <div style='height: 100px;'>intro</div>
+                                <div style='height: 1400px;'>oversized</div>
+                              </body>
+                            </html>
+                            """;
         const string emptyHtml = "   ";
         var converter = new HtmlConverter();
 
@@ -67,7 +67,8 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         oversizedEventNames.ShouldContain("layout/pagination/oversized-block");
 
         var paginationEvents = oversizedRecords
-            .Where(static e => e.Stage == "stage/pagination" && e.Name.StartsWith("layout/pagination/", StringComparison.Ordinal))
+            .Where(static e => e.Stage == "stage/pagination" &&
+                               e.Name.StartsWith("layout/pagination/", StringComparison.Ordinal))
             .ToList();
         paginationEvents.Select(static e => e.Name).ShouldBe(paginationEvents
             .Select(static e => e.Fields["eventName"].ShouldBeOfType<DiagnosticStringValue>().Value));
@@ -98,14 +99,16 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
 
     private static DiagnosticObject GetLayoutSnapshot(Html2PdfResult result)
     {
-        var layoutEvent = result.DiagnosticsReport!.Records.FirstOrDefault(
-            static x => x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
+        var layoutEvent =
+            result.DiagnosticsReport!.Records.FirstOrDefault(static x =>
+                x is { Stage: "LayoutBuild", Name: "stage/succeeded" });
         layoutEvent.ShouldNotBeNull();
 
         return layoutEvent.Fields["snapshot"].ShouldBeOfType<DiagnosticObject>();
     }
 
-    private static IReadOnlyList<(int PageNumber, string Text, double Y)> ExtractTextAssignments(DiagnosticObject snapshot)
+    private static IReadOnlyList<(int PageNumber, string Text, double Y)> ExtractTextAssignments(
+        DiagnosticObject snapshot)
     {
         return ArrayField(snapshot, "pages")
             .Select(static page => page.ShouldBeOfType<DiagnosticObject>())

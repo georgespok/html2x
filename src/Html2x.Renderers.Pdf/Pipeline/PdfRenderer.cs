@@ -8,8 +8,8 @@ using SkiaSharp;
 namespace Html2x.Renderers.Pdf.Pipeline;
 
 /// <summary>
-/// Renders an <see cref="HtmlLayout"/> to PDF using a SkiaSharp drawing pipeline.
-/// The renderer owns paint output only and treats layout pages and fragments as read-only inputs.
+///     Renders an <see cref="HtmlLayout" /> to PDF using a SkiaSharp drawing pipeline.
+///     The renderer owns paint output only and treats layout pages and fragments as read-only inputs.
 /// </summary>
 public sealed class PdfRenderer
 {
@@ -34,7 +34,7 @@ public sealed class PdfRenderer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(htmlLayout);
-        settings ??= new PdfRenderSettings();
+        settings ??= new();
         ValidateSettings(settings);
 
         var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink, cancellationToken);

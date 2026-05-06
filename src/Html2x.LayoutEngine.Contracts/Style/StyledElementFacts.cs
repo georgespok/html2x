@@ -46,26 +46,19 @@ internal sealed class StyledElementFacts
         values.TryGetValue(HtmlCssConstants.HtmlAttributes.Id, out var id);
         values.TryGetValue(HtmlCssConstants.HtmlAttributes.Class, out var classAttribute);
 
-        return new StyledElementFacts(tagName, tagName.ToLowerInvariant(), id, classAttribute, values);
+        return new(tagName, tagName.ToLowerInvariant(), id, classAttribute, values);
     }
 
-    public bool IsTag(string tagName)
-    {
-        return string.Equals(TagName, tagName, StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(LocalName, tagName, StringComparison.OrdinalIgnoreCase);
-    }
+    public bool IsTag(string tagName) =>
+        string.Equals(TagName, tagName, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(LocalName, tagName, StringComparison.OrdinalIgnoreCase);
 
-    public bool HasAttribute(string attributeName)
-    {
-        return Attributes.ContainsKey(attributeName);
-    }
+    public bool HasAttribute(string attributeName) => Attributes.ContainsKey(attributeName);
 
-    public string? GetAttribute(string attributeName)
-    {
-        return Attributes.TryGetValue(attributeName, out var value)
+    public string? GetAttribute(string attributeName) =>
+        Attributes.TryGetValue(attributeName, out var value)
             ? value
             : null;
-    }
 
     private static IReadOnlyDictionary<string, string> NormalizeAttributes(
         IReadOnlyDictionary<string, string>? attributes,

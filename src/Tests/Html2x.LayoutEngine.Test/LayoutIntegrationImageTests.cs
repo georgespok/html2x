@@ -84,10 +84,10 @@ public partial class LayoutIntegrationTests
             </html>";
 
         var layout = await CreateLayoutBuilder(new FixedImageMetadataResolver(src =>
-            string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
-                ? new SizePx(400d, 200d)
-                : new SizePx(80d, 40d)))
-            .BuildAsync(html, new LayoutBuildSettings { PageSize = PaperSizes.Letter });
+                string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
+                    ? new(400d, 200d)
+                    : new SizePx(80d, 40d)))
+            .BuildAsync(html, new() { PageSize = PaperSizes.Letter });
 
         var container = layout.Pages[0].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
         var images = EnumerateLayoutFragments(container)
@@ -148,14 +148,12 @@ public partial class LayoutIntegrationTests
     {
         private readonly Func<string, SizePx> _resolveSize = resolveSize;
 
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
-        {
-            return new ImageMetadataResult
+        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+            new()
             {
                 Src = src,
                 Status = ImageLoadStatus.Ok,
                 IntrinsicSizePx = _resolveSize(src)
             };
-        }
     }
 }

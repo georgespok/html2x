@@ -48,8 +48,8 @@ public sealed class LayoutGeometryDocumentationTests
         ArchitectureDocument.Load("docs", "architecture", "geometry.md")
             .ShouldMentionTopicsInSection(
                 "Block Flow Locality",
-                nameof(BlockFlowLayoutExecutor),
-                nameof(BlockFlowMeasurementExecutor),
+                nameof(BlockFlowLayout),
+                nameof(BlockFlowMeasurement),
                 nameof(BlockLayoutRuleSet),
                 nameof(LayoutBoxStateWriter),
                 nameof(PublishedLayoutWriter));

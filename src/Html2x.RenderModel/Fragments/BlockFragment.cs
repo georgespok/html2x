@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Represents a block-level fragment that can own child fragments in normal flow or table cell content.
+///     Represents a block-level fragment that can own child fragments in normal flow or table cell content.
 /// </summary>
 public class BlockFragment(IEnumerable<Fragment>? children) : Fragment
 {

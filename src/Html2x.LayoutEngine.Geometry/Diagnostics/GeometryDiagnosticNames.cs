@@ -20,4 +20,15 @@ internal static class GeometryDiagnosticNames
         public const string IsHeader = "isHeader";
         public const string RowCount = "rowCount";
     }
+
+    public static class Consumers
+    {
+        public const string BlockBoxLayout = "BlockLayoutEngine";
+        public const string InlineLayoutEngine = "InlineLayoutEngine";
+    }
+
+    public static class Owners
+    {
+        public const string BlockFormattingContext = "BlockFormattingContext";
+    }
 }

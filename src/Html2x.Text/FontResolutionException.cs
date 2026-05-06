@@ -3,7 +3,7 @@ using Html2x.RenderModel.Text;
 namespace Html2x.Text;
 
 /// <summary>
-/// Represents a font resolution or font file loading failure.
+///     Represents a font resolution or font file loading failure.
 /// </summary>
 public sealed class FontResolutionException(
     string message,

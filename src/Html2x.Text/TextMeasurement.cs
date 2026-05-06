@@ -3,7 +3,7 @@ using Html2x.RenderModel.Text;
 namespace Html2x.Text;
 
 /// <summary>
-/// Carries measured text dimensions together with the font resolution used for measurement.
+///     Carries measured text dimensions together with the font resolution used for measurement.
 /// </summary>
 public sealed record TextMeasurement(
     float Width,
@@ -23,11 +23,11 @@ public sealed record TextMeasurement(
             ? "Default"
             : font.Family;
 
-        return new TextMeasurement(
+        return new(
             width,
             ascent,
             descent,
-            new ResolvedFont(
+            new(
                 family,
                 font.Weight,
                 font.Style,

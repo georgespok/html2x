@@ -7,7 +7,7 @@ using Html2x.LayoutEngine.Style.Models;
 namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
-/// Maps raw CSS width/height declarations into the shared dimension contracts.
+///     Maps raw CSS width/height declarations into the shared dimension contracts.
 /// </summary>
 internal sealed class DimensionStyleMapper(CssValueConverter converter)
 {
@@ -105,12 +105,12 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
         }
 
         if (!_lengthReader.TryParseLengthToken(
-            trimmed,
-            element,
-            property,
-            $"Unable to parse {property} as a supported length.",
-            diagnosticsSink,
-            out var points))
+                trimmed,
+                element,
+                property,
+                $"Unable to parse {property} as a supported length.",
+                diagnosticsSink,
+                out var points))
         {
             return null;
         }
@@ -129,5 +129,4 @@ internal sealed class DimensionStyleMapper(CssValueConverter converter)
 
         return points;
     }
-
 }

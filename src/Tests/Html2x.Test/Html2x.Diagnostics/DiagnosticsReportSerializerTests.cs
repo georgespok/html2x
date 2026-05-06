@@ -36,45 +36,45 @@ public sealed class DiagnosticsReportSerializerTests
         var json = DiagnosticsReportSerializer.ToJson(report);
 
         NormalizeNewLines(json).ShouldBe(NormalizeNewLines("""
-            {
-              "startTime": "2026-04-14T10:00:00+00:00",
-              "endTime": "2026-04-14T10:00:01+00:00",
-              "records": [
-                {
-                  "stage": "stage/style",
-                  "name": "style/ignored-declaration",
-                  "severity": "Warning",
-                  "message": "Ignored declaration.",
-                  "context": {
-                    "selector": ".invoice-total",
-                    "elementIdentity": "p#total",
-                    "styleDeclaration": "width: 120qu",
-                    "structuralPath": "html/body/p[3]",
-                    "rawUserInput": "<p id=\"total\">$42</p>"
-                  },
-                  "fields": {
-                    "property": "width",
-                    "attempts": 2,
-                    "ratio": 0.75,
-                    "successful": false,
-                    "decision": "Skipped",
-                    "raw": null,
-                    "values": [
-                      "120qu",
-                      12.5,
-                      true,
-                      null
-                    ],
-                    "source": {
-                      "path": "html/body/p[3]",
-                      "index": 3
-                    }
-                  },
-                  "timestamp": "2026-04-14T10:00:00.5+00:00"
-                }
-              ]
-            }
-            """));
+                                                           {
+                                                             "startTime": "2026-04-14T10:00:00+00:00",
+                                                             "endTime": "2026-04-14T10:00:01+00:00",
+                                                             "records": [
+                                                               {
+                                                                 "stage": "stage/style",
+                                                                 "name": "style/ignored-declaration",
+                                                                 "severity": "Warning",
+                                                                 "message": "Ignored declaration.",
+                                                                 "context": {
+                                                                   "selector": ".invoice-total",
+                                                                   "elementIdentity": "p#total",
+                                                                   "styleDeclaration": "width: 120qu",
+                                                                   "structuralPath": "html/body/p[3]",
+                                                                   "rawUserInput": "<p id=\"total\">$42</p>"
+                                                                 },
+                                                                 "fields": {
+                                                                   "property": "width",
+                                                                   "attempts": 2,
+                                                                   "ratio": 0.75,
+                                                                   "successful": false,
+                                                                   "decision": "Skipped",
+                                                                   "raw": null,
+                                                                   "values": [
+                                                                     "120qu",
+                                                                     12.5,
+                                                                     true,
+                                                                     null
+                                                                   ],
+                                                                   "source": {
+                                                                     "path": "html/body/p[3]",
+                                                                     "index": 3
+                                                                   }
+                                                                 },
+                                                                 "timestamp": "2026-04-14T10:00:00.5+00:00"
+                                                               }
+                                                             ]
+                                                           }
+                                                           """));
     }
 
     [Fact]
@@ -84,14 +84,14 @@ public sealed class DiagnosticsReportSerializerTests
             DateTimeOffset.Parse("2026-04-14T10:00:00Z"),
             DateTimeOffset.Parse("2026-04-14T10:00:01Z"),
             [
-                new DiagnosticRecord(
-                    Stage: "stage/render",
-                    Name: "render/skipped",
-                    Severity: DiagnosticSeverity.Info,
-                    Message: null,
-                    Context: null,
-                    Fields: DiagnosticFields.Empty,
-                    Timestamp: DateTimeOffset.Parse("2026-04-14T10:00:00Z"))
+                new(
+                    "stage/render",
+                    "render/skipped",
+                    DiagnosticSeverity.Info,
+                    null,
+                    null,
+                    DiagnosticFields.Empty,
+                    DateTimeOffset.Parse("2026-04-14T10:00:00Z"))
             ]);
 
         var json = DiagnosticsReportSerializer.ToJson(report);
@@ -103,20 +103,19 @@ public sealed class DiagnosticsReportSerializerTests
         record.GetProperty("fields").EnumerateObject().ShouldBeEmpty();
     }
 
-    private static DiagnosticRecord CreateRecord(string stage, string name)
-    {
-        return new DiagnosticRecord(
-            Stage: stage,
-            Name: name,
-            Severity: DiagnosticSeverity.Warning,
-            Message: "Ignored declaration.",
-            Context: new DiagnosticContext(
-                Selector: ".invoice-total",
-                ElementIdentity: "p#total",
-                StyleDeclaration: "width: 120qu",
-                StructuralPath: "html/body/p[3]",
-                RawUserInput: "<p id=\"total\">$42</p>"),
-            Fields: DiagnosticFields.Create(
+    private static DiagnosticRecord CreateRecord(string stage, string name) =>
+        new(
+            stage,
+            name,
+            DiagnosticSeverity.Warning,
+            "Ignored declaration.",
+            new(
+                ".invoice-total",
+                "p#total",
+                "width: 120qu",
+                "html/body/p[3]",
+                "<p id=\"total\">$42</p>"),
+            DiagnosticFields.Create(
                 DiagnosticFields.Field("property", "width"),
                 DiagnosticFields.Field("attempts", 2),
                 DiagnosticFields.Field("ratio", 0.75),
@@ -129,8 +128,7 @@ public sealed class DiagnosticsReportSerializerTests
                     DiagnosticObject.Create(
                         DiagnosticObject.Field("path", "html/body/p[3]"),
                         DiagnosticObject.Field("index", 3)))),
-            Timestamp: DateTimeOffset.Parse("2026-04-14T10:00:00.5Z"));
-    }
+            DateTimeOffset.Parse("2026-04-14T10:00:00.5Z"));
 
     private static string NormalizeNewLines(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal);

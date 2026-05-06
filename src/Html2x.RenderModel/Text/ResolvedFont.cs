@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Text;
 
 /// <summary>
-/// Describes a resolved font without renderer-specific types.
+///     Describes a resolved font without renderer-specific types.
 /// </summary>
 public sealed record ResolvedFont(
     string Family,

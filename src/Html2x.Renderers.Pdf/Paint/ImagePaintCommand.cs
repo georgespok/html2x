@@ -5,9 +5,8 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.Renderers.Pdf.Paint;
 
-
 /// <summary>
-/// Paints image content or its placeholder using the image fragment payload.
+///     Paints image content or its placeholder using the image fragment payload.
 /// </summary>
 internal sealed record ImagePaintCommand(
     int PageNumber,

@@ -7,10 +7,12 @@ public sealed class DiagnosticsFontSource(
     IFontSource inner,
     IDiagnosticsSink diagnosticsSink) : IFontSource
 {
-    private readonly IFontSource _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-    private readonly IDiagnosticsSink _diagnosticsSink = diagnosticsSink ?? throw new ArgumentNullException(nameof(diagnosticsSink));
-    private readonly HashSet<ResolutionEventKey> _published = [];
+    private readonly IDiagnosticsSink _diagnosticsSink =
+        diagnosticsSink ?? throw new ArgumentNullException(nameof(diagnosticsSink));
+
     private readonly object _gate = new();
+    private readonly IFontSource _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+    private readonly HashSet<ResolutionEventKey> _published = [];
 
     public ResolvedFont Resolve(FontKey requested, string consumer)
     {
@@ -25,7 +27,7 @@ public sealed class DiagnosticsFontSource(
                 consumer,
                 DiagnosticSeverity.Info,
                 FontDiagnosticNames.Outcomes.Resolved,
-                reason: null,
+                null,
                 resolved);
             return resolved;
         }
@@ -66,18 +68,20 @@ public sealed class DiagnosticsFontSource(
             }
         }
 
-        _diagnosticsSink.Emit(new DiagnosticRecord(
-            Stage: FontDiagnosticNames.Stages.Font,
-            Name: FontDiagnosticNames.Events.Resolve,
-            Severity: severity,
-            Message: reason,
-            Context: null,
-            Fields: DiagnosticFields.Create(
+        _diagnosticsSink.Emit(new(
+            FontDiagnosticNames.Stages.Font,
+            FontDiagnosticNames.Events.Resolve,
+            severity,
+            reason,
+            null,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.Owner, nameof(FontPathSource)),
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.Consumer, consumer),
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedFamily, requested.Family),
-                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedWeight, DiagnosticValue.FromEnum(requested.Weight)),
-                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedStyle, DiagnosticValue.FromEnum(requested.Style)),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedWeight,
+                    DiagnosticValue.FromEnum(requested.Weight)),
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedStyle,
+                    DiagnosticValue.FromEnum(requested.Style)),
                 DiagnosticFields.Field(
                     FontDiagnosticNames.Fields.ResolvedFamily,
                     resolved?.Family is null ? null : DiagnosticValue.From(resolved.Family)),
@@ -103,16 +107,8 @@ public sealed class DiagnosticsFontSource(
                 DiagnosticFields.Field(
                     FontDiagnosticNames.Fields.Reason,
                     reason is null ? null : DiagnosticValue.From(reason))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
-
-    private readonly record struct ResolutionEventKey(
-        string Consumer,
-        string RequestedFamily,
-        FontWeight RequestedWeight,
-        FontStyle RequestedStyle,
-        string? SourceId,
-        string Outcome);
 
     private static ResolvedFont? CreateFailedResolution(Exception exception)
     {
@@ -125,8 +121,8 @@ public sealed class DiagnosticsFontSource(
         var configuredPath = fontException.ConfiguredPath;
         var filePath = resolved?.FilePath;
         var sourceId = resolved?.SourceId
-            ?? fontException.ResolvedPath
-            ?? configuredPath;
+                       ?? fontException.ResolvedPath
+                       ?? configuredPath;
 
         if (string.IsNullOrWhiteSpace(sourceId) &&
             string.IsNullOrWhiteSpace(configuredPath) &&
@@ -135,13 +131,21 @@ public sealed class DiagnosticsFontSource(
             return null;
         }
 
-        return new ResolvedFont(
+        return new(
             resolved?.Family ?? string.Empty,
             resolved?.Weight ?? default,
             resolved?.Style ?? default,
             sourceId ?? string.Empty,
-            FilePath: filePath,
-            FaceIndex: resolved?.FaceIndex ?? 0,
-            ConfiguredPath: configuredPath);
+            filePath,
+            resolved?.FaceIndex ?? 0,
+            configuredPath);
     }
+
+    private readonly record struct ResolutionEventKey(
+        string Consumer,
+        string RequestedFamily,
+        FontWeight RequestedWeight,
+        FontStyle RequestedStyle,
+        string? SourceId,
+        string Outcome);
 }

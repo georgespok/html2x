@@ -3,21 +3,22 @@ using Html2x.LayoutEngine.Geometry.Primitives;
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
-/// Lays out normal block boxes that do not need specialized replaced, rule, or table behavior.
+///     Lays out normal block boxes that do not need specialized replaced, rule, or table behavior.
 /// </summary>
 internal sealed class StandardBlockLayoutRule(
-    BoxSizingRules sizingRules,
-    BlockFlowLayoutExecutor blockFlow,
+    BlockSizingRules sizingRules,
+    BlockFlowLayout blockFlow,
     LayoutBoxStateWriter stateWriter) : IBlockLayoutRule
 {
-    private readonly BoxSizingRules _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
-    private readonly BlockFlowLayoutExecutor _blockFlow = blockFlow ?? throw new ArgumentNullException(nameof(blockFlow));
-    private readonly LayoutBoxStateWriter _stateWriter = stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
+    private readonly BlockFlowLayout _blockFlow = blockFlow ?? throw new ArgumentNullException(nameof(blockFlow));
 
-    public bool CanLayout(BlockBox block)
-    {
-        return block is not TableBox and not ImageBox and not RuleBox;
-    }
+    private readonly BlockSizingRules
+        _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
+
+    private readonly LayoutBoxStateWriter _stateWriter =
+        stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
+
+    public bool CanLayout(BlockBox block) => block is not TableBox and not ImageBox and not RuleBox;
 
     public BlockLayoutRuleResult Layout(BlockBox block, BlockLayoutRequest request)
     {
@@ -28,8 +29,8 @@ internal sealed class StandardBlockLayoutRule(
     private BlockFlowLayoutResult ApplyLayout(BlockBox block, BlockLayoutRequest request)
     {
         var measurement = _sizingRules.Prepare(block, request.ContentWidth);
-        var origin = BlockOriginResolver.ResolveOrigin(request, measurement.Margin);
-        var contentArea = UsedGeometryCalculator.ResolveContentFlowArea(
+        var origin = BlockOriginRules.ResolveOrigin(request, measurement.Margin);
+        var contentArea = UsedGeometryRules.ResolveContentFlowArea(
             origin.X,
             origin.Y,
             measurement.BorderBoxWidth,
@@ -40,7 +41,7 @@ internal sealed class StandardBlockLayoutRule(
 
         _stateWriter.ApplyTextAlignment(block);
 
-        var flowLayout = _blockFlow.Layout(new BlockFlowLayoutRequest(
+        var flowLayout = _blockFlow.Layout(new(
             block,
             contentArea.X,
             contentArea.Y,
@@ -53,11 +54,11 @@ internal sealed class StandardBlockLayoutRule(
         _stateWriter.ApplyBlockLayout(
             block,
             measurement,
-            UsedGeometryCalculator.FromBorderBoxWithContentHeight(
+            UsedGeometryRules.FromBorderBoxWithContentHeight(
                 origin.X,
                 origin.Y,
-                UsedGeometryCalculator.RequireNonNegativeFinite(measurement.BorderBoxWidth),
-                UsedGeometryCalculator.RequireNonNegativeFinite(contentHeight),
+                UsedGeometryRules.RequireNonNegativeFinite(measurement.BorderBoxWidth),
+                UsedGeometryRules.RequireNonNegativeFinite(contentHeight),
                 measurement.Padding,
                 measurement.Border,
                 markerOffset: block.MarkerOffset));

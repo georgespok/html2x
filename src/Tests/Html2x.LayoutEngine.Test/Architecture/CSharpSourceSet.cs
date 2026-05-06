@@ -2,7 +2,6 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class CSharpSourceSet
 {
     private CSharpSourceSet(IReadOnlyList<CSharpSourceFile> files)
@@ -20,7 +19,7 @@ internal sealed class CSharpSourceSet
             .Select(CSharpSourceFile.Load)
             .ToArray();
 
-        return new CSharpSourceSet(files);
+        return new(files);
     }
 
     public void ShouldDeclareNamespace(string expectedNamespace)

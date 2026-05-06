@@ -2,7 +2,6 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
@@ -18,25 +17,25 @@ public sealed class LayoutSnapshotMapperTests
         var background = new ColorRgba(0xEE, 0xDD, 0xCC, 0xFF);
         var margin = new Spacing(1, 2, 3, 4);
         var padding = new Spacing(5, 6, 7, 8);
-        var borders = BorderEdges.Uniform(new BorderSide(2f, color, BorderLineStyle.Solid));
+        var borders = BorderEdges.Uniform(new(2f, color, BorderLineStyle.Solid));
         var fragment = new BlockFragment
         {
-            Rect = new RectPt(10, 20, 300, 40),
-            Style = new VisualStyle(
-                BackgroundColor: background,
-                Borders: borders,
-                Color: color,
-                Margin: margin,
-                Padding: padding,
-                WidthPt: 300,
-                HeightPt: 40,
-                Display: "block"),
+            Rect = new(10, 20, 300, 40),
+            Style = new(
+                background,
+                borders,
+                color,
+                margin,
+                padding,
+                300,
+                40,
+                "block"),
             DisplayRole = FragmentDisplayRole.Block
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(24, 24, 24, 24),
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
             [fragment]));
 
         var snapshot = LayoutSnapshotMapper.From(layout);
@@ -61,27 +60,27 @@ public sealed class LayoutSnapshotMapperTests
         var background = new ColorRgba(0xAA, 0xBB, 0xCC, 0xFF);
         var margin = new Spacing(1, 2, 3, 4);
         var padding = new Spacing(5, 6, 7, 8);
-        var borders = BorderEdges.Uniform(new BorderSide(2f, color, BorderLineStyle.Solid));
+        var borders = BorderEdges.Uniform(new(2f, color, BorderLineStyle.Solid));
         var fragment = new BlockFragment
         {
-            Rect = new RectPt(10, 20, 300, 40),
-            Style = new VisualStyle(
-                BackgroundColor: background,
-                Borders: borders,
-                Color: color,
-                Margin: margin,
-                Padding: padding,
-                WidthPt: 300,
-                HeightPt: 40,
-                Display: "block"),
+            Rect = new(10, 20, 300, 40),
+            Style = new(
+                background,
+                borders,
+                color,
+                margin,
+                padding,
+                300,
+                40,
+                "block"),
             DisplayRole = FragmentDisplayRole.Block,
             FormattingContext = FormattingContextKind.Block,
             MarkerOffset = 9
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(24, 25, 26, 27),
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 25, 26, 27),
             [fragment]));
 
         var snapshot = LayoutSnapshotMapper.ToDiagnosticObject(layout);
@@ -168,26 +167,26 @@ public sealed class LayoutSnapshotMapperTests
         var background = new ColorRgba(0x10, 0x20, 0x30, 0xFF);
         var margin = new Spacing(2, 4, 6, 8);
         var padding = new Spacing(1, 3, 5, 7);
-        var borders = BorderEdges.Uniform(new BorderSide(1f, color, BorderLineStyle.Dashed));
+        var borders = BorderEdges.Uniform(new(1f, color, BorderLineStyle.Dashed));
         var fragment = new ImageFragment
         {
             Src = "image.png",
-            Rect = new RectPt(20, 30, 100, 80),
-            ContentRect = new RectPt(27, 31, 90, 70),
-            Style = new VisualStyle(
-                BackgroundColor: background,
-                Borders: borders,
-                Color: color,
-                Margin: margin,
-                Padding: padding,
-                WidthPt: 100,
-                HeightPt: 80,
-                Display: "inline-block")
+            Rect = new(20, 30, 100, 80),
+            ContentRect = new(27, 31, 90, 70),
+            Style = new(
+                background,
+                borders,
+                color,
+                margin,
+                padding,
+                100,
+                80,
+                "inline-block")
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(24, 24, 24, 24),
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
             [fragment]));
 
         var snapshot = LayoutSnapshotMapper.From(layout);
@@ -212,25 +211,25 @@ public sealed class LayoutSnapshotMapperTests
     {
         var line = new LineBoxFragment
         {
-            Rect = new RectPt(10, 10, 80, 12)
+            Rect = new(10, 10, 80, 12)
         };
         var block = new BlockFragment([line])
         {
-            Rect = new RectPt(10, 10, 100, 20)
+            Rect = new(10, 10, 100, 20)
         };
         var image = new ImageFragment
         {
             Src = "sequence.png",
-            Rect = new RectPt(10, 40, 20, 20),
-            ContentRect = new RectPt(10, 40, 20, 20)
+            Rect = new(10, 40, 20, 20),
+            ContentRect = new(10, 40, 20, 20)
         };
         var rule = new RuleFragment
         {
-            Rect = new RectPt(10, 10, 100, 2)
+            Rect = new(10, 10, 100, 2)
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(new SizePt(612, 792), new Spacing(), [block, image]));
-        layout.AddPage(new LayoutPage(new SizePt(612, 792), new Spacing(), [rule]));
+        layout.AddPage(new(new(612, 792), new(), [block, image]));
+        layout.AddPage(new(new(612, 792), new(), [rule]));
 
         var snapshot = LayoutSnapshotMapper.From(layout);
 

@@ -20,7 +20,7 @@ internal sealed class FontMetricsProvider : IFontMetricsProvider
             ? HtmlCssConstants.Defaults.FontFamily
             : style.FontFamily;
 
-        return new FontKey(family, weight, fontStyle);
+        return new(family, weight, fontStyle);
     }
 
     public float GetFontSize(ComputedStyle style)

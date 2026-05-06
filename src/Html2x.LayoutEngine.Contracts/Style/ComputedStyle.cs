@@ -4,7 +4,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Contracts.Style;
 
 /// <summary>
-/// Stores the computed style facts consumed by box construction, layout, diagnostics, and fragment projection.
+///     Stores the computed style facts consumed by box construction, layout, diagnostics, and fragment projection.
 /// </summary>
 internal sealed record ComputedStyle
 {

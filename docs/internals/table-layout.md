@@ -32,7 +32,7 @@ Unsupported tables should emit diagnostics and avoid rendering an incorrect visi
 ```text
 HTML table
   -> TableGridLayout derives rows, columns, widths, and support status
-  -> TableBlockLayoutRule places table behavior inside BlockLayoutEngine dispatch
+  -> TableBlockLayoutRule places table behavior inside BlockBoxLayout dispatch
   -> LayoutBoxStateWriter materializes table, row, and cell boxes
   -> FragmentBuilder emits table fragments
   -> LayoutSnapshotMapper records table structure

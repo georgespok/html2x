@@ -4,7 +4,6 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
-
 internal sealed class FragmentSnapshot
 {
     public int SequenceId { get; init; }

@@ -45,11 +45,11 @@ public sealed class LayoutGeometryPublicSurfaceTests
         CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FontFaceEntry.cs")
             .ShouldContainType("FontFaceEntry", "internal");
         CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FileDirectory.cs")
-            .ShouldContainType("FileDirectory", "internal", isSealed: true);
+            .ShouldContainType("FileDirectory", "internal", true);
         CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "IFileDirectory.cs")
             .ShouldContainType("IFileDirectory", "internal");
         CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "SkiaTypefaceFactory.cs")
-            .ShouldContainType("SkiaTypefaceFactory", "internal", isSealed: true);
+            .ShouldContainType("SkiaTypefaceFactory", "internal", true);
         CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "ISkiaTypefaceFactory.cs")
             .ShouldContainType("ISkiaTypefaceFactory", "internal");
     }
@@ -85,7 +85,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
         paginationPublic.ShouldBeEmpty();
         geometryPublic.ShouldNotContain(FullTypeName<BlockBox>());
         geometryPublic.ShouldNotContain(FullTypeName<InlineBox>());
-        geometryPublic.ShouldNotContain(FullTypeName<BlockLayoutEngine>());
+        geometryPublic.ShouldNotContain(FullTypeName<BlockBoxLayout>());
     }
 
     [Fact]
@@ -94,27 +94,27 @@ public sealed class LayoutGeometryPublicSurfaceTests
         SourceSetFor<LayoutGeometryBuilder>()
             .ShouldNotContainPublicTypes(nameof(BlockBox), nameof(InlineBox));
 
-        var blockLayoutEngine = SourceFileFor<BlockLayoutEngine>("Box");
-        blockLayoutEngine.ShouldUseIdentifier(nameof(BlockFlowLayoutExecutor));
-        blockLayoutEngine.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
-        blockLayoutEngine.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
-        blockLayoutEngine.ShouldNotUseIdentifier("BuildTableRowContexts");
-        blockLayoutEngine.ShouldNotUseIdentifier("BuildTableCellContexts");
+        var blockBoxLayout = SourceFileFor<BlockBoxLayout>("Box");
+        blockBoxLayout.ShouldUseIdentifier(nameof(BlockFlowLayout));
+        blockBoxLayout.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
+        blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
+        blockBoxLayout.ShouldNotUseIdentifier("BuildTableRowFacts");
+        blockBoxLayout.ShouldNotUseIdentifier("BuildTableCellFacts");
 
-        var boxSizingRules = SourceFileFor<BoxSizingRules>("Box");
-        boxSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurementExecutor));
+        var BlockSizingRules = SourceFileFor<BlockSizingRules>("Box");
+        BlockSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
 
-        var blockFormattingContext = SourceFileFor<BlockFormattingContext>("Formatting");
-        blockFormattingContext.ShouldUseIdentifier(nameof(BlockFlowMeasurementExecutor));
+        var blockContentMeasurement = SourceFileFor<BlockContentExtentMeasurement>("Formatting");
+        blockContentMeasurement.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
     }
 
     [Fact]
     public void PublishedGeometryFacts_AvoidMutableBoxImplementationNamespace()
     {
         CSharpSourceSet.FromDirectory("src", AssemblyName<PublishedLayoutTree>(), "Published")
-            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockLayoutEngine>());
+            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockBoxLayout>());
         SourceSetFor<HtmlLayout>()
-            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockLayoutEngine>());
+            .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockBoxLayout>());
         SourceFileFor(typeof(GeometrySnapshotMapper), "Diagnostics")
             .ShouldNotUseIdentifier("BoxTree");
     }
@@ -125,9 +125,12 @@ public sealed class LayoutGeometryPublicSurfaceTests
         var htmlLayout = SourceFileFor<HtmlLayout>("Documents");
         var paginator = SourceFileFor<LayoutPaginator>();
 
-        htmlLayout.ShouldContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages), ReadOnlyListTypeName<LayoutPage>(), PublicAccessibility);
-        htmlLayout.ShouldContainMethodInType(nameof(HtmlLayout), nameof(HtmlLayout.AddPage), VoidTypeName, PublicAccessibility);
-        htmlLayout.ShouldNotContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages), "IList<" + TypeName<LayoutPage>() + ">", PublicAccessibility);
+        htmlLayout.ShouldContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages),
+            ReadOnlyListTypeName<LayoutPage>(), PublicAccessibility);
+        htmlLayout.ShouldContainMethodInType(nameof(HtmlLayout), nameof(HtmlLayout.AddPage), VoidTypeName,
+            PublicAccessibility);
+        htmlLayout.ShouldNotContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages),
+            "IList<" + TypeName<LayoutPage>() + ">", PublicAccessibility);
         paginator.ShouldInvoke(nameof(HtmlLayout.AddPage));
     }
 
@@ -148,7 +151,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
     public void SourceIdentity_AssignmentAndSnapshotBoundaries_AreExplicit()
     {
         var styleTraversal = SourceFileFor<StyleTraversal>("Style");
-        var styleTreeBoxProjector = SourceFileFor<StyleTreeBoxProjector>("Box");
+        var boxTreeConstruction = SourceFileFor<BoxTreeConstruction>("Box");
         var snapshots = new[]
         {
             SourceFileFor<LayoutSnapshot>("Diagnostics"),
@@ -163,18 +166,27 @@ public sealed class LayoutGeometryPublicSurfaceTests
 
         styleTraversal.ShouldConstructType(nameof(StyleSourceIdentity));
         styleTraversal.ShouldConstructType(nameof(StyleContentIdentity));
-        styleTreeBoxProjector.ShouldUseIdentifier(nameof(StyleNode.Identity));
-        styleTreeBoxProjector.ShouldNotConstructType(nameof(StyleSourceIdentity));
-        styleTreeBoxProjector.ShouldNotConstructType(nameof(StyleContentIdentity));
+        boxTreeConstruction.ShouldUseIdentifier(nameof(StyleNode.Identity));
+        boxTreeConstruction.ShouldUseIdentifier(nameof(StyleContentNode.Identity));
+        boxTreeConstruction.ShouldUseIdentifier(nameof(GeometrySourceIdentity));
+        boxTreeConstruction.ShouldUseIdentifier(nameof(GeometryGeneratedSourceKind.InlineBlockContent));
+        boxTreeConstruction.ShouldUseIdentifier(nameof(GeometryGeneratedSourceKind.AnonymousText));
+        boxTreeConstruction.ShouldNotConstructType(nameof(StyleSourceIdentity));
+        boxTreeConstruction.ShouldNotConstructType(nameof(StyleContentIdentity));
+
         foreach (var snapshot in snapshots)
         {
             snapshot.ShouldNotUseNamespaces(NamespaceOf<StyleTreeBuilder>(), NamespaceOf<LayoutGeometryBuilder>());
         }
 
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceNodeId), NullableCSharpTypeName<int>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceContentId), NullableCSharpTypeName<int>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourcePath), NullableCSharpTypeName<string>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot), nameof(BoxGeometrySnapshot.SourceOrder), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.SourceNodeId), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.SourceContentId), NullableCSharpTypeName<int>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.SourcePath), NullableCSharpTypeName<string>(), PublicAccessibility);
+        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+            nameof(BoxGeometrySnapshot.SourceOrder), NullableCSharpTypeName<int>(), PublicAccessibility);
         boxGeometrySnapshot.ShouldContainPropertyInType(
             nameof(BoxGeometrySnapshot),
             nameof(BoxGeometrySnapshot.SourceElementIdentity),
@@ -206,9 +218,11 @@ public sealed class LayoutGeometryPublicSurfaceTests
     public void FriendAssemblies_AreExplicitAndLimited()
     {
         CSharpSourceFile.Load("src", AssemblyName<LayoutGeometryBuilder>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(AssemblyName<LayoutBuilder>(), TestAssemblyNameFor<LayoutGeometryBuilder>(), CurrentAssemblyName());
+            .ShouldContainFriendAssemblies(AssemblyName<LayoutBuilder>(), TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                CurrentAssemblyName());
         CSharpSourceFile.Load("src", AssemblyName<LayoutBuilder>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(FacadeAssemblyName, TestAssemblyNameFor<LayoutGeometryBuilder>(), CurrentAssemblyName());
+            .ShouldContainFriendAssemblies(FacadeAssemblyName, TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                CurrentAssemblyName());
         CSharpSourceFile.Load("src", AssemblyName<FragmentBuilder>(), "Properties", "InternalsVisibleTo.cs")
             .ShouldContainFriendAssemblies(
                 AssemblyName<LayoutBuilder>(),

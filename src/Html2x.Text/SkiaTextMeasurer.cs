@@ -6,30 +6,47 @@ using SkiaSharp.HarfBuzz;
 namespace Html2x.Text;
 
 /// <summary>
-/// Measures text using SkiaSharp and HarfBuzz with strict font resolution.
+///     Measures text using SkiaSharp and HarfBuzz with strict font resolution.
 /// </summary>
 public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 {
-    private readonly IFontSource _fontSource;
     private readonly IFileDirectory _fileDirectory;
-    private readonly ISkiaTypefaceFactory _typefaceFactory;
+    private readonly IFontSource _fontSource;
+
+    private readonly ConcurrentDictionary<MetricKey, (float Ascent, float Descent)> _metricsBySourceAndSize = new();
+
     // Render-scoped caches; not shared across conversions.
     private readonly ConcurrentDictionary<FontKey, ResolvedFont> _resolvedFontsByRequest = new();
-    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SKShaper> _shapersBySourceId = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ISkiaTypefaceFactory _typefaceFactory;
+
+    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private readonly ConcurrentDictionary<TextMeasureKey, float> _widthBySourceAndText = new();
-    private readonly ConcurrentDictionary<MetricKey, (float Ascent, float Descent)> _metricsBySourceAndSize = new();
 
     public SkiaTextMeasurer(IFontSource fontSource)
         : this(fontSource, new FileDirectory(), new SkiaTypefaceFactory())
     {
     }
 
-    internal SkiaTextMeasurer(IFontSource fontSource, IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal SkiaTextMeasurer(IFontSource fontSource, IFileDirectory fileDirectory,
+        ISkiaTypefaceFactory typefaceFactory)
     {
         _fontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
+    }
+
+    public void Dispose()
+    {
+        // Dispose native resources once per handle; skip default typeface.
+        foreach (var shaper in _shapersBySourceId.Values)
+        {
+            shaper.Dispose();
+        }
+
+        DisposeTypefaces(_typefacesBySourceId.Values, []);
     }
 
     public TextMeasurement Measure(FontKey font, float sizePt, string text)
@@ -39,13 +56,13 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         var width = string.IsNullOrEmpty(text)
             ? 0f
             : _widthBySourceAndText.GetOrAdd(
-                new TextMeasureKey(sourceId, sizePt, text),
+                new(sourceId, sizePt, text),
                 _ => MeasureWidthUsingShaper(font, sizePt, text, resolved));
         var metrics = _metricsBySourceAndSize.GetOrAdd(
-            new MetricKey(sourceId, sizePt),
+            new(sourceId, sizePt),
             _ => MeasureMetricsFromFont(font, sizePt, resolved));
 
-        return new TextMeasurement(width, metrics.Ascent, metrics.Descent, resolved);
+        return new(width, metrics.Ascent, metrics.Descent, resolved);
     }
 
     public float MeasureWidth(FontKey font, float sizePt, string text)
@@ -74,7 +91,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private float MeasureWidthUsingShaper(FontKey fontKey, float sizePt, string text, ResolvedFont resolved)
     {
         var typeface = GetTypefaceForResolvedFont(fontKey, resolved);
-        var shaper = _shapersBySourceId.GetOrAdd(resolved.SourceId, _ => new SKShaper(typeface));
+        var shaper = _shapersBySourceId.GetOrAdd(resolved.SourceId, _ => new(typeface));
 
         using var font = CreateFont(typeface, sizePt);
         var result = shaper.Shape(text, font);
@@ -146,7 +163,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
             throw CreateFontResolutionException(
                 "Resolved font source id cannot be empty.",
                 resolved,
-                fontKey: null);
+                null);
         }
 
         return resolved.SourceId;
@@ -164,25 +181,12 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         string message,
         ResolvedFont resolved,
         FontKey? fontKey,
-        string? path = null)
-    {
-        return new FontResolutionException(
+        string? path = null) =>
+        new(
             message,
             fontKey,
             resolved,
             resolvedPath: path);
-    }
-
-    public void Dispose()
-    {
-        // Dispose native resources once per handle; skip default typeface.
-        foreach (var shaper in _shapersBySourceId.Values)
-        {
-            shaper.Dispose();
-        }
-
-        DisposeTypefaces(_typefacesBySourceId.Values, []);
-    }
 
     private static void DisposeTypefaces(IEnumerable<SKTypeface> typefaces, HashSet<IntPtr> disposedHandles)
     {
@@ -202,10 +206,8 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         }
     }
 
-    private static bool IsDefaultTypeface(SKTypeface typeface)
-    {
-        return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
-    }
+    private static bool IsDefaultTypeface(SKTypeface typeface) => ReferenceEquals(typeface, SKTypeface.Default) ||
+                                                                  typeface.Handle == SKTypeface.Default.Handle;
 
     private static string CreateFontLoadFailureMessage(string path, int faceIndex) =>
         faceIndex > 0

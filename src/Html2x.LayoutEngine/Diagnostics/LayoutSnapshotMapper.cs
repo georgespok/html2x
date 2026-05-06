@@ -10,7 +10,8 @@ using static Html2x.LayoutEngine.Diagnostics.DiagnosticSnapshotValueMapper;
 namespace Html2x.LayoutEngine.Diagnostics;
 
 /// <summary>
-/// Projects assembled layout output into diagnostic snapshots and validates fragment structures that cross layout boundaries.
+///     Projects assembled layout output into diagnostic snapshots and validates fragment structures that cross layout
+///     boundaries.
 /// </summary>
 internal static class LayoutSnapshotMapper
 {
@@ -30,7 +31,7 @@ internal static class LayoutSnapshotMapper
             var fragments = fragmentMapper.MapFragments(page.Children);
             var pageNumber = page.PageNumber > 0 ? page.PageNumber : pageIndex + 1;
 
-            pages.Add(new LayoutPageSnapshot
+            pages.Add(new()
             {
                 PageNumber = pageNumber,
                 PageSize = page.PageSize,
@@ -39,7 +40,7 @@ internal static class LayoutSnapshotMapper
             });
         }
 
-        return new LayoutSnapshot
+        return new()
         {
             PageCount = layout.Pages.Count,
             Pages = pages
@@ -49,29 +50,24 @@ internal static class LayoutSnapshotMapper
     public static DiagnosticObject ToDiagnosticObject(HtmlLayout layout) =>
         MapLayoutSnapshot(From(layout));
 
-    internal static DiagnosticObject MapLayoutSnapshot(LayoutSnapshot snapshot)
-    {
-        return DiagnosticObject.Create(
+    internal static DiagnosticObject MapLayoutSnapshot(LayoutSnapshot snapshot) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageCount, snapshot.PageCount),
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.Pages,
                 MapArray(snapshot.Pages, MapPageSnapshot)));
-    }
 
-    private static DiagnosticObject MapPageSnapshot(LayoutPageSnapshot page)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapPageSnapshot(LayoutPageSnapshot page) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageNumber, page.PageNumber),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageSize, MapSize(page.PageSize)),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Margin, MapSpacing(page.Margin)),
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.Fragments,
                 MapArray(page.Fragments, MapFragmentSnapshot)));
-    }
 
-    private static DiagnosticObject MapFragmentSnapshot(FragmentSnapshot fragment)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapFragmentSnapshot(FragmentSnapshot fragment) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.SequenceId, fragment.SequenceId),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Kind, fragment.Kind),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.X, fragment.X),
@@ -120,7 +116,6 @@ internal static class LayoutSnapshotMapper
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.Children,
                 MapArray(fragment.Children, MapFragmentSnapshot)));
-    }
 
     private static FragmentSnapshot MapLineBox(LineBoxFragment line, int sequenceId)
     {
@@ -131,16 +126,15 @@ internal static class LayoutSnapshotMapper
             sequenceId,
             LayoutSnapshotSchema.FragmentKinds.Line,
             [],
-            color: ResolveLineColor(line),
-            text: text,
+            ResolveLineColor(line),
+            text,
             occupiedX: line.OccupiedRect.X,
             occupiedY: line.OccupiedRect.Y,
             occupiedSize: new SizePt(line.OccupiedRect.Width, line.OccupiedRect.Height));
     }
 
-    private static FragmentSnapshot MapImage(ImageFragment image, int sequenceId)
-    {
-        return CreateSnapshot(
+    private static FragmentSnapshot MapImage(ImageFragment image, int sequenceId) =>
+        CreateSnapshot(
             image,
             sequenceId,
             LayoutSnapshotSchema.FragmentKinds.Image,
@@ -148,17 +142,12 @@ internal static class LayoutSnapshotMapper
             contentX: image.ContentRect.X,
             contentY: image.ContentRect.Y,
             contentSize: image.ContentSize);
-    }
 
-    private static FragmentSnapshot MapRule(RuleFragment rule, int sequenceId)
-    {
-        return CreateSnapshot(rule, sequenceId, LayoutSnapshotSchema.FragmentKinds.Rule, []);
-    }
+    private static FragmentSnapshot MapRule(RuleFragment rule, int sequenceId) =>
+        CreateSnapshot(rule, sequenceId, LayoutSnapshotSchema.FragmentKinds.Rule, []);
 
-    private static FragmentSnapshot MapUnknown(LayoutFragment fragment, int sequenceId)
-    {
-        return CreateSnapshot(fragment, sequenceId, fragment.GetType().Name.ToLowerInvariant(), []);
-    }
+    private static FragmentSnapshot MapUnknown(LayoutFragment fragment, int sequenceId) =>
+        CreateSnapshot(fragment, sequenceId, fragment.GetType().Name.ToLowerInvariant(), []);
 
     private static FragmentSnapshot CreateSnapshot(
         LayoutFragment fragment,
@@ -184,7 +173,7 @@ internal static class LayoutSnapshotMapper
         string? metadataConsumer = null)
     {
         var style = fragment.Style;
-        return new FragmentSnapshot
+        return new()
         {
             SequenceId = sequenceId,
             Kind = kind,
@@ -227,9 +216,8 @@ internal static class LayoutSnapshotMapper
         int? derivedColumnCount = null,
         int? rowIndex = null,
         int? columnIndex = null,
-        bool? isHeader = null)
-    {
-        return CreateSnapshot(
+        bool? isHeader = null) =>
+        CreateSnapshot(
             fragment,
             sequenceId,
             kind,
@@ -243,7 +231,6 @@ internal static class LayoutSnapshotMapper
             isHeader: isHeader,
             metadataOwner: PublishedLayoutToFragmentProjector.MetadataOwnerName,
             metadataConsumer: nameof(LayoutSnapshotMapper));
-    }
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)
         => line.Style?.Color ?? line.Runs.FirstOrDefault(static run => run.Color is not null)?.Color;
@@ -288,7 +275,7 @@ internal static class LayoutSnapshotMapper
                 fragmentSequenceId,
                 LayoutSnapshotSchema.FragmentKinds.Table,
                 children,
-                derivedColumnCount: table.DerivedColumnCount);
+                table.DerivedColumnCount);
         }
 
         private FragmentSnapshot MapTableRow(TableRowFragment row)

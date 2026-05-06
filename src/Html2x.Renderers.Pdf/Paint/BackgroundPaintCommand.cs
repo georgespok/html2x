@@ -3,9 +3,8 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.Renderers.Pdf.Paint;
 
-
 /// <summary>
-/// Paints a block-like fragment background fill.
+///     Paints a block-like fragment background fill.
 /// </summary>
 internal sealed record BackgroundPaintCommand(
     int PageNumber,

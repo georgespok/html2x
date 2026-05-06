@@ -20,7 +20,7 @@ internal static class GeometrySnapshotMapper
 
         var boxMapper = new PublishedGeometrySnapshotMapper();
 
-        return new GeometrySnapshot
+        return new()
         {
             Fragments = LayoutSnapshotMapper.From(pagination.Layout),
             Boxes = boxMapper.MapBoxes(layoutTree.Blocks),
@@ -30,14 +30,11 @@ internal static class GeometrySnapshotMapper
 
     public static DiagnosticObject ToDiagnosticObject(
         PublishedLayoutTree layoutTree,
-        PaginationResult pagination)
-    {
-        return MapGeometrySnapshot(From(layoutTree, pagination));
-    }
+        PaginationResult pagination) =>
+        MapGeometrySnapshot(From(layoutTree, pagination));
 
-    private static DiagnosticObject MapGeometrySnapshot(GeometrySnapshot snapshot)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapGeometrySnapshot(GeometrySnapshot snapshot) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.Fragments,
                 LayoutSnapshotMapper.MapLayoutSnapshot(snapshot.Fragments)),
@@ -45,11 +42,9 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(
                 GeometrySnapshotSchema.Fields.Pagination,
                 MapArray(snapshot.Pagination, MapPaginationPage)));
-    }
 
-    private static DiagnosticObject MapPaginationPage(PaginationPageSnapshot page)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapPaginationPage(PaginationPageSnapshot page) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageNumber, page.PageNumber),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageSize, MapSize(page.PageSize)),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Margin, MapSpacing(page.Margin)),
@@ -58,11 +53,9 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(
                 GeometrySnapshotSchema.Fields.Placements,
                 MapArray(page.Placements, MapPlacementSnapshot)));
-    }
 
-    private static DiagnosticObject MapPlacementSnapshot(PaginationPlacementSnapshot placement)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapPlacementSnapshot(PaginationPlacementSnapshot placement) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(GeometrySnapshotSchema.Fields.FragmentId, placement.FragmentId),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Kind, placement.Kind),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.PageNumber, placement.PageNumber),
@@ -101,11 +94,9 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.MetadataConsumer,
                 FromNullable(placement.MetadataConsumer)));
-    }
 
-    private static DiagnosticObject MapBoxSnapshot(BoxGeometrySnapshot box)
-    {
-        return DiagnosticObject.Create(
+    private static DiagnosticObject MapBoxSnapshot(BoxGeometrySnapshot box) =>
+        DiagnosticObject.Create(
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.SequenceId, box.SequenceId),
             DiagnosticObject.Field(GeometrySnapshotSchema.Fields.Path, box.Path),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Kind, box.Kind),
@@ -156,11 +147,9 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.Children,
                 MapArray(box.Children, MapBoxSnapshot)));
-    }
 
-    private static PaginationPageSnapshot MapPage(PaginationPageAudit page)
-    {
-        return new PaginationPageSnapshot
+    private static PaginationPageSnapshot MapPage(PaginationPageAudit page) =>
+        new()
         {
             PageNumber = page.PageNumber,
             PageSize = page.PageSize,
@@ -169,11 +158,9 @@ internal static class GeometrySnapshotMapper
             ContentBottom = page.ContentBottom,
             Placements = page.Placements.Select(MapPlacement).ToList()
         };
-    }
 
-    private static PaginationPlacementSnapshot MapPlacement(PaginationPlacementAudit placement)
-    {
-        return new PaginationPlacementSnapshot
+    private static PaginationPlacementSnapshot MapPlacement(PaginationPlacementAudit placement) =>
+        new()
         {
             FragmentId = placement.FragmentId,
             Kind = placement.FragmentKind,
@@ -183,7 +170,7 @@ internal static class GeometrySnapshotMapper
             DecisionKind = placement.DecisionKind,
             X = placement.PageX,
             Y = placement.PageY,
-            Size = new SizePt(placement.Width, placement.Height),
+            Size = new(placement.Width, placement.Height),
             DisplayRole = placement.DisplayRole,
             FormattingContext = placement.FormattingContext,
             MarkerOffset = placement.MarkerOffset,
@@ -194,7 +181,6 @@ internal static class GeometrySnapshotMapper
             MetadataOwner = PublishedLayoutToFragmentProjector.MetadataOwnerName,
             MetadataConsumer = GeometrySnapshotSchema.Metadata.PaginationConsumer
         };
-    }
 
     private sealed class PublishedGeometrySnapshotMapper
     {
@@ -216,7 +202,7 @@ internal static class GeometrySnapshotMapper
             var borderRect = block.Geometry.BorderBoxRect;
             var contentRect = block.Geometry.ContentBoxRect;
 
-            return new BoxGeometrySnapshot
+            return new()
             {
                 SequenceId = NextSequenceId(),
                 Path = block.Identity.NodePath,
@@ -230,7 +216,7 @@ internal static class GeometrySnapshotMapper
                 GeneratedSourceKind = ResolveGeneratedSourceKind(block.Identity.SourceIdentity.GeneratedKind),
                 X = borderRect.X,
                 Y = borderRect.Y,
-                Size = new SizePt(borderRect.Width, borderRect.Height),
+                Size = new(borderRect.Width, borderRect.Height),
                 ContentX = contentRect.X,
                 ContentY = contentRect.Y,
                 ContentSize = new SizePt(contentRect.Width, contentRect.Height),

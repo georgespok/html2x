@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -9,7 +10,8 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 {
     private const string HtmlSamplesFolder = "html";
 
-    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings,
+        CancellationToken cancellationToken)
     {
         var runContext = ConsoleRunContext.FromArguments(context.Arguments);
         var inputPath = ResolveInputPath(settings);
@@ -19,8 +21,8 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
                 settings,
                 inputPath,
                 runContext,
-                interactive: false,
-                selectedSamplePath: null);
+                false,
+                null);
         }
 
         return await RunInteractiveLoopAsync(settings, runContext, cancellationToken);
@@ -68,7 +70,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            Process.Start(new ProcessStartInfo
             {
                 FileName = path,
                 UseShellExecute = true
@@ -121,8 +123,8 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
                 settings,
                 selection.FullPath!,
                 runContext,
-                interactive: true,
-                selectedSamplePath: selection.FullPath).ConfigureAwait(false);
+                true,
+                selection.FullPath).ConfigureAwait(false);
             if (result != 0)
             {
                 return result;

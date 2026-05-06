@@ -7,29 +7,30 @@ using SkiaSharp;
 namespace Html2x.Renderers.Pdf.Drawing;
 
 /// <summary>
-/// Provides a small, render-scoped cache for <see cref="SKTypeface"/> instances used by the Skia PDF renderer.
+///     Provides a small, render-scoped cache for <see cref="SKTypeface" /> instances used by the Skia PDF renderer.
 /// </summary>
 /// <remarks>
-/// Purpose:
-/// <list type="bullet">
-/// <item>
-/// Avoid repeatedly creating <see cref="SKTypeface"/> objects during a render pass. Typeface creation can be
-/// relatively expensive and each instance wraps native resources that should be disposed deterministically.
-/// </item>
-/// <item>
-/// Normalize font selection across fragments by mapping resolved text run font facts to stable Skia typefaces.
-/// </item>
-/// </list>
-///
-/// Lifecycle:
-/// Create one cache per conversion and dispose it when rendering completes. This keeps native resources bounded and
-/// avoids cross-request global state.
+///     Purpose:
+///     <list type="bullet">
+///         <item>
+///             Avoid repeatedly creating <see cref="SKTypeface" /> objects during a render pass. Typeface creation can be
+///             relatively expensive and each instance wraps native resources that should be disposed deterministically.
+///         </item>
+///         <item>
+///             Normalize font selection across fragments by mapping resolved text run font facts to stable Skia typefaces.
+///         </item>
+///     </list>
+///     Lifecycle:
+///     Create one cache per conversion and dispose it when rendering completes. This keeps native resources bounded and
+///     avoids cross-request global state.
 /// </remarks>
 internal sealed class SkiaFontCache : IDisposable
 {
     private readonly IFileDirectory _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
-    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId = new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId =
+        new(StringComparer.OrdinalIgnoreCase);
 
     internal SkiaFontCache(
         IFileDirectory fileDirectory,
@@ -37,6 +38,13 @@ internal sealed class SkiaFontCache : IDisposable
     {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
+    }
+
+    public void Dispose()
+    {
+        var disposedHandles = new HashSet<IntPtr>();
+
+        DisposeTypefaces(_typefacesBySourceId.Values, disposedHandles);
     }
 
     public SKTypeface GetTypeface(TextRun run)
@@ -76,13 +84,6 @@ internal sealed class SkiaFontCache : IDisposable
             ? _typefaceFactory.FromFile(path, faceIndex)
             : _typefaceFactory.FromFile(path);
 
-    public void Dispose()
-    {
-        var disposedHandles = new HashSet<IntPtr>();
-
-        DisposeTypefaces(_typefacesBySourceId.Values, disposedHandles);
-    }
-
     private static void DisposeTypefaces(IEnumerable<SKTypeface> typefaces, HashSet<IntPtr> disposedHandles)
     {
         foreach (var typeface in typefaces)
@@ -101,10 +102,8 @@ internal sealed class SkiaFontCache : IDisposable
         }
     }
 
-    private static bool IsDefaultTypeface(SKTypeface typeface)
-    {
-        return ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
-    }
+    private static bool IsDefaultTypeface(SKTypeface typeface) => ReferenceEquals(typeface, SKTypeface.Default) ||
+                                                                  typeface.Handle == SKTypeface.Default.Handle;
 
     private static string CreateFontLoadFailureMessage(string path, int faceIndex) =>
         faceIndex > 0
@@ -115,20 +114,16 @@ internal sealed class SkiaFontCache : IDisposable
         string message,
         FontKey requested,
         ResolvedFont resolved,
-        string? path)
-    {
-        return new FontResolutionException(
+        string? path) =>
+        new(
             message,
             requested,
             resolved,
             resolvedPath: path);
-    }
 
-    private static FontResolutionException CreateMissingResolvedFontException(TextRun run)
-    {
-        return new FontResolutionException(
+    private static FontResolutionException CreateMissingResolvedFontException(TextRun run) =>
+        new(
             "TextRun.ResolvedFont is required before PDF rendering. Build renderer inputs through layout geometry or provide resolved font facts on manually constructed text runs.",
             run.Font,
             text: run.Text);
-    }
 }

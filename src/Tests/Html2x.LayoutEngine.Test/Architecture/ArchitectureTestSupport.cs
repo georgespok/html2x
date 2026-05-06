@@ -87,7 +87,8 @@ internal static class ArchitectureTestSupport
         type.Namespace ?? throw new InvalidOperationException($"{type.Name} has no namespace.");
 
     public static string AssemblyName<T>() =>
-        typeof(T).Assembly.GetName().Name ?? throw new InvalidOperationException($"{typeof(T).Name} has no assembly name.");
+        typeof(T).Assembly.GetName().Name ??
+        throw new InvalidOperationException($"{typeof(T).Name} has no assembly name.");
 
     public static string AssemblyName(Type type) =>
         type.Assembly.GetName().Name ?? throw new InvalidOperationException($"{type.Name} has no assembly name.");

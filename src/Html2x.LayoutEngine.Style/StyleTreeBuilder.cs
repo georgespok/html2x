@@ -11,7 +11,7 @@ internal sealed class StyleTreeBuilder : IStyleTreeBuilder
     private readonly CssStyleComputer _styleComputer;
 
     public StyleTreeBuilder()
-        : this(new AngleSharpDomProvider(Configuration.Default.WithCss()), new CssStyleComputer())
+        : this(new(Configuration.Default.WithCss()), new())
     {
     }
 

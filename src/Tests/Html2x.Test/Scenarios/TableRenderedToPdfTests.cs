@@ -12,11 +12,11 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
 {
     private HtmlConverterOptions DefaultOptions => new()
     {
-        Diagnostics = new DiagnosticsOptions
+        Diagnostics = new()
         {
             EnableDiagnostics = true
         },
-        Fonts = new FontOptions
+        Fonts = new()
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -26,22 +26,22 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     public async Task SimpleTableMarkup_EmitsDiagnosticsAndRowMajorText()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body style='margin:0'>
-                <table style='width: 400px; border: 1px solid black;'>
-                  <tr>
-                    <td style='padding: 10px; border: 1px solid black;'>A</td>
-                    <td style='padding: 10px; border: 1px solid black;'>B</td>
-                  </tr>
-                  <tr>
-                    <td style='padding: 10px; border: 1px solid black;'>C</td>
-                    <td style='padding: 10px; border: 1px solid black;'>D</td>
-                  </tr>
-                </table>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body style='margin:0'>
+                                <table style='width: 400px; border: 1px solid black;'>
+                                  <tr>
+                                    <td style='padding: 10px; border: 1px solid black;'>A</td>
+                                    <td style='padding: 10px; border: 1px solid black;'>B</td>
+                                  </tr>
+                                  <tr>
+                                    <td style='padding: 10px; border: 1px solid black;'>C</td>
+                                    <td style='padding: 10px; border: 1px solid black;'>D</td>
+                                  </tr>
+                                </table>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DefaultOptions);
@@ -74,21 +74,21 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     public async Task TableInsideBlockContainer_AppearInLayoutSnapshot()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body style='margin:0'>
-                <div>
-                  <h2>Wrapped Table</h2>
-                  <table style='width: 400px; border: 1px solid black;'>
-                    <tr>
-                      <td style='padding: 10px; border: 1px solid black;'>A</td>
-                      <td style='padding: 10px; border: 1px solid black;'>B</td>
-                    </tr>
-                  </table>
-                </div>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body style='margin:0'>
+                                <div>
+                                  <h2>Wrapped Table</h2>
+                                  <table style='width: 400px; border: 1px solid black;'>
+                                    <tr>
+                                      <td style='padding: 10px; border: 1px solid black;'>A</td>
+                                      <td style='padding: 10px; border: 1px solid black;'>B</td>
+                                    </tr>
+                                  </table>
+                                </div>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DefaultOptions);
@@ -111,22 +111,22 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     public async Task HeaderStyledTable_PreserveHeaderIdentityAndColumnAlignment()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body style='margin:0'>
-                <table style='width: 400px; border: 1px solid black;'>
-                  <tr style='background-color: #d1d5db;'>
-                    <th style='padding: 10px; border: 1px solid black;'>Name</th>
-                    <th style='padding: 10px; border: 1px solid black;'>Status</th>
-                  </tr>
-                  <tr>
-                    <td style='padding: 10px; border: 1px solid black;'>Alpha</td>
-                    <td style='padding: 10px; border: 1px solid black; background-color: #fef3c7;'>Ready</td>
-                  </tr>
-                </table>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body style='margin:0'>
+                                <table style='width: 400px; border: 1px solid black;'>
+                                  <tr style='background-color: #d1d5db;'>
+                                    <th style='padding: 10px; border: 1px solid black;'>Name</th>
+                                    <th style='padding: 10px; border: 1px solid black;'>Status</th>
+                                  </tr>
+                                  <tr>
+                                    <td style='padding: 10px; border: 1px solid black;'>Alpha</td>
+                                    <td style='padding: 10px; border: 1px solid black; background-color: #fef3c7;'>Ready</td>
+                                  </tr>
+                                </table>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DefaultOptions);
@@ -164,17 +164,17 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     public async Task TableWithColspan_RejectsUnsupportedStructure()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body style='margin:0'>
-                <table style='width: 400px; border: 1px solid black;'>
-                  <tr>
-                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>A</td>
-                  </tr>
-                </table>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body style='margin:0'>
+                                <table style='width: 400px; border: 1px solid black;'>
+                                  <tr>
+                                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>A</td>
+                                  </tr>
+                                </table>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DefaultOptions);
@@ -203,19 +203,19 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     public async Task UnsupportedTable_ReportDiagnosticsAndPreserveSurroundingTextOrder()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body style='margin:0'>
-                <p>before table</p>
-                <table style='width: 400px; border: 1px solid black;'>
-                  <tr>
-                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>merged cell</td>
-                  </tr>
-                </table>
-                <p>after table</p>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body style='margin:0'>
+                                <p>before table</p>
+                                <table style='width: 400px; border: 1px solid black;'>
+                                  <tr>
+                                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>merged cell</td>
+                                  </tr>
+                                </table>
+                                <p>after table</p>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DefaultOptions);
@@ -254,17 +254,17 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
                 Kind = "block",
                 Children =
                 [
-                    new FragmentSnapshot { Kind = "text", Text = "A" },
-                    new FragmentSnapshot
+                    new() { Kind = "text", Text = "A" },
+                    new()
                     {
                         Kind = "block",
                         Children =
                         [
-                            new FragmentSnapshot { Kind = "text", Text = "B" },
-                            new FragmentSnapshot { Kind = "text", Text = "C" }
+                            new() { Kind = "text", Text = "B" },
+                            new() { Kind = "text", Text = "C" }
                         ]
                     },
-                    new FragmentSnapshot { Kind = "text", Text = "D" }
+                    new() { Kind = "text", Text = "D" }
                 ]
             }
         };

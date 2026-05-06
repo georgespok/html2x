@@ -6,17 +6,17 @@ using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 namespace Html2x.LayoutEngine.Pagination;
 
 /// <summary>
-/// Paginates measured layout fragments into page placement results.
+///     Paginates measured layout fragments into page placement results.
 /// </summary>
 internal sealed class LayoutPaginator
 {
     private readonly BlockPaginator _blockPaginator;
 
     /// <summary>
-    /// Initializes a new layout paginator using the current block-boundary placement algorithm.
+    ///     Initializes a new layout paginator using the current block-boundary placement algorithm.
     /// </summary>
     internal LayoutPaginator()
-        : this(new BlockPaginator())
+        : this(new())
     {
     }
 
@@ -26,7 +26,7 @@ internal sealed class LayoutPaginator
     }
 
     /// <summary>
-    /// Paginates measured block fragments into final page layout and audit facts.
+    ///     Paginates measured block fragments into final page layout and audit facts.
     /// </summary>
     /// <param name="blocks">Measured source block fragments in document order.</param>
     /// <param name="options">Page size and margin input facts.</param>
@@ -40,7 +40,7 @@ internal sealed class LayoutPaginator
         ArgumentNullException.ThrowIfNull(options);
 
         var plan = _blockPaginator.Paginate(blocks, options.PageSize, options.Margin, diagnosticsSink);
-        return new PaginationResult
+        return new()
         {
             Layout = CreateLayout(plan),
             AuditPages = CreateAuditPages(plan)
@@ -53,7 +53,7 @@ internal sealed class LayoutPaginator
 
         foreach (var page in plan.Pages)
         {
-            layout.AddPage(new LayoutPage(
+            layout.AddPage(new(
                 page.PageSize,
                 page.Margin,
                 page.Placements.Select(static placement => (LayoutFragment)placement.Fragment).ToList(),
@@ -79,7 +79,7 @@ internal sealed class LayoutPaginator
     {
         var fragment = placement.Fragment;
 
-        return new PaginationPlacementAudit
+        return new()
         {
             FragmentId = placement.FragmentId,
             PageNumber = placement.PageNumber,

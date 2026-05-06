@@ -3,7 +3,6 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
-
 internal sealed class LayoutPageSnapshot
 {
     public int PageNumber { get; init; }

@@ -1,13 +1,13 @@
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
-using Shouldly;
 using Html2x.Text;
+using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 /// <summary>
-/// Verifies text alignment affects run placement and line bounds.
+///     Verifies text alignment affects run placement and line bounds.
 /// </summary>
 public class TextAlignmentLayoutTests
 {
@@ -103,18 +103,13 @@ public class TextAlignmentLayoutTests
         return null;
     }
 
-    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer)
-    {
-        return await Fixture.BuildLayoutAsync(html, textMeasurer, new LayoutBuildSettings
+    private static async Task<HtmlLayout> BuildLayoutAsync(string html, ITextMeasurer textMeasurer) =>
+        await Fixture.BuildLayoutAsync(html, textMeasurer, new()
         {
             PageSize = PaperSizes.A4
         });
-    }
 
-    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
-    {
-        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
-    }
+    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
 
     private static void AssertLineContainsRuns(LineBoxFragment line)
     {

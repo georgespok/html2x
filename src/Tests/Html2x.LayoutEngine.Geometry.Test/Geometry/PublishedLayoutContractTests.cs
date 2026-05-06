@@ -2,7 +2,6 @@ using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Geometry.Box.Publishing;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
@@ -15,11 +14,11 @@ public sealed class PublishedLayoutContractTests
     [Fact]
     public void PublishedBlock_WithGeometry_CarriesImmutableProjectionFacts()
     {
-        var identity = new PublishedBlockIdentity("body/div[1]", "div#content", sourceOrder: 1);
+        var identity = new PublishedBlockIdentity("body/div[1]", "div#content", 1);
         var display = new PublishedDisplayFacts(
             FragmentDisplayRole.Block,
             FormattingContextKind.Block,
-            markerOffset: null);
+            null);
         var style = new VisualStyle { Color = ColorRgba.Black };
         var geometry = CreateGeometry();
 
@@ -28,11 +27,11 @@ public sealed class PublishedLayoutContractTests
             display,
             style,
             geometry,
-            inlineLayout: null,
-            image: null,
-            rule: null,
-            table: null,
-            children: []);
+            null,
+            null,
+            null,
+            null,
+            []);
 
         block.Identity.ShouldBe(identity);
         block.Display.ShouldBe(display);
@@ -52,7 +51,7 @@ public sealed class PublishedLayoutContractTests
 
         var block = CreateBlock(
             "body/hr[1]",
-            sourceOrder: 1,
+            1,
             rule: rule);
 
         block.Rule.ShouldBe(rule);
@@ -64,37 +63,37 @@ public sealed class PublishedLayoutContractTests
     public void PublishedBlock_WithInlineLayout_PreservesPublishedInlineFacts()
     {
         var run = CreateTextRun();
-        var source = new PublishedInlineSource("body/p[1]/span[1]", "span.note", sourceOrder: 2);
-        var inlineObjectContent = CreateBlock("body/p[1]/img[1]", sourceOrder: 3);
+        var source = new PublishedInlineSource("body/p[1]/span[1]", "span.note", 2);
+        var inlineObjectContent = CreateBlock("body/p[1]/img[1]", 3);
         var textItem = new PublishedInlineTextItem(
-            order: 0,
-            rect: new RectPt(1f, 2f, 30f, 10f),
-            runs: [run],
-            sources: [source]);
+            0,
+            new(1f, 2f, 30f, 10f),
+            [run],
+            [source]);
         var objectItem = new PublishedInlineObjectItem(
-            order: 1,
-            rect: new RectPt(35f, 2f, 12f, 10f),
+            1,
+            new(35f, 2f, 12f, 10f),
             inlineObjectContent);
         var line = new PublishedInlineLine(
-            lineIndex: 0,
-            rect: new RectPt(0f, 0f, 100f, 14f),
-            occupiedRect: new RectPt(1f, 2f, 46f, 10f),
-            baselineY: 11f,
-            lineHeight: 14f,
-            textAlign: "left",
-            items: [textItem, objectItem]);
+            0,
+            new(0f, 0f, 100f, 14f),
+            new(1f, 2f, 46f, 10f),
+            11f,
+            14f,
+            "left",
+            [textItem, objectItem]);
         var segment = new PublishedInlineFlowSegment(
-            lines: [line],
-            top: 0f,
-            height: 14f);
+            [line],
+            0f,
+            14f);
         var inlineLayout = new PublishedInlineLayout(
-            segments: [segment],
-            totalHeight: 14f,
-            maxLineWidth: 46f);
+            [segment],
+            14f,
+            46f);
 
         var block = CreateBlock(
             "body/p[1]",
-            sourceOrder: 1,
+            1,
             inlineLayout: inlineLayout);
 
         block.InlineLayout.ShouldBe(inlineLayout);
@@ -111,25 +110,25 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
-    public void PublishedBlockMapper_CreateBlock_MapsResolvedFactsAndProvidedIdentity()
+    public void PublishedBlockFacts_CreateBlock_MapsResolvedFactsAndProvidedIdentity()
     {
         var source = new ImageBox(BoxRole.Block)
         {
             Src = "images/logo.png",
-            AuthoredSizePx = new SizePx(40d, 20d),
-            IntrinsicSizePx = new SizePx(80d, 40d),
+            AuthoredSizePx = new(40d, 20d),
+            IntrinsicSizePx = new(80d, 40d),
             Status = ImageLoadStatus.Missing,
-            Style = new ComputedStyle { FontSizePt = 14f, WidthPt = 42f }
+            Style = new() { FontSizePt = 14f, WidthPt = 42f }
         };
-        var identity = PublishedBlockMapper.CreateIdentity(source, sourceOrder: 7);
+        var identity = PublishedBlockFacts.CreateIdentity(source, 7);
         var geometry = CreateGeometry();
 
-        var block = PublishedBlockMapper.CreateBlock(
+        var block = PublishedBlockFacts.CreateBlock(
             source,
             identity,
             geometry,
-            inlineLayout: null,
-            children: []);
+            null,
+            []);
 
         block.Identity.ShouldBe(identity);
         block.Identity.SourceOrder.ShouldBe(7);
@@ -145,15 +144,15 @@ public sealed class PublishedLayoutContractTests
     public void PublishedBlockIdentity_KeepsNodePathAndSourceIdentitySeparate()
     {
         var sourceIdentity = CreateSourceIdentity(
-            nodeId: 5,
-            sourcePath: "body[0]/div[1]",
-            elementIdentity: "div#content",
-            sourceOrder: 12);
+            5,
+            "body[0]/div[1]",
+            "div#content",
+            12);
 
         var identity = new PublishedBlockIdentity(
             "block/block[1]",
             "div#content",
-            sourceOrder: 3,
+            3,
             sourceIdentity);
 
         identity.NodePath.ShouldBe("block/block[1]");
@@ -165,13 +164,13 @@ public sealed class PublishedLayoutContractTests
     }
 
     [Fact]
-    public void PublishedBlockMapper_CreateIdentity_UsesBoxElementIdentity()
+    public void PublishedBlockFacts_CreateIdentity_UsesBoxElementIdentity()
     {
         var sourceIdentity = CreateSourceIdentity(
-            nodeId: 6,
-            sourcePath: "body[0]/section[0]",
-            elementIdentity: "section#from-source",
-            sourceOrder: 13);
+            6,
+            "body[0]/section[0]",
+            "section#from-source",
+            13);
         var source = new BlockBox(BoxRole.Block)
         {
             Element = StyledElementFacts.Create(
@@ -180,7 +179,7 @@ public sealed class PublishedLayoutContractTests
             SourceIdentity = sourceIdentity
         };
 
-        var identity = PublishedBlockMapper.CreateIdentity(source, sourceOrder: 9);
+        var identity = PublishedBlockFacts.CreateIdentity(source, 9);
 
         identity.NodePath.ShouldBe("section");
         identity.SourceOrder.ShouldBe(9);
@@ -192,17 +191,17 @@ public sealed class PublishedLayoutContractTests
     public void PublishedInlineSource_CarriesSourceIdentity()
     {
         var sourceIdentity = CreateSourceIdentity(
-            nodeId: 7,
-            sourcePath: "body[0]/p[0]/span[0]",
-            elementIdentity: "span.note",
-            sourceOrder: 14);
+            7,
+            "body[0]/p[0]/span[0]",
+            "span.note",
+            14);
         var source = new InlineBox(BoxRole.Inline)
         {
             Element = StyledElementFacts.Create("span"),
             SourceIdentity = sourceIdentity
         };
 
-        var inlineSource = PublishedBlockMapper.CreateInlineSource(source, sourceOrder: 4);
+        var inlineSource = PublishedBlockFacts.CreateInlineSource(source, 4);
 
         inlineSource.NodePath.ShouldBe("span");
         inlineSource.SourceOrder.ShouldBe(4);
@@ -213,11 +212,11 @@ public sealed class PublishedLayoutContractTests
     [Fact]
     public void PublishedCollections_WithMutableInput_CopyValuesAndHideMutableBacking()
     {
-        var child = CreateBlock("body/div[1]", sourceOrder: 1);
+        var child = CreateBlock("body/div[1]", 1);
         var childSource = new List<PublishedBlock> { child };
-        var block = CreateBlock("body/div[0]", sourceOrder: 0, childSource);
+        var block = CreateBlock("body/div[0]", 0, childSource);
 
-        var page = new PublishedPage(PaperSizes.A4, new Spacing(10f, 20f, 30f, 40f));
+        var page = new PublishedPage(PaperSizes.A4, new(10f, 20f, 30f, 40f));
         var blockSource = new List<PublishedBlock> { block };
         var tree = new PublishedLayoutTree(page, blockSource);
 
@@ -256,7 +255,7 @@ public sealed class PublishedLayoutContractTests
 
         var exception = Should.Throw<ArgumentException>(() => CreateBlock(
             "body/div[0]",
-            sourceOrder: 0,
+            0,
             children));
 
         exception.ParamName.ShouldBe("block");
@@ -269,8 +268,8 @@ public sealed class PublishedLayoutContractTests
     {
         var exception = Should.Throw<ArgumentException>(() => new PublishedBlockIdentity(
             nodePath,
-            elementIdentity: null,
-            sourceOrder: 0));
+            null,
+            0));
 
         exception.ParamName.ShouldBe("nodePath");
     }
@@ -293,45 +292,39 @@ public sealed class PublishedLayoutContractTests
         int sourceOrder,
         IReadOnlyList<PublishedBlock>? children = null,
         PublishedRuleFacts? rule = null,
-        PublishedInlineLayout? inlineLayout = null)
-    {
-        return new PublishedBlock(
-            new PublishedBlockIdentity(nodePath, elementIdentity: null, sourceOrder),
-            new PublishedDisplayFacts(
+        PublishedInlineLayout? inlineLayout = null) =>
+        new(
+            new(nodePath, null, sourceOrder),
+            new(
                 FragmentDisplayRole.Block,
                 FormattingContextKind.Block,
-                markerOffset: null),
-            new VisualStyle(),
+                null),
+            new(),
             CreateGeometry(),
-            inlineLayout: inlineLayout,
-            image: null,
-            rule: rule,
-            table: null,
+            inlineLayout,
+            null,
+            rule,
+            null,
             children ?? []);
-    }
 
-    private static UsedGeometry CreateGeometry()
-    {
-        return UsedGeometryCalculator.FromBorderBox(
-            x: 1f,
-            y: 2f,
-            width: 30f,
-            height: 40f,
-            padding: new Spacing(3f, 4f, 5f, 6f),
-            border: new Spacing(1f, 2f, 3f, 4f));
-    }
+    private static UsedGeometry CreateGeometry() =>
+        UsedGeometryRules.FromBorderBox(
+            1f,
+            2f,
+            30f,
+            40f,
+            new(3f, 4f, 5f, 6f),
+            new(1f, 2f, 3f, 4f));
 
-    private static TextRun CreateTextRun()
-    {
-        return new TextRun(
+    private static TextRun CreateTextRun() =>
+        new(
             "alpha",
-            new FontKey("Test", FontWeight.W400, FontStyle.Normal),
+            new("Test", FontWeight.W400, FontStyle.Normal),
             12f,
-            new PointPt(1f, 11f),
+            new(1f, 11f),
             30f,
             8f,
             3f);
-    }
 
     private static IEnumerable<TextRun> EnumeratePublishedTextRuns(IEnumerable<PublishedBlock> blocks)
     {
@@ -365,14 +358,12 @@ public sealed class PublishedLayoutContractTests
         int nodeId,
         string sourcePath,
         string elementIdentity,
-        int sourceOrder)
-    {
-        return new GeometrySourceIdentity(
+        int sourceOrder) =>
+        new(
             new StyleNodeId(nodeId),
             null,
             sourcePath,
             elementIdentity,
             sourceOrder,
             GeometryGeneratedSourceKind.None);
-    }
 }

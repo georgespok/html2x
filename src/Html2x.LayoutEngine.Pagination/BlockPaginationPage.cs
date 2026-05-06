@@ -4,7 +4,6 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Pagination;
 
-
 internal sealed class BlockPaginationPage
 {
     public required int PageNumber { get; init; }

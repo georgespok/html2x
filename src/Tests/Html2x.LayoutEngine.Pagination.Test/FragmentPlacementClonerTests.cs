@@ -1,5 +1,4 @@
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
@@ -17,7 +16,7 @@ public sealed class FragmentPlacementClonerTests
         {
             FragmentId = 1,
             PageNumber = 1,
-            Rect = new RectPt(10f, 20f, 100f, 30f),
+            Rect = new(10f, 20f, 100f, 30f),
             DisplayRole = FragmentDisplayRole.Block,
             FormattingContext = FormattingContextKind.Block,
             MarkerOffset = 4f
@@ -28,12 +27,12 @@ public sealed class FragmentPlacementClonerTests
 
         moved.ShouldNotBeSameAs(source);
         moved.PageNumber.ShouldBe(3);
-        moved.Rect.ShouldBe(new RectPt(15f, 12f, 100f, 30f));
+        moved.Rect.ShouldBe(new(15f, 12f, 100f, 30f));
         moved.DisplayRole.ShouldBe(source.DisplayRole);
         moved.FormattingContext.ShouldBe(source.FormattingContext);
         moved.MarkerOffset.ShouldBe(source.MarkerOffset);
         movedLine.ShouldNotBeSameAs(line);
-        movedLine.Rect.ShouldBe(new RectPt(17f, 16f, 50f, 12f));
+        movedLine.Rect.ShouldBe(new(17f, 16f, 50f, 12f));
     }
 
     [Fact]
@@ -45,11 +44,11 @@ public sealed class FragmentPlacementClonerTests
             .ShouldBeOfType<LineBoxFragment>();
 
         moved.PageNumber.ShouldBe(2);
-        moved.Rect.ShouldBe(new RectPt(15f, 12f, 50f, 12f));
+        moved.Rect.ShouldBe(new(15f, 12f, 50f, 12f));
         moved.BaselineY.ShouldBe(22f);
         moved.LineHeight.ShouldBe(source.LineHeight);
-        moved.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointPt(16f, 22f));
-        source.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new PointPt(11f, 30f));
+        moved.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new(16f, 22f));
+        source.Runs.ShouldHaveSingleItem().Origin.ShouldBe(new(11f, 30f));
     }
 
     [Fact]
@@ -59,11 +58,11 @@ public sealed class FragmentPlacementClonerTests
         {
             FragmentId = 1,
             PageNumber = 1,
-            Rect = new RectPt(10f, 20f, 40f, 30f),
+            Rect = new(10f, 20f, 40f, 30f),
             Src = "image.png",
-            ContentRect = new RectPt(12f, 23f, 36f, 24f),
-            AuthoredSizePx = new SizePx(40d, 30d),
-            IntrinsicSizePx = new SizePx(80d, 60d),
+            ContentRect = new(12f, 23f, 36f, 24f),
+            AuthoredSizePx = new(40d, 30d),
+            IntrinsicSizePx = new(80d, 60d),
             Status = ImageLoadStatus.OutOfScope
         };
 
@@ -71,8 +70,8 @@ public sealed class FragmentPlacementClonerTests
             .ShouldBeOfType<ImageFragment>();
 
         moved.PageNumber.ShouldBe(2);
-        moved.Rect.ShouldBe(new RectPt(5f, 8f, 40f, 30f));
-        moved.ContentRect.ShouldBe(new RectPt(7f, 11f, 36f, 24f));
+        moved.Rect.ShouldBe(new(5f, 8f, 40f, 30f));
+        moved.ContentRect.ShouldBe(new(7f, 11f, 36f, 24f));
         moved.Src.ShouldBe(source.Src);
         moved.AuthoredSizePx.ShouldBe(source.AuthoredSizePx);
         moved.IntrinsicSizePx.ShouldBe(source.IntrinsicSizePx);
@@ -88,20 +87,20 @@ public sealed class FragmentPlacementClonerTests
         var cell = new TableCellFragment([line])
         {
             FragmentId = 3,
-            Rect = new RectPt(14f, 26f, 50f, 20f),
+            Rect = new(14f, 26f, 50f, 20f),
             ColumnIndex = 2,
             IsHeader = true
         };
         var row = new TableRowFragment([cell])
         {
             FragmentId = 2,
-            Rect = new RectPt(12f, 24f, 80f, 24f),
+            Rect = new(12f, 24f, 80f, 24f),
             RowIndex = 5
         };
         var source = new TableFragment([row])
         {
             FragmentId = 1,
-            Rect = new RectPt(10f, 20f, 100f, 30f),
+            Rect = new(10f, 20f, 100f, 30f),
             DerivedColumnCount = 3
         };
 
@@ -111,69 +110,70 @@ public sealed class FragmentPlacementClonerTests
         var movedCell = movedRow.Cells.ShouldHaveSingleItem();
         var movedLine = movedCell.Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>();
 
-        moved.Rect.ShouldBe(new RectPt(5f, 8f, 100f, 30f));
+        moved.Rect.ShouldBe(new(5f, 8f, 100f, 30f));
         moved.DerivedColumnCount.ShouldBe(source.DerivedColumnCount);
-        movedRow.Rect.ShouldBe(new RectPt(7f, 12f, 80f, 24f));
+        movedRow.Rect.ShouldBe(new(7f, 12f, 80f, 24f));
         movedRow.RowIndex.ShouldBe(row.RowIndex);
-        movedCell.Rect.ShouldBe(new RectPt(9f, 14f, 50f, 20f));
+        movedCell.Rect.ShouldBe(new(9f, 14f, 50f, 20f));
         movedCell.ColumnIndex.ShouldBe(cell.ColumnIndex);
         movedCell.IsHeader.ShouldBeTrue();
-        movedLine.Rect.ShouldBe(new RectPt(10f, 16f, 50f, 12f));
+        movedLine.Rect.ShouldBe(new(10f, 16f, 50f, 12f));
     }
 
     [Fact]
     public void Paginate_TableFragmentMovesToNextPage_ClonesTableSubtree()
     {
         var table = new TableFragment([
-            new TableRowFragment([
-                new TableCellFragment([
+            new([
+                new([
                     new LineBoxFragment
                     {
                         FragmentId = 1001,
-                        Rect = new RectPt(0f, 665f, 20f, 10f),
+                        Rect = new(0f, 665f, 20f, 10f),
                         Runs = []
                     }
                 ])
                 {
                     FragmentId = 1000,
-                    Rect = new RectPt(0f, 660f, 50f, 20f),
+                    Rect = new(0f, 660f, 50f, 20f),
                     ColumnIndex = 0
                 }
             ])
             {
                 FragmentId = 100,
-                Rect = new RectPt(0f, 660f, 100f, 20f),
+                Rect = new(0f, 660f, 100f, 20f),
                 RowIndex = 0
             }
         ])
         {
             FragmentId = 10,
-            Rect = new RectPt(0f, 650f, 100f, 40f),
+            Rect = new(0f, 650f, 100f, 40f),
             DerivedColumnCount = 1
         };
 
         var result = Paginate(
             [CreateBlock(1, 10f, 70f), table],
-            new SizePt(200f, 100f),
-            new Spacing(10f, 10f, 10f, 10f));
+            new(200f, 100f),
+            new(10f, 10f, 10f, 10f));
         var movedTable = result.Layout.Pages[1].Children.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
 
         movedTable.PageNumber.ShouldBe(2);
         movedTable.Rect.Y.ShouldBe(10f);
         movedTable.Rows.ShouldHaveSingleItem().Rect.Y.ShouldBe(20f);
         movedTable.Rows[0].Cells.ShouldHaveSingleItem().Rect.Y.ShouldBe(20f);
-        movedTable.Rows[0].Cells[0].Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>().Rect.Y.ShouldBe(25f);
+        movedTable.Rows[0].Cells[0].Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>().Rect.Y
+            .ShouldBe(25f);
     }
 
     [Fact]
     public void Paginate_MetadataRichFragments_PreserveAuthoritativeMetadata()
     {
         var table = new TableFragment([
-            new TableRowFragment([
-                new TableCellFragment
+            new([
+                new()
                 {
                     FragmentId = 1000,
-                    Rect = new RectPt(0f, 660f, 50f, 20f),
+                    Rect = new(0f, 660f, 50f, 20f),
                     DisplayRole = FragmentDisplayRole.TableCell,
                     FormattingContext = FormattingContextKind.Block,
                     MarkerOffset = 3f,
@@ -183,7 +183,7 @@ public sealed class FragmentPlacementClonerTests
             ])
             {
                 FragmentId = 100,
-                Rect = new RectPt(0f, 660f, 100f, 20f),
+                Rect = new(0f, 660f, 100f, 20f),
                 DisplayRole = FragmentDisplayRole.TableRow,
                 FormattingContext = FormattingContextKind.Block,
                 MarkerOffset = 2f,
@@ -192,7 +192,7 @@ public sealed class FragmentPlacementClonerTests
         ])
         {
             FragmentId = 10,
-            Rect = new RectPt(0f, 650f, 100f, 40f),
+            Rect = new(0f, 650f, 100f, 40f),
             DisplayRole = FragmentDisplayRole.Table,
             FormattingContext = FormattingContextKind.Block,
             MarkerOffset = 1f,
@@ -201,8 +201,8 @@ public sealed class FragmentPlacementClonerTests
 
         var result = Paginate(
             [CreateBlock(1, 10f, 70f), table],
-            new SizePt(200f, 100f),
-            new Spacing(10f, 10f, 10f, 10f));
+            new(200f, 100f),
+            new(10f, 10f, 10f, 10f));
         var movedTable = result.Layout.Pages[1].Children.ShouldHaveSingleItem().ShouldBeOfType<TableFragment>();
         var movedRow = movedTable.Rows.ShouldHaveSingleItem();
         var movedCell = movedRow.Cells.ShouldHaveSingleItem();
@@ -229,16 +229,16 @@ public sealed class FragmentPlacementClonerTests
         {
             FragmentId = 201,
             PageNumber = 1,
-            Rect = new RectPt(5f, 655f, 60f, 14f),
+            Rect = new(5f, 655f, 60f, 14f),
             BaselineY = 667f,
             LineHeight = 14f,
             Runs =
             [
-                new TextRun(
+                new(
                     "move",
-                    new FontKey("Test", FontWeight.W400, FontStyle.Normal),
+                    new("Test", FontWeight.W400, FontStyle.Normal),
                     12f,
-                    new PointPt(7f, 665f),
+                    new(7f, 665f),
                     35f,
                     9f,
                     3f)
@@ -248,8 +248,8 @@ public sealed class FragmentPlacementClonerTests
         {
             FragmentId = 2,
             PageNumber = 1,
-            Rect = new RectPt(0f, 650f, 100f, 40f),
-            Style = new VisualStyle()
+            Rect = new(0f, 650f, 100f, 40f),
+            Style = new()
         };
         var originalBlockRect = source.Rect;
         var originalLineRect = line.Rect;
@@ -258,8 +258,8 @@ public sealed class FragmentPlacementClonerTests
 
         var result = Paginate(
             [CreateBlock(1, 10f, 70f), source],
-            new SizePt(200f, 100f),
-            new Spacing(10f, 10f, 10f, 10f));
+            new(200f, 100f),
+            new(10f, 10f, 10f, 10f));
 
         var moved = result.Layout.Pages[1].Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
         var movedLine = moved.Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>();
@@ -285,72 +285,63 @@ public sealed class FragmentPlacementClonerTests
                 new CustomFragment
                 {
                     FragmentId = 200,
-                    Rect = new RectPt(0f, 655f, 50f, 10f)
+                    Rect = new(0f, 655f, 50f, 10f)
                 }
             ])
             {
                 FragmentId = 2,
-                Rect = new RectPt(0f, 650f, 100f, 40f)
+                Rect = new(0f, 650f, 100f, 40f)
             }
         };
 
         var exception = Should.Throw<NotSupportedException>(() =>
-            Paginate(blocks, new SizePt(200f, 100f), new Spacing(10f, 10f, 10f, 10f)));
+            Paginate(blocks, new(200f, 100f), new(10f, 10f, 10f, 10f)));
 
         exception.Message.ShouldContain(nameof(CustomFragment));
         exception.Message.ShouldContain("explicit clone branch");
     }
 
-    private static FragmentPlacementCloner CreateCloner()
-    {
-        return new FragmentPlacementCloner();
-    }
+    private static FragmentPlacementCloner CreateCloner() => new();
 
     private static PaginationResult Paginate(
         IReadOnlyList<BlockFragment> blocks,
         SizePt pageSize,
-        Spacing margins)
-    {
-        return new LayoutPaginator().Paginate(
+        Spacing margins) =>
+        new LayoutPaginator().Paginate(
             blocks,
-            new PaginationOptions
+            new()
             {
                 PageSize = pageSize,
                 Margin = margins
             });
-    }
 
-    private static BlockFragment CreateBlock(int id, float y, float height)
-    {
-        return new BlockFragment
+    private static BlockFragment CreateBlock(int id, float y, float height) =>
+        new()
         {
             FragmentId = id,
-            Rect = new RectPt(0f, y, 100f, height)
+            Rect = new(0f, y, 100f, height)
         };
-    }
 
-    private static LineBoxFragment CreateLine(int id, float x, float y)
-    {
-        return new LineBoxFragment
+    private static LineBoxFragment CreateLine(int id, float x, float y) =>
+        new()
         {
             FragmentId = id,
             PageNumber = 1,
-            Rect = new RectPt(x, y, 50f, 12f),
+            Rect = new(x, y, 50f, 12f),
             BaselineY = y + 10f,
             LineHeight = 12f,
             Runs =
             [
-                new TextRun(
+                new(
                     "text",
-                    new FontKey("Test", FontWeight.W400, FontStyle.Normal),
+                    new("Test", FontWeight.W400, FontStyle.Normal),
                     12f,
-                    new PointPt(x + 1f, y + 10f),
+                    new(x + 1f, y + 10f),
                     20f,
                     8f,
                     3f)
             ]
         };
-    }
 
     private sealed class CustomFragment : Fragment
     {

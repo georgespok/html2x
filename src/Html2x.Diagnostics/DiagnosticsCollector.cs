@@ -22,10 +22,7 @@ public sealed class DiagnosticsCollector(DateTimeOffset startTime) : IDiagnostic
         }
     }
 
-    public DiagnosticsReport ToReport()
-    {
-        return ToReport(DateTimeOffset.UtcNow);
-    }
+    public DiagnosticsReport ToReport() => ToReport(DateTimeOffset.UtcNow);
 
     public DiagnosticsReport ToReport(DateTimeOffset endTime)
     {
@@ -35,6 +32,6 @@ public sealed class DiagnosticsCollector(DateTimeOffset startTime) : IDiagnostic
             records = _records.ToArray();
         }
 
-        return new DiagnosticsReport(startTime, endTime, records);
+        return new(startTime, endTime, records);
     }
 }

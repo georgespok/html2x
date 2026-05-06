@@ -6,37 +6,32 @@ internal sealed record StyleContentNode(
     string? Text,
     StyleNode? Element)
 {
-    public static StyleContentNode ForElement(StyleNode element)
-    {
-        return ForElement(StyleContentIdentity.Unspecified, element);
-    }
+    public static StyleContentNode LineBreak { get; } = ForLineBreak(StyleContentIdentity.Unspecified);
+
+    public static StyleContentNode ForElement(StyleNode element) =>
+        ForElement(StyleContentIdentity.Unspecified, element);
 
     public static StyleContentNode ForElement(StyleContentIdentity identity, StyleNode element)
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(identity);
 
-        return new StyleContentNode(identity, StyleContentNodeKind.Element, null, element);
+        return new(identity, StyleContentNodeKind.Element, null, element);
     }
 
-    public static StyleContentNode ForText(string text)
-    {
-        return ForText(StyleContentIdentity.Unspecified, text);
-    }
+    public static StyleContentNode ForText(string text) => ForText(StyleContentIdentity.Unspecified, text);
 
     public static StyleContentNode ForText(StyleContentIdentity identity, string text)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        return new StyleContentNode(identity, StyleContentNodeKind.Text, text, null);
+        return new(identity, StyleContentNodeKind.Text, text, null);
     }
 
     public static StyleContentNode ForLineBreak(StyleContentIdentity identity)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
-        return new StyleContentNode(identity, StyleContentNodeKind.LineBreak, null, null);
+        return new(identity, StyleContentNodeKind.LineBreak, null, null);
     }
-
-    public static StyleContentNode LineBreak { get; } = ForLineBreak(StyleContentIdentity.Unspecified);
 }

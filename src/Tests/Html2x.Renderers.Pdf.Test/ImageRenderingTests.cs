@@ -2,8 +2,6 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 
@@ -12,19 +10,24 @@ namespace Html2x.Renderers.Pdf.Test;
 [Trait("Category", "Integration")]
 public class ImageRenderingTests
 {
+    private const string TwoByOnePngDataUri = $"data:image/png;base64,{TwoByOnePngBase64}";
+
+    private const string TwoByOnePngBase64 =
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
+
     [Fact]
     public async Task Render_Images_ReportStatusesAndRenderedSizes()
     {
         // arrange: construct layout with success, missing, and oversize cases
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(24, 24, 24, 24),
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
             new List<Fragment>
             {
-                CreateImageFragment(24, 60, 120, 120, status: ImageLoadStatus.Ok),
-                CreateImageFragment(24, 120, 80, 80, status: ImageLoadStatus.Missing),
-                CreateImageFragment(24, 180, 140, 70, status: ImageLoadStatus.Oversize)
+                CreateImageFragment(24, 60, 120, 120, ImageLoadStatus.Ok),
+                CreateImageFragment(24, 120, 80, 80, ImageLoadStatus.Missing),
+                CreateImageFragment(24, 180, 140, 70, ImageLoadStatus.Oversize)
             }));
 
         // act
@@ -54,9 +57,9 @@ public class ImageRenderingTests
     public async Task Render_ImageDiagnostics_UseCanonicalEventAndContext()
     {
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(24, 24, 24, 24),
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
             new List<Fragment>
             {
                 CreateImageFragment(24, 60, 120, 80, ImageLoadStatus.Missing, src: "missing.png")
@@ -87,12 +90,12 @@ public class ImageRenderingTests
         ColorRgba borderColor,
         BorderLineStyle lineStyle)
     {
-        var borders = BorderEdges.Uniform(new BorderSide(borderWidth, borderColor, lineStyle));
+        var borders = BorderEdges.Uniform(new(borderWidth, borderColor, lineStyle));
 
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(0, 0, 0, 0),
+        layout.AddPage(new(
+            new(612, 792),
+            new(0, 0, 0, 0),
             new List<Fragment>
             {
                 CreateImageFragment(24, 40, 64, 64, status, borders)
@@ -117,12 +120,12 @@ public class ImageRenderingTests
     [Fact]
     public async Task Render_ImageWithNoBorder_ReportNoBorders()
     {
-        var borders = BorderEdges.Uniform(new BorderSide(0f, ColorRgba.Black, BorderLineStyle.None));
+        var borders = BorderEdges.Uniform(new(0f, ColorRgba.Black, BorderLineStyle.None));
 
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(0, 0, 0, 0),
+        layout.AddPage(new(
+            new(612, 792),
+            new(0, 0, 0, 0),
             new List<Fragment>
             {
                 CreateImageFragment(48, 72, 64, 64, ImageLoadStatus.Ok, borders)
@@ -152,9 +155,9 @@ public class ImageRenderingTests
         string expectedStatus)
     {
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(612, 792),
-            new Spacing(0, 0, 0, 0),
+        layout.AddPage(new(
+            new(612, 792),
+            new(0, 0, 0, 0),
             new List<Fragment>
             {
                 CreateImageFragmentWithLoadStatus(loadStatus)
@@ -179,9 +182,9 @@ public class ImageRenderingTests
             await File.WriteAllBytesAsync(Path.Combine(baseDirectory.FullName, "decode.png"), [1]);
 
             var layout = new HtmlLayout();
-            layout.AddPage(new LayoutPage(
-                new SizePt(612, 792),
-                new Spacing(0, 0, 0, 0),
+            layout.AddPage(new(
+                new(612, 792),
+                new(0, 0, 0, 0),
                 new List<Fragment>
                 {
                     CreateImageFragment(24, 40, 16, 16, ImageLoadStatus.Ok, src: "missing.png"),
@@ -205,7 +208,7 @@ public class ImageRenderingTests
         }
         finally
         {
-            rootDirectory.Delete(recursive: true);
+            rootDirectory.Delete(true);
         }
     }
 
@@ -218,35 +221,34 @@ public class ImageRenderingTests
         BorderEdges? borders = null,
         string? src = null)
     {
-        const string dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
+        const string dataUri =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 
-        return new ImageFragment
+        return new()
         {
             Src = src ?? dataUri,
-            AuthoredSizePx = new SizePx(width, height),
-            IntrinsicSizePx = new SizePx(width, height),
-            Rect = new RectPt(x, y, width, height),
-            ContentRect = new RectPt(x, y, width, height),
-            Style = new VisualStyle(Borders: borders),
+            AuthoredSizePx = new(width, height),
+            IntrinsicSizePx = new(width, height),
+            Rect = new(x, y, width, height),
+            ContentRect = new(x, y, width, height),
+            Style = new(Borders: borders),
             ZOrder = 0,
             Status = status
         };
     }
 
-    private static ImageFragment CreateImageFragmentWithLoadStatus(ImageLoadStatus status)
-    {
-        return new ImageFragment
+    private static ImageFragment CreateImageFragmentWithLoadStatus(ImageLoadStatus status) =>
+        new()
         {
             Src = TwoByOnePngDataUri,
-            AuthoredSizePx = new SizePx(16d, 16d),
-            IntrinsicSizePx = new SizePx(16d, 16d),
-            Rect = new RectPt(24, 40, 16, 16),
-            ContentRect = new RectPt(24, 40, 16, 16),
-            Style = new VisualStyle(),
+            AuthoredSizePx = new(16d, 16d),
+            IntrinsicSizePx = new(16d, 16d),
+            Rect = new(24, 40, 16, 16),
+            ContentRect = new(24, 40, 16, 16),
+            Style = new(),
             ZOrder = 0,
             Status = status
         };
-    }
 
     public static IEnumerable<object[]> ImageBorderCases()
     {
@@ -311,9 +313,12 @@ public class ImageRenderingTests
 
         var renderer = new PdfRenderer();
 
-        var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnosticsSink: diagnostics);
+        var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnostics);
         return (bytes, diagnostics.Records);
     }
+
+    private static byte[] TwoByOnePngBytes() =>
+        Convert.FromBase64String(TwoByOnePngBase64);
 
     private sealed class RecordingDiagnosticsSink : IDiagnosticsSink
     {
@@ -326,12 +331,4 @@ public class ImageRenderingTests
             _records.Add(record);
         }
     }
-
-    private static byte[] TwoByOnePngBytes() =>
-        Convert.FromBase64String(TwoByOnePngBase64);
-
-    private const string TwoByOnePngDataUri = $"data:image/png;base64,{TwoByOnePngBase64}";
-
-    private const string TwoByOnePngBase64 =
-        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 }

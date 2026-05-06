@@ -15,8 +15,8 @@ public class FragmentIdTests
         var nestedSegment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "Nested"));
         var nestedInlineLayout = PublishedLayoutTestBuilder.InlineLayout(nestedSegment);
         var nestedBlock = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/div/p",
-            sourceOrder: 1,
+            "body/div/p",
+            1,
             inlineLayout: nestedInlineLayout,
             flow:
             [
@@ -25,8 +25,8 @@ public class FragmentIdTests
         var segment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "Hello"));
         var inlineLayout = PublishedLayoutTestBuilder.InlineLayout(segment);
         var root = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/div",
-            sourceOrder: 0,
+            "body/div",
+            0,
             inlineLayout: inlineLayout,
             children: [nestedBlock],
             flow:
@@ -66,5 +66,4 @@ public class FragmentIdTests
             }
         }
     }
-
 }

@@ -8,8 +8,8 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Pagination;
 
 /// <summary>
-/// Creates a paged view of already measured block fragments.
-/// Places whole block fragments across pages and translates fragment coordinates by cloning.
+///     Creates a paged view of already measured block fragments.
+///     Places whole block fragments across pages and translates fragment coordinates by cloning.
 /// </summary>
 internal sealed class BlockPaginator
 {
@@ -17,7 +17,7 @@ internal sealed class BlockPaginator
     private readonly FragmentPlacementCloner _fragmentCloner;
 
     internal BlockPaginator()
-        : this(new FragmentPlacementCloner())
+        : this(new())
     {
     }
 
@@ -116,9 +116,8 @@ internal sealed class BlockPaginator
         SizePt pageSize,
         Spacing margins,
         RectPt contentArea,
-        IReadOnlyList<BlockFragmentPlacement> placements)
-    {
-        return new BlockPaginationPage
+        IReadOnlyList<BlockFragmentPlacement> placements) =>
+        new()
         {
             PageNumber = pageNumber,
             PageSize = pageSize,
@@ -126,62 +125,41 @@ internal sealed class BlockPaginator
             ContentArea = contentArea,
             Placements = placements
         };
-    }
 
-    private static bool FitsInRemainingSpace(float blockHeight, float remainingSpace)
-    {
-        return blockHeight - remainingSpace <= FitEpsilon;
-    }
+    private static bool FitsInRemainingSpace(float blockHeight, float remainingSpace) =>
+        blockHeight - remainingSpace <= FitEpsilon;
 
-    private static IReadOnlyList<BlockFragment> ToDeterministicOrder(IReadOnlyList<BlockFragment> blocks)
-    {
+    private static IReadOnlyList<BlockFragment> ToDeterministicOrder(IReadOnlyList<BlockFragment> blocks) =>
         // Materialize once to guarantee stable iteration across repeated runs.
-        return blocks.ToArray();
-    }
+        blocks.ToArray();
 
-    private static bool IsOversizedBlock(float blockHeight, float pageContentHeight)
-    {
-        return blockHeight > pageContentHeight;
-    }
+    private static bool IsOversizedBlock(float blockHeight, float pageContentHeight) => blockHeight > pageContentHeight;
 
-    private static float GetRemainingSpace(float contentBottom, float cursorY)
-    {
-        return contentBottom - cursorY;
-    }
+    private static float GetRemainingSpace(float contentBottom, float cursorY) => contentBottom - cursorY;
 
     private BlockFragment CreatePlacedFragment(
         BlockFragment source,
         int pageNumber,
-        float placementY)
-    {
-        return _fragmentCloner.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
-    }
+        float placementY) =>
+        _fragmentCloner.CloneBlockWithPlacement(source, pageNumber, source.Rect.X, placementY);
 
-    private static float ResolvePlacementY(BlockFragment block, int pageNumber, float cursorY)
-    {
-        return pageNumber > 1
+    private static float ResolvePlacementY(BlockFragment block, int pageNumber, float cursorY) =>
+        pageNumber > 1
             ? GetNextPagePlacementY(cursorY)
             : GetCurrentPagePlacementY(block, cursorY);
-    }
 
-    private static float GetCurrentPagePlacementY(BlockFragment block, float cursorY)
-    {
-        return Math.Max(cursorY, block.Rect.Y);
-    }
+    private static float GetCurrentPagePlacementY(BlockFragment block, float cursorY) =>
+        Math.Max(cursorY, block.Rect.Y);
 
-    private static float GetNextPagePlacementY(float cursorY)
-    {
-        return cursorY;
-    }
+    private static float GetNextPagePlacementY(float cursorY) => cursorY;
 
     private static BlockFragmentPlacement CreatePlacement(
         BlockFragment fragment,
         int pageNumber,
         PaginationDecisionKind decisionKind,
         bool isOversized,
-        int orderIndex)
-    {
-        return new BlockFragmentPlacement
+        int orderIndex) =>
+        new()
         {
             FragmentId = fragment.FragmentId,
             PageNumber = pageNumber,
@@ -190,20 +168,15 @@ internal sealed class BlockPaginator
             OrderIndex = orderIndex,
             Fragment = fragment
         };
-    }
 
-    private static float GetInitialCursorY(IReadOnlyList<BlockFragment> blocks, float contentTop)
-    {
-        return blocks.Count > 0 ? blocks[0].Rect.Y : contentTop;
-    }
+    private static float GetInitialCursorY(IReadOnlyList<BlockFragment> blocks, float contentTop) =>
+        blocks.Count > 0 ? blocks[0].Rect.Y : contentTop;
 
-    private static BlockPaginationPlan CreateResult(IReadOnlyList<BlockPaginationPage> pages)
-    {
-        return new BlockPaginationPlan
+    private static BlockPaginationPlan CreateResult(IReadOnlyList<BlockPaginationPage> pages) =>
+        new()
         {
             Pages = pages
         };
-    }
 
     private sealed class PaginationBuildState(
         SizePt pageSize,
@@ -221,10 +194,8 @@ internal sealed class BlockPaginator
 
         public float RemainingSpace => GetRemainingSpace(contentArea.Bottom, CursorY);
 
-        public bool ShouldStartNewPage(float blockHeight)
-        {
-            return _placements.Count > 0 && !FitsInRemainingSpace(blockHeight, RemainingSpace);
-        }
+        public bool ShouldStartNewPage(float blockHeight) =>
+            _placements.Count > 0 && !FitsInRemainingSpace(blockHeight, RemainingSpace);
 
         public void AddPlacement(BlockFragmentPlacement placement)
         {
@@ -254,7 +225,8 @@ internal sealed class BlockPaginator
             PageNumber++;
             _placements = [];
             CursorY = contentArea.Y;
-            PaginationDiagnostics.EmitPageCreated(diagnosticsSink, PageNumber, PaginationDiagnosticNames.Reasons.Overflow);
+            PaginationDiagnostics.EmitPageCreated(diagnosticsSink, PageNumber,
+                PaginationDiagnosticNames.Reasons.Overflow);
         }
 
         public IReadOnlyList<BlockPaginationPage> Complete()
@@ -263,9 +235,7 @@ internal sealed class BlockPaginator
             return _pages;
         }
 
-        private BlockPaginationPage CreateCurrentPage()
-        {
-            return CreatePage(PageNumber, pageSize, margins, contentArea, _placements);
-        }
+        private BlockPaginationPage CreateCurrentPage() =>
+            CreatePage(PageNumber, pageSize, margins, contentArea, _placements);
     }
 }

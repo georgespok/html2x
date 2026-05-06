@@ -5,7 +5,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.RenderModel.Documents;
 
 /// <summary>
-/// Renderer-facing page facts in absolute page coordinates.
+///     Renderer-facing page facts in absolute page coordinates.
 /// </summary>
 /// <param name="Size">Full page size in points.</param>
 /// <param name="Margins">Content margins in points.</param>
@@ -21,13 +21,13 @@ public sealed record LayoutPage(
 )
 {
     /// <summary>
-    /// Gets fragments positioned in absolute page coordinates.
+    ///     Gets fragments positioned in absolute page coordinates.
     /// </summary>
     public IReadOnlyList<Fragment> Children { get; init; } =
         Children?.ToArray() ?? throw new ArgumentNullException(nameof(Children));
 
     /// <summary>
-    /// Gets the full page size in points.
+    ///     Gets the full page size in points.
     /// </summary>
     public SizePt PageSize => Size;
 }

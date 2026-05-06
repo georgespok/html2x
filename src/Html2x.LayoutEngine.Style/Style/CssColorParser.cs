@@ -26,12 +26,10 @@ internal static class CssColorParser
             ["aqua"] = new(0x00, 0xFF, 0xFF, 0xFF)
         };
 
-    public static ColorRgba Parse(string? value, ColorRgba fallback)
-    {
-        return TryParse(value, out var color)
+    public static ColorRgba Parse(string? value, ColorRgba fallback) =>
+        TryParse(value, out var color)
             ? color
             : fallback;
-    }
 
     public static bool TryParse(string? value, out ColorRgba color)
     {
@@ -79,19 +77,15 @@ internal static class CssColorParser
             return false;
         }
 
-        static bool TryExpand(char c, out byte value)
-        {
-            return byte.TryParse(
+        static bool TryExpand(char c, out byte value) =>
+            byte.TryParse(
                 new string(c, 2),
                 NumberStyles.HexNumber,
                 CultureInfo.InvariantCulture,
                 out value);
-        }
 
-        static bool TryParsePair(string pair, out byte value)
-        {
-            return byte.TryParse(pair, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
-        }
+        static bool TryParsePair(string pair, out byte value) =>
+            byte.TryParse(pair, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
 
         if (normalized.Length is 3 or 4)
         {
@@ -105,7 +99,7 @@ internal static class CssColorParser
 
             if (normalized.Length == 3)
             {
-                color = new ColorRgba(r, g, b, 255);
+                color = new(r, g, b, 255);
                 return true;
             }
 
@@ -115,7 +109,7 @@ internal static class CssColorParser
                 return false;
             }
 
-            color = new ColorRgba(r, g, b, a);
+            color = new(r, g, b, a);
             return true;
         }
 
@@ -129,7 +123,7 @@ internal static class CssColorParser
 
         if (normalized.Length == 6)
         {
-            color = new ColorRgba(red, green, blue, 255);
+            color = new(red, green, blue, 255);
             return true;
         }
 
@@ -139,7 +133,7 @@ internal static class CssColorParser
             return false;
         }
 
-        color = new ColorRgba(red, green, blue, alpha);
+        color = new(red, green, blue, alpha);
         return true;
     }
 
@@ -184,7 +178,7 @@ internal static class CssColorParser
             a = (byte)(Math.Clamp(alpha, 0f, 1f) * 255);
         }
 
-        color = new ColorRgba(r.Value, g.Value, b.Value, a);
+        color = new(r.Value, g.Value, b.Value, a);
         return true;
     }
 

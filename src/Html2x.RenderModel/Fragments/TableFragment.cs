@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Represents a table fragment with row children and derived table metadata.
+///     Represents a table fragment with row children and derived table metadata.
 /// </summary>
 public sealed class TableFragment : BlockFragment
 {
@@ -35,8 +35,5 @@ public sealed class TableFragment : BlockFragment
         }
     }
 
-    private static List<TableRowFragment> MaterializeRows(IEnumerable<TableRowFragment>? rows)
-    {
-        return rows?.ToList() ?? [];
-    }
+    private static List<TableRowFragment> MaterializeRows(IEnumerable<TableRowFragment>? rows) => rows?.ToList() ?? [];
 }

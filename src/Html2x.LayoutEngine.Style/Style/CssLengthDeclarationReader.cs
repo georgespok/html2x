@@ -8,10 +8,8 @@ internal sealed class CssLengthDeclarationReader(CssValueConverter converter)
 {
     private readonly CssValueConverter _converter = converter ?? throw new ArgumentNullException(nameof(converter));
 
-    public string? GetValue(ICssStyleDeclaration css, IElement element, string property)
-    {
-        return InlineStyleSource.GetValue(css, element, property);
-    }
+    public string? GetValue(ICssStyleDeclaration css, IElement element, string property) =>
+        InlineStyleSource.GetValue(css, element, property);
 
     public bool TryParseLengthToken(
         string rawValue,

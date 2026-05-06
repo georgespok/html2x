@@ -2,7 +2,6 @@ using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.LayoutEngine.Diagnostics;
 
-
 internal sealed class BoxGeometrySnapshot
 {
     public int SequenceId { get; init; }

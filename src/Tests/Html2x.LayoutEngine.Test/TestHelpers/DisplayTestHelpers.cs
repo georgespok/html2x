@@ -9,16 +9,11 @@ internal static class DisplayTestHelpers
 {
     private static readonly LayoutBuilderFixture Fixture = new();
 
-    public static Task<HtmlLayout> BuildLayoutAsync(string html, float widthPerChar)
-    {
-        return Fixture.BuildLayoutAsync(html, CreateLinearMeasurer(widthPerChar), new LayoutBuildSettings
+    public static Task<HtmlLayout> BuildLayoutAsync(string html, float widthPerChar) =>
+        Fixture.BuildLayoutAsync(html, CreateLinearMeasurer(widthPerChar), new()
         {
             PageSize = PaperSizes.A4
         });
-    }
 
-    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar)
-    {
-        return new FakeTextMeasurer(widthPerChar, 8f, 2f);
-    }
+    private static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
 }

@@ -77,16 +77,16 @@ internal sealed class HtmlConversionService(ConsoleOptions options)
 
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = fontPath
             },
-            Resources = new ResourceOptions
+            Resources = new()
             {
                 BaseDirectory = resourceBaseDirectory,
                 MaxImageSizeBytes = 10 * 1024 * 1024
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = consoleOptions.DiagnosticsEnabled ||
                                     !string.IsNullOrWhiteSpace(consoleOptions.DiagnosticsJson)

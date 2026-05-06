@@ -2,7 +2,6 @@ using UglyToad.PdfPig.Content;
 
 namespace Html2x.Renderers.Pdf.Test;
 
-
 /// <summary>
 ///     Result of word lookup operations.
 /// </summary>

@@ -1,26 +1,25 @@
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 /// <summary>
-/// Lays out image blocks as replaced block content.
+///     Lays out image blocks as replaced block content.
 /// </summary>
 internal sealed class ImageBlockLayoutRule(
-    BoxSizingRules sizingRules,
-    ImageBlockLayoutApplier imageBlockLayoutApplier) : IBlockLayoutRule
+    BlockSizingRules sizingRules,
+    ImageBlockLayoutWriter imageBlockLayoutWriter) : IBlockLayoutRule
 {
-    private readonly BoxSizingRules _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
-    private readonly ImageBlockLayoutApplier _imageBlockLayoutApplier =
-        imageBlockLayoutApplier ?? throw new ArgumentNullException(nameof(imageBlockLayoutApplier));
+    private readonly ImageBlockLayoutWriter _imageBlockLayoutWriter =
+        imageBlockLayoutWriter ?? throw new ArgumentNullException(nameof(imageBlockLayoutWriter));
 
-    public bool CanLayout(BlockBox block)
-    {
-        return block is ImageBox;
-    }
+    private readonly BlockSizingRules
+        _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
+
+    public bool CanLayout(BlockBox block) => block is ImageBox;
 
     public BlockLayoutRuleResult Layout(BlockBox block, BlockLayoutRequest request)
     {
         var image = (ImageBox)block;
         var measurement = _sizingRules.Prepare(image, request.ContentWidth);
-        _imageBlockLayoutApplier.Apply(image, request, measurement);
+        _imageBlockLayoutWriter.Write(image, request, measurement);
         return BlockLayoutRuleResult.ForResolvedBlock(image);
     }
 }

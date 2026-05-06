@@ -10,7 +10,7 @@ internal sealed class InlineFlowBuffer
 
     public bool TryQueue(BoxNode node)
     {
-        if (!InlineFlowClassifier.IsInlineFlowMember(node))
+        if (!InlineFlowRules.IsInlineFlowMember(node))
         {
             return false;
         }

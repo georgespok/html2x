@@ -11,7 +11,7 @@ internal sealed record BlockLayoutRuleResult(
     public static BlockLayoutRuleResult ForResolvedBlock(BlockBox block)
     {
         ArgumentNullException.ThrowIfNull(block);
-        return new BlockLayoutRuleResult(block, null, [], null);
+        return new(block, null, [], null);
     }
 
     public static BlockLayoutRuleResult ForFlow(
@@ -21,7 +21,7 @@ internal sealed record BlockLayoutRuleResult(
         ArgumentNullException.ThrowIfNull(block);
         ArgumentNullException.ThrowIfNull(flow);
 
-        return new BlockLayoutRuleResult(
+        return new(
             block,
             flow.PublishedInlineLayout,
             flow.PublishedChildren,

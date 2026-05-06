@@ -1,8 +1,6 @@
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
@@ -16,18 +14,18 @@ public sealed class AbsolutePositioningTests
     public async Task RenderAsync_PositionedLines_PreservesPageCoordinates()
     {
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(400f, 400f),
-            new Spacing(),
+        layout.AddPage(new(
+            new(400f, 400f),
+            new(),
             [
                 CreateLine("Anchor", 40f, 60f),
                 CreateLine("Offset", 180f, 220f)
             ],
-            PageNumber: 1,
-            PageBackground: new ColorRgba(255, 255, 255, 255)));
+            1,
+            new ColorRgba(255, 255, 255, 255)));
         var renderer = new PdfRenderer();
 
-        var pdfBytes = await renderer.RenderAsync(layout, new PdfRenderSettings());
+        var pdfBytes = await renderer.RenderAsync(layout, new());
 
         PdfValidator.Validate(pdfBytes).ShouldBeTrue();
         var words = PdfWordParser.GetRawWords(pdfBytes);
@@ -37,11 +35,10 @@ public sealed class AbsolutePositioningTests
         Math.Abs(offset.BoundingBox.Top - anchor.BoundingBox.Top).ShouldBeGreaterThan(100d);
     }
 
-    private static LineBoxFragment CreateLine(string text, float x, float y)
-    {
-        return new LineBoxFragment
+    private static LineBoxFragment CreateLine(string text, float x, float y) =>
+        new()
         {
-            Rect = new RectPt(x, y, 100f, 20f),
+            Rect = new(x, y, 100f, 20f),
             BaselineY = y + 15f,
             LineHeight = 20f,
             Runs =
@@ -50,11 +47,10 @@ public sealed class AbsolutePositioningTests
                     text,
                     RendererFontTestData.CreateFont(weight: FontWeight.W400),
                     12f,
-                    new PointPt(x, y + 15f),
+                    new(x, y + 15f),
                     60f,
                     9f,
                     3f)
             ]
         };
-    }
 }

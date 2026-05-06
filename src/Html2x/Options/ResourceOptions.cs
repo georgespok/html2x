@@ -1,8 +1,7 @@
 namespace Html2x.Options;
 
-
 /// <summary>
-/// Resource loading options shared by layout and rendering.
+///     Resource loading options shared by layout and rendering.
 /// </summary>
 public sealed class ResourceOptions
 {

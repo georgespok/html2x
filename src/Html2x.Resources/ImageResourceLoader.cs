@@ -5,7 +5,6 @@ using SkiaSharp;
 
 namespace Html2x.Resources;
 
-
 internal static class ImageResourceLoader
 {
     public static ImageResourceMetadataResult LoadMetadata(string src, string? baseDirectory, long maxBytes)
@@ -81,12 +80,10 @@ internal static class ImageResourceLoader
         return Ok(src, bytes, intrinsicSize.Value);
     }
 
-    public static string ResolveBaseDirectory(string? baseDirectory)
-    {
-        return string.IsNullOrWhiteSpace(baseDirectory)
+    public static string ResolveBaseDirectory(string? baseDirectory) =>
+        string.IsNullOrWhiteSpace(baseDirectory)
             ? AppContext.BaseDirectory
             : Path.GetFullPath(baseDirectory);
-    }
 
     private static ImageBytesResult TryLoadBytes(string src, string? baseDirectory)
     {
@@ -205,8 +202,8 @@ internal static class ImageResourceLoader
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
         var basePath = Path.GetFullPath(baseDirectory)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
-            Path.DirectorySeparatorChar;
+                           .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                       Path.DirectorySeparatorChar;
 
         return fullPath.StartsWith(basePath, comparison);
     }
@@ -216,7 +213,7 @@ internal static class ImageResourceLoader
         {
             Src = src,
             Status = status,
-            IntrinsicSizePx = new SizePx(0d, 0d)
+            IntrinsicSizePx = new(0d, 0d)
         };
 
     private static ImageResourceResult Ok(string src, byte[] bytes, SizePx intrinsicSizePx) =>
@@ -233,7 +230,7 @@ internal static class ImageResourceLoader
         {
             Src = src,
             Status = status,
-            IntrinsicSizePx = new SizePx(0d, 0d)
+            IntrinsicSizePx = new(0d, 0d)
         };
 
     private static ImageResourceMetadataResult MetadataOk(string src, SizePx intrinsicSizePx) =>

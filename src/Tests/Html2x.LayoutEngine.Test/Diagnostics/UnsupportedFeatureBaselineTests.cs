@@ -84,12 +84,12 @@ public sealed class UnsupportedFeatureBaselineTests
     private static void AssertUnsupportedMode(IReadOnlyList<DiagnosticRecord> diagnostics, string structureKind)
     {
         diagnostics.Any(e =>
-            e.Severity == DiagnosticSeverity.Warning &&
-            e.Name == "layout/unsupported-mode" &&
-            e.Fields["structureKind"] is DiagnosticStringValue { Value: var actualKind } &&
-            actualKind == structureKind &&
-            e.Fields["reason"] is DiagnosticStringValue { Value: var reason } &&
-            !string.IsNullOrWhiteSpace(reason))
+                e.Severity == DiagnosticSeverity.Warning &&
+                e.Name == "layout/unsupported-mode" &&
+                e.Fields["structureKind"] is DiagnosticStringValue { Value: var actualKind } &&
+                actualKind == structureKind &&
+                e.Fields["reason"] is DiagnosticStringValue { Value: var reason } &&
+                !string.IsNullOrWhiteSpace(reason))
             .ShouldBeTrue();
     }
 

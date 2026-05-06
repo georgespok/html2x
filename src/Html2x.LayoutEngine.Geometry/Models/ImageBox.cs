@@ -29,9 +29,8 @@ internal sealed class ImageBox(BoxRole role) : BlockBox(role)
         Status = status;
     }
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new ImageBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new ImageBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -43,5 +42,4 @@ internal sealed class ImageBox(BoxRole role) : BlockBox(role)
             IntrinsicSizePx = IntrinsicSizePx,
             Status = Status
         });
-    }
 }

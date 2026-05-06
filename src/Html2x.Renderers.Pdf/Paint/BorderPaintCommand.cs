@@ -3,9 +3,8 @@ using Html2x.RenderModel.Styles;
 
 namespace Html2x.Renderers.Pdf.Paint;
 
-
 /// <summary>
-/// Paints border edges for block-like and image fragments.
+///     Paints border edges for block-like and image fragments.
 /// </summary>
 internal sealed record BorderPaintCommand(
     int PageNumber,

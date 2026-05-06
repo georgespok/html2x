@@ -1,7 +1,7 @@
 namespace Html2x.Renderers.Pdf;
 
 /// <summary>
-/// Input settings owned by the PDF renderer.
+///     Input settings owned by the PDF renderer.
 /// </summary>
 public sealed class PdfRenderSettings
 {

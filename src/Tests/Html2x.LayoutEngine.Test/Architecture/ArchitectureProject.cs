@@ -3,11 +3,10 @@ using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Architecture;
 
-
 internal sealed class ArchitectureProject
 {
-    private readonly string _path;
     private readonly XDocument _document;
+    private readonly string _path;
 
     private ArchitectureProject(string path)
     {
@@ -63,7 +62,8 @@ internal sealed class ArchitectureProject
             .Concat(_document.Descendants("TargetFrameworks"))
             .Select(static element => element.Value)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .SelectMany(static value => value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .SelectMany(static value =>
+                value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             .OrderBy(static value => value, StringComparer.Ordinal)
             .ToArray();
 

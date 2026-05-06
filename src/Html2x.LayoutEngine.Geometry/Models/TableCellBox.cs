@@ -6,9 +6,8 @@ internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
 
     public bool IsHeader { get; set; }
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new TableCellBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new TableCellBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -18,5 +17,4 @@ internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
             ColumnIndex = ColumnIndex,
             IsHeader = IsHeader
         });
-    }
 }

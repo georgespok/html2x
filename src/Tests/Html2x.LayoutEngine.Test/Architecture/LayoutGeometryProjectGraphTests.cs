@@ -32,15 +32,20 @@ public sealed class LayoutGeometryProjectGraphTests
     public void ProductionProjectGraph_FollowsOwnedModuleDirection()
     {
         ProjectFor<LayoutBuilder>()
-            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<FragmentBuilder>(), AssemblyName<LayoutGeometryBuilder>(), AssemblyName<LayoutPaginator>(), AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
+                AssemblyName<FragmentBuilder>(), AssemblyName<LayoutGeometryBuilder>(), AssemblyName<LayoutPaginator>(),
+                AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
         ProjectFor<StyleTreeBuilder>()
-            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
+                AssemblyName<HtmlLayout>());
         ProjectFor<StyleTreeBuilder>()
             .ShouldReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
         ProjectFor<LayoutGeometryBuilder>()
-            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
+                AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
         ProjectFor<LayoutPaginator>()
-            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
+                AssemblyName<HtmlLayout>());
         ProjectFor<LayoutPaginator>()
             .ShouldHaveNoPackageReferences();
         ProjectFor<StyleNode>()
@@ -64,7 +69,8 @@ public sealed class LayoutGeometryProjectGraphTests
     {
         var renderer = Project("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj");
 
-        renderer.ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>(), ResourcesAssemblyName, AssemblyName<ITextMeasurer>());
+        renderer.ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>(),
+            ResourcesAssemblyName, AssemblyName<ITextMeasurer>());
         renderer.ShouldNotReferenceProjects(
             AssemblyName<LayoutBuilder>(),
             AssemblyName<StyleNode>(),
@@ -76,9 +82,12 @@ public sealed class LayoutGeometryProjectGraphTests
     [Fact]
     public void FocusedTestProjects_StayInOwningModules()
     {
-        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(), TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
-            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<LayoutPaginator>(), AssemblyName<HtmlLayout>());
-        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(), TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
+        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(),
+                TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<LayoutPaginator>(),
+                AssemblyName<HtmlLayout>());
+        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(),
+                TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
             .ShouldNotReferenceProjects(
                 AssemblyName<LayoutBuilder>(),
                 AssemblyName<FragmentBuilder>(),
@@ -86,9 +95,11 @@ public sealed class LayoutGeometryProjectGraphTests
                 AssemblyName<StyleTreeBuilder>(),
                 PdfRendererAssemblyName,
                 AssemblyName<ITextMeasurer>());
-        Project("src", "Tests", TestAssemblyNameFor<StyleTreeBuilder>(), TestAssemblyNameFor<StyleTreeBuilder>() + ".csproj")
+        Project("src", "Tests", TestAssemblyNameFor<StyleTreeBuilder>(),
+                TestAssemblyNameFor<StyleTreeBuilder>() + ".csproj")
             .ShouldNotReferenceProjects(AssemblyName<LayoutBuilder>(), AssemblyName<LayoutGeometryBuilder>());
-        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryBuilder>(), TestAssemblyNameFor<LayoutGeometryBuilder>() + ".csproj")
+        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryBuilder>(),
+                TestAssemblyNameFor<LayoutGeometryBuilder>() + ".csproj")
             .ShouldNotReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
     }
 

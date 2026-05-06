@@ -22,5 +22,4 @@ public class DisplayOverrideTests
         layout.Pages[0].Children.Count.ShouldBe(1);
         layout.Pages[0].Children[0].ShouldBeOfType<BlockFragment>();
     }
-
 }

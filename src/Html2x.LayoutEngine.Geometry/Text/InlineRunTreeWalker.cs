@@ -1,5 +1,4 @@
 using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.RenderModel.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Text;
 
@@ -27,7 +26,7 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
 
     private void CollectInlineFlowNode(BoxNode node)
     {
-        if (node is BlockBox block && InlineFlowClassifier.IsAnonymousInlineWrapper(block))
+        if (node is BlockBox block && InlineFlowRules.IsAnonymousInlineWrapper(block))
         {
             CollectInlineFlow(block.Children);
             return;

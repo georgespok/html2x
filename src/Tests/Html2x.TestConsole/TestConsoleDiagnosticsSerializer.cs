@@ -49,9 +49,8 @@ internal sealed record TestConsoleRunDiagnostics(
     string? SelectedSamplePath,
     IReadOnlyList<string> RawArguments)
 {
-    public static TestConsoleRunDiagnostics From(ConsoleOptions options)
-    {
-        return new TestConsoleRunDiagnostics(
+    public static TestConsoleRunDiagnostics From(ConsoleOptions options) =>
+        new(
             options.InputPath,
             options.OutputPath,
             options.DiagnosticsEnabled,
@@ -61,21 +60,18 @@ internal sealed record TestConsoleRunDiagnostics(
             options.Interactive,
             options.SelectedSamplePath,
             options.RawArguments.ToArray());
-    }
 }
 
 internal sealed record PolicyOwnershipDiagnostics(
     IReadOnlyList<string> RequiredEvidence,
     IReadOnlyList<string> ApprovedExceptionPaths)
 {
-    public static PolicyOwnershipDiagnostics CreateDefault()
-    {
-        return new PolicyOwnershipDiagnostics(
+    public static PolicyOwnershipDiagnostics CreateDefault() =>
+        new(
             ["owner", "consumer", "approved-exception"],
             [
                 "block-formatting:inline-block-descendant-implicit-width"
             ]);
-    }
 }
 
 internal sealed record TestConsoleEnvironmentDiagnostics(
@@ -87,9 +83,8 @@ internal sealed record TestConsoleEnvironmentDiagnostics(
     string CurrentCulture,
     string CurrentUiCulture)
 {
-    public static TestConsoleEnvironmentDiagnostics Capture()
-    {
-        return new TestConsoleEnvironmentDiagnostics(
+    public static TestConsoleEnvironmentDiagnostics Capture() =>
+        new(
             Directory.GetCurrentDirectory(),
             AppContext.BaseDirectory,
             RuntimeInformation.OSDescription,
@@ -97,5 +92,4 @@ internal sealed record TestConsoleEnvironmentDiagnostics(
             RuntimeInformation.ProcessArchitecture.ToString(),
             CultureInfo.CurrentCulture.Name,
             CultureInfo.CurrentUICulture.Name);
-    }
 }

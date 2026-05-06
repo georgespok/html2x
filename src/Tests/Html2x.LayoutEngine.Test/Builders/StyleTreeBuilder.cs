@@ -1,5 +1,3 @@
-using Html2x.RenderModel.Styles;
-
 namespace Html2x.LayoutEngine.Test.Builders;
 
 internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssConstants.HtmlTags.Body)
@@ -9,7 +7,7 @@ internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssConstants.Htm
 
     public StyleTreeBuilder WithPageMargins(float top, float right, float bottom, float left)
     {
-        _page.Margin = new Spacing(top, right, bottom, left);
+        _page.Margin = new(top, right, bottom, left);
         return this;
     }
 
@@ -64,10 +62,10 @@ internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssConstants.Htm
         {
             style = style with
             {
-                Margin = new Spacing(top, 0f, 0f, left)
+                Margin = new(top, 0f, 0f, left)
             };
         }
 
-        return new StyleNodeBuilder(element, style);
+        return new(element, style);
     }
 }

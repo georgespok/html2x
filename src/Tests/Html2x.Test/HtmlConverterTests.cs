@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Options;
@@ -9,10 +10,16 @@ namespace Html2x.Test;
 [Trait("Category", "Integration")]
 public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    private const string TwoByOnePngDataUri = $"data:image/png;base64,{TwoByOnePngBase64}";
+
+    private const string TwoByOnePngBase64 =
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
+
     private readonly HtmlConverter _htmlConverter = new();
+
     private readonly HtmlConverterOptions _options = new()
     {
-        Fonts = new FontOptions
+        Fonts = new()
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -51,12 +58,12 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     {
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions { FontPath = string.Empty },
-            Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
+            Fonts = new() { FontPath = string.Empty },
+            Diagnostics = new() { EnableDiagnostics = true }
         };
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
 
         Assert.Contains("FontPath", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(exception.Data.Contains("DiagnosticsReport"));
@@ -83,12 +90,12 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     {
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions { FontPath = Path.Combine(Path.GetTempPath(), "missing-fonts") },
-            Diagnostics = new DiagnosticsOptions { EnableDiagnostics = true }
+            Fonts = new() { FontPath = Path.Combine(Path.GetTempPath(), "missing-fonts") },
+            Diagnostics = new() { EnableDiagnostics = true }
         };
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _htmlConverter.ToPdfAsync("<html><div>Test</div></html>", options));
 
         Assert.Contains("FontPath", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.True(exception.Data.Contains("DiagnosticsReport"));
@@ -116,11 +123,11 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         const string html = "<html><body><p>Hello diagnostics</p></body></html>";
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = true
             }
@@ -153,24 +160,24 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
                 Path.Combine(tempDirectory.FullName, "oversize.png"),
                 [1, 2]);
             const string html = """
-                <html>
-                  <body>
-                    <img src="oversize.png" width="16" height="16" />
-                  </body>
-                </html>
-                """;
+                                <html>
+                                  <body>
+                                    <img src="oversize.png" width="16" height="16" />
+                                  </body>
+                                </html>
+                                """;
             var options = new HtmlConverterOptions
             {
-                Fonts = new FontOptions
+                Fonts = new()
                 {
                     FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
                 },
-                Resources = new ResourceOptions
+                Resources = new()
                 {
                     BaseDirectory = tempDirectory.FullName,
                     MaxImageSizeBytes = 1
                 },
-                Diagnostics = new DiagnosticsOptions
+                Diagnostics = new()
                 {
                     EnableDiagnostics = true
                 }
@@ -186,7 +193,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         }
         finally
         {
-            tempDirectory.Delete(recursive: true);
+            tempDirectory.Delete(true);
         }
     }
 
@@ -200,12 +207,12 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
                 Path.Combine(tempDirectory.FullName, "ratio.png"),
                 TwoByOnePngBytes());
             const string html = """
-                <html>
-                  <body>
-                    <img src="ratio.png" width="40" />
-                  </body>
-                </html>
-                """;
+                                <html>
+                                  <body>
+                                    <img src="ratio.png" width="40" />
+                                  </body>
+                                </html>
+                                """;
 
             var result = await _htmlConverter.ToPdfAsync(
                 html,
@@ -213,12 +220,12 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
 
             var imageRecord = SingleImageRecord(result);
             Assert.Equal("Ok", StringField(imageRecord, "status"));
-            Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), precision: 1);
-            Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), precision: 1);
+            Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), 1);
+            Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), 1);
         }
         finally
         {
-            tempDirectory.Delete(recursive: true);
+            tempDirectory.Delete(true);
         }
     }
 
@@ -226,19 +233,19 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     public async Task ToPdfAsync_DataUriImageWithHeightOnly_UsesDecodedIntrinsicRatio()
     {
         var html = $"""
-            <html>
-              <body>
-                <img src="{TwoByOnePngDataUri}" height="20" />
-              </body>
-            </html>
-            """;
+                    <html>
+                      <body>
+                        <img src="{TwoByOnePngDataUri}" height="20" />
+                      </body>
+                    </html>
+                    """;
 
         var result = await _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions());
 
         var imageRecord = SingleImageRecord(result);
         Assert.Equal("Ok", StringField(imageRecord, "status"));
-        Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), precision: 1);
-        Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), precision: 1);
+        Assert.Equal(30d, NumberField(imageRecord, "renderedWidth"), 1);
+        Assert.Equal(15d, NumberField(imageRecord, "renderedHeight"), 1);
     }
 
     [Fact]
@@ -253,28 +260,28 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             await File.WriteAllBytesAsync(Path.Combine(baseDirectory.FullName, "oversize.png"), [1, 2]);
 
             const string html = """
-                <html>
-                  <body>
-                    <img src="missing.png" width="16" height="16" />
-                    <img src="../outside.png" width="16" height="16" />
-                    <img src="oversize.png" width="16" height="16" />
-                    <img src="data:image/png;base64,not-base64" width="16" height="16" />
-                    <img src="data:image/png;base64,eA==" width="16" height="16" />
-                  </body>
-                </html>
-                """;
+                                <html>
+                                  <body>
+                                    <img src="missing.png" width="16" height="16" />
+                                    <img src="../outside.png" width="16" height="16" />
+                                    <img src="oversize.png" width="16" height="16" />
+                                    <img src="data:image/png;base64,not-base64" width="16" height="16" />
+                                    <img src="data:image/png;base64,eA==" width="16" height="16" />
+                                  </body>
+                                </html>
+                                """;
             var options = new HtmlConverterOptions
             {
-                Fonts = new FontOptions
+                Fonts = new()
                 {
                     FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
                 },
-                Resources = new ResourceOptions
+                Resources = new()
                 {
                     BaseDirectory = baseDirectory.FullName,
                     MaxImageSizeBytes = 1
                 },
-                Diagnostics = new DiagnosticsOptions
+                Diagnostics = new()
                 {
                     EnableDiagnostics = true
                 }
@@ -295,7 +302,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         }
         finally
         {
-            rootDirectory.Delete(recursive: true);
+            rootDirectory.Delete(true);
         }
     }
 
@@ -305,11 +312,11 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         const string html = "<html><body><p>Hello diagnostics report</p></body></html>";
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = true
             }
@@ -359,7 +366,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         Assert.True(geometryFields.ContainsKey("pagination"));
 
         var json = DiagnosticsReportSerializer.ToJson(report);
-        using var document = System.Text.Json.JsonDocument.Parse(json);
+        using var document = JsonDocument.Parse(json);
         var records = document.RootElement.GetProperty("records").EnumerateArray().ToArray();
         Assert.Contains(records, static record =>
             record.GetProperty("stage").GetString() == "PdfRender" &&
@@ -372,11 +379,11 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         const string html = "<html><body><p>Hello raw diagnostics payload</p></body></html>";
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = true,
                 IncludeRawHtml = true,
@@ -401,8 +408,8 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
 
-        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
-            () => _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions(), cancellation.Token));
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions(), cancellation.Token));
 
         var diagnostics = Assert.IsType<DiagnosticsReport>(exception.Data["DiagnosticsReport"]);
         Assert.Contains(diagnostics.Records, static record =>
@@ -421,20 +428,20 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     public async Task ToPdfAsync_DiagnosticsEnabled_UsesSingleResolvedFontPath()
     {
         const string html = """
-            <html>
-              <body>
-                <p style="font-family: Inter; font-size: 14pt;">One owner for font resolution.</p>
-              </body>
-            </html>
-            """;
+                            <html>
+                              <body>
+                                <p style="font-family: Inter; font-size: 14pt;">One owner for font resolution.</p>
+                              </body>
+                            </html>
+                            """;
 
         var options = new HtmlConverterOptions
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = true
             }
@@ -479,15 +486,15 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     private static HtmlConverterOptions CreateDiagnosticsOptions(string? baseDirectory = null) =>
         new()
         {
-            Fonts = new FontOptions
+            Fonts = new()
             {
                 FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
             },
-            Resources = new ResourceOptions
+            Resources = new()
             {
                 BaseDirectory = baseDirectory
             },
-            Diagnostics = new DiagnosticsOptions
+            Diagnostics = new()
             {
                 EnableDiagnostics = true
             }
@@ -495,9 +502,4 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
 
     private static byte[] TwoByOnePngBytes() =>
         Convert.FromBase64String(TwoByOnePngBase64);
-
-    private const string TwoByOnePngDataUri = $"data:image/png;base64,{TwoByOnePngBase64}";
-
-    private const string TwoByOnePngBase64 =
-        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 }

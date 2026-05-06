@@ -11,7 +11,7 @@ public sealed class StyleTreeContractTests
         var node = new StyleNode
         {
             Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Div),
-            Style = new ComputedStyle()
+            Style = new()
         };
 
         node.Element.ShouldBeOfType<StyledElementFacts>();
@@ -24,12 +24,12 @@ public sealed class StyleTreeContractTests
         var child = new StyleNode
         {
             Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
-            Style = new ComputedStyle()
+            Style = new()
         };
         var node = new StyleNode(
             StyleSourceIdentity.Unspecified,
             StyledElementFacts.Create(HtmlCssConstants.HtmlTags.P),
-            new ComputedStyle(),
+            new(),
             content:
             [
                 StyleContentNode.ForText("alpha "),
@@ -62,11 +62,11 @@ public sealed class StyleTreeContractTests
     public async Task StyleTree_CarriesLayoutAttributesWithoutDomTypes()
     {
         const string html = """
-            <html><body>
-              <img id='hero' class='lead art' src='hero.png' width='200' height='100' />
-              <table><tr><td colspan='2' rowspan='3'>Cell</td></tr></table>
-            </body></html>
-            """;
+                            <html><body>
+                              <img id='hero' class='lead art' src='hero.png' width='200' height='100' />
+                              <table><tr><td colspan='2' rowspan='3'>Cell</td></tr></table>
+                            </body></html>
+                            """;
 
         var tree = await new StyleTreeBuilder()
             .BuildAsync(html, new() { UseDefaultUserAgentStyleSheet = false });
@@ -96,7 +96,7 @@ public sealed class StyleTreeContractTests
         var child = new StyleNode
         {
             Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Br),
-            Style = new ComputedStyle()
+            Style = new()
         };
 
         var element = StyleContentNode.ForElement(child);
@@ -135,22 +135,22 @@ public sealed class StyleTreeContractTests
         Should.Throw<ArgumentOutOfRangeException>(() => new StyleSourceIdentity(
             StyleNodeId.Unspecified,
             null,
-            sourceOrder: -1,
-            siblingIndex: 0,
-            sourcePath: string.Empty,
-            elementIdentity: null));
+            -1,
+            0,
+            string.Empty,
+            null));
     }
 
     [Fact]
     public void StyleSourceIdentity_BlankElementIdentity_NormalizesToNull()
     {
         var identity = new StyleSourceIdentity(
-            new StyleNodeId(1),
+            new(1),
             null,
-            sourceOrder: 1,
-            siblingIndex: 0,
-            sourcePath: "body[0]",
-            elementIdentity: "  ");
+            1,
+            0,
+            "body[0]",
+            "  ");
 
         identity.ElementIdentity.ShouldBeNull();
     }
@@ -161,9 +161,9 @@ public sealed class StyleTreeContractTests
         Should.Throw<ArgumentOutOfRangeException>(() => new StyleContentIdentity(
             StyleContentId.Unspecified,
             StyleNodeId.Unspecified,
-            sourceOrder: 0,
-            siblingIndex: -1,
-            sourcePath: string.Empty));
+            0,
+            -1,
+            string.Empty));
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public sealed class StyleTreeContractTests
         var child = new StyleNode
         {
             Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
-            Style = new ComputedStyle()
+            Style = new()
         };
         var children = new List<StyleNode> { child };
         var content = new List<StyleContentNode> { StyleContentNode.ForElement(child) };
@@ -208,11 +208,11 @@ public sealed class StyleTreeContractTests
         var node = new StyleNode(
             StyleSourceIdentity.Unspecified,
             StyledElementFacts.Create(HtmlCssConstants.HtmlTags.P),
-            new ComputedStyle(),
+            new(),
             children,
             content);
 
-        children.Add(new StyleNode());
+        children.Add(new());
         content.Add(StyleContentNode.ForText("late"));
 
         node.Children.Count.ShouldBe(1);
@@ -225,7 +225,7 @@ public sealed class StyleTreeContractTests
         var child = new StyleNode
         {
             Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
-            Style = new ComputedStyle()
+            Style = new()
         };
 
         var element = StyleContentNode.ForElement(child);
@@ -241,11 +241,11 @@ public sealed class StyleTreeContractTests
     public void StyleContentNode_IdentityFactories_UseProvidedIdentity()
     {
         var identity = new StyleContentIdentity(
-            new StyleContentId(2),
-            new StyleNodeId(1),
-            sourceOrder: 3,
-            siblingIndex: 0,
-            sourcePath: "body[0]/text[0]");
+            new(2),
+            new(1),
+            3,
+            0,
+            "body[0]/text[0]");
 
         var node = StyleContentNode.ForText(identity, "text");
 

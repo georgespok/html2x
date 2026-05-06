@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Html2x Supported HTML And CSS Smoke Demo</title>
+        <style>
+            body {
+                display: block;
+                position: static;
+                margin: 24px;
+                font-family: Arial;
+                font-size: 12pt;
+                line-height: 1.25;
+                color: #172033;
+                background-color: #f3f7fb;
+            }
+
+            header {
+                display: block;
+                position: relative;
+                max-width: 700px;
+                min-width: 320px;
+                margin-bottom: 10px;
+                padding: 14px 16px;
+                background-color: #e8f1ff;
+                border-left: 5px solid #2f6fbd;
+                border-top: 1px solid #b7cbe8;
+                border-right: 1px solid #b7cbe8;
+                border-bottom: 1px solid #b7cbe8;
+            }
+
+            main,
+            section,
+            footer {
+                display: block;
+            }
+
+            h1 {
+                margin: 0 0 6px 0;
+                font-size: 22pt;
+                font-weight: 700;
+                color: navy;
+                text-align: center;
+            }
+
+            h2 {
+                margin: 14px 0 8px 0;
+                font-size: 16pt;
+                font-weight: bold;
+                color: #1f5f6f;
+                border-bottom: 1px dashed #79a9b5;
+            }
+
+            h3,
+            h4,
+            h5,
+            h6 {
+                margin: 6px 0;
+                color: #334155;
+            }
+
+            p {
+                margin: 6px 0;
+            }
+
+            .lead {
+                line-height: 1.5;
+                text-align: justify;
+            }
+
+            .section-card {
+                margin: 10px 0 12px 0;
+                padding: 10px 12px;
+                max-width: 700px;
+                min-width: 320px;
+                background-color: #f8fbff;
+                border: 1px solid #d8e2ef;
+            }
+
+            .offset-note {
+                margin-top: 8px;
+                margin-right: 12px;
+                margin-bottom: 8px;
+                margin-left: 12px;
+                padding-top: 8px;
+                padding-right: 10px;
+                padding-bottom: 8px;
+                padding-left: 10px;
+                background-color: #fff7e6;
+                border-top-width: 1px;
+                border-top-style: solid;
+                border-top-color: #d79b32;
+                border-right-width: 1px;
+                border-right-style: dotted;
+                border-right-color: #d79b32;
+                border-bottom-width: 1px;
+                border-bottom-style: dashed;
+                border-bottom-color: #d79b32;
+                border-left-width: 4px;
+                border-left-style: solid;
+                border-left-color: #d79b32;
+            }
+
+            .badge,
+            .metric {
+                display: inline-block;
+                min-width: 105px;
+                max-width: 160px;
+                height: 28px;
+                min-height: 24px;
+                max-height: 36px;
+                margin: 3px;
+                padding: 6px;
+                font-size: 10pt;
+                text-align: center;
+                background-color: rgba(47, 111, 189, 0.10);
+                border-width: 1px;
+                border-style: dashed;
+                border-color: #2f6fbd;
+            }
+
+            .metric {
+                width: 120px;
+                font-weight: 700;
+            }
+
+            .inline-demo span {
+                display: inline;
+            }
+
+            .blue {
+                color: blue;
+            }
+
+            .red {
+                color: red;
+            }
+
+            .italic {
+                font-style: oblique;
+            }
+
+            .decorated {
+                text-decoration: underline line-through overline;
+            }
+
+            .plain {
+                text-decoration: none;
+            }
+
+            .align-left {
+                text-align: left;
+            }
+
+            .align-right {
+                text-align: right;
+            }
+
+            .align-center {
+                text-align: center;
+            }
+
+            .align-justify {
+                text-align: justify;
+                line-height: normal;
+            }
+
+            .border-strip {
+                margin: 8px 0;
+                padding: 8px;
+                background-color: transparent;
+                border-top: 2px solid #2f6fbd;
+                border-right: 2px dotted #1f8a70;
+                border-bottom: 2px dashed #9a3412;
+                border-left: 2px solid #7c3aed;
+            }
+
+            .color-a {
+                background-color: rgb(100%, 50%, 0%);
+                color: black;
+            }
+
+            .color-b {
+                background-color: rgba(0, 128, 255, 0.20);
+                color: #123456;
+            }
+
+            .color-c {
+                background-color: transparent;
+                color: teal;
+                border-style: none;
+            }
+
+            ul,
+            ol {
+                display: block;
+                margin: 6px 0;
+                padding-left: 30pt;
+            }
+
+            li {
+                display: list-item;
+                margin: 2px 0;
+            }
+
+            table {
+                display: table;
+                width: 640px;
+                margin: 8px 0;
+                border: 1px solid #334155;
+                background-color: #ffffff;
+            }
+
+            thead {
+                display: table-header-group;
+                background-color: #dbeafe;
+            }
+
+            tbody {
+                display: table-row-group;
+            }
+
+            tfoot {
+                display: table-footer-group;
+                background-color: #e0f2fe;
+            }
+
+            tr {
+                display: table-row;
+            }
+
+            th,
+            td {
+                display: table-cell;
+                padding: 7px;
+                border: 1px solid #64748b;
+            }
+
+            th {
+                font-weight: bold;
+                text-align: center;
+            }
+
+            .pass {
+                background-color: #dcfce7;
+            }
+
+            .watch {
+                background-color: #fef3c7;
+            }
+
+            img {
+                display: inline-block;
+                float: none;
+                width: 96px;
+                height: 64px;
+                max-width: 120px;
+                max-height: 80px;
+                padding: 4px;
+                border: 2px solid #2f6fbd;
+                background-color: white;
+            }
+
+            hr {
+                display: block;
+                height: 0;
+                margin: 12px 0;
+                border-top: 2px solid #94a3b8;
+                border-right: 0;
+                border-bottom: 0;
+                border-left: 0;
+            }
+
+            footer {
+                margin-top: 14px;
+                padding: 10px;
+                max-width: 700px;
+                font-size: 10pt;
+                color: gray;
+                background-color: #f1f5f9;
+                border: 1px dotted #94a3b8;
+            }
+        </style>
+    </head>
+    <body>
+        <header id="intro" class="hero">
+            <h1>Html2x Supported Rendering Demo</h1>
+            <p class="lead">
+                This compact page exercises the supported happy-path surface:
+                block flow, inline text, headings, spacing, dimensions,
+                colors, borders, lists, images, horizontal rules, and
+                rectangular tables.
+            </p>
+        </header>
+
+        <main id="content" class="section-card">
+            <h2>Smoke Test Scope</h2>
+            <div class="metric">HTML tags</div>
+            <div class="metric color-a">CSS colors</div>
+            <div class="metric color-b">dimensions</div>
+            <div class="metric color-c">borders</div>
+            <p>
+                These badges are inline-block boxes using width, min and max
+                bounds, height bounds, padding, margins, colors, and borders.
+            </p>
+        </main>
+
+        <section id="text">
+            <h2>Text, Headings, And Inline Styling</h2>
+            <div class="section-card inline-demo">
+                <h3>Heading h3</h3>
+                <h4>Heading h4</h4>
+                <h5>Heading h5</h5>
+                <h6>Heading h6</h6>
+                <p class="lead">
+                    Inline tags stay in the text flow:
+                    <span class="blue">span color</span>,
+                    <span class="red">span red</span>,
+                    <span style="color: purple; font-weight: bold;">inline style attribute</span>,
+                    <b>b bold</b>,
+                    <strong>strong bold</strong>,
+                    <i>i italic</i>,
+                    <u>u underline</u>, and
+                    <s>s line-through</s>.
+                    Supported decoration can combine
+                    <span class="decorated">underline, line-through, and overline</span>,
+                    while <span class="plain">plain text remains undecorated</span>.
+                    A manual line break follows here:<br />
+                    the second line confirms `br` handling.
+                </p>
+                <p class="italic">
+                    Oblique font style and inherited font settings are visible on this line.
+                </p>
+            </div>
+        </section>
+
+        <section id="alignment">
+            <h2>Alignment And Line Height</h2>
+            <div class="section-card">
+                <p class="align-left">Left aligned text starts at the content edge.</p>
+                <p class="align-center">Centered text checks inline line offset.</p>
+                <p class="align-right">Right aligned text checks right edge placement.</p>
+                <p class="align-justify">
+                    Justified text distributes extra whitespace across a longer
+                    sentence, making it useful for catching changes in line
+                    measurement and spacing.
+                </p>
+            </div>
+        </section>
+
+        <section id="boxes">
+            <h2>Spacing, Dimensions, Colors, And Borders</h2>
+            <div class="section-card">
+                <div class="offset-note">
+                    This block uses individual margin, padding, border width,
+                    border style, and border color declarations on each side.
+                </div>
+                <div class="border-strip">
+                    Shorthand side borders verify solid, dotted, and dashed rules.
+                </div>
+            </div>
+        </section>
+
+        <section id="lists">
+            <h2>Generated List Markers</h2>
+            <div class="section-card">
+                <ul>
+                    <li>Unordered item with generated bullet marker.</li>
+                    <li>Second unordered item keeps spacing and marker alignment.</li>
+                </ul>
+                <ol>
+                    <li>Ordered item one uses generated numeric marker text.</li>
+                    <li>Ordered item two confirms one-based numbering.</li>
+                </ol>
+            </div>
+        </section>
+
+        <section id="media">
+            <h2>Image, Rule, And Inline-Block Objects</h2>
+            <div class="section-card">
+                <p>
+                    The image uses `src`, HTML `width` and `height`, CSS dimensions,
+                    padding, max bounds, and border styling.
+                </p>
+                <img
+                    id="sample-logo"
+                    class="sample-logo"
+                    src="images/sample-logo.jpg"
+                    width="128"
+                    height="85" />
+                <span class="badge">inline-block badge</span>
+                <span class="badge">bounded text box</span>
+            </div>
+            <hr />
+        </section>
+
+        <section id="table">
+            <h2>Rectangular Table With Sections</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Status</th>
+                        <th>Visible Check</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="1" rowspan="1">Typography</td>
+                        <td class="pass">Supported</td>
+                        <td>Fonts, colors, and decorations render.</td>
+                    </tr>
+                    <tr>
+                        <td>Geometry</td>
+                        <td class="pass">Supported</td>
+                        <td>Margins, padding, dimensions, and borders apply.</td>
+                    </tr>
+                    <tr>
+                        <td>Tables</td>
+                        <td class="watch">Rectangular</td>
+                        <td>Header, body, footer, cells, and backgrounds render.</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td>Summary</td>
+                        <td>Happy path</td>
+                        <td>No spans beyond value 1 and no unsupported layout modes.</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </section>
+
+        <footer id="footer">
+            This smoke example intentionally avoids unsupported features such as
+            flex, grid, absolute positioning, merged table cells, unsupported units,
+            and scripting.
+        </footer>
+    </body>
+</html>

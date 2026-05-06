@@ -3,32 +3,32 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Geometry.Models;
 
 /// <summary>
-/// Represents mutable block-level layout state while geometry and inline flow are resolved.
+///     Represents mutable block-level layout state while geometry and inline flow are resolved.
 /// </summary>
 internal class BlockBox(BoxRole role) : BoxNode(role)
 {
     private UsedGeometry? _usedGeometry;
 
     /// <summary>
-    /// Gets or sets the layout input reserved for synthetic list markers.
+    ///     Gets or sets the layout input reserved for synthetic list markers.
     /// </summary>
     /// <remarks>
-    /// Final post-layout marker geometry is published through <see cref="UsedGeometry"/>.
+    ///     Final post-layout marker geometry is published through <see cref="UsedGeometry" />.
     /// </remarks>
     public float MarkerOffset { get; set; }
 
     /// <summary>
-    /// Gets or sets the margin resolved for the current layout pass.
+    ///     Gets or sets the margin resolved for the current layout pass.
     /// </summary>
     public Spacing Margin { get; internal set; }
 
     /// <summary>
-    /// Gets or sets the padding resolved for the current layout pass.
+    ///     Gets or sets the padding resolved for the current layout pass.
     /// </summary>
     public Spacing Padding { get; internal set; }
 
     /// <summary>
-    /// Gets or sets the text alignment resolved for inline layout.
+    ///     Gets or sets the text alignment resolved for inline layout.
     /// </summary>
     public string TextAlign { get; internal set; } = HtmlCssConstants.Defaults.TextAlign;
 
@@ -40,6 +40,19 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
         internal set => SetUsedGeometry(value);
     }
 
+    /// <summary>
+    ///     Gets or sets the inline layout resolved for this block during layout.
+    /// </summary>
+    /// <remarks>
+    ///     Layout owns this value. Measurement paths must not assign temporary inline layout here.
+    /// </remarks>
+    public InlineLayoutResult? InlineLayout { get; internal set; }
+
+    /// <summary>
+    ///     Gets or sets whether this block is the content box for an inline-block formatting context.
+    /// </summary>
+    public bool IsInlineBlockContext { get; internal set; }
+
     internal void ApplyLayoutGeometry(UsedGeometry geometry)
     {
         SetUsedGeometry(geometry);
@@ -50,22 +63,8 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
         _usedGeometry = value;
     }
 
-    /// <summary>
-    /// Gets or sets the inline layout resolved for this block during layout.
-    /// </summary>
-    /// <remarks>
-    /// Layout owns this value. Measurement paths must not assign temporary inline layout here.
-    /// </remarks>
-    public InlineLayoutResult? InlineLayout { get; internal set; }
-
-    /// <summary>
-    /// Gets or sets whether this block is the content box for an inline-block formatting context.
-    /// </summary>
-    public bool IsInlineBlockContext { get; internal set; }
-
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new BlockBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new BlockBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -73,7 +72,6 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
             IsAnonymous = IsAnonymous,
             SourceIdentity = SourceIdentity
         });
-    }
 
     protected TBlock CopyBlockStateTo<TBlock>(TBlock clone)
         where TBlock : BlockBox
@@ -90,4 +88,3 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
         return clone;
     }
 }
-

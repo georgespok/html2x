@@ -1,7 +1,6 @@
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
@@ -65,13 +64,13 @@ public class PdfRendererTests
         var line = CreateLineFragment("Stable", 24, 40, 120, 18);
         var block = new BlockFragment([line])
         {
-            Rect = new RectPt(20, 30, 180, 80),
-            Style = new VisualStyle()
+            Rect = new(20, 30, 180, 80),
+            Style = new()
         };
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(300, 300),
-            new Spacing(0, 0, 0, 0),
+        layout.AddPage(new(
+            new(300, 300),
+            new(0, 0, 0, 0),
             new List<Fragment> { block },
             1,
             new ColorRgba(255, 255, 255, 255)));
@@ -94,22 +93,22 @@ public class PdfRendererTests
     public async Task RenderAsync_TextRunWithoutResolvedFont_ThrowsClearException()
     {
         var layout = new HtmlLayout();
-        layout.AddPage(new LayoutPage(
-            new SizePt(300, 300),
-            new Spacing(),
+        layout.AddPage(new(
+            new(300, 300),
+            new(),
             [
                 new LineBoxFragment
                 {
-                    Rect = new RectPt(0, 0, 120, 20),
+                    Rect = new(0, 0, 120, 20),
                     BaselineY = 15f,
                     LineHeight = 20f,
                     Runs =
                     [
-                        new TextRun(
+                        new(
                             "Missing",
                             RendererFontTestData.CreateFont(),
                             12f,
-                            new PointPt(0, 15),
+                            new(0, 15),
                             60f,
                             9f,
                             3f)
@@ -120,8 +119,7 @@ public class PdfRendererTests
             new ColorRgba(255, 255, 255, 255)));
         var renderer = new PdfRenderer();
 
-        var exception = await Should.ThrowAsync<FontResolutionException>(
-            () => renderer.RenderAsync(layout, new PdfRenderSettings()));
+        var exception = await Should.ThrowAsync<FontResolutionException>(() => renderer.RenderAsync(layout, new()));
 
         exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
         exception.RequestedFont.ShouldNotBeNull().Family.ShouldBe("Inter");
@@ -139,8 +137,9 @@ public class PdfRendererTests
             MaxImageSizeBytes = maxImageSizeBytes
         };
 
-        var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(
-            () => renderer.RenderAsync(CreateSimpleLayout(), settings));
+        var exception =
+            await Should.ThrowAsync<ArgumentOutOfRangeException>(() =>
+                renderer.RenderAsync(CreateSimpleLayout(), settings));
 
         exception.Message.ShouldContain("PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
         exception.ParamName.ShouldBe("settings");
@@ -151,8 +150,8 @@ public class PdfRendererTests
         var layout = new HtmlLayout();
 
         var page = new LayoutPage(
-            new SizePt(PaperSizes.A4.Width, PaperSizes.A4.Height),
-            new Spacing(72, 72, 72, 72),
+            new(PaperSizes.A4.Width, PaperSizes.A4.Height),
+            new(72, 72, 72, 72),
             CreateSimpleContent(),
             1,
             new ColorRgba(255, 255, 255, 255)
@@ -170,16 +169,16 @@ public class PdfRendererTests
             "Hello, Html2x!",
             RendererFontTestData.CreateFont(weight: FontWeight.W700),
             12f,
-            new PointPt(0, 0),
+            new(0, 0),
             80f,
             10f,
             3f);
 
         var lineBox = new LineBoxFragment
         {
-            Rect = new RectPt(0, 0, 400, 20),
+            Rect = new(0, 0, 400, 20),
             ZOrder = 1,
-            Style = new VisualStyle(),
+            Style = new(),
             BaselineY = 15f,
             LineHeight = 20f,
             Runs = [textRun]
@@ -198,13 +197,13 @@ public class PdfRendererTests
             CreateLineFragment("Padding", 50, 130, 140, 18)
         ])
         {
-            Rect = new RectPt(50, 100, 200, 120),
-            Style = new VisualStyle()
+            Rect = new(50, 100, 200, 120),
+            Style = new()
         };
 
         var page = new LayoutPage(
-            new SizePt(400, 400),
-            new Spacing(0, 0, 0, 0),
+            new(400, 400),
+            new(0, 0, 0, 0),
             new List<Fragment> { block },
             1,
             new ColorRgba(255, 255, 255, 255));
@@ -219,16 +218,16 @@ public class PdfRendererTests
             text,
             RendererFontTestData.CreateFont(),
             12f,
-            new PointPt(x, y),
+            new(x, y),
             width - 10f,
             9f,
             3f);
 
-        return new LineBoxFragment
+        return new()
         {
-            Rect = new RectPt(x, y, width, height),
+            Rect = new(x, y, width, height),
             ZOrder = 1,
-            Style = new VisualStyle(),
+            Style = new(),
             BaselineY = y + height - 6f,
             LineHeight = height,
             Runs = [run]

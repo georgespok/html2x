@@ -15,21 +15,19 @@ internal readonly record struct PageContentArea(float X, float Y, float Width, f
         var contentWidth = Math.Max(0f, width - safeMargin.Left - safeMargin.Right);
         var contentHeight = Math.Max(0f, height - safeMargin.Top - safeMargin.Bottom);
 
-        return new PageContentArea(
+        return new(
             safeMargin.Left,
             safeMargin.Top,
             contentWidth,
             contentHeight);
     }
 
-    private static Spacing NormalizeMargin(Spacing margin)
-    {
-        return new Spacing(
+    private static Spacing NormalizeMargin(Spacing margin) =>
+        new(
             RequireNonNegative(margin.Top),
             RequireNonNegative(margin.Right),
             RequireNonNegative(margin.Bottom),
             RequireNonNegative(margin.Left));
-    }
 
     private static float RequireNonNegative(float value)
     {

@@ -5,7 +5,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Base renderable fragment carrying page geometry, paint metadata, and validation at immutable boundaries.
+///     Base renderable fragment carrying page geometry, paint metadata, and validation at immutable boundaries.
 /// </summary>
 public abstract class Fragment
 {
@@ -30,5 +30,4 @@ public abstract class Fragment
     public int ZOrder { get; init; } // resolved stacking/z-index
 
     public VisualStyle Style { get; init; } = new(); // minimal style needed to paint this box
-
 }

@@ -4,9 +4,8 @@ using Html2x.RenderModel.Text;
 
 namespace Html2x.LayoutEngine.Geometry.Text;
 
-
 /// <summary>
-/// Represents one measured run after line wrapping.
+///     Represents one measured run after line wrapping.
 /// </summary>
 internal sealed record TextLayoutRun(
     InlineBox Source,

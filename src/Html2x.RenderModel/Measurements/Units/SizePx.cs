@@ -1,8 +1,8 @@
 namespace Html2x.RenderModel.Measurements.Units;
 
 /// <summary>
-/// Represents a width and height in CSS pixels.
-/// Width or height can be null when a dimension is unspecified.
+///     Represents a width and height in CSS pixels.
+///     Width or height can be null when a dimension is unspecified.
 /// </summary>
 public readonly record struct SizePx(double? Width, double? Height)
 {

@@ -3,7 +3,6 @@ using Html2x.RenderModel.Geometry;
 
 namespace Html2x.LayoutEngine.Pagination;
 
-
 internal sealed class BlockFragmentPlacement
 {
     public required int FragmentId { get; init; }

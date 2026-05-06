@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Styles;
 
 /// <summary>
-/// Renderer-facing visual facts that the built-in renderers can consume.
+///     Renderer-facing visual facts that the built-in renderers can consume.
 /// </summary>
 /// <param name="BackgroundColor">Resolved background color. A null value means transparent.</param>
 /// <param name="Borders">Resolved border edges, or null when no edge is painted.</param>

@@ -10,11 +10,11 @@ public sealed class HtmlConverterDiagnosticsTests
 {
     private static HtmlConverterOptions DiagnosticsOptions => new()
     {
-        Diagnostics = new DiagnosticsOptions
+        Diagnostics = new()
         {
             EnableDiagnostics = true
         },
-        Fonts = new FontOptions
+        Fonts = new()
         {
             FontPath = Path.Combine("Fonts", "Inter-Regular.ttf")
         }
@@ -24,16 +24,16 @@ public sealed class HtmlConverterDiagnosticsTests
     public async Task ToPdfAsync_ReportTemplateWithInvalidStyles_EmitsStyleDiagnostics()
     {
         const string html = """
-            <!DOCTYPE html>
-            <html>
-              <body>
-                <section id="invoice" style="width: 10rem; padding: 1px 2px 3px 4px 5px;">
-                  <h1>Invoice</h1>
-                  <p>Total due</p>
-                </section>
-              </body>
-            </html>
-            """;
+                            <!DOCTYPE html>
+                            <html>
+                              <body>
+                                <section id="invoice" style="width: 10rem; padding: 1px 2px 3px 4px 5px;">
+                                  <h1>Invoice</h1>
+                                  <p>Total due</p>
+                                </section>
+                              </body>
+                            </html>
+                            """;
 
         var converter = new HtmlConverter();
         var result = await converter.ToPdfAsync(html, DiagnosticsOptions);
@@ -80,18 +80,19 @@ public sealed class HtmlConverterDiagnosticsTests
         {
             var options = new HtmlConverterOptions
             {
-                Diagnostics = new DiagnosticsOptions
+                Diagnostics = new()
                 {
                     EnableDiagnostics = true
                 },
-                Fonts = new FontOptions
+                Fonts = new()
                 {
                     FontPath = tempDirectory.FullName
                 }
             };
 
             var converter = new HtmlConverter();
-            var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
+            var exception =
+                await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
 
             var diagnostics = exception.Data["DiagnosticsReport"].ShouldBeOfType<DiagnosticsReport>();
             var payload = diagnostics.Records
@@ -106,7 +107,7 @@ public sealed class HtmlConverterDiagnosticsTests
         }
         finally
         {
-            tempDirectory.Delete(recursive: true);
+            tempDirectory.Delete(true);
         }
     }
 
@@ -123,18 +124,19 @@ public sealed class HtmlConverterDiagnosticsTests
 
             var options = new HtmlConverterOptions
             {
-                Diagnostics = new DiagnosticsOptions
+                Diagnostics = new()
                 {
                     EnableDiagnostics = true
                 },
-                Fonts = new FontOptions
+                Fonts = new()
                 {
                     FontPath = invalidFontPath
                 }
             };
 
             var converter = new HtmlConverter();
-            var exception = await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
+            var exception =
+                await Should.ThrowAsync<InvalidOperationException>(() => converter.ToPdfAsync(html, options));
 
             var diagnostics = exception.Data["DiagnosticsReport"].ShouldBeOfType<DiagnosticsReport>();
             var payload = diagnostics.Records
@@ -150,7 +152,7 @@ public sealed class HtmlConverterDiagnosticsTests
         }
         finally
         {
-            tempDirectory.Delete(recursive: true);
+            tempDirectory.Delete(true);
         }
     }
 

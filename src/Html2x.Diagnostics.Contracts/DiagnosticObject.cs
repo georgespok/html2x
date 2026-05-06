@@ -26,16 +26,16 @@ public sealed record DiagnosticObject : DiagnosticValue, IEnumerable<KeyValuePai
 
     public static DiagnosticObject Empty { get; } = new([]);
 
+    public IEnumerator<KeyValuePair<string, DiagnosticValue?>> GetEnumerator() => _values.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
     public static DiagnosticObject Create(params KeyValuePair<string, DiagnosticValue?>[] values) => new(values);
 
     public static KeyValuePair<string, DiagnosticValue?> Field(string key, DiagnosticValue? value) =>
         new(ValidateKey(key), value);
 
     public bool ContainsKey(string key) => _values.ContainsKey(key);
-
-    public IEnumerator<KeyValuePair<string, DiagnosticValue?>> GetEnumerator() => _values.GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     private static string ValidateKey(string key)
     {

@@ -9,49 +9,49 @@ using Html2x.Text;
 namespace Html2x.LayoutEngine.Geometry;
 
 /// <summary>
-/// Builds published layout geometry output from computed styles.
+///     Builds published layout geometry output from computed styles.
 /// </summary>
 /// <remarks>
-/// This is the named Interface for the layout geometry module. The Implementation may use
-/// mutable boxes while resolving layout, but callers receive only <see cref="PublishedLayoutTree"/>.
+///     This is the named Interface for the layout geometry module. The Implementation may use
+///     mutable boxes while resolving layout, but callers receive only <see cref="PublishedLayoutTree" />.
 /// </remarks>
 internal sealed class LayoutGeometryBuilder
 {
-    private readonly StyleTreeBoxProjector _styleTreeBoxProjector;
-    private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy;
+    private readonly BoxTreeConstruction _boxTreeConstruction;
+    private readonly BlockContentExtentMeasurement _contentMeasurement;
     private readonly ITextMeasurer? _textMeasurer;
-    private readonly IBlockFormattingContext _blockFormattingContext;
+    private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy;
 
     public LayoutGeometryBuilder()
-        : this(textMeasurer: null, new BlockFormattingContext())
+        : this(null, new())
     {
     }
 
     public LayoutGeometryBuilder(ITextMeasurer textMeasurer)
-        : this(textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer)), new BlockFormattingContext())
+        : this(textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer)), new())
     {
     }
 
-    internal LayoutGeometryBuilder(ITextMeasurer? textMeasurer, IBlockFormattingContext blockFormattingContext)
+    internal LayoutGeometryBuilder(ITextMeasurer? textMeasurer, BlockContentExtentMeasurement contentMeasurement)
         : this(
-            new StyleTreeBoxProjector(),
-            new UnsupportedLayoutModePolicy(),
+            new(),
+            new(),
             textMeasurer,
-            blockFormattingContext)
+            contentMeasurement)
     {
     }
 
     private LayoutGeometryBuilder(
-        StyleTreeBoxProjector styleTreeBoxProjector,
+        BoxTreeConstruction boxTreeConstruction,
         UnsupportedLayoutModePolicy unsupportedLayoutModePolicy,
         ITextMeasurer? textMeasurer,
-        IBlockFormattingContext blockFormattingContext)
+        BlockContentExtentMeasurement contentMeasurement)
     {
-        _styleTreeBoxProjector = styleTreeBoxProjector ?? throw new ArgumentNullException(nameof(styleTreeBoxProjector));
+        _boxTreeConstruction = boxTreeConstruction ?? throw new ArgumentNullException(nameof(boxTreeConstruction));
         _unsupportedLayoutModePolicy = unsupportedLayoutModePolicy
                                        ?? throw new ArgumentNullException(nameof(unsupportedLayoutModePolicy));
         _textMeasurer = textMeasurer;
-        _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
+        _contentMeasurement = contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
     }
 
     public PublishedLayoutTree Build(
@@ -69,7 +69,7 @@ internal sealed class LayoutGeometryBuilder
         StyleTree styles,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var initialBoxRoot = _styleTreeBoxProjector.Build(styles);
+        var initialBoxRoot = _boxTreeConstruction.Build(styles);
         _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSink);
         return initialBoxRoot;
     }
@@ -86,9 +86,9 @@ internal sealed class LayoutGeometryBuilder
             styles,
             request,
             _textMeasurer,
-            _blockFormattingContext,
+            _contentMeasurement,
             diagnosticsSink);
-        var layout = pipeline.BlockEngine.LayoutPublished(initialBoxRoot, pipeline.Page);
+        var layout = pipeline.BoxTreeLayout.Layout(initialBoxRoot, pipeline.Page);
         GeometryLayoutStructureValidator.ValidateInlineBlockStructures(layout, diagnosticsSink);
         return layout;
     }

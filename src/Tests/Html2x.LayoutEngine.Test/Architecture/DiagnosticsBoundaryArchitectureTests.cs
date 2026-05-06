@@ -118,15 +118,20 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         CSharpSourceFile.Load("src", FacadeAssemblyName, "Html2PdfResult.cs")
             .ShouldContainPropertyInType("Html2PdfResult", "DiagnosticsReport", "DiagnosticsReport?", "public");
         SourceFileFor<LayoutBuilder>()
-            .ShouldHaveParameter(nameof(LayoutBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter(nameof(LayoutBuilder.BuildAsync), "diagnosticsSink",
+                NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<StyleTreeBuilder>()
-            .ShouldHaveParameter(nameof(StyleTreeBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter(nameof(StyleTreeBuilder.BuildAsync), "diagnosticsSink",
+                NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<IStyleTreeBuilder>()
-            .ShouldHaveParameter(nameof(IStyleTreeBuilder.BuildAsync), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter(nameof(IStyleTreeBuilder.BuildAsync), "diagnosticsSink",
+                NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<LayoutGeometryBuilder>()
-            .ShouldHaveParameter(nameof(LayoutGeometryBuilder.Build), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter(nameof(LayoutGeometryBuilder.Build), "diagnosticsSink",
+                NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<LayoutPaginator>()
-            .ShouldHaveParameter(nameof(LayoutPaginator.Paginate), "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter(nameof(LayoutPaginator.Paginate), "diagnosticsSink",
+                NullableTypeName<IDiagnosticsSink>());
         CSharpSourceFile.Load("src", PdfRendererAssemblyName, "Pipeline", "PdfRenderer.cs")
             .ShouldHaveParameter("RenderAsync", "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
     }
@@ -171,9 +176,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         var report = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsReport.cs");
         var serializer = CSharpSourceFile.Load("src", DiagnosticsAssemblyName, "DiagnosticsReportSerializer.cs");
 
-        collector.ShouldContainType("DiagnosticsCollector", "public", isSealed: true);
+        collector.ShouldContainType("DiagnosticsCollector", "public", true);
         collector.ShouldContainMethodInType("DiagnosticsCollector", "ToReport", "DiagnosticsReport", "public");
-        report.ShouldContainType("DiagnosticsReport", "public", isSealed: true);
+        report.ShouldContainType("DiagnosticsReport", "public", true);
         report.ShouldContainPropertyInType("DiagnosticsReport", "Records", "IReadOnlyList<DiagnosticRecord>", "public");
         serializer.ShouldContainType("DiagnosticsReportSerializer", "public");
         serializer.ShouldContainMethodInType("DiagnosticsReportSerializer", "ToJson", "string", "public");
@@ -206,21 +211,22 @@ public sealed class DiagnosticsBoundaryArchitectureTests
             "TableBox",
             "TableLayoutResult");
         ArchitectureSemanticProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
-            .ShouldNotReferenceNamespaces(AssemblyName<LayoutBuilder>(), "Html2x.Renderers", ParserPackageName(), SkiaSharpPackageName);
+            .ShouldNotReferenceNamespaces(AssemblyName<LayoutBuilder>(), "Html2x.Renderers", ParserPackageName(),
+                SkiaSharpPackageName);
     }
 
     [Fact]
     public void DiagnosticsCollections_AreNotMutatedDirectly()
     {
         foreach (var sourceRoot in new[]
-        {
-            CSharpSourceSet.FromDirectory("src", FacadeAssemblyName),
-            SourceSetFor<LayoutBuilder>(),
-            SourceSetFor<LayoutPaginator>(),
-            SourceSetFor<StyleTreeBuilder>(),
-            SourceSetFor<LayoutGeometryBuilder>(),
-            CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
-        })
+                 {
+                     CSharpSourceSet.FromDirectory("src", FacadeAssemblyName),
+                     SourceSetFor<LayoutBuilder>(),
+                     SourceSetFor<LayoutPaginator>(),
+                     SourceSetFor<StyleTreeBuilder>(),
+                     SourceSetFor<LayoutGeometryBuilder>(),
+                     CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
+                 })
         {
             sourceRoot.ShouldNotInvokeMemberOn("Events", "Add", "AddRange", "Clear", "Remove", "RemoveAt", "Insert");
         }

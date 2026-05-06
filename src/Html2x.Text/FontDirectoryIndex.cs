@@ -1,16 +1,17 @@
-using SkiaSharp;
 using Html2x.RenderModel.Text;
+using SkiaSharp;
 
 namespace Html2x.Text;
 
 /// <summary>
-/// Builds a metadata index of font files in a directory for consistent font selection.
+///     Builds a metadata index of font files in a directory for consistent font selection.
 /// </summary>
 internal static class FontDirectoryIndex
 {
     private static readonly string[] FontExtensions = [".ttf", ".otf", ".ttc"];
 
-    public static IReadOnlyList<FontFaceEntry> Build(IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory, string directory)
+    public static IReadOnlyList<FontFaceEntry> Build(IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory,
+        string directory)
     {
         ArgumentNullException.ThrowIfNull(fileDirectory);
         ArgumentNullException.ThrowIfNull(typefaceFactory);
@@ -26,7 +27,7 @@ internal static class FontDirectoryIndex
             return [];
         }
 
-        var faces = new List<FontFaceEntry>(capacity: files.Count);
+        var faces = new List<FontFaceEntry>(files.Count);
 
         foreach (var file in files)
         {
@@ -61,7 +62,7 @@ internal static class FontDirectoryIndex
             return [];
         }
 
-        return fileDirectory.EnumerateFiles(directory, "*.*", recursive: true)
+        return fileDirectory.EnumerateFiles(directory, "*.*", true)
             .Where(path => FontExtensions.Contains(fileDirectory.GetExtension(path), StringComparer.OrdinalIgnoreCase))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -75,12 +76,13 @@ internal static class FontDirectoryIndex
             return;
         }
 
-        AddFaceEntry(typefaceFactory, file, faceIndex: 0, faces);
+        AddFaceEntry(typefaceFactory, file, 0, faces);
     }
 
-    private static void LoadCollectionFaces(ISkiaTypefaceFactory typefaceFactory, string file, List<FontFaceEntry> faces)
+    private static void LoadCollectionFaces(ISkiaTypefaceFactory typefaceFactory, string file,
+        List<FontFaceEntry> faces)
     {
-        for (var index = 0; ; index++)
+        for (var index = 0;; index++)
         {
             var tf = typefaceFactory.FromFile(file, index);
             if (tf is null)
@@ -101,11 +103,11 @@ internal static class FontDirectoryIndex
             typeface.IsItalic || typeface.FontSlant != SKFontStyleSlant.Upright);
 
     private static List<FontFaceEntry> GetFamilyCandidates(IReadOnlyList<FontFaceEntry> faces, string? family) =>
-        string.IsNullOrWhiteSpace(family) 
-            ? [] 
+        string.IsNullOrWhiteSpace(family)
+            ? []
             : faces.Where(entry => string.Equals(entry.Family, family, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    private static bool IsDefaultTypeface(SKTypeface typeface) => 
+    private static bool IsDefaultTypeface(SKTypeface typeface) =>
         ReferenceEquals(typeface, SKTypeface.Default) || typeface.Handle == SKTypeface.Default.Handle;
 
     private static FontFaceEntry? SelectBestMatch(

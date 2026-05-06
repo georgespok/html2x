@@ -1,9 +1,9 @@
+using Html2x.LayoutEngine.Contracts.Published;
+using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Fragments.Test.Assertions;
 using Html2x.LayoutEngine.Fragments.Test.Builders;
-using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
@@ -25,13 +25,13 @@ public sealed class FragmentBuilderProjectionTests
     public void Build_BlockChildren_PreservesChildOrder()
     {
         var first = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/div/p[0]",
-            sourceOrder: 1,
-            rect: new RectPt(1f, 0f, 10f, 10f));
+            "body/div/p[0]",
+            1,
+            new RectPt(1f, 0f, 10f, 10f));
         var second = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/div/p[1]",
-            sourceOrder: 2,
-            rect: new RectPt(2f, 0f, 10f, 10f));
+            "body/div/p[1]",
+            2,
+            new RectPt(2f, 0f, 10f, 10f));
         var root = PublishedLayoutFragmentTestBuilder.Block(
             children: [first, second],
             flow:
@@ -55,8 +55,8 @@ public sealed class FragmentBuilderProjectionTests
             PublishedLayoutFragmentTestBuilder.TextItem(0, "child"));
         var childInlineLayout = PublishedLayoutFragmentTestBuilder.InlineLayout(childSegment);
         var child = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/div/p",
-            sourceOrder: 1,
+            "body/div/p",
+            1,
             inlineLayout: childInlineLayout,
             flow:
             [
@@ -93,8 +93,8 @@ public sealed class FragmentBuilderProjectionTests
             PublishedLayoutFragmentTestBuilder.TextItem(0, "nested"));
         var nestedInlineLayout = PublishedLayoutFragmentTestBuilder.InlineLayout(nestedSegment);
         var nestedBlock = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/div/p",
-            sourceOrder: 1,
+            "body/div/p",
+            1,
             inlineLayout: nestedInlineLayout,
             flow:
             [
@@ -104,8 +104,8 @@ public sealed class FragmentBuilderProjectionTests
             PublishedLayoutFragmentTestBuilder.TextItem(0, "root"));
         var inlineLayout = PublishedLayoutFragmentTestBuilder.InlineLayout(segment);
         var root = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/div",
-            sourceOrder: 0,
+            "body/div",
+            0,
             inlineLayout: inlineLayout,
             children: [nestedBlock],
             flow:
@@ -217,8 +217,8 @@ public sealed class FragmentBuilderProjectionTests
         var innerSegment = PublishedLayoutFragmentTestBuilder.Segment(
             PublishedLayoutFragmentTestBuilder.TextItem(0, "inner"));
         var inlineObject = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/span",
-            sourceOrder: 1,
+            "body/span",
+            1,
             formattingContext: FormattingContextKind.InlineBlock,
             inlineLayout: PublishedLayoutFragmentTestBuilder.InlineLayout(innerSegment),
             flow:
@@ -246,20 +246,20 @@ public sealed class FragmentBuilderProjectionTests
     [Fact]
     public void Build_ImageBlock_EmitsImageFragmentWithImageFacts()
     {
-        var style = new Contracts.Style.ComputedStyle
+        var style = new ComputedStyle
         {
             BackgroundColor = new ColorRgba(10, 20, 30, 255)
         };
         var image = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/img",
-            sourceOrder: 0,
-            rect: new RectPt(1f, 2f, 30f, 20f),
-            contentRect: new RectPt(3f, 4f, 20f, 12f),
+            "body/img",
+            0,
+            new RectPt(1f, 2f, 30f, 20f),
+            new RectPt(3f, 4f, 20f, 12f),
             style: style,
-            image: new PublishedImageFacts(
+            image: new(
                 "images/logo.png",
-                new SizePx(30d, 20d),
-                new SizePx(60d, 40d),
+                new(30d, 20d),
+                new(60d, 40d),
                 ImageLoadStatus.Missing));
 
         var fragments = Build(PublishedLayoutFragmentTestBuilder.Tree(image));
@@ -269,12 +269,12 @@ public sealed class FragmentBuilderProjectionTests
             .ShouldHaveSingleItem()
             .ShouldBeOfType<ImageFragment>();
         imageFragment.Src.ShouldBe("images/logo.png");
-        imageFragment.AuthoredSizePx.ShouldBe(new SizePx(30d, 20d));
-        imageFragment.IntrinsicSizePx.ShouldBe(new SizePx(60d, 40d));
+        imageFragment.AuthoredSizePx.ShouldBe(new(30d, 20d));
+        imageFragment.IntrinsicSizePx.ShouldBe(new(60d, 40d));
         imageFragment.IsMissing.ShouldBeTrue();
         imageFragment.IsOversize.ShouldBeFalse();
-        imageFragment.Rect.ShouldBe(new RectPt(1f, 2f, 30f, 20f));
-        imageFragment.ContentRect.ShouldBe(new RectPt(3f, 4f, 20f, 12f));
+        imageFragment.Rect.ShouldBe(new(1f, 2f, 30f, 20f));
+        imageFragment.ContentRect.ShouldBe(new(3f, 4f, 20f, 12f));
         imageFragment.Style.BackgroundColor.ShouldBe(style.BackgroundColor);
     }
 
@@ -282,10 +282,10 @@ public sealed class FragmentBuilderProjectionTests
     public void Build_RuleBlock_EmitsRuleFragment()
     {
         var rule = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/hr",
-            sourceOrder: 0,
-            rect: new RectPt(4f, 5f, 70f, 2f),
-            rule: new PublishedRuleFacts());
+            "body/hr",
+            0,
+            new RectPt(4f, 5f, 70f, 2f),
+            rule: new());
 
         var fragments = Build(PublishedLayoutFragmentTestBuilder.Tree(rule));
 
@@ -293,32 +293,31 @@ public sealed class FragmentBuilderProjectionTests
             .Children
             .ShouldHaveSingleItem()
             .ShouldBeOfType<RuleFragment>();
-        ruleFragment.Rect.ShouldBe(new RectPt(4f, 5f, 70f, 2f));
+        ruleFragment.Rect.ShouldBe(new(4f, 5f, 70f, 2f));
     }
 
     [Fact]
     public void Build_TableRoles_EmitSpecializedTableFragments()
     {
         var cell = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/table/tr/td",
-            sourceOrder: 2,
+            "body/table/tr/td",
+            2,
             role: FragmentDisplayRole.TableCell,
-            table: new PublishedTableFacts(null, null, columnIndex: 1, isHeader: true));
+            table: new(null, null, 1, true));
         var row = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/table/tr",
-            sourceOrder: 1,
+            "body/table/tr",
+            1,
             role: FragmentDisplayRole.TableRow,
-            table: new PublishedTableFacts(null, rowIndex: 3, null, null),
+            table: new(null, 3, null, null),
             children: [cell],
             flow:
             [
                 new PublishedChildBlockItem(0, cell)
             ]);
         var table = PublishedLayoutFragmentTestBuilder.Block(
-            nodePath: "body/table",
-            sourceOrder: 0,
+            "body/table",
             role: FragmentDisplayRole.Table,
-            table: new PublishedTableFacts(derivedColumnCount: 2, null, null, null),
+            table: new(2, null, null, null),
             children: [row],
             flow:
             [
@@ -336,8 +335,5 @@ public sealed class FragmentBuilderProjectionTests
         cellFragment.IsHeader.ShouldBeTrue();
     }
 
-    private static FragmentTree Build(PublishedLayoutTree layout)
-    {
-        return new FragmentBuilder().Build(layout);
-    }
+    private static FragmentTree Build(PublishedLayoutTree layout) => new FragmentBuilder().Build(layout);
 }

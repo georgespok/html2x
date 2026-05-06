@@ -1,7 +1,7 @@
 namespace Html2x.LayoutEngine.Style;
 
 /// <summary>
-/// Input settings owned by the style stage.
+///     Input settings owned by the style stage.
 /// </summary>
 internal sealed class StyleBuildSettings
 {

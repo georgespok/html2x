@@ -6,7 +6,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.Renderers.Pdf.Paint;
 
 /// <summary>
-/// Encodes the current fragment traversal and layering rules as explicit paint command order.
+///     Encodes the current fragment traversal and layering rules as explicit paint command order.
 /// </summary>
 internal sealed class PaintOrderResolver
 {
@@ -217,23 +217,18 @@ internal sealed class PaintOrderResolver
             borders!));
     }
 
-    private static bool ShouldPaintBorder(RectPt rect, BorderEdges? borders)
-    {
-        return borders is { HasAny: true } && rect.Width > 0f && rect.Height > 0f;
-    }
+    private static bool ShouldPaintBorder(RectPt rect, BorderEdges? borders) =>
+        borders is { HasAny: true } && rect.Width > 0f && rect.Height > 0f;
 
     /// <summary>
-    /// Assigns stable command indexes while collecting commands for a single page.
+    ///     Assigns stable command indexes while collecting commands for a single page.
     /// </summary>
     private sealed class PaintCommandAccumulator
     {
         private readonly List<PaintCommand> _commands = [];
         private int _nextIndex;
 
-        public int NextIndex()
-        {
-            return _nextIndex++;
-        }
+        public int NextIndex() => _nextIndex++;
 
         public void Add(PaintCommand command)
         {

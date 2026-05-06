@@ -12,7 +12,7 @@ internal static class PaginationDiagnostics
         Emit(
             diagnosticsSink,
             PaginationDiagnosticNames.Events.PageCreated,
-            new PaginationDiagnostic(
+            new(
                 PaginationDiagnosticNames.Events.PageCreated,
                 DiagnosticSeverity.Info,
                 CreateContext(pageNumber, null),
@@ -33,7 +33,7 @@ internal static class PaginationDiagnostics
         Emit(
             diagnosticsSink,
             PaginationDiagnosticNames.Events.BlockMovedNextPage,
-            new PaginationDiagnostic(
+            new(
                 PaginationDiagnosticNames.Events.BlockMovedNextPage,
                 DiagnosticSeverity.Info,
                 CreateContext(toPage, fragmentId),
@@ -59,7 +59,7 @@ internal static class PaginationDiagnostics
         Emit(
             diagnosticsSink,
             PaginationDiagnosticNames.Events.BlockPlaced,
-            new PaginationDiagnostic(
+            new(
                 PaginationDiagnosticNames.Events.BlockPlaced,
                 DiagnosticSeverity.Info,
                 CreateContext(pageNumber, fragmentId),
@@ -83,7 +83,7 @@ internal static class PaginationDiagnostics
         Emit(
             diagnosticsSink,
             PaginationDiagnosticNames.Events.OversizedBlock,
-            new PaginationDiagnostic(
+            new(
                 PaginationDiagnosticNames.Events.OversizedBlock,
                 DiagnosticSeverity.Warning,
                 CreateContext(pageNumber, fragmentId),
@@ -102,7 +102,7 @@ internal static class PaginationDiagnostics
         Emit(
             diagnosticsSink,
             PaginationDiagnosticNames.Events.EmptyDocument,
-            new PaginationDiagnostic(
+            new(
                 PaginationDiagnosticNames.Events.EmptyDocument,
                 DiagnosticSeverity.Info,
                 CreateContext(pageNumber, null),
@@ -114,20 +114,21 @@ internal static class PaginationDiagnostics
         string eventName,
         PaginationDiagnostic payload)
     {
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: PaginationDiagnosticNames.Stages.Pagination,
-            Name: eventName,
-            Severity: payload.Severity,
-            Message: payload.Reason,
-            Context: payload.Context,
-            Fields: DiagnosticFields.Create(
+        diagnosticsSink?.Emit(new(
+            PaginationDiagnosticNames.Stages.Pagination,
+            eventName,
+            payload.Severity,
+            payload.Reason,
+            payload.Context,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.EventName, payload.EventName),
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.PageNumber, payload.PageNumber),
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.FragmentId, FromNullable(payload.FragmentId)),
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.FromPage, FromNullable(payload.FromPage)),
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.ToPage, FromNullable(payload.ToPage)),
                 DiagnosticFields.Field(PaginationDiagnosticNames.Fields.LocalY, FromNullable(payload.LocalY)),
-                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.RemainingSpace, FromNullable(payload.RemainingSpace)),
+                DiagnosticFields.Field(PaginationDiagnosticNames.Fields.RemainingSpace,
+                    FromNullable(payload.RemainingSpace)),
                 DiagnosticFields.Field(
                     PaginationDiagnosticNames.Fields.RemainingSpaceBefore,
                     FromNullable(payload.RemainingSpaceBefore)),
@@ -141,7 +142,7 @@ internal static class PaginationDiagnostics
                 DiagnosticFields.Field(
                     PaginationDiagnosticNames.Fields.Reason,
                     payload.Reason is null ? null : DiagnosticValue.From(payload.Reason))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
 
     private static DiagnosticValue? FromNullable(int? value) =>
@@ -156,12 +157,12 @@ internal static class PaginationDiagnostics
             ? $"page[{pageNumber}]/fragment[{fragmentId.Value}]"
             : $"page[{pageNumber}]";
 
-        return new DiagnosticContext(
-            Selector: null,
-            ElementIdentity: fragmentId.HasValue ? $"fragment#{fragmentId.Value}" : null,
-            StyleDeclaration: null,
-            StructuralPath: structuralPath,
-            RawUserInput: null);
+        return new(
+            null,
+            fragmentId.HasValue ? $"fragment#{fragmentId.Value}" : null,
+            null,
+            structuralPath,
+            null);
     }
 
     private sealed record PaginationDiagnostic(
@@ -181,7 +182,6 @@ internal static class PaginationDiagnostics
         public float? PageContentHeight { get; init; }
         public string? Reason { get; init; }
     }
-
 }
 
 internal static class PaginationDiagnosticNames

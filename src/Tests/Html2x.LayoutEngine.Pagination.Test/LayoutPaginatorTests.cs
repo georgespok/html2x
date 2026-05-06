@@ -1,6 +1,5 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
@@ -17,8 +16,8 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(1, y: 10f, width: 100f, height: 50f),
-            CreateBlock(2, y: 60f, width: 100f, height: 40f)
+            CreateBlock(1, 10f, 100f, 50f),
+            CreateBlock(2, 60f, 100f, 40f)
         };
 
         var pageSize = new SizePt(200f, 100f);
@@ -48,8 +47,8 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(1, y: 10f, width: 100f, height: 30f),
-            CreateBlock(2, y: 40f, width: 100f, height: 50f)
+            CreateBlock(1, 10f, 100f, 30f),
+            CreateBlock(2, 40f, 100f, 50f)
         };
 
         var pageSize = new SizePt(200f, 100f);
@@ -71,13 +70,14 @@ public sealed class LayoutPaginatorTests
     {
         // Arrange
         var paginator = new LayoutPaginator();
-        var block = CreateBlock(7, y: 10f, width: 100f, height: 30f);
+        var block = CreateBlock(7, 10f, 100f, 30f);
 
         // Act
-        var result = Paginate(paginator, [block], new SizePt(200f, 100f), new Spacing(10f, 10f, 10f, 10f));
+        var result = Paginate(paginator, [block], new(200f, 100f), new(10f, 10f, 10f, 10f));
 
         // Assert
-        var placed = result.Layout.Pages.ShouldHaveSingleItem().Children.ShouldHaveSingleItem().ShouldBeOfType<BlockFragment>();
+        var placed = result.Layout.Pages.ShouldHaveSingleItem().Children.ShouldHaveSingleItem()
+            .ShouldBeOfType<BlockFragment>();
         placed.ShouldNotBeSameAs(block);
         placed.FragmentId.ShouldBe(block.FragmentId);
         placed.PageNumber.ShouldBe(1);
@@ -91,9 +91,9 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(11, y: 10f, width: 100f, height: 40f),
-            CreateBlock(12, y: 50f, width: 100f, height: 40f),
-            CreateBlock(13, y: 90f, width: 100f, height: 20f)
+            CreateBlock(11, 10f, 100f, 40f),
+            CreateBlock(12, 50f, 100f, 40f),
+            CreateBlock(13, 90f, 100f, 20f)
         };
 
         var pageSize = new SizePt(200f, 100f);
@@ -121,9 +121,9 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(21, y: 10f, width: 100f, height: 40f),
-            CreateBlock(22, y: 20f, width: 100f, height: 30f),
-            CreateBlock(23, y: 25f, width: 100f, height: 10f)
+            CreateBlock(21, 10f, 100f, 40f),
+            CreateBlock(22, 20f, 100f, 30f),
+            CreateBlock(23, 25f, 100f, 10f)
         };
 
         var pageSize = new SizePt(200f, 120f);
@@ -148,8 +148,8 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(31, y: 10f, width: 100f, height: 60f),
-            CreateBlock(32, y: 70f, width: 100f, height: 30f)
+            CreateBlock(31, 10f, 100f, 60f),
+            CreateBlock(32, 70f, 100f, 30f)
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
@@ -198,20 +198,20 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(31, y: 10f, width: 100f, height: 60f),
-            CreateBlock(32, y: 70f, width: 100f, height: 30f)
+            CreateBlock(31, 10f, 100f, 60f),
+            CreateBlock(32, 70f, 100f, 30f)
         };
         var sink = new RecordingDiagnosticsSink();
 
         _ = Paginate(
             paginator,
             blocks,
-            new SizePt(200f, 100f),
-            new Spacing(10f, 10f, 10f, 10f),
+            new(200f, 100f),
+            new(10f, 10f, 10f, 10f),
             sink);
 
-        var movedRecord = sink.Records.Single(
-            static record => record.Name == "layout/pagination/block-moved-next-page");
+        var movedRecord =
+            sink.Records.Single(static record => record.Name == "layout/pagination/block-moved-next-page");
         movedRecord.Stage.ShouldBe("stage/pagination");
         movedRecord.Severity.ShouldBe(DiagnosticSeverity.Info);
         movedRecord.Context.ShouldNotBeNull().StructuralPath.ShouldBe("page[2]/fragment[32]");
@@ -229,9 +229,9 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(41, y: 10f, width: 100f, height: 35f),
-            CreateBlock(42, y: 50f, width: 100f, height: 35f),
-            CreateBlock(43, y: 90f, width: 100f, height: 35f)
+            CreateBlock(41, 10f, 100f, 35f),
+            CreateBlock(42, 50f, 100f, 35f),
+            CreateBlock(43, 90f, 100f, 35f)
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
@@ -266,8 +266,8 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(44, y: 10f, width: 100f, height: 35f),
-            CreateBlock(45, y: 50f, width: 100f, height: 120f)
+            CreateBlock(44, 10f, 100f, 35f),
+            CreateBlock(45, 50f, 100f, 120f)
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f);
@@ -289,8 +289,8 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(51, y: 10f, width: 100f, height: 60f),
-            CreateBlock(52, y: 70f, width: 100f, height: 120f)
+            CreateBlock(51, 10f, 100f, 60f),
+            CreateBlock(52, 70f, 100f, 120f)
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
@@ -344,9 +344,9 @@ public sealed class LayoutPaginatorTests
         var paginator = new LayoutPaginator();
         var blocks = new List<BlockFragment>
         {
-            CreateBlock(61, y: 10f, width: 100f, height: 70f),
-            CreateBlock(62, y: 650f, width: 100f, height: 20f),
-            CreateBlock(63, y: 700f, width: 100f, height: 20f)
+            CreateBlock(61, 10f, 100f, 70f),
+            CreateBlock(62, 650f, 100f, 20f),
+            CreateBlock(63, 700f, 100f, 20f)
         };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
@@ -371,14 +371,14 @@ public sealed class LayoutPaginatorTests
     {
         // Arrange
         var paginator = new LayoutPaginator();
-        var first = CreateBlock(71, y: 10f, width: 100f, height: 70f);
+        var first = CreateBlock(71, 10f, 100f, 70f);
         var moved = CreateBlockWithLine(
-            id: 72,
-            y: 650f,
-            width: 100f,
-            height: 40f,
-            lineOffsetY: 10f,
-            text: "Moved");
+            72,
+            650f,
+            100f,
+            40f,
+            10f,
+            "Moved");
         var blocks = new List<BlockFragment> { first, moved };
         var pageSize = new SizePt(200f, 100f);
         var margins = new Spacing(10f, 10f, 10f, 10f); // content height: 80
@@ -404,26 +404,22 @@ public sealed class LayoutPaginatorTests
         IReadOnlyList<BlockFragment> blocks,
         SizePt pageSize,
         Spacing margins,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        return paginator.Paginate(
+        IDiagnosticsSink? diagnosticsSink = null) =>
+        paginator.Paginate(
             blocks,
-            new PaginationOptions
+            new()
             {
                 PageSize = pageSize,
                 Margin = margins
             },
             diagnosticsSink);
-    }
 
-    private static BlockFragment CreateBlock(int id, float y, float width, float height)
-    {
-        return new BlockFragment
+    private static BlockFragment CreateBlock(int id, float y, float width, float height) =>
+        new()
         {
             FragmentId = id,
-            Rect = new RectPt(0f, y, width, height)
+            Rect = new(0f, y, width, height)
         };
-    }
 
     private static IReadOnlyList<(string Name, DiagnosticSeverity Severity, string? StructuralPath, string EventName)>
         ExtractTraceContract(RecordingDiagnosticsSink diagnostics)
@@ -451,26 +447,26 @@ public sealed class LayoutPaginatorTests
         var line = new LineBoxFragment
         {
             FragmentId = id * 100,
-            Rect = new RectPt(0f, lineY, width, 12f),
+            Rect = new(0f, lineY, width, 12f),
             BaselineY = baselineY,
             LineHeight = 12f,
             Runs =
             [
-                new TextRun(
+                new(
                     text,
                     font,
                     12f,
-                    new PointPt(0f, baselineY),
+                    new(0f, baselineY),
                     30f,
                     9f,
                     3f)
             ]
         };
 
-        return new BlockFragment([line])
+        return new([line])
         {
             FragmentId = id,
-            Rect = new RectPt(0f, y, width, height)
+            Rect = new(0f, y, width, height)
         };
     }
 }

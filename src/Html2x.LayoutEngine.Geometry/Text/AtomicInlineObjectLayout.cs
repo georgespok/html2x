@@ -1,5 +1,6 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.RenderModel.Fragments;
@@ -9,28 +10,35 @@ using Html2x.Text;
 namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
-/// Measures inline-block content as an atomic inline object for current inline layout.
+///     Measures inline-block content as an atomic inline object for current inline layout.
 /// </summary>
 internal sealed class AtomicInlineObjectLayout(
     ITextMeasurer measurer,
     IFontMetricsProvider metrics,
     ILineHeightStrategy lineHeightStrategy,
-    IBlockFormattingContext blockFormattingContext,
-    IImageLayoutResolver? imageResolver = null,
+    BlockContentExtentMeasurement contentMeasurement,
+    IImageSizingRules? imageResolver = null,
     IDiagnosticsSink? diagnosticsSink = null)
 {
+    private readonly BlockContentExtentMeasurement _blockContentMeasurement =
+        contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
+
+    private readonly IImageSizingRules _imageResolver = imageResolver ?? new ImageSizingRules();
+    private readonly TextLineLayout _layoutEngine = new(measurer);
+
+    private readonly ILineHeightStrategy _lineHeightStrategy =
+        lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+
     private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
     private readonly IFontMetricsProvider _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
-    private readonly ILineHeightStrategy _lineHeightStrategy = lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-    private readonly InlineRunFactory _runFactory = new(
+
+    private readonly InlineRunConstruction _runConstruction = new(
         metrics,
-        blockFormattingContext,
-        imageResolver ?? new ImageLayoutResolver(),
+        contentMeasurement,
+        imageResolver ?? new ImageSizingRules(),
         diagnosticsSink);
-    private readonly TextLayoutEngine _layoutEngine = new(measurer);
-    private readonly IBlockFormattingContext _blockFormattingContext = blockFormattingContext ?? throw new ArgumentNullException(nameof(blockFormattingContext));
-    private readonly BoxSizingRules _sizingRules = new(blockFormattingContext);
-    private readonly IImageLayoutResolver _imageResolver = imageResolver ?? new ImageLayoutResolver();
+
+    private readonly BlockSizingRules _sizingRules = new(contentMeasurement.MarginCollapseRules);
 
     public InlineObjectLayout? MeasureInlineBlock(InlineBox inline, float availableWidth)
     {
@@ -61,9 +69,9 @@ internal sealed class AtomicInlineObjectLayout(
         var resolvedLineHeight = ResolveLineHeight(imageBox);
         var resolvedBaseline = Math.Max(resolvedLineHeight, image.TotalHeight);
 
-        return new InlineObjectLayout(
+        return new(
             imageBox,
-            new TextLayoutResult([], image.ContentHeight, image.ContentWidth),
+            new([], image.ContentHeight, image.ContentWidth),
             image.ContentWidth,
             image.ContentHeight,
             image.TotalWidth,
@@ -78,20 +86,23 @@ internal sealed class AtomicInlineObjectLayout(
         var layoutResult = LayoutInlineContent(contentBox, measurement.ContentFlowWidth, lineHeight);
         var formattingResult = FormatBlockContent(contentBox, measurement.ContentFlowWidth);
 
-        var measuredContentFlowWidth = ResolveMeasuredContentWidth(layoutResult, formattingResult, measurement.ContentFlowWidth);
+        var measuredContentFlowWidth =
+            ResolveMeasuredContentWidth(layoutResult, formattingResult, measurement.ContentFlowWidth);
         var measuredContentBoxWidth = measuredContentFlowWidth + contentBox.MarkerOffset;
         var measuredContentHeight = ResolveContentHeight(contentBox, layoutResult, formattingResult);
-        var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredContentBoxWidth, measurement.Padding, measurement.Border);
-        var contentWidth = BoxDimensionResolver.ResolveContentFlowWidth(
+        var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredContentBoxWidth, measurement.Padding,
+            measurement.Border);
+        var contentWidth = BoxDimensionRules.ResolveContentFlowWidth(
             totalWidth,
             measurement.Padding,
             measurement.Border,
             contentBox.MarkerOffset);
         var contentHeight = _sizingRules.ResolveContentHeight(contentBox, measuredContentHeight);
-        var totalHeight = UsedGeometryCalculator.ResolveBorderBoxHeight(contentHeight, measurement.Padding, measurement.Border);
+        var totalHeight =
+            UsedGeometryRules.ResolveBorderBoxHeight(contentHeight, measurement.Padding, measurement.Border);
         var baseline = ResolveBaseline(layoutResult, measurement.Padding, measurement.Border, totalHeight);
 
-        return new InlineObjectLayout(
+        return new(
             contentBox,
             layoutResult,
             contentWidth,
@@ -104,34 +115,34 @@ internal sealed class AtomicInlineObjectLayout(
     private TextLayoutResult LayoutInlineContent(BlockBox contentBox, float availableWidth, float lineHeight)
     {
         var runs = CollectInlineRuns(contentBox, availableWidth);
-        return _layoutEngine.Layout(new TextLayoutInput(runs, availableWidth, lineHeight));
+        return _layoutEngine.Layout(new(runs, availableWidth, lineHeight));
     }
 
-    private BlockFormattingResult FormatBlockContent(BlockBox contentBox, float availableWidth)
+    private BlockContentExtentMeasurementResult FormatBlockContent(BlockBox contentBox, float availableWidth)
     {
         if (float.IsFinite(availableWidth))
         {
-            var request = BlockFormattingRequest.ForInlineBlock(
+            var request = BlockContentExtentMeasurementRequest.ForInlineBlock(
                 contentBox,
                 availableWidth,
-                consumerName: nameof(InlineLayoutEngine),
-                diagnosticsSink: diagnosticsSink,
-                emitDiagnostics: diagnosticsSink is not null);
-            return _blockFormattingContext.Format(request);
+                GeometryDiagnosticNames.Consumers.InlineLayoutEngine,
+                diagnosticsSink,
+                diagnosticsSink is not null);
+            return _blockContentMeasurement.Measure(request);
         }
 
-        var unboundedRequest = BlockFormattingRequest.ForUnboundedWidth(
+        var unboundedRequest = BlockContentExtentMeasurementRequest.ForUnboundedWidth(
             FormattingContextKind.InlineBlock,
             contentBox,
-            consumerName: nameof(InlineLayoutEngine),
-            diagnosticsSink: diagnosticsSink,
-            emitDiagnostics: diagnosticsSink is not null);
-        return _blockFormattingContext.Format(unboundedRequest);
+            GeometryDiagnosticNames.Consumers.InlineLayoutEngine,
+            diagnosticsSink,
+            diagnosticsSink is not null);
+        return _blockContentMeasurement.Measure(unboundedRequest);
     }
 
     private static float ResolveMeasuredContentWidth(
         TextLayoutResult layoutResult,
-        BlockFormattingResult formattingResult,
+        BlockContentExtentMeasurementResult formattingResult,
         float contentAvailableWidth)
     {
         var maxLineWidth = Math.Max(layoutResult.MaxLineWidth, formattingResult.TotalWidth);
@@ -142,15 +153,13 @@ internal sealed class AtomicInlineObjectLayout(
         ComputedStyle style,
         float measuredContentBoxWidth,
         Spacing padding,
-        Spacing border)
-    {
-        return BoxDimensionResolver.ResolveIntrinsicBorderBoxWidth(style, measuredContentBoxWidth, padding, border);
-    }
+        Spacing border) =>
+        BoxDimensionRules.ResolveIntrinsicBorderBoxWidth(style, measuredContentBoxWidth, padding, border);
 
     private static float ResolveContentHeight(
         BlockBox contentBox,
         TextLayoutResult layoutResult,
-        BlockFormattingResult formattingResult)
+        BlockContentExtentMeasurementResult formattingResult)
     {
         if (!HasCanonicalBlockDescendants(contentBox, formattingResult))
         {
@@ -162,7 +171,7 @@ internal sealed class AtomicInlineObjectLayout(
 
     private static bool HasCanonicalBlockDescendants(
         BlockBox contentBox,
-        BlockFormattingResult formattingResult)
+        BlockContentExtentMeasurementResult formattingResult)
     {
         return formattingResult.FormattedBlocks.Any(block => !ReferenceEquals(block, contentBox));
     }
@@ -180,7 +189,7 @@ internal sealed class AtomicInlineObjectLayout(
         var collector = new InlineRunCollector(
             block.Style,
             availableWidth,
-            _runFactory,
+            _runConstruction,
             _measurer,
             _lineHeightStrategy);
 
@@ -194,10 +203,10 @@ internal sealed class AtomicInlineObjectLayout(
     {
         if (!float.IsFinite(availableWidth))
         {
-            return UsedGeometryCalculator.RequireNonNegativeFinite(measuredWidth);
+            return UsedGeometryRules.RequireNonNegativeFinite(measuredWidth);
         }
 
-        return UsedGeometryCalculator.RequireNonNegativeFinite(Math.Min(availableWidth, measuredWidth));
+        return UsedGeometryRules.RequireNonNegativeFinite(Math.Min(availableWidth, measuredWidth));
     }
 
     private static float ResolveBaseline(

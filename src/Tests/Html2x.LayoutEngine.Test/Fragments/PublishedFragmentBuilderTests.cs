@@ -3,7 +3,6 @@ using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Test.Builders;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
@@ -17,7 +16,7 @@ public sealed class PublishedFragmentBuilderTests
     {
         var style = new ComputedStyle
         {
-            Borders = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
+            Borders = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         };
         var block = PublishedLayoutTestBuilder.Block(
             rect: new RectPt(10f, 20f, 100f, 50f),
@@ -26,7 +25,7 @@ public sealed class PublishedFragmentBuilderTests
         var fragments = Build(PublishedLayoutTestBuilder.Tree(block));
 
         var fragment = fragments.Blocks.ShouldHaveSingleItem();
-        fragment.Rect.ShouldBe(new RectPt(10f, 20f, 100f, 50f));
+        fragment.Rect.ShouldBe(new(10f, 20f, 100f, 50f));
         fragment.Style.Borders.ShouldBe(style.Borders);
     }
 
@@ -51,8 +50,8 @@ public sealed class PublishedFragmentBuilderTests
         var innerLayout = PublishedLayoutTestBuilder.InlineLayout(
             PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "inner")));
         var inlineObject = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/span",
-            sourceOrder: 1,
+            "body/span",
+            1,
             formattingContext: FormattingContextKind.InlineBlock,
             inlineLayout: innerLayout,
             flow:
@@ -106,26 +105,26 @@ public sealed class PublishedFragmentBuilderTests
     public void Build_WithPublishedImageAndRuleFacts_UsesPublishedFacts()
     {
         var image = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/img",
-            sourceOrder: 0,
-            rect: new RectPt(1f, 2f, 30f, 20f),
-            image: new PublishedImageFacts(
+            "body/img",
+            0,
+            new RectPt(1f, 2f, 30f, 20f),
+            image: new(
                 "images/logo.png",
-                new SizePx(30d, 20d),
-                new SizePx(60d, 40d),
+                new(30d, 20d),
+                new(60d, 40d),
                 ImageLoadStatus.Oversize));
         var rule = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/hr",
-            sourceOrder: 1,
-            rect: new RectPt(4f, 5f, 70f, 2f),
-            rule: new PublishedRuleFacts());
+            "body/hr",
+            1,
+            new RectPt(4f, 5f, 70f, 2f),
+            rule: new());
 
         var fragments = Build(PublishedLayoutTestBuilder.Tree(image, rule));
 
         var imageFragment = fragments.Blocks[0].Children.ShouldHaveSingleItem().ShouldBeOfType<ImageFragment>();
         imageFragment.Src.ShouldBe("images/logo.png");
         imageFragment.IsOversize.ShouldBeTrue();
-        imageFragment.Rect.ShouldBe(new RectPt(1f, 2f, 30f, 20f));
+        imageFragment.Rect.ShouldBe(new(1f, 2f, 30f, 20f));
         fragments.Blocks[1].Children.ShouldHaveSingleItem().ShouldBeOfType<RuleFragment>();
     }
 
@@ -133,25 +132,24 @@ public sealed class PublishedFragmentBuilderTests
     public void Build_WithPublishedTableFacts_PreservesTableChildMetadata()
     {
         var cell = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/table/tr/td",
-            sourceOrder: 2,
+            "body/table/tr/td",
+            2,
             role: FragmentDisplayRole.TableCell,
-            table: new PublishedTableFacts(null, null, columnIndex: 1, isHeader: true));
+            table: new(null, null, 1, true));
         var row = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/table/tr",
-            sourceOrder: 1,
+            "body/table/tr",
+            1,
             role: FragmentDisplayRole.TableRow,
-            table: new PublishedTableFacts(null, rowIndex: 3, null, null),
+            table: new(null, 3, null, null),
             children: [cell],
             flow:
             [
                 new PublishedChildBlockItem(0, cell)
             ]);
         var table = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/table",
-            sourceOrder: 0,
+            "body/table",
             role: FragmentDisplayRole.Table,
-            table: new PublishedTableFacts(derivedColumnCount: 2, null, null, null),
+            table: new(2, null, null, null),
             children: [row],
             flow:
             [
@@ -175,8 +173,8 @@ public sealed class PublishedFragmentBuilderTests
         var childSegment = PublishedLayoutTestBuilder.Segment(PublishedLayoutTestBuilder.TextItem(0, "child"));
         var childInlineLayout = PublishedLayoutTestBuilder.InlineLayout(childSegment);
         var child = PublishedLayoutTestBuilder.Block(
-            nodePath: "body/div/p",
-            sourceOrder: 1,
+            "body/div/p",
+            1,
             inlineLayout: childInlineLayout,
             flow:
             [
@@ -204,10 +202,7 @@ public sealed class PublishedFragmentBuilderTests
             .Runs.ShouldHaveSingleItem().Text.ShouldBe("after");
     }
 
-    private static FragmentTree Build(PublishedLayoutTree layout)
-    {
-        return new FragmentBuilder().Build(layout);
-    }
+    private static FragmentTree Build(PublishedLayoutTree layout) => new FragmentBuilder().Build(layout);
 
     private static IEnumerable<string> EnumerateText(LayoutFragment fragment)
     {

@@ -1,7 +1,7 @@
 namespace Html2x.RenderModel.Fragments;
 
 /// <summary>
-/// Represents a table cell fragment that can own block or inline child fragments.
+///     Represents a table cell fragment that can own block or inline child fragments.
 /// </summary>
 public sealed class TableCellFragment(IEnumerable<Fragment>? children) : BlockFragment(children)
 {

@@ -4,7 +4,7 @@ using AngleSharp.Dom;
 namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
-/// Walks supported DOM elements and materializes a StyleNode tree using the provided style factory.
+///     Walks supported DOM elements and materializes a StyleNode tree using the provided style factory.
 /// </summary>
 internal sealed class StyleTraversal
 {
@@ -89,7 +89,7 @@ internal sealed class StyleTraversal
             content.Add(StyleContentNode.ForElement(elementContentIdentity, childNode));
         }
 
-        return new StyleNode(identity, facts, style, children, content);
+        return new(identity, facts, style, children, content);
     }
 
     private static void AppendUnsupportedContent(
@@ -129,15 +129,11 @@ internal sealed class StyleTraversal
         }
     }
 
-    private static bool ShouldInclude(IElement? element)
-    {
-        return element is not null && HtmlCssConstants.SupportedElementTags.Contains(element.TagName);
-    }
+    private static bool ShouldInclude(IElement? element) =>
+        element is not null && HtmlCssConstants.SupportedElementTags.Contains(element.TagName);
 
-    private static bool IsLineBreak(IElement element)
-    {
-        return string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Br, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsLineBreak(IElement element) => string.Equals(element.TagName, HtmlCssConstants.HtmlTags.Br,
+        StringComparison.OrdinalIgnoreCase);
 
     private static StyledElementFacts CreateFacts(IElement element)
     {
@@ -146,7 +142,7 @@ internal sealed class StyleTraversal
             static attribute => attribute.Value,
             StringComparer.OrdinalIgnoreCase);
 
-        return new StyledElementFacts(
+        return new(
             element.TagName,
             element.LocalName,
             element.GetAttribute(HtmlCssConstants.HtmlAttributes.Id),
@@ -156,18 +152,16 @@ internal sealed class StyleTraversal
 
     private sealed class TraversalIdentityState
     {
-        private int _nextNodeId = 1;
         private int _nextContentId = 1;
+        private int _nextNodeId = 1;
         private int _nextSourceOrder = 1;
 
-        public StyleSourceIdentity CreateRootIdentity(StyledElementFacts facts)
-        {
-            return CreateSourceIdentity(
+        public StyleSourceIdentity CreateRootIdentity(StyledElementFacts facts) =>
+            CreateSourceIdentity(
                 facts,
-                parent: null,
-                siblingIndex: 0,
-                sourcePath: CreatePathSegment(facts, 0));
-        }
+                null,
+                0,
+                CreatePathSegment(facts, 0));
 
         public StyleSourceIdentity CreateChildIdentity(
             StyleSourceIdentity parent,
@@ -191,8 +185,8 @@ internal sealed class StyleTraversal
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentException.ThrowIfNullOrWhiteSpace(kind);
 
-            return new StyleContentIdentity(
-                new StyleContentId(_nextContentId++),
+            return new(
+                new(_nextContentId++),
                 parent.NodeId,
                 _nextSourceOrder++,
                 siblingIndex,
@@ -203,16 +197,14 @@ internal sealed class StyleTraversal
             StyledElementFacts facts,
             StyleSourceIdentity? parent,
             int siblingIndex,
-            string sourcePath)
-        {
-            return new StyleSourceIdentity(
-                new StyleNodeId(_nextNodeId++),
+            string sourcePath) =>
+            new(
+                new(_nextNodeId++),
                 parent?.NodeId,
                 _nextSourceOrder++,
                 siblingIndex,
                 sourcePath,
                 CreateElementIdentity(facts));
-        }
 
         private static string CreatePathSegment(StyledElementFacts facts, int siblingIndex)
         {
@@ -240,8 +232,8 @@ internal sealed class StyleTraversal
             if (!string.IsNullOrWhiteSpace(classAttribute))
             {
                 foreach (var className in classAttribute.Split(
-                    [' ', '\t', '\r', '\n'],
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                             [' ', '\t', '\r', '\n'],
+                             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     builder.Append('.');
                     builder.Append(className);
@@ -271,9 +263,6 @@ internal sealed class StyleTraversal
     {
         private int _contentIndex;
 
-        public int ReserveIndex()
-        {
-            return _contentIndex++;
-        }
+        public int ReserveIndex() => _contentIndex++;
     }
 }

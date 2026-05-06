@@ -18,7 +18,7 @@ public sealed record BorderEdges
     public static BorderEdges Uniform(BorderSide? side)
         => side is null
             ? None
-            : new BorderEdges
+            : new()
             {
                 Top = side,
                 Right = side,

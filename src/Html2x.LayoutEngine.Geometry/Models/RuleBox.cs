@@ -1,13 +1,12 @@
 namespace Html2x.LayoutEngine.Geometry.Models;
 
 /// <summary>
-/// Represents an HTML horizontal rule element that lays out as a block and projects to a rule fragment.
+///     Represents an HTML horizontal rule element that lays out as a block and projects to a rule fragment.
 /// </summary>
 internal sealed class RuleBox(BoxRole role) : BlockBox(role)
 {
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return CopyBlockStateTo(new RuleBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        CopyBlockStateTo(new RuleBox(Role)
         {
             Element = Element,
             Style = Style,
@@ -15,5 +14,4 @@ internal sealed class RuleBox(BoxRole role) : BlockBox(role)
             IsAnonymous = IsAnonymous,
             SourceIdentity = SourceIdentity
         });
-    }
 }

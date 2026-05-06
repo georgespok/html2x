@@ -10,13 +10,13 @@ using SkiaSharp;
 namespace Html2x.Renderers.Pdf;
 
 /// <summary>
-/// Renders image fragments onto a Skia canvas while honoring size caps and placeholders.
+///     Renders image fragments onto a Skia canvas while honoring size caps and placeholders.
 /// </summary>
 internal sealed class ImageRenderer
 {
-    private readonly string _resourceBaseDirectory;
     private readonly IDiagnosticsSink? _diagnosticsSink;
     private readonly long _maxImageSizeBytes;
+    private readonly string _resourceBaseDirectory;
 
     public ImageRenderer(
         PdfRenderSettings settings,
@@ -90,7 +90,7 @@ internal sealed class ImageRenderer
 
         using var paint = new SKPaint
         {
-            Color = new SKColor(220, 220, 220, 255),
+            Color = new(220, 220, 220, 255),
             Style = SKPaintStyle.Stroke,
             StrokeWidth = 1,
             IsAntialias = true
@@ -105,25 +105,25 @@ internal sealed class ImageRenderer
             ? DiagnosticSeverity.Info
             : DiagnosticSeverity.Warning;
         var context = new DiagnosticContext(
-            Selector: null,
-            ElementIdentity: ImageRenderDiagnosticNames.Context.ImageElement,
-            StyleDeclaration: null,
-            StructuralPath: $"image:{command.Src}",
-            RawUserInput: command.Src);
+            null,
+            ImageRenderDiagnosticNames.Context.ImageElement,
+            null,
+            $"image:{command.Src}",
+            command.Src);
 
-        _diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: ImageRenderDiagnosticNames.Stages.Render,
-            Name: ImageRenderDiagnosticNames.Events.Render,
-            Severity: severity,
-            Message: status == ImageLoadStatus.Ok ? null : $"Image render status: {status}.",
-            Context: context,
-            Fields: DiagnosticFields.Create(
+        _diagnosticsSink?.Emit(new(
+            ImageRenderDiagnosticNames.Stages.Render,
+            ImageRenderDiagnosticNames.Events.Render,
+            severity,
+            status == ImageLoadStatus.Ok ? null : $"Image render status: {status}.",
+            context,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Src, command.Src),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Status, DiagnosticValue.FromEnum(status)),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedWidth, width),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedHeight, height),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Borders, MapBorders(command.Style.Borders))),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
 
     private static DiagnosticObject MapBorders(BorderEdges? borders)
@@ -140,9 +140,8 @@ internal sealed class ImageRenderer
             DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Left, MapBorderSide(borders.Left)));
     }
 
-    private static DiagnosticObject? MapBorderSide(BorderSide? side)
-    {
-        return side is null
+    private static DiagnosticObject? MapBorderSide(BorderSide? side) =>
+        side is null
             ? null
             : DiagnosticObject.Create(
                 DiagnosticObject.Field(ImageRenderDiagnosticNames.Fields.Width, side.Width),
@@ -150,6 +149,4 @@ internal sealed class ImageRenderer
                 DiagnosticObject.Field(
                     ImageRenderDiagnosticNames.Fields.LineStyle,
                     DiagnosticValue.FromEnum(side.LineStyle)));
-    }
-
 }

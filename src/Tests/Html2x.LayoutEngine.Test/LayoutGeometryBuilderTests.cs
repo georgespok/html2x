@@ -14,11 +14,11 @@ public sealed class LayoutGeometryBuilderTests
     {
         var styles = BuildStyleTree()
             .WithPageMargins(72, 10, 20, 30)
-            .AddChild(HtmlCssConstants.HtmlTags.P, "Text", marginTop: 12, marginLeft: 4);
+            .AddChild(HtmlCssConstants.HtmlTags.P, "Text", 12, 4);
 
         var actual = Build(styles);
 
-        actual.Page.Margin.ShouldBe(new Spacing(72f, 10f, 20f, 30f));
+        actual.Page.Margin.ShouldBe(new(72f, 10f, 20f, 30f));
         var block = actual.Blocks.ShouldHaveSingleItem();
         block.Geometry.X.ShouldBe(34f);
         block.Geometry.Y.ShouldBe(84f);
@@ -29,7 +29,7 @@ public sealed class LayoutGeometryBuilderTests
     {
         var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
-            .AddChild(HtmlCssConstants.HtmlTags.Div, "Hello", marginTop: 15, marginLeft: 5);
+            .AddChild(HtmlCssConstants.HtmlTags.Div, "Hello", 15, 5);
 
         var actual = Build(styles);
 
@@ -43,7 +43,7 @@ public sealed class LayoutGeometryBuilderTests
     [Fact]
     public void Build_DivAndBorder_PublishesVisualStyle()
     {
-        var border = BorderEdges.Uniform(new BorderSide(0.75f, ColorRgba.Black, BorderLineStyle.Solid));
+        var border = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Solid));
         var styles = BuildStyleTree()
             .WithPageMargins(0, 0, 0, 0)
             .AddChild(HtmlCssConstants.HtmlTags.Div, divNode => divNode
@@ -66,8 +66,8 @@ public sealed class LayoutGeometryBuilderTests
                 ul => ul
                     .AddChild(HtmlCssConstants.HtmlTags.Li, "item 1")
                     .AddChild(HtmlCssConstants.HtmlTags.Li, "item 2"),
-                marginTop: 15f,
-                marginLeft: 5f);
+                15f,
+                5f);
 
         var actual = Build(styles);
 

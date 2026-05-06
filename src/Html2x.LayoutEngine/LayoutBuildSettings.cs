@@ -4,7 +4,7 @@ using Html2x.RenderModel.Measurements.Units;
 namespace Html2x.LayoutEngine;
 
 /// <summary>
-/// Input settings owned by the layout pipeline composition stage.
+///     Input settings owned by the layout pipeline composition stage.
 /// </summary>
 internal sealed class LayoutBuildSettings
 {

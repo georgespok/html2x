@@ -1,8 +1,7 @@
 namespace Html2x.Options;
 
-
 /// <summary>
-/// CSS processing options.
+///     CSS processing options.
 /// </summary>
 public sealed class CssOptions
 {

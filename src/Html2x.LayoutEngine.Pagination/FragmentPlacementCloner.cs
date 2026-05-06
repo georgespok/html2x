@@ -11,10 +11,8 @@ internal sealed class FragmentPlacementCloner
         return Clone(source, pageNumber, x - source.Rect.X, y - source.Rect.Y);
     }
 
-    public BlockFragment CloneBlockWithPlacement(BlockFragment source, int pageNumber, float x, float y)
-    {
-        return (BlockFragment)CloneWithPlacement(source, pageNumber, x, y);
-    }
+    public BlockFragment CloneBlockWithPlacement(BlockFragment source, int pageNumber, float x, float y) =>
+        (BlockFragment)CloneWithPlacement(source, pageNumber, x, y);
 
     private static LayoutFragment Clone(LayoutFragment source, int pageNumber, float deltaX, float deltaY)
     {
@@ -34,7 +32,7 @@ internal sealed class FragmentPlacementCloner
 
     private static BlockFragment CloneBlock(BlockFragment source, int pageNumber, float deltaX, float deltaY)
     {
-        return new BlockFragment(source.Children.Select(child => Clone(child, pageNumber, deltaX, deltaY)))
+        return new(source.Children.Select(child => Clone(child, pageNumber, deltaX, deltaY)))
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -49,7 +47,7 @@ internal sealed class FragmentPlacementCloner
 
     private static TableFragment CloneTable(TableFragment source, int pageNumber, float deltaX, float deltaY)
     {
-        return new TableFragment(source.Rows.Select(row => (TableRowFragment)Clone(row, pageNumber, deltaX, deltaY)))
+        return new(source.Rows.Select(row => (TableRowFragment)Clone(row, pageNumber, deltaX, deltaY)))
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -65,7 +63,7 @@ internal sealed class FragmentPlacementCloner
 
     private static TableRowFragment CloneTableRow(TableRowFragment source, int pageNumber, float deltaX, float deltaY)
     {
-        return new TableRowFragment(source.Cells.Select(cell => (TableCellFragment)Clone(cell, pageNumber, deltaX, deltaY)))
+        return new(source.Cells.Select(cell => (TableCellFragment)Clone(cell, pageNumber, deltaX, deltaY)))
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -79,9 +77,10 @@ internal sealed class FragmentPlacementCloner
         };
     }
 
-    private static TableCellFragment CloneTableCell(TableCellFragment source, int pageNumber, float deltaX, float deltaY)
+    private static TableCellFragment CloneTableCell(TableCellFragment source, int pageNumber, float deltaX,
+        float deltaY)
     {
-        return new TableCellFragment(source.Children.Select(child => Clone(child, pageNumber, deltaX, deltaY)))
+        return new(source.Children.Select(child => Clone(child, pageNumber, deltaX, deltaY)))
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -98,7 +97,7 @@ internal sealed class FragmentPlacementCloner
 
     private static LineBoxFragment CloneLine(LineBoxFragment source, int pageNumber, float deltaX, float deltaY)
     {
-        return new LineBoxFragment
+        return new()
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -115,9 +114,8 @@ internal sealed class FragmentPlacementCloner
         };
     }
 
-    private static ImageFragment CloneImage(ImageFragment source, int pageNumber, float deltaX, float deltaY)
-    {
-        return new ImageFragment
+    private static ImageFragment CloneImage(ImageFragment source, int pageNumber, float deltaX, float deltaY) =>
+        new()
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -130,11 +128,9 @@ internal sealed class FragmentPlacementCloner
             IntrinsicSizePx = source.IntrinsicSizePx,
             Status = source.Status
         };
-    }
 
-    private static RuleFragment CloneRule(RuleFragment source, int pageNumber, float deltaX, float deltaY)
-    {
-        return new RuleFragment
+    private static RuleFragment CloneRule(RuleFragment source, int pageNumber, float deltaX, float deltaY) =>
+        new()
         {
             FragmentId = source.FragmentId,
             PageNumber = pageNumber,
@@ -142,5 +138,4 @@ internal sealed class FragmentPlacementCloner
             ZOrder = source.ZOrder,
             Style = source.Style
         };
-    }
 }

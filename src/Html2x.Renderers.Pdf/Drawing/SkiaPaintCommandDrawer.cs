@@ -9,13 +9,13 @@ using SkiaSharp;
 namespace Html2x.Renderers.Pdf.Drawing;
 
 /// <summary>
-/// Draws internal paint commands onto a Skia canvas using existing PDF drawing helpers.
+///     Draws internal paint commands onto a Skia canvas using existing PDF drawing helpers.
 /// </summary>
 internal sealed class SkiaPaintCommandDrawer
 {
-    private readonly ImageRenderer _imageRenderer;
-    private readonly SkiaFontCache _fontCache;
     private readonly BorderShapeDrawer _borderShapeDrawer = new();
+    private readonly SkiaFontCache _fontCache;
+    private readonly ImageRenderer _imageRenderer;
 
     public SkiaPaintCommandDrawer(
         PdfRenderSettings settings,
@@ -24,7 +24,7 @@ internal sealed class SkiaPaintCommandDrawer
     {
         ArgumentNullException.ThrowIfNull(settings);
         _fontCache = fontCache ?? throw new ArgumentNullException(nameof(fontCache));
-        _imageRenderer = new ImageRenderer(settings, diagnosticsSink);
+        _imageRenderer = new(settings, diagnosticsSink);
     }
 
     public void Draw(SKCanvas canvas, IReadOnlyList<PaintCommand> commands)
@@ -74,7 +74,7 @@ internal sealed class SkiaPaintCommandDrawer
             IsAntialias = false
         };
 
-        canvas.DrawRect(new SKRect(0, 0, command.PageSize.Width, command.PageSize.Height), paint);
+        canvas.DrawRect(new(0, 0, command.PageSize.Width, command.PageSize.Height), paint);
     }
 
     private static void DrawBackground(SKCanvas canvas, BackgroundPaintCommand command)
@@ -99,7 +99,7 @@ internal sealed class SkiaPaintCommandDrawer
         canvas.Save();
         canvas.Translate(rect.Left, rect.Top);
 
-        _borderShapeDrawer.Draw(canvas, new SKSize(rect.Width, rect.Height), borders);
+        _borderShapeDrawer.Draw(canvas, new(rect.Width, rect.Height), borders);
 
         canvas.Restore();
     }
@@ -156,7 +156,7 @@ internal sealed class SkiaPaintCommandDrawer
 
         if ((run.Decorations & TextDecorations.LineThrough) != 0)
         {
-            var y = baseline - (run.Ascent / 2f);
+            var y = baseline - run.Ascent / 2f;
             canvas.DrawLine(x0, y, x1, y, paint);
         }
 
@@ -193,12 +193,9 @@ internal sealed class SkiaPaintCommandDrawer
             IsAntialias = true
         };
 
-        var y = command.Rect.Top + (command.Rect.Height / 2f);
+        var y = command.Rect.Top + command.Rect.Height / 2f;
         canvas.DrawLine(command.Rect.Left, y, command.Rect.Right, y, paint);
     }
 
-    private static SKColor ToSkColor(ColorRgba color)
-    {
-        return new SKColor(color.R, color.G, color.B, color.A);
-    }
+    private static SKColor ToSkColor(ColorRgba color) => new(color.R, color.G, color.B, color.A);
 }

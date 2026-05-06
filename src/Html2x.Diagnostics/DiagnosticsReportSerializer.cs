@@ -13,10 +13,8 @@ public static class DiagnosticsReportSerializer
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    public static string ToJson(DiagnosticsReport report)
-    {
-        return JsonSerializer.Serialize(ToSerializableObject(report), JsonOptions);
-    }
+    public static string ToJson(DiagnosticsReport report) =>
+        JsonSerializer.Serialize(ToSerializableObject(report), JsonOptions);
 
     public static object ToSerializableObject(DiagnosticsReport report)
     {
@@ -30,9 +28,8 @@ public static class DiagnosticsReportSerializer
         };
     }
 
-    private static DiagnosticsRecordEnvelope MapRecord(DiagnosticRecord record)
-    {
-        return new DiagnosticsRecordEnvelope
+    private static DiagnosticsRecordEnvelope MapRecord(DiagnosticRecord record) =>
+        new()
         {
             Stage = record.Stage,
             Name = record.Name,
@@ -42,11 +39,9 @@ public static class DiagnosticsReportSerializer
             Fields = MapFields(record.Fields),
             Timestamp = record.Timestamp
         };
-    }
 
-    private static DiagnosticsContextEnvelope? MapContext(DiagnosticContext? context)
-    {
-        return context is null
+    private static DiagnosticsContextEnvelope? MapContext(DiagnosticContext? context) =>
+        context is null
             ? null
             : new DiagnosticsContextEnvelope
             {
@@ -56,7 +51,6 @@ public static class DiagnosticsReportSerializer
                 StructuralPath = context.StructuralPath,
                 RawUserInput = context.RawUserInput
             };
-    }
 
     private static IReadOnlyDictionary<string, object?> MapFields(DiagnosticFields fields)
     {

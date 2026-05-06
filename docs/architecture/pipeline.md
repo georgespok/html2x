@@ -162,12 +162,12 @@ and ordered style content from `Html2x.LayoutEngine.Contracts`. It must not read
 DOM nodes, `IElement`, `INode`, child node collections, or AngleSharp types.
 Geometry validation helpers stay inside the geometry module.
 
-`StyleTreeBoxProjector` converts styled nodes into `BoxRole` values such as
-block, inline, inline-block, table, row, cell, image, list item, and rule. The
-geometry pass then resolves dimensions, margins, padding, borders, inline
-layout, image layout, and table placements.
+`BoxTreeConstruction` builds the internal mutable box tree from styled nodes.
+It creates `BoxRole` values such as block, inline, inline-block, table, row,
+cell, image, list item, and rule. The geometry pass then resolves dimensions,
+margins, padding, borders, inline layout, image layout, and table placements.
 
-`BlockLayoutEngine` coordinates block layout through `BlockLayoutRuleSet`.
+`BlockBoxLayout` coordinates block layout through `BlockLayoutRuleSet`.
 Specialized internal modules own normal block-flow sequencing, non-mutating
 block-flow measurement, shared block sizing, image block placement, table grid
 calculation, table diagnostics and placement, mutable layout writes, published

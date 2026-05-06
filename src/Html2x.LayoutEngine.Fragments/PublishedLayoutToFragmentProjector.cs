@@ -41,9 +41,8 @@ internal sealed class PublishedLayoutToFragmentProjector
         return null;
     }
 
-    private static TableFragment CreateTableFragment(PublishedBlock source, int fragmentId, int pageNumber)
-    {
-        return new TableFragment
+    private static TableFragment CreateTableFragment(PublishedBlock source, int fragmentId, int pageNumber) =>
+        new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,
@@ -54,11 +53,9 @@ internal sealed class PublishedLayoutToFragmentProjector
             MarkerOffset = source.Display.MarkerOffset,
             DerivedColumnCount = source.Table?.DerivedColumnCount ?? 0
         };
-    }
 
-    private static TableRowFragment CreateTableRowFragment(PublishedBlock source, int fragmentId, int pageNumber)
-    {
-        return new TableRowFragment
+    private static TableRowFragment CreateTableRowFragment(PublishedBlock source, int fragmentId, int pageNumber) =>
+        new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,
@@ -69,11 +66,9 @@ internal sealed class PublishedLayoutToFragmentProjector
             MarkerOffset = source.Display.MarkerOffset,
             RowIndex = source.Table?.RowIndex ?? 0
         };
-    }
 
-    private static TableCellFragment CreateTableCellFragment(PublishedBlock source, int fragmentId, int pageNumber)
-    {
-        return new TableCellFragment
+    private static TableCellFragment CreateTableCellFragment(PublishedBlock source, int fragmentId, int pageNumber) =>
+        new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,
@@ -85,11 +80,9 @@ internal sealed class PublishedLayoutToFragmentProjector
             ColumnIndex = source.Table?.ColumnIndex ?? 0,
             IsHeader = source.Table?.IsHeader == true
         };
-    }
 
-    private static BlockFragment CreateStandardBlockFragment(PublishedBlock source, int fragmentId, int pageNumber)
-    {
-        return new BlockFragment
+    private static BlockFragment CreateStandardBlockFragment(PublishedBlock source, int fragmentId, int pageNumber) =>
+        new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,
@@ -99,25 +92,22 @@ internal sealed class PublishedLayoutToFragmentProjector
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset
         };
-    }
 
-    private static RuleFragment CreateRuleFragment(PublishedBlock source, int fragmentId, int pageNumber)
-    {
-        return new RuleFragment
+    private static RuleFragment CreateRuleFragment(PublishedBlock source, int fragmentId, int pageNumber) =>
+        new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,
             Rect = source.Geometry.BorderBoxRect,
             Style = source.Style
         };
-    }
 
     private static ImageFragment CreateImageFragment(PublishedBlock source, int fragmentId, int pageNumber)
     {
         var image = source.Image ?? throw new InvalidOperationException(
             "Image fragment projection requires published image facts.");
 
-        return new ImageFragment
+        return new()
         {
             FragmentId = fragmentId,
             PageNumber = pageNumber,

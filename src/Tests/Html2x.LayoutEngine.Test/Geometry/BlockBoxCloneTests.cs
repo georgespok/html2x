@@ -1,6 +1,4 @@
 using Html2x.LayoutEngine.Geometry.Primitives;
-using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Styles;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Geometry;
@@ -9,15 +7,42 @@ public sealed class BlockBoxCloneTests
 {
     public static IEnumerable<object[]> BlockFactories()
     {
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new BlockBox(BoxRole.Block) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new ImageBox(BoxRole.Block) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new InlineBlockBoundaryBox(
-            new InlineBox(BoxRole.InlineBlock),
-            new BlockBox(BoxRole.Block)) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new RuleBox(BoxRole.Block) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new TableBox(BoxRole.Table) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new TableRowBox(BoxRole.TableRow) { IsAnonymous = true, SourceIdentity = identity })];
-        yield return [new Func<GeometrySourceIdentity, BlockBox>(identity => new TableCellBox(BoxRole.TableCell) { IsAnonymous = true, SourceIdentity = identity })];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new(BoxRole.Block)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new ImageBox(BoxRole.Block)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new InlineBlockBoundaryBox(
+                new(BoxRole.InlineBlock),
+                new(BoxRole.Block)) { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new RuleBox(BoxRole.Block)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new TableBox(BoxRole.Table)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new TableRowBox(BoxRole.TableRow)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
+        yield return
+        [
+            new Func<GeometrySourceIdentity, BlockBox>(identity => new TableCellBox(BoxRole.TableCell)
+                { IsAnonymous = true, SourceIdentity = identity })
+        ];
     }
 
     [Theory]
@@ -29,16 +54,16 @@ public sealed class BlockBoxCloneTests
         var sourceIdentity = CreateSourceIdentity();
         var source = createBlock(sourceIdentity);
         var style = new ComputedStyle { FontSizePt = 16f };
-        var geometry = UsedGeometryCalculator.FromBorderBox(
-            new RectPt(10f, 20f, 120f, 40f),
-            new Spacing(3f, 4f, 5f, 6f),
-            new Spacing(1f, 2f, 3f, 4f),
-            baseline: 34f,
-            markerOffset: 7f);
+        var geometry = UsedGeometryRules.FromBorderBox(
+            new(10f, 20f, 120f, 40f),
+            new(3f, 4f, 5f, 6f),
+            new(1f, 2f, 3f, 4f),
+            34f,
+            7f);
 
         source.Style = style;
-        source.Margin = new Spacing(1f, 2f, 3f, 4f);
-        source.Padding = new Spacing(3f, 4f, 5f, 6f);
+        source.Margin = new(1f, 2f, 3f, 4f);
+        source.Padding = new(3f, 4f, 5f, 6f);
         source.TextAlign = "center";
         source.IsInlineBlockContext = true;
         source.MarkerOffset = 7f;
@@ -126,14 +151,12 @@ public sealed class BlockBoxCloneTests
         clone.FloatDirection.ShouldBe(HtmlCssConstants.CssValues.Right);
     }
 
-    private static GeometrySourceIdentity CreateSourceIdentity()
-    {
-        return new GeometrySourceIdentity(
+    private static GeometrySourceIdentity CreateSourceIdentity() =>
+        new(
             new StyleNodeId(12),
             null,
             "body[0]/div[0]",
             "div",
             4,
             GeometryGeneratedSourceKind.None);
-    }
 }

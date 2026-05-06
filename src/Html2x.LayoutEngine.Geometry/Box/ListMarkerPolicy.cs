@@ -65,18 +65,17 @@ internal static class ListMarkerPolicy
         return listItems.Count + 1;
     }
 
-    private static InlineBox CreateMarkerRun(string markerText, BlockBox listItem)
-    {
-        return new InlineBox(BoxRole.Inline)
+    private static InlineBox CreateMarkerRun(string markerText, BlockBox listItem) =>
+        new(BoxRole.Inline)
         {
             TextContent = markerText,
             Style = listItem.Style,
             Parent = listItem,
             SourceIdentity = GeometrySourceIdentity
-                .FirstSpecified(listItem.SourceIdentity, listItem.Parent?.SourceIdentity ?? GeometrySourceIdentity.Unspecified)
+                .FirstSpecified(listItem.SourceIdentity,
+                    listItem.Parent?.SourceIdentity ?? GeometrySourceIdentity.Unspecified)
                 .AsGenerated(GeometryGeneratedSourceKind.ListMarker)
         };
-    }
 
     private static bool HasExplicitMarker(BlockBox listItem)
     {
@@ -103,7 +102,7 @@ internal static class ListMarkerPolicy
         var current = node;
         while (current is not null)
         {
-            if (HtmlElementClassifier.IsListContainer(current.Element))
+            if (HtmlElementRules.IsListContainer(current.Element))
             {
                 return current;
             }

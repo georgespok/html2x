@@ -1,8 +1,6 @@
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
-using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
-using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
 
@@ -16,7 +14,7 @@ public sealed class RenderModelImmutabilityTests
         var first = new BlockFragment();
         var children = new List<Fragment> { first };
 
-        var page = new LayoutPage(PaperSizes.A4, new Spacing(), children);
+        var page = new LayoutPage(PaperSizes.A4, new(), children);
 
         children.Add(new BlockFragment());
 
@@ -42,25 +40,23 @@ public sealed class RenderModelImmutabilityTests
     [Fact]
     public void HtmlLayout_PagesInputMutatesAfterConstruction_KeepsOriginalPages()
     {
-        var first = new LayoutPage(PaperSizes.A4, new Spacing(), []);
+        var first = new LayoutPage(PaperSizes.A4, new(), []);
         var pages = new List<LayoutPage> { first };
 
         var layout = new HtmlLayout(pages);
 
-        pages.Add(new LayoutPage(PaperSizes.A4, new Spacing(), []));
+        pages.Add(new(PaperSizes.A4, new(), []));
 
         layout.Pages.ShouldHaveSingleItem().ShouldBeSameAs(first);
     }
 
-    private static TextRun CreateTextRun(string text)
-    {
-        return new TextRun(
+    private static TextRun CreateTextRun(string text) =>
+        new(
             text,
-            new FontKey("Inter", FontWeight.W400, FontStyle.Normal),
+            new("Inter", FontWeight.W400, FontStyle.Normal),
             12f,
-            new PointPt(0f, 0f),
+            new(0f, 0f),
             12f,
             9f,
             3f);
-    }
 }

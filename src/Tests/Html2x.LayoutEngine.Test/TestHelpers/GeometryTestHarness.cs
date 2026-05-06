@@ -7,7 +7,6 @@ using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
-using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
@@ -21,7 +20,7 @@ internal static class GeometryTestHarness
         string html,
         LayoutBuildSettings? options = null)
     {
-        options ??= new LayoutBuildSettings
+        options ??= new()
         {
             PageSize = PaperSizes.Letter
         };
@@ -48,7 +47,7 @@ internal static class GeometryTestHarness
         var fragments = fragmentBuilder.Build(publishedLayout);
         var pagination = new LayoutPaginator().Paginate(
             fragments.Blocks,
-            new PaginationOptions
+            new()
             {
                 PageSize = options.PageSize,
                 Margin = publishedLayout.Page.Margin
@@ -56,7 +55,7 @@ internal static class GeometryTestHarness
             diagnosticsSink);
         var snapshot = GeometrySnapshotMapper.From(publishedLayout, pagination);
 
-        return new GeometryPipelineResult(
+        return new(
             publishedLayout,
             fragments,
             pagination.Layout,
@@ -103,15 +102,9 @@ internal static class GeometryTestHarness
         return builder.ToString().TrimEnd();
     }
 
-    public static string NormalizeNewLines(string value)
-    {
-        return value.Replace("\r\n", "\n", StringComparison.Ordinal);
-    }
+    public static string NormalizeNewLines(string value) => value.Replace("\r\n", "\n", StringComparison.Ordinal);
 
-    public static ITextMeasurer CreateTextMeasurer()
-    {
-        return new ConstantTextMeasurer(10f, 9f, 3f);
-    }
+    public static ITextMeasurer CreateTextMeasurer() => new ConstantTextMeasurer(10f, 9f, 3f);
 
     private static void AppendBox(StringBuilder builder, BoxGeometrySnapshot box, int depth)
     {
@@ -167,7 +160,8 @@ internal static class GeometryTestHarness
 
         if (fragment.OccupiedX.HasValue && fragment.OccupiedY.HasValue && fragment.OccupiedSize.HasValue)
         {
-            extras.Add($"occupied={FormatRect(fragment.OccupiedX.Value, fragment.OccupiedY.Value, fragment.OccupiedSize.Value)}");
+            extras.Add(
+                $"occupied={FormatRect(fragment.OccupiedX.Value, fragment.OccupiedY.Value, fragment.OccupiedSize.Value)}");
         }
 
         if (fragment.MarkerOffset.HasValue)
@@ -204,25 +198,15 @@ internal static class GeometryTestHarness
         }
     }
 
-    private static string FormatRect(float x, float y, SizePt size)
-    {
-        return $"{FormatFloat(x)},{FormatFloat(y)},{FormatFloat(size.Width)},{FormatFloat(size.Height)}";
-    }
+    private static string FormatRect(float x, float y, SizePt size) =>
+        $"{FormatFloat(x)},{FormatFloat(y)},{FormatFloat(size.Width)},{FormatFloat(size.Height)}";
 
-    private static string FormatSize(SizePt size)
-    {
-        return $"{FormatFloat(size.Width)},{FormatFloat(size.Height)}";
-    }
+    private static string FormatSize(SizePt size) => $"{FormatFloat(size.Width)},{FormatFloat(size.Height)}";
 
-    private static string FormatSpacing(Spacing spacing)
-    {
-        return $"{FormatFloat(spacing.Top)},{FormatFloat(spacing.Right)},{FormatFloat(spacing.Bottom)},{FormatFloat(spacing.Left)}";
-    }
+    private static string FormatSpacing(Spacing spacing) =>
+        $"{FormatFloat(spacing.Top)},{FormatFloat(spacing.Right)},{FormatFloat(spacing.Bottom)},{FormatFloat(spacing.Left)}";
 
-    private static string FormatFloat(float value)
-    {
-        return value.ToString("0.##", CultureInfo.InvariantCulture);
-    }
+    private static string FormatFloat(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 }
 
 internal sealed record GeometryPipelineResult(

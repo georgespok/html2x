@@ -48,11 +48,9 @@ public sealed class ListMarkerPolicyTests
         marker.ShouldBeNull();
     }
 
-    private static BlockBox CreateList(string tagName)
-    {
-        return new BlockBox(BoxRole.Block)
+    private static BlockBox CreateList(string tagName) =>
+        new(BoxRole.Block)
         {
             Element = StyledElementFacts.Create(tagName)
         };
-    }
 }

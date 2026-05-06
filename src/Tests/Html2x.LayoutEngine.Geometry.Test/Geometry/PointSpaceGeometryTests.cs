@@ -1,5 +1,4 @@
 using Html2x.RenderModel.Geometry;
-using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 
@@ -34,7 +33,7 @@ public sealed class PointSpaceGeometryTests
     {
         var translated = new PointPt(2f, 3f).Translate(5f, -1f);
 
-        translated.ShouldBe(new PointPt(7f, 2f));
+        translated.ShouldBe(new(7f, 2f));
     }
 
     [Fact]
@@ -46,8 +45,8 @@ public sealed class PointSpaceGeometryTests
         rect.Top.ShouldBe(20f);
         rect.Right.ShouldBe(40f);
         rect.Bottom.ShouldBe(60f);
-        rect.Origin.ShouldBe(new PointPt(10f, 20f));
-        rect.Size.ShouldBe(new SizePt(30f, 40f));
+        rect.Origin.ShouldBe(new(10f, 20f));
+        rect.Size.ShouldBe(new(30f, 40f));
     }
 
     [Theory]
@@ -67,7 +66,7 @@ public sealed class PointSpaceGeometryTests
     {
         var translated = new RectPt(10f, 20f, 30f, 40f).Translate(-2f, 5f);
 
-        translated.ShouldBe(new RectPt(8f, 25f, 30f, 40f));
+        translated.ShouldBe(new(8f, 25f, 30f, 40f));
     }
 
     [Fact]
@@ -75,10 +74,10 @@ public sealed class PointSpaceGeometryTests
     {
         var rect = new RectPt(10f, 20f, 30f, 40f);
 
-        rect.WithX(1f).ShouldBe(new RectPt(1f, 20f, 30f, 40f));
-        rect.WithY(2f).ShouldBe(new RectPt(10f, 2f, 30f, 40f));
-        rect.WithWidth(3f).ShouldBe(new RectPt(10f, 20f, 3f, 40f));
-        rect.WithHeight(4f).ShouldBe(new RectPt(10f, 20f, 30f, 4f));
+        rect.WithX(1f).ShouldBe(new(1f, 20f, 30f, 40f));
+        rect.WithY(2f).ShouldBe(new(10f, 2f, 30f, 40f));
+        rect.WithWidth(3f).ShouldBe(new(10f, 20f, 3f, 40f));
+        rect.WithHeight(4f).ShouldBe(new(10f, 20f, 30f, 4f));
     }
 
     [Fact]
@@ -87,6 +86,6 @@ public sealed class PointSpaceGeometryTests
         var rect = new RectPt(10f, 20f, 8f, 6f);
         var spacing = new Spacing(2f, 5f, 6f, 7f);
 
-        rect.Inset(spacing).ShouldBe(new RectPt(17f, 22f, 0f, 0f));
+        rect.Inset(spacing).ShouldBe(new(17f, 22f, 0f, 0f));
     }
 }

@@ -1,8 +1,7 @@
 namespace Html2x.Options;
 
-
 /// <summary>
-/// Diagnostics options.
+///     Diagnostics options.
 /// </summary>
 public sealed class DiagnosticsOptions
 {

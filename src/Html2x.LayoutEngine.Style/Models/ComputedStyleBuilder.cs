@@ -4,7 +4,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Style.Models;
 
 /// <summary>
-/// Accumulates parsed CSS values before creating an immutable computed style snapshot.
+///     Accumulates parsed CSS values before creating an immutable computed style snapshot.
 /// </summary>
 internal sealed class ComputedStyleBuilder
 {
@@ -31,9 +31,8 @@ internal sealed class ComputedStyleBuilder
 
     public BorderBuilder Borders { get; } = new();
 
-    public ComputedStyle Build()
-    {
-        return new ComputedStyle
+    public ComputedStyle Build() =>
+        new()
         {
             FontFamily = FontFamily,
             FontSizePt = FontSizePt,
@@ -57,7 +56,6 @@ internal sealed class ComputedStyleBuilder
             MaxHeightPt = MaxHeightPt,
             Borders = Borders.Build(Color)
         };
-    }
 
     private static Spacing NormalizePadding(Spacing padding)
         => new(
@@ -67,7 +65,7 @@ internal sealed class ComputedStyleBuilder
             Math.Max(0, padding.Left));
 
     /// <summary>
-    /// Accumulates per-side border declarations before normalizing them into border edge values.
+    ///     Accumulates per-side border declarations before normalizing them into border edge values.
     /// </summary>
     internal sealed class BorderBuilder
     {
@@ -87,25 +85,24 @@ internal sealed class ComputedStyleBuilder
         public BorderLineStyle LeftStyle { get; set; }
         public ColorRgba? LeftColor { get; set; }
 
-        public BorderEdges Build(ColorRgba currentColor)
-        {
-            return new BorderEdges
+        public BorderEdges Build(ColorRgba currentColor) =>
+            new()
             {
                 Top = CreateSide(TopWidth, TopStyle, TopColor, currentColor),
                 Right = CreateSide(RightWidth, RightStyle, RightColor, currentColor),
                 Bottom = CreateSide(BottomWidth, BottomStyle, BottomColor, currentColor),
                 Left = CreateSide(LeftWidth, LeftStyle, LeftColor, currentColor)
             };
-        }
 
-        private static BorderSide? CreateSide(float? width, BorderLineStyle style, ColorRgba? color, ColorRgba currentColor)
+        private static BorderSide? CreateSide(float? width, BorderLineStyle style, ColorRgba? color,
+            ColorRgba currentColor)
         {
             if (!width.HasValue || width.Value <= 0 || style == BorderLineStyle.None)
             {
                 return null;
             }
 
-            return new BorderSide(width.Value, color ?? currentColor, style);
+            return new(width.Value, color ?? currentColor, style);
         }
     }
 }

@@ -24,16 +24,14 @@ internal static class DiagnosticSnapshotValueMapper
     internal static DiagnosticObject? MapSpacing(Spacing? spacing) =>
         spacing.HasValue ? MapSpacing(spacing.Value) : null;
 
-    internal static DiagnosticObject? MapBorders(BorderEdges? borders)
-    {
-        return borders is null
+    internal static DiagnosticObject? MapBorders(BorderEdges? borders) =>
+        borders is null
             ? null
             : DiagnosticObject.Create(
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Top, MapBorderSide(borders.Top)),
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Right, MapBorderSide(borders.Right)),
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Bottom, MapBorderSide(borders.Bottom)),
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Left, MapBorderSide(borders.Left)));
-    }
 
     internal static DiagnosticValue? MapColor(ColorRgba? color) =>
         color.HasValue ? DiagnosticValue.From(color.Value.ToHex()) : null;
@@ -61,16 +59,15 @@ internal static class DiagnosticSnapshotValueMapper
         ArgumentNullException.ThrowIfNull(values);
         ArgumentNullException.ThrowIfNull(mapper);
 
-        return new DiagnosticArray(values.Select(mapper));
+        return new(values.Select(mapper));
     }
 
-    private static DiagnosticObject? MapBorderSide(BorderSide? side)
-    {
-        return side is null
+    private static DiagnosticObject? MapBorderSide(BorderSide? side) =>
+        side is null
             ? null
             : DiagnosticObject.Create(
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Width, side.Width),
                 DiagnosticObject.Field(LayoutSnapshotSchema.Fields.Color, side.Color.ToHex()),
-                DiagnosticObject.Field(LayoutSnapshotSchema.Fields.LineStyle, DiagnosticValue.FromEnum(side.LineStyle)));
-    }
+                DiagnosticObject.Field(LayoutSnapshotSchema.Fields.LineStyle,
+                    DiagnosticValue.FromEnum(side.LineStyle)));
 }

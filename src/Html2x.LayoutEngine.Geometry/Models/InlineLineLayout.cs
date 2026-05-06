@@ -2,9 +2,8 @@ using Html2x.RenderModel.Geometry;
 
 namespace Html2x.LayoutEngine.Geometry.Models;
 
-
 /// <summary>
-/// Describes one inline line where Rect is the line slot and OccupiedRect is the tight item bounds.
+///     Describes one inline line where Rect is the line slot and OccupiedRect is the tight item bounds.
 /// </summary>
 internal sealed record InlineLineLayout(
     int LineIndex,

@@ -10,8 +10,8 @@ namespace Html2x.LayoutEngine;
 
 internal sealed class LayoutStageRunner
 {
-    private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
     private readonly FragmentBuilder _fragmentBuilder;
+    private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
     private readonly LayoutPaginator _layoutPaginator;
 
     public LayoutStageRunner(

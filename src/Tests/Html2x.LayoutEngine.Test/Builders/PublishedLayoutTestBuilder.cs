@@ -11,12 +11,10 @@ namespace Html2x.LayoutEngine.Test.Builders;
 
 internal static class PublishedLayoutTestBuilder
 {
-    public static PublishedLayoutTree Tree(params PublishedBlock[] blocks)
-    {
-        return new PublishedLayoutTree(
-            new PublishedPage(PaperSizes.A4, new Spacing()),
+    public static PublishedLayoutTree Tree(params PublishedBlock[] blocks) =>
+        new(
+            new(PaperSizes.A4, new()),
             blocks);
-    }
 
     public static PublishedBlock Block(
         string nodePath = "body/div",
@@ -33,15 +31,15 @@ internal static class PublishedLayoutTestBuilder
         IReadOnlyList<PublishedBlock>? children = null,
         IReadOnlyList<PublishedBlockFlowItem>? flow = null)
     {
-        var geometry = UsedGeometryCalculator.FromBorderBox(
+        var geometry = UsedGeometryRules.FromBorderBox(
             rect ?? new RectPt(0f, 0f, 100f, 20f),
-            new Spacing(),
-            new Spacing(),
+            new(),
+            new(),
             markerOffset: markerOffset.GetValueOrDefault());
 
-        return new PublishedBlock(
-            new PublishedBlockIdentity(nodePath, elementIdentity: null, sourceOrder),
-            new PublishedDisplayFacts(role, formattingContext, markerOffset),
+        return new(
+            new(nodePath, null, sourceOrder),
+            new(role, formattingContext, markerOffset),
             ToVisualStyle(style ?? new ComputedStyle()),
             geometry,
             inlineLayout,
@@ -61,52 +59,46 @@ internal static class PublishedLayoutTestBuilder
             .DefaultIfEmpty(0f)
             .Max();
 
-        return new PublishedInlineLayout(segments, totalHeight, maxLineWidth);
+        return new(segments, totalHeight, maxLineWidth);
     }
 
-    public static PublishedInlineFlowSegment Segment(params PublishedInlineItem[] items)
-    {
-        return new PublishedInlineFlowSegment(
+    public static PublishedInlineFlowSegment Segment(params PublishedInlineItem[] items) =>
+        new(
             [
-                new PublishedInlineLine(
-                    lineIndex: 0,
-                    rect: new RectPt(0f, 0f, 100f, 12f),
-                    occupiedRect: new RectPt(0f, 0f, 100f, 12f),
-                    baselineY: 9f,
-                    lineHeight: 12f,
-                    textAlign: "left",
-                    items: items)
+                new(
+                    0,
+                    new(0f, 0f, 100f, 12f),
+                    new(0f, 0f, 100f, 12f),
+                    9f,
+                    12f,
+                    "left",
+                    items)
             ],
-            top: 0f,
-            height: 12f);
-    }
+            0f,
+            12f);
 
-    public static PublishedInlineTextItem TextItem(int order, string text)
-    {
-        return new PublishedInlineTextItem(
+    public static PublishedInlineTextItem TextItem(int order, string text) =>
+        new(
             order,
-            new RectPt(order * 20f, 0f, 20f, 12f),
+            new(order * 20f, 0f, 20f, 12f),
             [CreateRun(text)],
-            [new PublishedInlineSource($"body/span[{order}]", "span", order)]);
-    }
+            [new($"body/span[{order}]", "span", order)]);
 
-    public static PublishedInlineObjectItem ObjectItem(int order, PublishedBlock content)
-    {
-        return new PublishedInlineObjectItem(
+    public static PublishedInlineObjectItem ObjectItem(int order, PublishedBlock content) =>
+        new(
             order,
-            new RectPt(order * 20f, 0f, 20f, 12f),
+            new(order * 20f, 0f, 20f, 12f),
             content);
-    }
 
     private static TextRun CreateRun(string text)
     {
         var font = new FontKey("Test", FontWeight.W400, FontStyle.Normal);
 
-        return new TextRun(
+        return new(
             text,
             font,
             12f,
-            new PointPt(0f, 9f),
+            new(0f, 9f),
             20f,
             8f,
             3f,
@@ -117,14 +109,14 @@ internal static class PublishedLayoutTestBuilder
     {
         var hasBorders = style.Borders?.HasAny == true;
 
-        return new VisualStyle(
-            BackgroundColor: style.BackgroundColor,
-            Borders: hasBorders ? style.Borders : null,
-            Color: style.Color,
-            Margin: style.Margin,
-            Padding: style.Padding,
-            WidthPt: style.WidthPt,
-            HeightPt: style.HeightPt,
-            Display: style.Display);
+        return new(
+            style.BackgroundColor,
+            hasBorders ? style.Borders : null,
+            style.Color,
+            style.Margin,
+            style.Padding,
+            style.WidthPt,
+            style.HeightPt,
+            style.Display);
     }
 }

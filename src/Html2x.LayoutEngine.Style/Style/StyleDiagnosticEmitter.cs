@@ -37,7 +37,7 @@ internal static class StyleDiagnostics
             element,
             propertyName,
             rawValue,
-            normalizedValue: null,
+            null,
             StyleDiagnosticNames.Decisions.Unsupported,
             reason);
     }
@@ -53,13 +53,13 @@ internal static class StyleDiagnostics
         string reason)
     {
         var context = CreateDiagnosticContext(element, propertyName, rawValue);
-        diagnosticsSink?.Emit(new DiagnosticRecord(
-            Stage: StyleDiagnosticNames.Stages.Style,
-            Name: eventName,
-            Severity: DiagnosticSeverity.Warning,
-            Message: reason,
-            Context: context,
-            Fields: DiagnosticFields.Create(
+        diagnosticsSink?.Emit(new(
+            StyleDiagnosticNames.Stages.Style,
+            eventName,
+            DiagnosticSeverity.Warning,
+            reason,
+            context,
+            DiagnosticFields.Create(
                 DiagnosticFields.Field(StyleDiagnosticNames.Fields.PropertyName, propertyName),
                 DiagnosticFields.Field(StyleDiagnosticNames.Fields.RawValue, rawValue),
                 DiagnosticFields.Field(
@@ -67,21 +67,19 @@ internal static class StyleDiagnostics
                     normalizedValue is null ? null : DiagnosticValue.From(normalizedValue)),
                 DiagnosticFields.Field(StyleDiagnosticNames.Fields.Decision, decision),
                 DiagnosticFields.Field(StyleDiagnosticNames.Fields.Reason, reason)),
-            Timestamp: DateTimeOffset.UtcNow));
+            DateTimeOffset.UtcNow));
     }
 
     private static DiagnosticContext CreateDiagnosticContext(
         IElement element,
         string propertyName,
-        string rawValue)
-    {
-        return new DiagnosticContext(
-            Selector: CreateSelector(element),
-            ElementIdentity: CreateElementIdentity(element),
-            StyleDeclaration: InlineStyleSource.GetDeclaration(element, propertyName) ?? $"{propertyName}: {rawValue}",
-            StructuralPath: BuildStructuralPath(element),
-            RawUserInput: element.GetAttribute(HtmlCssConstants.HtmlAttributes.Style));
-    }
+        string rawValue) =>
+        new(
+            CreateSelector(element),
+            CreateElementIdentity(element),
+            InlineStyleSource.GetDeclaration(element, propertyName) ?? $"{propertyName}: {rawValue}",
+            BuildStructuralPath(element),
+            element.GetAttribute(HtmlCssConstants.HtmlAttributes.Style));
 
     private static string CreateSelector(IElement element)
     {

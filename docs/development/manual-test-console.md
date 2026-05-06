@@ -13,13 +13,13 @@ It is not a replacement for automated tests. If the console reveals a bug, add a
 Run from the repository root.
 
 ```powershell
-dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/example.html build/example.pdf
+dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/all-supported-features.html build/all-supported-features.pdf
 ```
 
 ## Render With Diagnostics
 
 ```powershell
-dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/example.html build/example.pdf --diagnostics --diagnostics-json build/diagnostics/session.json
+dotnet run --project src/Tests/Html2x.TestConsole/Html2x.TestConsole.csproj -- src/Tests/Html2x.TestConsole/html/all-supported-features.html build/all-supported-features.pdf --diagnostics --diagnostics-json build/diagnostics/session.json
 ```
 
 ## Sample Inputs

@@ -8,6 +8,7 @@ internal sealed class InlineBox(BoxRole role) : BoxNode(role)
 
     public float Width { get; internal set; }
     public float Height { get; internal set; }
+
     public SizePt Size
     {
         get => new(Width, Height);
@@ -17,11 +18,11 @@ internal sealed class InlineBox(BoxRole role) : BoxNode(role)
             Height = value.Height;
         }
     }
+
     public float BaselineOffset { get; internal set; }
 
-    protected override BoxNode CloneShallowForParent(BoxNode parent)
-    {
-        return new InlineBox(Role)
+    protected override BoxNode CloneShallowForParent(BoxNode parent) =>
+        new InlineBox(Role)
         {
             TextContent = TextContent,
             Element = Element,
@@ -32,5 +33,4 @@ internal sealed class InlineBox(BoxRole role) : BoxNode(role)
             Height = Height,
             BaselineOffset = BaselineOffset
         };
-    }
 }

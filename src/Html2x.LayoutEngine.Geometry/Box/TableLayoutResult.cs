@@ -1,6 +1,5 @@
 namespace Html2x.LayoutEngine.Geometry.Box;
 
-
 internal sealed class TableLayoutResult
 {
     public bool IsSupported { get; init; } = true;
@@ -30,9 +29,8 @@ internal sealed class TableLayoutResult
         float resolvedWidth,
         string structureKind,
         string reason,
-        int rowCount = 0)
-    {
-        return new TableLayoutResult
+        int rowCount = 0) =>
+        new()
         {
             IsSupported = false,
             RequestedWidth = requestedWidth,
@@ -46,5 +44,4 @@ internal sealed class TableLayoutResult
             ContentHeight = 0f,
             BorderBoxHeight = 0f
         };
-    }
 }

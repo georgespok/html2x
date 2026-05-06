@@ -69,7 +69,7 @@ internal sealed class StyleNodeBuilder(StyledElementFacts element, ComputedStyle
     {
         _style = _style with
         {
-            Padding = new Spacing(top, right, bottom, left)
+            Padding = new(top, right, bottom, left)
         };
         return this;
     }
@@ -86,7 +86,7 @@ internal sealed class StyleNodeBuilder(StyledElementFacts element, ComputedStyle
             .Select(entry => entry.ToStyleContent(builtChildren))
             .ToArray();
 
-        return new StyleNode(
+        return new(
             StyleSourceIdentity.Unspecified,
             element,
             _style,

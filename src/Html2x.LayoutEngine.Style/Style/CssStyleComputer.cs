@@ -9,18 +9,18 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Style.Style;
 
 /// <summary>
-/// Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
+///     Computes simplified CSS styles for supported HTML tags using AngleSharp's computed style API.
 /// </summary>
 internal sealed class CssStyleComputer
 {
-    private readonly StyleTraversal _traversal;
+    private readonly BorderStyleMapper _borderMapper;
     private readonly CssValueConverter _converter;
     private readonly DimensionStyleMapper _dimensionMapper;
     private readonly SpacingStyleMapper _spacingMapper;
-    private readonly BorderStyleMapper _borderMapper;
+    private readonly StyleTraversal _traversal;
 
     public CssStyleComputer()
-        : this(new StyleTraversal(), new CssValueConverter())
+        : this(new(), new())
     {
     }
 
@@ -28,9 +28,9 @@ internal sealed class CssStyleComputer
     {
         _traversal = traversal ?? throw new ArgumentNullException(nameof(traversal));
         _converter = converter ?? throw new ArgumentNullException(nameof(converter));
-        _dimensionMapper = new DimensionStyleMapper(converter);
-        _spacingMapper = new SpacingStyleMapper(converter);
-        _borderMapper = new BorderStyleMapper(converter);
+        _dimensionMapper = new(converter);
+        _spacingMapper = new(converter);
+        _borderMapper = new(converter);
     }
 
     public StyleTree Compute(
@@ -253,10 +253,8 @@ internal sealed class CssStyleComputer
         return false;
     }
 
-    private static bool IsCssWideKeyword(string rawValue)
-    {
-        return string.Equals(rawValue.Trim(), HtmlCssConstants.CssValues.Inherit, StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsCssWideKeyword(string rawValue) => string.Equals(rawValue.Trim(),
+        HtmlCssConstants.CssValues.Inherit, StringComparison.OrdinalIgnoreCase);
 
     private static TextDecorations ResolveTextDecorations(ICssStyleDeclaration css, ComputedStyle? parentStyle)
     {
@@ -313,7 +311,8 @@ internal sealed class CssStyleComputer
             return parentStyle?.LineHeightMultiplier;
         }
 
-        return float.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var multiplier) && multiplier > 0
+        return float.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var multiplier) &&
+               multiplier > 0
             ? multiplier
             : parentStyle?.LineHeightMultiplier;
     }
@@ -353,5 +352,4 @@ internal sealed class CssStyleComputer
 
         return HtmlCssConstants.Defaults.FontFamily;
     }
-
 }

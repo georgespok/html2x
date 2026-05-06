@@ -2,9 +2,8 @@ using Html2x.RenderModel.Measurements.Units;
 
 namespace Html2x.Options;
 
-
 /// <summary>
-/// Page-level conversion options.
+///     Page-level conversion options.
 /// </summary>
 public sealed class PageOptions
 {

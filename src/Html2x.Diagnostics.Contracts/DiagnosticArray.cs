@@ -13,15 +13,15 @@ public sealed record DiagnosticArray : DiagnosticValue, IReadOnlyList<Diagnostic
         _values = values.ToArray();
     }
 
+    public static DiagnosticArray Empty { get; } = new([]);
+
     public int Count => _values.Count;
 
     public DiagnosticValue? this[int index] => _values[index];
 
-    public static DiagnosticArray Empty { get; } = new([]);
-
-    public static DiagnosticArray Create(params DiagnosticValue?[] values) => new(values);
-
     public IEnumerator<DiagnosticValue?> GetEnumerator() => _values.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public static DiagnosticArray Create(params DiagnosticValue?[] values) => new(values);
 }
