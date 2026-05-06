@@ -11,14 +11,15 @@ namespace Html2x.LayoutEngine.Geometry.Box;
 ///     Owns normal block-flow sequencing for laid-out block content.
 /// </summary>
 internal sealed class BlockFlowLayout(
-    InlineFlowLayout inlineEngine,
+    InlineFlowLayout inlineFlowLayout,
     MarginCollapseRules marginCollapseRules,
-    PublishedLayoutWriter publisher,
+    PublishedLayoutWriter publishedLayoutWriter,
+    LayoutBoxStateWriter stateWriter,
     Func<BlockBox, BlockLayoutRequest, PublishedBlock> layoutBlock,
     IDiagnosticsSink? diagnosticsSink = null)
 {
-    private readonly InlineFlowLayout _inlineEngine =
-        inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
+    private readonly InlineFlowLayout _inlineFlowLayout =
+        inlineFlowLayout ?? throw new ArgumentNullException(nameof(inlineFlowLayout));
 
     private readonly Func<BlockBox, BlockLayoutRequest, PublishedBlock> _layoutBlock =
         layoutBlock ?? throw new ArgumentNullException(nameof(layoutBlock));
@@ -26,7 +27,11 @@ internal sealed class BlockFlowLayout(
     private readonly MarginCollapseRules _marginCollapseRules =
         marginCollapseRules ?? throw new ArgumentNullException(nameof(marginCollapseRules));
 
-    private readonly PublishedLayoutWriter _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+    private readonly PublishedLayoutWriter _publishedLayoutWriter =
+        publishedLayoutWriter ?? throw new ArgumentNullException(nameof(publishedLayoutWriter));
+
+    private readonly LayoutBoxStateWriter _stateWriter =
+        stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
 
     public BlockFlowLayoutResult Layout(BlockFlowLayoutRequest request)
     {
@@ -79,7 +84,7 @@ internal sealed class BlockFlowLayout(
                 collapsedTop);
             var publishedChild = _layoutBlock(childBlock, childRequest);
             publishedChildren.Add(publishedChild);
-            publishedFlow.Add(new PublishedChildBlockItem(state.ReserveFlowOrder(), publishedChild));
+            publishedFlow.Add(_publishedLayoutWriter.WriteChildFlowItem(state.ReserveFlowOrder(), publishedChild));
 
             parent.Children[i] = childBlock;
             state.CurrentY = AdvanceCursorPastUsedGeometry(childBlock);
@@ -98,9 +103,11 @@ internal sealed class BlockFlowLayout(
 
         var contentHeight =
             VerticalFlowPolicy.ResolveStackHeight(state.CurrentY, state.PreviousBottomMargin, request.CursorY);
-        parent.InlineLayout = new(inlineSegments, contentHeight, state.MaxLineWidth);
-        var publishedInlineLayout =
-            new PublishedInlineLayout(publishedInlineSegments, contentHeight, state.MaxLineWidth);
+        _stateWriter.ApplyInlineLayout(parent, new(inlineSegments, contentHeight, state.MaxLineWidth));
+        var publishedInlineLayout = _publishedLayoutWriter.WriteInlineLayout(
+            publishedInlineSegments,
+            contentHeight,
+            state.MaxLineWidth);
 
         return new(
             contentHeight,
@@ -177,7 +184,7 @@ internal sealed class BlockFlowLayout(
 
         var contentTop = state.CurrentY + state.PreviousBottomMargin;
         var segmentBlock = CreateInlineSegmentBlock(blockContext, pendingInlineFlow.Nodes);
-        var inlineLayout = _inlineEngine.LayoutInlineFlow(
+        var inlineLayout = _inlineFlowLayout.LayoutInlineFlow(
             segmentBlock,
             new(
                 contentX,
@@ -192,7 +199,9 @@ internal sealed class BlockFlowLayout(
         if (inlineLayout.Segments.Count > 0)
         {
             inlineSegments.AddRange(inlineLayout.Segments);
-            var publishedInlineFlow = _publisher.WriteInlineFlow(inlineLayout.Segments, state.ReserveFlowOrder);
+            var publishedInlineFlow = _publishedLayoutWriter.WriteInlineFlow(
+                inlineLayout.Segments,
+                state.ReserveFlowOrder);
             foreach (var publishedSegment in publishedInlineFlow.Segments)
             {
                 publishedInlineSegments.Add(publishedSegment);

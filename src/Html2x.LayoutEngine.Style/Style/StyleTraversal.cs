@@ -185,8 +185,8 @@ internal sealed class StyleTraversal
             ArgumentNullException.ThrowIfNull(parent);
             ArgumentException.ThrowIfNullOrWhiteSpace(kind);
 
-            return new(
-                new(_nextContentId++),
+            return new StyleContentIdentity(
+                new StyleContentId(_nextContentId++),
                 parent.NodeId,
                 _nextSourceOrder++,
                 siblingIndex,
@@ -198,8 +198,8 @@ internal sealed class StyleTraversal
             StyleSourceIdentity? parent,
             int siblingIndex,
             string sourcePath) =>
-            new(
-                new(_nextNodeId++),
+            new StyleSourceIdentity(
+                new StyleNodeId(_nextNodeId++),
                 parent?.NodeId,
                 _nextSourceOrder++,
                 siblingIndex,

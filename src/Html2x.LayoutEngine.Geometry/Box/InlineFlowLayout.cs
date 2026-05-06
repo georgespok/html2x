@@ -71,10 +71,6 @@ internal sealed class InlineFlowLayout
         _stateWriter = new();
     }
 
-    public InlineLayoutResult Layout(BlockBox block, InlineLayoutRequest request) => LayoutInlineFlow(block, request);
-
-    public InlineLayoutResult Measure(BlockBox block, InlineLayoutRequest request) => MeasureInlineFlow(block, request);
-
     public InlineLayoutResult LayoutInlineFlow(BlockBox block, InlineLayoutRequest request)
     {
         var result = RunInlineFlow(block, request, LayoutSegment);

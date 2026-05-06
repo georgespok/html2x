@@ -69,14 +69,4 @@ internal sealed class CssValueConverter
 
         return null;
     }
-
-    public float GetLengthPt(ICssStyleDeclaration styles, string property, float fallback)
-    {
-        if (styles is null)
-        {
-            throw new ArgumentNullException(nameof(styles));
-        }
-
-        return ParseLengthPt(styles.GetPropertyValue(property)) ?? fallback;
-    }
 }

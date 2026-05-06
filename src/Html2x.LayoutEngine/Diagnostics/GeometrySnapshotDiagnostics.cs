@@ -15,7 +15,7 @@ internal static class GeometrySnapshotDiagnostics
         PaginationResult pagination,
         IDiagnosticsSink? diagnosticsSink)
     {
-        diagnosticsSink?.Emit(new(
+        diagnosticsSink?.Emit(new DiagnosticRecord(
             LayoutStageNames.Pagination,
             EventName,
             DiagnosticSeverity.Info,

@@ -152,12 +152,12 @@ internal static class GeometryLayoutStructureValidator
             yield break;
         }
 
-        foreach (var inlineObject in block.InlineLayout.Segments
+        foreach (var publishedInlineObject in block.InlineLayout.Segments
                      .SelectMany(static segment => segment.Lines)
                      .SelectMany(static line => line.Items)
                      .OfType<PublishedInlineObjectItem>())
         {
-            yield return inlineObject.Content;
+            yield return publishedInlineObject.Content;
         }
     }
 

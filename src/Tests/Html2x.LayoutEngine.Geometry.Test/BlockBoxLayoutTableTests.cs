@@ -447,7 +447,7 @@ public class BlockBoxLayoutTableTests
     {
         var formattingContext = new BlockContentExtentMeasurement();
         var imageResolver = new ImageSizingRules();
-        var inlineEngine = new InlineFlowLayout(
+        var inlineFlowLayout = new InlineFlowLayout(
             new FontMetricsProvider(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
@@ -455,8 +455,8 @@ public class BlockBoxLayoutTableTests
             imageResolver,
             diagnosticsSink);
         return new(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             formattingContext,
             imageResolver,
             diagnosticsSink);

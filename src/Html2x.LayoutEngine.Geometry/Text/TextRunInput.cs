@@ -17,4 +17,4 @@ internal sealed record TextRunInput(
     float MarginLeft,
     float MarginRight,
     TextRunKind Kind = TextRunKind.Normal,
-    InlineObjectLayout? InlineObject = null);
+    InlineBoxLayout? InlineBox = null);

@@ -16,11 +16,11 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
         }
     }
 
-    public void CollectInlineObjectContent(BlockBox block)
+    public void CollectInlineBoxContent(BlockBox block)
     {
         ArgumentNullException.ThrowIfNull(block);
 
-        CollectInlineObjectNodes(block.Children, block.Style);
+        CollectInlineBoxNodes(block.Children, block.Style);
         _collector.TrimBoundaryLineBreaks();
     }
 
@@ -65,22 +65,22 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
                _collector.TryAppendTextRun(inline);
     }
 
-    private void CollectInlineObjectNodes(IEnumerable<BoxNode> nodes, ComputedStyle blockStyle)
+    private void CollectInlineBoxNodes(IEnumerable<BoxNode> nodes, ComputedStyle blockStyle)
     {
         foreach (var node in nodes)
         {
             switch (node)
             {
                 case InlineBox inline:
-                    CollectInlineObjectInline(inline, blockStyle);
+                    CollectInlineBoxInline(inline, blockStyle);
                     break;
                 case BlockBox blockChild:
-                    CollectInlineObjectBlockChild(blockChild, blockStyle);
+                    CollectInlineBoxBlockChild(blockChild, blockStyle);
                     break;
                 default:
                     if (node.Children.Count > 0)
                     {
-                        CollectInlineObjectNodes(node.Children, blockStyle);
+                        CollectInlineBoxNodes(node.Children, blockStyle);
                     }
 
                     break;
@@ -88,13 +88,13 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
         }
     }
 
-    private void CollectInlineObjectBlockChild(BlockBox blockChild, ComputedStyle parentStyle)
+    private void CollectInlineBoxBlockChild(BlockBox blockChild, ComputedStyle parentStyle)
     {
         var runCountBeforeBoundary = _collector.Count;
         AppendBlockBoundaryBreak(parentStyle);
         var runCountAfterBoundary = _collector.Count;
 
-        CollectInlineObjectNodes(blockChild.Children, blockChild.Style);
+        CollectInlineBoxNodes(blockChild.Children, blockChild.Style);
 
         if (_collector.Count > runCountAfterBoundary)
         {
@@ -108,7 +108,7 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
         }
     }
 
-    private void CollectInlineObjectInline(InlineBox inline, ComputedStyle blockStyle)
+    private void CollectInlineBoxInline(InlineBox inline, ComputedStyle blockStyle)
     {
         if (_collector.TryAppendInlineBlockRun(inline))
         {
@@ -124,7 +124,7 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
-            CollectInlineObjectInline(childInline, blockStyle);
+            CollectInlineBoxInline(childInline, blockStyle);
         }
     }
 

@@ -25,11 +25,11 @@ public sealed class GeometryContractTests
                 WidthPt = 40f
             }
         };
-        var inlineEngine = new InlineFlowLayout();
+        var inlineFlowLayout = new InlineFlowLayout();
         var imageResolver = new ImageSizingRules();
         var layoutEngine = new BlockBoxLayout(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             new(),
             imageResolver);
         var page = new PageBox
@@ -58,47 +58,7 @@ public sealed class GeometryContractTests
         geometry.BorderBoxRect.ShouldBe(new(1f, 2f, 10f, 6f));
         geometry.ContentBoxRect.ShouldBe(new(8f, 9f, 0f, 0f));
     }
-
-    [Fact]
-    public void MeasureBorderBoxHeight_RepeatedWidths_DoesNotMutateInlineLayout()
-    {
-        var style = new ComputedStyle();
-        var block = new BlockBox(BoxRole.Block)
-        {
-            Style = style
-        };
-        block.Children.Add(new InlineBox(BoxRole.Inline)
-        {
-            Parent = block,
-            Style = style,
-            TextContent = "abcd efgh"
-        });
-        var inlineEngine = new InlineFlowLayout(
-            new FontMetricsProvider(),
-            new FakeTextMeasurer(10f, 9f, 3f),
-            new DefaultLineHeightStrategy());
-        var heightCalculator = new BlockContentHeightMeasurement(
-            new(
-                inlineEngine,
-                new(),
-                new ImageSizingRules()));
-
-        var existingLayout = new InlineLayoutResult(
-            [
-                new([], 123f, 45f)
-            ],
-            45f,
-            67f);
-        block.InlineLayout = existingLayout;
-
-        var wideHeight = heightCalculator.MeasureBorderBoxHeight(block, 200f, MeasureNoTables);
-        block.InlineLayout.ShouldBeSameAs(existingLayout);
-        var narrowHeight = heightCalculator.MeasureBorderBoxHeight(block, 25f, MeasureNoTables);
-
-        narrowHeight.ShouldBeGreaterThan(wideHeight);
-        block.InlineLayout.ShouldBeSameAs(existingLayout);
-    }
-
+    
     [Fact]
     public async Task Build_InlineBlockBoundary_PreservesInlineFlowFragmentOrder()
     {
@@ -178,7 +138,7 @@ public sealed class GeometryContractTests
             new FakeTextMeasurer(10f, 9f, 3f),
             new DefaultLineHeightStrategy());
 
-        var measured = engine.Measure(block, InlineLayoutRequest.ForMeasurement(25f));
+        var measured = engine.MeasureInlineFlow(block, InlineLayoutRequest.ForMeasurement(25f));
 
         measured.TotalHeight.ShouldBeGreaterThan(0f);
         measured.MaxLineWidth.ShouldBeLessThanOrEqualTo(25f);
@@ -231,7 +191,7 @@ public sealed class GeometryContractTests
             new(),
             imageResolver);
 
-        var measured = engine.Measure(root, InlineLayoutRequest.ForMeasurement(100f));
+        var measured = engine.MeasureInlineFlow(root, InlineLayoutRequest.ForMeasurement(100f));
 
         measured.TotalHeight.ShouldBeGreaterThan(0f);
         measured.Segments.ShouldBeEmpty();
@@ -348,11 +308,11 @@ public sealed class GeometryContractTests
             Style = new()
         };
         root.Children.Add(block);
-        var inlineEngine = new InlineFlowLayout();
+        var inlineFlowLayout = new InlineFlowLayout();
         var imageResolver = new ImageSizingRules();
         var layoutEngine = new BlockBoxLayout(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             new(),
             imageResolver);
         var page = new PageBox

@@ -25,7 +25,7 @@ internal sealed class BoxTreeLayout(BlockBoxLayout blockBoxLayout)
     {
         var contentArea = PageContentArea.From(page.Size, page.Margin);
         var candidates = SelectTopLevelCandidates(boxRoot);
-        return _blockBoxLayout.LayoutBlockStack(new(
+        return _blockBoxLayout.LayoutBlockStack(new BlockStackLayoutRequest(
             candidates,
             contentArea.X,
             contentArea.Y,

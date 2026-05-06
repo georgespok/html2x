@@ -10,15 +10,15 @@ namespace Html2x.LayoutEngine.Geometry.Box;
 ///     Measurement must not assign temporary geometry, inline layout, image metadata, or table metadata.
 /// </remarks>
 internal sealed class BlockContentSizeMeasurement(
-    InlineFlowLayout inlineEngine,
+    InlineFlowLayout inlineFlowLayout,
     BlockSizingRules sizingRules,
     IImageSizingRules imageResolver)
 {
     private readonly IImageSizingRules _imageResolver =
         imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
 
-    private readonly InlineFlowLayout _inlineEngine =
-        inlineEngine ?? throw new ArgumentNullException(nameof(inlineEngine));
+    private readonly InlineFlowLayout _inlineFlowLayout =
+        inlineFlowLayout ?? throw new ArgumentNullException(nameof(inlineFlowLayout));
 
     private readonly BlockSizingRules
         _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
@@ -75,6 +75,6 @@ internal sealed class BlockContentSizeMeasurement(
     }
 
     private InlineLayoutResult MeasureInlineLayout(BlockBox block, InlineLayoutRequest request) =>
-        _inlineEngine.MeasureInlineFlow(block, request) ?? throw new InvalidOperationException(
+        _inlineFlowLayout.MeasureInlineFlow(block, request) ?? throw new InvalidOperationException(
             $"{nameof(InlineFlowLayout.MeasureInlineFlow)} returned null for '{block.GetType().Name}'.");
 }

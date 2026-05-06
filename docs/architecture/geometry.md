@@ -132,10 +132,10 @@ locality lives in smaller internal modules:
 - `TableCellMeasurement` measures table cell content without mutation.
 - `TableBlockLayout` owns table diagnostics and table placement.
 - `TablePlacementWriter` writes table, row, and cell geometry.
-- `LayoutBoxStateWriter` owns mutable writes to block, image, table, and inline
-  object boxes.
-- `PublishedLayoutWriter` owns published block caching, source order, and
-  inline publishing.
+- `LayoutBoxStateWriter` owns mutable writes to block, image, table, inline
+  layout, and atomic inline box content.
+- `PublishedLayoutWriter` owns published block caching, source order, rule
+  result publication, inline flow item publication, and inline publishing.
 
 Extension boundaries:
 
@@ -143,9 +143,9 @@ Extension boundaries:
   in `BlockBoxLayout.CreateDefaultRuleSet`.
 - Keep table column, row span, and col span behavior in `TableStructure` and
   `TableGridLayout` before touching placement or publication.
-- Keep replaced inline object measurement in `AtomicInlineObjectLayout` and
-  placement in `AtomicInlineObjectLayoutWriter`; text line layout should consume
-  only atomic inline object metrics.
+- Keep replaced inline box measurement in `AtomicInlineBoxLayout` and
+  placement in `AtomicInlineBoxPlacementWriter`; text line layout should consume
+  only atomic inline box metrics.
 - Block-kind rules must not publish directly. Measurement modules must not
   mutate boxes or write published facts.
 

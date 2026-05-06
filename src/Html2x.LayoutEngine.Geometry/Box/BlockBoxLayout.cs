@@ -23,13 +23,13 @@ internal sealed class BlockBoxLayout
     private readonly TableBlockLayoutRule _tableBlockRule;
 
     internal BlockBoxLayout(
-        InlineFlowLayout inlineEngine,
+        InlineFlowLayout inlineFlowLayout,
         TableGridLayout tableGridLayout,
         BlockContentExtentMeasurement contentMeasurement,
         IImageSizingRules imageResolver,
         IDiagnosticsSink? diagnosticsSink = null)
     {
-        ArgumentNullException.ThrowIfNull(inlineEngine);
+        ArgumentNullException.ThrowIfNull(inlineFlowLayout);
         ArgumentNullException.ThrowIfNull(tableGridLayout);
         var resolvedContentMeasurement =
             contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
@@ -38,9 +38,10 @@ internal sealed class BlockBoxLayout
         var sizingRules = new BlockSizingRules(marginCollapseRules);
 
         _blockFlow = new(
-            inlineEngine,
+            inlineFlowLayout,
             marginCollapseRules,
             _publishedLayoutWriter,
+            stateWriter,
             LayoutChildBlock,
             diagnosticsSink);
 
@@ -75,37 +76,20 @@ internal sealed class BlockBoxLayout
         return _blockFlow.LayoutStack(request).PublishedBlocks;
     }
 
-    internal PublishedBlock LayoutBlock(BlockBox node, BlockLayoutRequest request) =>
-        WriteRuleResult(_rules.Layout(node, request));
-
     private PublishedBlock LayoutChildBlock(BlockBox block, BlockLayoutRequest request) =>
-        WriteRuleResult(_rules.Layout(block, request));
+        _publishedLayoutWriter.WriteRuleResult(_rules.Layout(block, request));
 
     internal PublishedBlock LayoutStandardBlock(BlockBox node, BlockLayoutRequest request) =>
-        WriteRuleResult(_standardBlockRule.Layout(node, request));
+        _publishedLayoutWriter.WriteRuleResult(_standardBlockRule.Layout(node, request));
 
     internal PublishedBlock LayoutImageBlock(ImageBox node, BlockLayoutRequest request) =>
-        WriteRuleResult(_imageBlockRule.Layout(node, request));
+        _publishedLayoutWriter.WriteRuleResult(_imageBlockRule.Layout(node, request));
 
     internal PublishedBlock LayoutRuleBlock(RuleBox node, BlockLayoutRequest request) =>
-        WriteRuleResult(_ruleBlockRule.Layout(node, request));
+        _publishedLayoutWriter.WriteRuleResult(_ruleBlockRule.Layout(node, request));
 
     internal PublishedBlock LayoutTableBlock(TableBox node, BlockLayoutRequest request) =>
-        WriteRuleResult(_tableBlockRule.Layout(node, request));
-
-    private PublishedBlock WriteRuleResult(BlockLayoutRuleResult result)
-    {
-        if (result.InlineLayout is not null || result.Children.Count > 0 || result.Flow is not null)
-        {
-            return _publishedLayoutWriter.WriteBlock(
-                result.Block,
-                result.InlineLayout,
-                result.Children,
-                result.Flow);
-        }
-
-        return _publishedLayoutWriter.WriteResolvedBlock(result.Block);
-    }
+        _publishedLayoutWriter.WriteRuleResult(_tableBlockRule.Layout(node, request));
 
     private static BlockLayoutRuleSet CreateDefaultRuleSet(
         TableBlockLayoutRule tableBlockRule,

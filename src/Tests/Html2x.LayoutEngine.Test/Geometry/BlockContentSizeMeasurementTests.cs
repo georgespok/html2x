@@ -118,7 +118,7 @@ public sealed class BlockContentSizeMeasurementTests
     }
 
     [Fact]
-    public void Measure_WithNestedInlineBlock_DoesNotAssignInlineObjectGeometry()
+    public void Measure_WithNestedInlineBlock_DoesNotAssignInlineBoxGeometry()
     {
         var block = CreateInlineBlockContent();
         var inlineBlock = block.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
@@ -198,7 +198,7 @@ public sealed class BlockContentSizeMeasurementTests
     {
         var imageResolver = CreateImageResolver(imageMetadataResolver);
         return new(
-            CreateInlineEngine(imageResolver),
+            CreateInlineFlowLayout(imageResolver),
             new(),
             imageResolver);
     }
@@ -206,10 +206,10 @@ public sealed class BlockContentSizeMeasurementTests
     private BlockBoxLayout CreateBlockBoxLayout(IImageMetadataResolver? imageMetadataResolver = null)
     {
         var imageResolver = CreateImageResolver(imageMetadataResolver);
-        var inlineEngine = CreateInlineEngine(imageResolver);
+        var inlineFlowLayout = CreateInlineFlowLayout(imageResolver);
         return new(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             new(),
             imageResolver);
     }
@@ -217,10 +217,10 @@ public sealed class BlockContentSizeMeasurementTests
     private TableGridLayout CreateTableGridLayout(IImageMetadataResolver? imageMetadataResolver = null)
     {
         var imageResolver = CreateImageResolver(imageMetadataResolver);
-        return new(CreateInlineEngine(imageResolver), imageResolver);
+        return new(CreateInlineFlowLayout(imageResolver), imageResolver);
     }
 
-    private InlineFlowLayout CreateInlineEngine(IImageSizingRules imageResolver) =>
+    private InlineFlowLayout CreateInlineFlowLayout(IImageSizingRules imageResolver) =>
         new(
             new FontMetricsProvider(),
             _textMeasurer,

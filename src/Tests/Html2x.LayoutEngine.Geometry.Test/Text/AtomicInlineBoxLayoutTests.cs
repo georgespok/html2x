@@ -1,13 +1,14 @@
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Text;
 using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Html2x.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
-public sealed class AtomicInlineObjectLayoutTests
+public sealed class AtomicInlineBoxLayoutTests
 {
     [Fact]
     public void MeasureInlineBlock_ImageContent_UsesImageSizingWithoutTextLineMeasurement()
@@ -31,7 +32,7 @@ public sealed class AtomicInlineObjectLayoutTests
             Parent = inlineBlock,
             Style = new()
         });
-        var layout = new AtomicInlineObjectLayout(
+        var layout = new AtomicInlineBoxLayout(
             textMeasurer,
             new FontMetricsProvider(),
             new DefaultLineHeightStrategy(),
@@ -49,6 +50,54 @@ public sealed class AtomicInlineObjectLayoutTests
         result.Layout.Lines.ShouldBeEmpty();
         textMeasurer.MeasureCount.ShouldBe(0);
         textMeasurer.MeasureWidthCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void MeasureInlineBlock_TextContent_UsesInlineBoxSizingWithoutMutatingContentBox()
+    {
+        var textMeasurer = new CountingTextMeasurer();
+        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
+        {
+            Style = new()
+        };
+        var contentBox = new BlockBox(BoxRole.Block)
+        {
+            Parent = inlineBlock,
+            IsInlineBlockContext = true,
+            Style = new()
+            {
+                WidthPt = 42f,
+                HeightPt = 18f,
+                Padding = new(2f, 3f, 4f, 5f),
+                Borders = BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid))
+            }
+        };
+        contentBox.Children.Add(new InlineBox(BoxRole.Inline)
+        {
+            Parent = contentBox,
+            Style = contentBox.Style,
+            TextContent = "alpha beta"
+        });
+        inlineBlock.Children.Add(contentBox);
+        var layout = new AtomicInlineBoxLayout(
+            textMeasurer,
+            new FontMetricsProvider(),
+            new DefaultLineHeightStrategy(),
+            new(),
+            new ImageSizingRules());
+
+        var result = layout.MeasureInlineBlock(inlineBlock, 100f);
+
+        result.ShouldNotBeNull();
+        result.ContentBox.ShouldBeSameAs(contentBox);
+        result.ContentWidth.ShouldBe(42f);
+        result.ContentHeight.ShouldBe(18f);
+        result.BorderBoxWidth.ShouldBe(52f);
+        result.BorderBoxHeight.ShouldBe(26f);
+        result.Layout.Lines.ShouldNotBeEmpty();
+        textMeasurer.MeasureCount.ShouldBeGreaterThan(0);
+        contentBox.UsedGeometry.ShouldBeNull();
+        contentBox.InlineLayout.ShouldBeNull();
     }
 
     private sealed class FixedImageSizingRules(ImageLayoutResolution resolution) : IImageSizingRules

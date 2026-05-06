@@ -8,5 +8,5 @@ internal enum TextRunKind
     Normal,
     LineBreak,
     Atomic,
-    InlineObject
+    InlineBox
 }

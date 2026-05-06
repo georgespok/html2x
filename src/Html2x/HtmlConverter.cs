@@ -30,7 +30,7 @@ public sealed class HtmlConverter
         if (options.Diagnostics.EnableDiagnostics)
         {
             var diagnosticsStartTime = DateTimeOffset.UtcNow;
-            collector = new(diagnosticsStartTime);
+            collector = new DiagnosticsCollector(diagnosticsStartTime);
             diagnosticsSink = collector;
         }
 

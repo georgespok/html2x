@@ -471,13 +471,13 @@ public class BlockFlowTests
         var formattingContext = new BlockContentExtentMeasurement();
         var sizingRules = new BlockSizingRules(formattingContext.MarginCollapseRules);
         var imageResolver = new ImageSizingRules();
-        var inlineEngine = new InlineFlowLayout(
+        var inlineFlowLayout = new InlineFlowLayout(
             new FontMetricsProvider(),
             CreateLinearMeasurer(10f),
             new DefaultLineHeightStrategy(),
             formattingContext,
             imageResolver);
-        var tableGridLayout = new TableGridLayout(inlineEngine, imageResolver);
+        var tableGridLayout = new TableGridLayout(inlineFlowLayout, imageResolver);
 
         var container = new BlockBox(BoxRole.Block)
         {
@@ -514,7 +514,7 @@ public class BlockFlowTests
         root.Children.Add(container);
 
         var engine = new BlockBoxLayout(
-            inlineEngine,
+            inlineFlowLayout,
             tableGridLayout,
             formattingContext,
             imageResolver,

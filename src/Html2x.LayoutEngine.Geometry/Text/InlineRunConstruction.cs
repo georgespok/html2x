@@ -30,7 +30,7 @@ internal sealed class InlineRunConstruction
         _diagnosticsSink = diagnosticsSink;
     }
 
-    public TextRunInput? BuildInlineBlockRun(InlineBox inline, int runId, InlineObjectLayout? inlineLayout)
+    public TextRunInput? BuildInlineBlockRun(InlineBox inline, int runId, InlineBoxLayout? inlineLayout)
     {
         if (inline.Role != BoxRole.InlineBlock || inlineLayout is null)
         {
@@ -47,20 +47,17 @@ internal sealed class InlineRunConstruction
             0f,
             margin.Left,
             margin.Right,
-            TextRunKind.InlineObject,
+            TextRunKind.InlineBox,
             inlineLayout);
     }
 
-    public TextRunInput? BuildLineBreakRunFromInlineStyle(InlineBox inline, int runId) =>
-        BuildLineBreakRun(inline, inline.Style, runId);
-
-    public InlineObjectLayout? BuildInlineBlockLayout(
+    public InlineBoxLayout? BuildInlineBlockLayout(
         InlineBox inline,
         float availableWidth,
         ITextMeasurer measurer,
         ILineHeightStrategy lineHeightStrategy)
     {
-        var layout = new AtomicInlineObjectLayout(
+        var layout = new AtomicInlineBoxLayout(
             measurer,
             _metrics,
             lineHeightStrategy,
@@ -143,7 +140,7 @@ internal sealed class InlineRunConstruction
         float marginLeft,
         float marginRight,
         TextRunKind kind = TextRunKind.Normal,
-        InlineObjectLayout? inlineObject = null)
+        InlineBoxLayout? inlineBox = null)
     {
         var font = _metrics.GetFontKey(style);
         var fontSize = _metrics.GetFontSize(style);
@@ -159,7 +156,7 @@ internal sealed class InlineRunConstruction
             marginLeft,
             marginRight,
             kind,
-            inlineObject);
+            inlineBox);
     }
 
     private static (float PaddingLeft, float PaddingRight, float MarginLeft, float MarginRight) GetInlineSpacing(

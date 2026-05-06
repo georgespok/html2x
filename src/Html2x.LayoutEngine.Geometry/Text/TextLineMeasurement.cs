@@ -16,9 +16,9 @@ internal sealed class TextLineMeasurement(ITextMeasurer measurer)
 
         foreach (var buffer in buffers)
         {
-            if (buffer.InlineObject is not null)
+            if (buffer.InlineBox is not null)
             {
-                var inlineRun = BuildInlineObjectRun(buffer);
+                var inlineRun = BuildInlineBoxRun(buffer);
                 lineRuns.Add(inlineRun);
                 lineWidth += buffer.LeftSpacing + inlineRun.Width + buffer.RightSpacing;
                 continue;
@@ -40,20 +40,20 @@ internal sealed class TextLineMeasurement(ITextMeasurer measurer)
             ResolveLineHeight(lineRuns, fallbackLineHeight));
     }
 
-    private TextLayoutRun BuildInlineObjectRun(TextLineRunBuffer buffer)
+    private TextLayoutRun BuildInlineBoxRun(TextLineRunBuffer buffer)
     {
-        var inlineObject = buffer.InlineObject
+        var inlineBox = buffer.InlineBox
                            ?? throw new InvalidOperationException(
-                               "Inline object buffer must carry inline object layout.");
-        var inlineAscent = inlineObject.Baseline;
-        var inlineDescent = inlineObject.BorderBoxHeight - inlineObject.Baseline;
+                               "Inline box buffer must carry inline box layout.");
+        var inlineAscent = inlineBox.Baseline;
+        var inlineDescent = inlineBox.BorderBoxHeight - inlineBox.Baseline;
 
         return new(
             buffer.Source.Source,
             string.Empty,
             buffer.Source.Font,
             buffer.Source.FontSizePt,
-            inlineObject.BorderBoxWidth,
+            inlineBox.BorderBoxWidth,
             buffer.LeftSpacing,
             buffer.RightSpacing,
             inlineAscent,
@@ -61,7 +61,7 @@ internal sealed class TextLineMeasurement(ITextMeasurer measurer)
             buffer.Source.Style.Decorations,
             buffer.Source.Style.Color,
             null,
-            inlineObject);
+            inlineBox);
     }
 
     private TextLayoutRun BuildTextRun(TextLineRunBuffer buffer)

@@ -3,14 +3,14 @@ using Html2x.RenderModel.Fragments;
 namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
-///     Places text runs and inline objects into ordered inline line item layouts.
+///     Places text runs and atomic inline boxes into ordered inline line item layouts.
 /// </summary>
 internal sealed class TextRunLayout(
-    AtomicInlineObjectLayoutWriter inlineObjectWriter,
+    AtomicInlineBoxPlacementWriter atomicInlineBoxPlacementWriter,
     InlineLineBoundsRules lineBoundsRules)
 {
-    private readonly AtomicInlineObjectLayoutWriter _inlineObjectWriter =
-        inlineObjectWriter ?? throw new ArgumentNullException(nameof(inlineObjectWriter));
+    private readonly AtomicInlineBoxPlacementWriter _atomicInlineBoxPlacementWriter =
+        atomicInlineBoxPlacementWriter ?? throw new ArgumentNullException(nameof(atomicInlineBoxPlacementWriter));
 
     private readonly InlineLineBoundsRules _lineBoundsRules =
         lineBoundsRules ?? throw new ArgumentNullException(nameof(lineBoundsRules));
@@ -24,16 +24,16 @@ internal sealed class TextRunLayout(
         ArgumentNullException.ThrowIfNull(createTextPlacements);
 
         var context = new RunPlacementContext(
-            _inlineObjectWriter,
+            _atomicInlineBoxPlacementWriter,
             _lineBoundsRules,
             placement,
             line.Runs.Count);
 
         foreach (var run in line.Runs)
         {
-            if (run.InlineObject is not null)
+            if (run.InlineBox is not null)
             {
-                context.PlaceInlineObject(run);
+                context.PlaceInlineBox(run);
                 continue;
             }
 
@@ -51,7 +51,7 @@ internal sealed class TextRunLayout(
     /// </summary>
     private sealed class RunPlacementContext
     {
-        private readonly AtomicInlineObjectLayoutWriter _inlineObjectWriter;
+        private readonly AtomicInlineBoxPlacementWriter _atomicInlineBoxPlacementWriter;
         private readonly List<InlineLineItemLayout> _items;
         private readonly InlineLineBoundsRules _lineBoundsRules;
         private readonly InlineLinePlacement _placement;
@@ -61,12 +61,12 @@ internal sealed class TextRunLayout(
         private int _order;
 
         internal RunPlacementContext(
-            AtomicInlineObjectLayoutWriter inlineObjectWriter,
+            AtomicInlineBoxPlacementWriter atomicInlineBoxPlacementWriter,
             InlineLineBoundsRules lineBoundsRules,
             InlineLinePlacement placement,
             int capacity)
         {
-            _inlineObjectWriter = inlineObjectWriter;
+            _atomicInlineBoxPlacementWriter = atomicInlineBoxPlacementWriter;
             _lineBoundsRules = lineBoundsRules;
             _placement = placement;
             _items = new(capacity);
@@ -75,19 +75,19 @@ internal sealed class TextRunLayout(
             _currentX = placement.StartX;
         }
 
-        internal void PlaceInlineObject(TextLayoutRun run)
+        internal void PlaceInlineBox(TextLayoutRun run)
         {
-            if (run.InlineObject is null)
+            if (run.InlineBox is null)
             {
                 return;
             }
 
             FlushTextItem();
-            var inlineRect = _inlineObjectWriter.Write(
-                run.InlineObject,
+            var inlineRect = _atomicInlineBoxPlacementWriter.Write(
+                run.InlineBox,
                 _currentX + run.LeftSpacing,
                 _placement.BaselineY);
-            _items.Add(new InlineObjectItemLayout(_order++, inlineRect, run.InlineObject.ContentBox));
+            _items.Add(new InlineBoxItemLayout(_order++, inlineRect, run.InlineBox.ContentBox));
             _currentX += run.LeftSpacing + run.Width + run.RightSpacing;
         }
 

@@ -5,12 +5,12 @@ using Shouldly;
 namespace Html2x.LayoutEngine.Geometry.Test.Text;
 
 /// <summary>
-///     Verifies inline object placement publishes geometry and nested inline layout.
+///     Verifies atomic inline box placement publishes geometry and nested inline layout.
 /// </summary>
-public sealed class AtomicInlineObjectLayoutWriterTests
+public sealed class AtomicInlineBoxPlacementWriterTests
 {
     [Fact]
-    public void Write_InlineObject_AppliesGeometryAndNestedInlineLayoutToContentBox()
+    public void Write_AtomicInlineBox_AppliesGeometryAndNestedInlineLayoutToContentBox()
     {
         var nestedLayout = new TextLayoutResult([], 4f, 6f);
         var contentBox = new BlockBox(BoxRole.Block)
@@ -23,7 +23,7 @@ public sealed class AtomicInlineObjectLayoutWriterTests
                 Borders = BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        var inlineObject = new InlineObjectLayout(
+        var inlineBox = new InlineBoxLayout(
             contentBox,
             nestedLayout,
             8f,
@@ -37,7 +37,7 @@ public sealed class AtomicInlineObjectLayoutWriterTests
         var capturedTop = 0f;
         var capturedWidth = 0f;
         string? capturedAlign = null;
-        var writer = new AtomicInlineObjectLayoutWriter(
+        var placement = new AtomicInlineBoxPlacementWriter(
             (block, layout, left, top, width, align) =>
             {
                 capturedBlock = block;
@@ -50,7 +50,7 @@ public sealed class AtomicInlineObjectLayoutWriterTests
             },
             new());
 
-        var rect = writer.Write(inlineObject, 30f, 50f);
+        var rect = placement.Write(inlineBox, 30f, 50f);
 
         rect.ShouldBe(new(30f, 43f, 20f, 10f));
         contentBox.UsedGeometry.ShouldNotBeNull();

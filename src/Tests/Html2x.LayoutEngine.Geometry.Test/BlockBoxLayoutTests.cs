@@ -406,7 +406,7 @@ public class BlockBoxLayoutTests
     {
         var formattingContext = new BlockContentExtentMeasurement();
         var imageResolver = new ImageSizingRules();
-        var inlineEngine = new InlineFlowLayout(
+        var inlineFlowLayout = new InlineFlowLayout(
             new FontMetricsProvider(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
@@ -414,8 +414,8 @@ public class BlockBoxLayoutTests
             imageResolver,
             diagnosticsSink);
         return new(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             formattingContext,
             imageResolver,
             diagnosticsSink);

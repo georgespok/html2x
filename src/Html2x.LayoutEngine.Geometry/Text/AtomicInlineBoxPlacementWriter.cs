@@ -6,9 +6,9 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
-///     Places inline objects and writes their content box geometry and nested inline layout.
+///     Places atomic inline boxes and writes their content box geometry and nested inline layout.
 /// </summary>
-internal sealed class AtomicInlineObjectLayoutWriter(
+internal sealed class AtomicInlineBoxPlacementWriter(
     Func<BlockBox, TextLayoutResult, float, float, float, string?, InlineFlowSegmentLayout> writeSegment,
     LayoutBoxStateWriter stateWriter)
 {
@@ -19,20 +19,20 @@ internal sealed class AtomicInlineObjectLayoutWriter(
         _writeSegment =
             writeSegment ?? throw new ArgumentNullException(nameof(writeSegment));
 
-    public RectPt Write(InlineObjectLayout inlineObject, float left, float baselineY)
+    public RectPt Write(InlineBoxLayout inlineBox, float left, float baselineY)
     {
-        ArgumentNullException.ThrowIfNull(inlineObject);
+        ArgumentNullException.ThrowIfNull(inlineBox);
 
-        var contentBox = inlineObject.ContentBox;
+        var contentBox = inlineBox.ContentBox;
         var padding = contentBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(contentBox.Style.Borders).Safe();
         var margin = contentBox.Style.Margin.Safe();
-        var top = baselineY - inlineObject.Baseline;
+        var top = baselineY - inlineBox.Baseline;
         var geometry = UsedGeometryRules.FromBorderBox(
             left,
             top,
-            inlineObject.BorderBoxWidth,
-            inlineObject.BorderBoxHeight,
+            inlineBox.BorderBoxWidth,
+            inlineBox.BorderBoxHeight,
             padding,
             border,
             baselineY,
@@ -42,22 +42,22 @@ internal sealed class AtomicInlineObjectLayoutWriter(
             [
                 _writeSegment(
                     contentBox,
-                    inlineObject.Layout,
+                    inlineBox.Layout,
                     contentArea.X,
                     contentArea.Y,
                     contentArea.Width,
                     contentBox.Style.TextAlign)
             ],
-            inlineObject.ContentHeight,
-            inlineObject.Layout.MaxLineWidth);
+            inlineBox.ContentHeight,
+            inlineBox.Layout.MaxLineWidth);
 
-        _stateWriter.ApplyInlineObjectContentLayout(
+        _stateWriter.ApplyInlineBoxContentLayout(
             contentBox,
             margin,
             padding,
             geometry,
             inlineLayout,
-            inlineObject.ImageResolution);
+            inlineBox.ImageResolution);
 
         return geometry.BorderBoxRect;
     }

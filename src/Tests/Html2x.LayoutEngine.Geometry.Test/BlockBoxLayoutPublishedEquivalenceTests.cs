@@ -217,7 +217,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     {
         var formattingContext = new BlockContentExtentMeasurement();
         var imageResolver = new ImageSizingRules();
-        var inlineEngine = new InlineFlowLayout(
+        var inlineFlowLayout = new InlineFlowLayout(
             new FontMetricsProvider(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
@@ -225,8 +225,8 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             imageResolver);
 
         return new(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             formattingContext,
             imageResolver);
     }

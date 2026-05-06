@@ -40,6 +40,22 @@ internal sealed class PublishedLayoutWriter
         return WriteBlock(block, inlineLayout, children);
     }
 
+    public PublishedBlock WriteRuleResult(BlockLayoutRuleResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        if (result.InlineLayout is not null || result.Children.Count > 0 || result.Flow is not null)
+        {
+            return WriteBlock(
+                result.Block,
+                result.InlineLayout,
+                result.Children,
+                result.Flow);
+        }
+
+        return WriteResolvedBlock(result.Block);
+    }
+
     public PublishedBlock WriteBlock(
         BlockBox block,
         PublishedInlineLayout? inlineLayout,
@@ -71,10 +87,25 @@ internal sealed class PublishedLayoutWriter
             return null;
         }
 
-        return new(
+        return new PublishedInlineLayout(
             inlineLayout.Segments.Select(CreateInlineSegment).ToArray(),
             inlineLayout.TotalHeight,
             inlineLayout.MaxLineWidth);
+    }
+
+    public PublishedInlineLayout WriteInlineLayout(
+        IReadOnlyList<PublishedInlineFlowSegment> segments,
+        float contentHeight,
+        float maxLineWidth)
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+        return new PublishedInlineLayout(segments, contentHeight, maxLineWidth);
+    }
+
+    public PublishedChildBlockItem WriteChildFlowItem(int order, PublishedBlock block)
+    {
+        ArgumentNullException.ThrowIfNull(block);
+        return new PublishedChildBlockItem(order, block);
     }
 
     public PublishedInlineFlowWriteResult WriteInlineFlow(
@@ -124,7 +155,7 @@ internal sealed class PublishedLayoutWriter
         return children;
     }
 
-    private PublishedBlock WriteInlineObjectContent(BlockBox block)
+    private PublishedBlock WriteInlineBoxContent(BlockBox block)
     {
         if (_blocks.TryGetValue(block, out var existing))
         {
@@ -132,7 +163,7 @@ internal sealed class PublishedLayoutWriter
         }
 
         var geometry = block.UsedGeometry ?? throw new InvalidOperationException(
-            $"Published inline object requires UsedGeometry for '{BoxNodePath.Build(block)}'.");
+            $"Published inline box requires UsedGeometry for '{BoxNodePath.Build(block)}'.");
         var inlineLayout = CreateInlineLayout(block.InlineLayout);
 
         var published = PublishedBlockFacts.CreateBlock(
@@ -169,10 +200,10 @@ internal sealed class PublishedLayoutWriter
                         source,
                         GetSourceOrder(source)))
                     .ToArray()),
-            InlineObjectItemLayout obj => new PublishedInlineObjectItem(
-                obj.Order,
-                obj.Rect,
-                WriteInlineObjectContent(obj.ContentBox)),
+            InlineBoxItemLayout box => new PublishedInlineObjectItem(
+                box.Order,
+                box.Rect,
+                WriteInlineBoxContent(box.ContentBox)),
             _ => throw new NotSupportedException(
                 $"Unsupported inline layout item '{item.GetType().Name}'.")
         };

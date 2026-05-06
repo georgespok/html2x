@@ -32,8 +32,8 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
             case TextRunKind.Atomic:
                 ProcessRunLines(run, AppendAtomicToken);
                 return;
-            case TextRunKind.InlineObject:
-                AppendInlineObject(run);
+            case TextRunKind.InlineBox:
+                AppendInlineBox(run);
                 return;
             case TextRunKind.Normal:
                 break;
@@ -122,21 +122,21 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
         AppendToken(run, token, tokenWidth);
     }
 
-    private void AppendInlineObject(TextRunInput run)
+    private void AppendInlineBox(TextRunInput run)
     {
-        if (run.InlineObject is null)
+        if (run.InlineBox is null)
         {
             return;
         }
 
-        var tokenWidth = run.InlineObject.BorderBoxWidth;
+        var tokenWidth = run.InlineBox.BorderBoxWidth;
         var additionalSpacing = GetAdditionalSpacing(run);
         if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
         {
             FlushLine();
         }
 
-        AppendInlineObject(run, tokenWidth);
+        AppendInlineBox(run, tokenWidth);
     }
 
     private void ProcessTokenByGrapheme(TextRunInput run, string token)
@@ -186,9 +186,9 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
         return buffer;
     }
 
-    private void AppendInlineObject(TextRunInput run, float tokenWidth)
+    private void AppendInlineBox(TextRunInput run, float tokenWidth)
     {
-        var buffer = new TextLineRunBuffer(run, run.InlineObject);
+        var buffer = new TextLineRunBuffer(run, run.InlineBox);
         _currentLine.Add(buffer);
         _currentWidth += buffer.LeftSpacing + tokenWidth + buffer.RightSpacing;
     }
@@ -231,7 +231,7 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
         for (var i = runs.Count - 1; i >= 0; i--)
         {
             var buffer = runs[i];
-            if (buffer.InlineObject is not null)
+            if (buffer.InlineBox is not null)
             {
                 return;
             }

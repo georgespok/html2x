@@ -11,6 +11,7 @@ using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
+using Html2x.LayoutEngine.Test.TestDoubles;
 
 namespace Html2x.LayoutEngine.Test.TestHelpers;
 

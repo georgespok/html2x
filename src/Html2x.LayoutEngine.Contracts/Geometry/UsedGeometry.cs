@@ -46,7 +46,7 @@ internal readonly record struct UsedGeometry
         new(
             Translate(BorderBoxRect, deltaX, deltaY),
             Translate(ContentBoxRect, deltaX, deltaY),
-            Baseline.HasValue ? Baseline.Value + deltaY : null,
+            Baseline + deltaY,
             MarkerOffset,
             AllowsOverflow);
 
@@ -76,14 +76,6 @@ internal readonly record struct UsedGeometry
             MarkerOffset,
             AllowsOverflow);
     }
-
-    public UsedGeometry WithMarkerOffset(float value) =>
-        new(
-            BorderBoxRect,
-            ContentBoxRect,
-            Baseline,
-            value,
-            AllowsOverflow);
 
     private UsedGeometry Resize(float borderWidth, float borderHeight)
     {

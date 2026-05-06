@@ -20,4 +20,4 @@ internal sealed record TextLayoutRun(
     TextDecorations Decorations,
     ColorRgba? Color,
     ResolvedFont? ResolvedFont = null,
-    InlineObjectLayout? InlineObject = null);
+    InlineBoxLayout? InlineBox = null);

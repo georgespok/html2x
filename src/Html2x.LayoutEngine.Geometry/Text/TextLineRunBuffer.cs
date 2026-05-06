@@ -5,7 +5,7 @@ namespace Html2x.LayoutEngine.Geometry.Text;
 /// <summary>
 ///     Buffers one source run while text is accumulated for a line.
 /// </summary>
-internal sealed class TextLineRunBuffer(TextRunInput source, InlineObjectLayout? inlineObject = null)
+internal sealed class TextLineRunBuffer(TextRunInput source, InlineBoxLayout? inlineBox = null)
 {
     public TextRunInput Source { get; } = source;
 
@@ -15,7 +15,7 @@ internal sealed class TextLineRunBuffer(TextRunInput source, InlineObjectLayout?
 
     public float RightSpacing { get; } = source.PaddingRight + source.MarginRight;
 
-    public InlineObjectLayout? InlineObject { get; } = inlineObject;
+    public InlineBoxLayout? InlineBox { get; } = inlineBox;
 
     public void Append(string text)
     {

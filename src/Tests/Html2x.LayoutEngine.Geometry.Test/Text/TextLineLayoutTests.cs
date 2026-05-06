@@ -102,15 +102,15 @@ public class TextLineLayoutTests
     }
 
     [Fact]
-    public void Layout_InlineObject_WrapsAndUsesInlineObjectMetrics()
+    public void Layout_InlineBox_WrapsAndUsesInlineBoxMetrics()
     {
         var engine = new TextLineLayout(new FakeTextMeasurer(10f, 9f, 3f));
-        var inlineObject = CreateInlineObject(25f, 18f, 13f);
+        var inlineBox = CreateInlineBox(25f, 18f, 13f);
         var input = BuildInput(
             50f,
             12f,
             Run(1, "alpha"),
-            InlineObjectRun(2, inlineObject));
+            InlineBoxRun(2, inlineBox));
 
         var result = engine.Layout(input);
 
@@ -124,7 +124,7 @@ public class TextLineLayoutTests
         objectRun.Width.ShouldBe(25f);
         objectRun.Ascent.ShouldBe(13f);
         objectRun.Descent.ShouldBe(5f);
-        objectRun.InlineObject.ShouldBeSameAs(inlineObject);
+        objectRun.InlineBox.ShouldBeSameAs(inlineBox);
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class TextLineLayoutTests
             0f);
     }
 
-    private static TextRunInput InlineObjectRun(int runId, InlineObjectLayout inlineObject)
+    private static TextRunInput InlineBoxRun(int runId, InlineBoxLayout inlineBox)
     {
         var style = new ComputedStyle { FontSizePt = 12 };
         return new(
@@ -240,8 +240,8 @@ public class TextLineLayoutTests
             0f,
             0f,
             0f,
-            TextRunKind.InlineObject,
-            inlineObject);
+            TextRunKind.InlineBox,
+            inlineBox);
     }
 
     private static TextRunInput LineBreak(int runId)
@@ -261,7 +261,7 @@ public class TextLineLayoutTests
             TextRunKind.LineBreak);
     }
 
-    private static InlineObjectLayout CreateInlineObject(float width, float height, float baseline)
+    private static InlineBoxLayout CreateInlineBox(float width, float height, float baseline)
     {
         var contentBox = new BlockBox(BoxRole.Block)
         {

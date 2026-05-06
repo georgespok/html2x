@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
@@ -287,7 +288,8 @@ public sealed class LayoutGeometryArchitectureTests
         var imageWriter = SourceFileFor<ImageBlockLayoutWriter>("Box");
         var tablePlacement = SourceFileFor<TablePlacementWriter>("Box");
         var tableGrid = SourceFileFor<TableGridLayout>("Box");
-        var AtomicInlineObjectLayoutWriter = SourceFileFor<AtomicInlineObjectLayoutWriter>("Text");
+        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>("Text");
+        var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>("Box", "Publishing");
 
         layoutGeometryBuilder.ShouldUseIdentifier(nameof(BoxTreeConstruction));
         geometryPipelineComposer.ShouldConstructType(nameof(BoxTreeLayout));
@@ -305,8 +307,19 @@ public sealed class LayoutGeometryArchitectureTests
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockSizingRules));
         blockBoxLayout.ShouldUseIdentifier(nameof(TableGridLayout));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PageContentArea));
+        blockBoxLayout.ShouldInvoke(nameof(PublishedLayoutWriter.WriteRuleResult));
+        blockBoxLayout.ShouldNotUseIdentifier(nameof(PublishedBlockFacts));
+        blockBoxLayout.ShouldNotConstructType(nameof(PublishedChildBlockItem));
+        blockBoxLayout.ShouldNotConstructType(nameof(PublishedInlineFlowSegmentItem));
+        blockBoxLayout.ShouldNotConstructType(nameof(PublishedInlineObjectItem));
         blockFlow.ShouldNotUseIdentifier(nameof(BlockLayoutRuleSet));
         blockFlow.ShouldNotUseIdentifier(nameof(IBlockLayoutRule));
+        blockFlow.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
+        blockFlow.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
+        blockFlow.ShouldInvoke(nameof(LayoutBoxStateWriter.ApplyInlineLayout));
+        blockFlow.ShouldInvoke(nameof(PublishedLayoutWriter.WriteInlineLayout));
+        blockFlow.ShouldInvoke(nameof(PublishedLayoutWriter.WriteChildFlowItem));
+        blockFlow.ShouldNotAssignToMember(nameof(BlockBox.InlineLayout));
         blockFlow.ShouldNotUseIdentifiers(
             nameof(StandardBlockLayoutRule),
             nameof(ImageBlockLayoutRule),
@@ -321,6 +334,13 @@ public sealed class LayoutGeometryArchitectureTests
             rule.ShouldNotUseIdentifier(nameof(PublishedBlockFlowItem));
         }
 
+        publishedLayoutWriter.ShouldContainMethodInType(
+            nameof(PublishedLayoutWriter),
+            nameof(PublishedLayoutWriter.WriteRuleResult));
+        publishedLayoutWriter.ShouldUseIdentifier(nameof(PublishedBlockFacts));
+        publishedLayoutWriter.ShouldConstructType(nameof(PublishedChildBlockItem));
+        publishedLayoutWriter.ShouldConstructType(nameof(PublishedInlineFlowSegmentItem));
+        publishedLayoutWriter.ShouldConstructType(nameof(PublishedInlineObjectItem));
         standardRule.ShouldNotAssignToMember(nameof(BlockBox.TextAlign));
         imageWriter.ShouldNotInvoke(nameof(ImageBox.ApplyImageMetadata));
         imageWriter.ShouldNotInvoke(nameof(BlockBox.ApplyLayoutGeometry));
@@ -329,7 +349,42 @@ public sealed class LayoutGeometryArchitectureTests
         tablePlacement.ShouldNotAssignToMember(nameof(BlockBox.TextAlign));
         tablePlacement.ShouldNotInvoke(nameof(BlockBox.ApplyLayoutGeometry));
         tableGrid.ShouldNotUseIdentifier(nameof(LayoutBoxStateWriter));
-        AtomicInlineObjectLayoutWriter.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
+        atomicInlineBoxPlacementWriter.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
+    }
+
+    [Fact]
+    public void GeometryMutableStateWrites_AreRoutedThroughStateWriterOrConstructionBoundaries()
+    {
+        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryBuilder>());
+        var allowedFiles = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "src/Html2x.LayoutEngine.Geometry/Box/BoxTreeConstruction.cs",
+            "src/Html2x.LayoutEngine.Geometry/Box/LayoutBoxStateWriter.cs",
+            "src/Html2x.LayoutEngine.Geometry/Models/BlockBox.cs",
+            "src/Html2x.LayoutEngine.Geometry/Models/ImageBox.cs"
+        };
+        var mutationPatterns = new[]
+        {
+            new Regex(
+                @"\.(UsedGeometry|InlineLayout|Margin|Padding|TextAlign|DerivedColumnCount|RowIndex|ColumnIndex|IsHeader)\s*=(?!=)",
+                RegexOptions.Compiled),
+            new Regex(@"\.(ApplyLayoutGeometry|ApplyImageMetadata)\s*\(", RegexOptions.Compiled)
+        };
+
+        var violations = Directory
+            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(static path => !IsGeneratedOrBuildOutput(path))
+            .Where(path => !allowedFiles.Contains(RelativeSourcePath(path)))
+            .SelectMany(path => File
+                .ReadLines(path)
+                .Select((line, index) => new { Path = path, Line = line, Number = index + 1 }))
+            .Where(item => mutationPatterns.Any(pattern => pattern.IsMatch(item.Line)))
+            .Select(item => $"{RelativeSourcePath(item.Path)}:{item.Number}: {item.Line.Trim()}")
+            .ToArray();
+
+        violations.ShouldBeEmpty(
+            "Mutable layout state should be assigned only by LayoutBoxStateWriter or documented construction/model copy boundaries. "
+            + string.Join(" ", violations));
     }
 
     [Fact]
@@ -338,15 +393,19 @@ public sealed class LayoutGeometryArchitectureTests
         var measurementFiles = new[]
         {
             SourceFileFor<BlockContentSizeMeasurement>("Box"),
-            SourceFileFor<BlockContentHeightMeasurement>("Box"),
             SourceFileFor<BlockContentExtentMeasurement>("Formatting"),
             SourceFileFor<BlockFlowMeasurement>("Box"),
             SourceFileFor<BlockSizingRules>("Box"),
             SourceFileFor<BlockContentSizeFacts>("Box"),
             SourceFileFor<TableCellMeasurement>("Box"),
             SourceFileFor<TableGridLayout>("Box"),
-            SourceFileFor<AtomicInlineObjectLayout>("Text")
+            SourceFileFor<AtomicInlineBoxLayout>("Text")
         };
+
+        SourceFileFor<BlockContentSizeMeasurement>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<StandardBlockLayoutRule>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<TableGridLayout>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<AtomicInlineBoxLayout>("Text").ShouldUseIdentifier(nameof(BlockSizingRules));
 
         foreach (var file in measurementFiles)
         {
@@ -359,7 +418,7 @@ public sealed class LayoutGeometryArchitectureTests
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyBlockLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyImageBlockLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyInlineLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyInlineObjectContentLayout));
+            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyInlineBoxContentLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableCellLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableRowLayout));
@@ -657,4 +716,9 @@ public sealed class LayoutGeometryArchitectureTests
                || path.EndsWith(".g.cs", StringComparison.Ordinal)
                || path.EndsWith(".AssemblyInfo.cs", StringComparison.Ordinal);
     }
+
+    private static string RelativeSourcePath(string path) =>
+        Path.GetRelativePath(ArchitecturePaths.RepoRoot(), path)
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
 }

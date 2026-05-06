@@ -17,13 +17,13 @@ internal sealed class TableGridLayout
     {
     }
 
-    internal TableGridLayout(InlineFlowLayout inlineEngine, IImageSizingRules? imageResolver = null)
+    internal TableGridLayout(InlineFlowLayout inlineFlowLayout, IImageSizingRules? imageResolver = null)
     {
-        ArgumentNullException.ThrowIfNull(inlineEngine);
+        ArgumentNullException.ThrowIfNull(inlineFlowLayout);
         _sizingRules = new();
         _cellMeasurement = new(
             new(
-                inlineEngine,
+                inlineFlowLayout,
                 _sizingRules,
                 imageResolver ?? new ImageSizingRules()));
     }

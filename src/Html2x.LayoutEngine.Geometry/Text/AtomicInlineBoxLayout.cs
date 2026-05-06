@@ -10,9 +10,9 @@ using Html2x.Text;
 namespace Html2x.LayoutEngine.Geometry.Text;
 
 /// <summary>
-///     Measures inline-block content as an atomic inline object for current inline layout.
+///     Measures inline-block content as an atomic inline box for current inline layout.
 /// </summary>
-internal sealed class AtomicInlineObjectLayout(
+internal sealed class AtomicInlineBoxLayout(
     ITextMeasurer measurer,
     IFontMetricsProvider metrics,
     ILineHeightStrategy lineHeightStrategy,
@@ -40,7 +40,7 @@ internal sealed class AtomicInlineObjectLayout(
 
     private readonly BlockSizingRules _sizingRules = new(contentMeasurement.MarginCollapseRules);
 
-    public InlineObjectLayout? MeasureInlineBlock(InlineBox inline, float availableWidth)
+    public InlineBoxLayout? MeasureInlineBlock(InlineBox inline, float availableWidth)
     {
         if (inline.Role != BoxRole.InlineBlock)
         {
@@ -57,13 +57,13 @@ internal sealed class AtomicInlineObjectLayout(
 
         if (contentBox is ImageBox imageBox)
         {
-            return BuildImageInlineObject(imageBox, measurement);
+            return BuildImageInlineBox(imageBox, measurement);
         }
 
-        return BuildContentInlineObject(contentBox, measurement);
+        return BuildContentInlineBox(contentBox, measurement);
     }
 
-    private InlineObjectLayout BuildImageInlineObject(ImageBox imageBox, BlockMeasurementBasis measurement)
+    private InlineBoxLayout BuildImageInlineBox(ImageBox imageBox, BlockMeasurementBasis measurement)
     {
         var image = _imageResolver.Resolve(imageBox, measurement.ContentFlowWidth);
         var resolvedLineHeight = ResolveLineHeight(imageBox);
@@ -80,7 +80,7 @@ internal sealed class AtomicInlineObjectLayout(
             image);
     }
 
-    private InlineObjectLayout BuildContentInlineObject(BlockBox contentBox, BlockMeasurementBasis measurement)
+    private InlineBoxLayout BuildContentInlineBox(BlockBox contentBox, BlockMeasurementBasis measurement)
     {
         var lineHeight = ResolveLineHeight(contentBox);
         var layoutResult = LayoutInlineContent(contentBox, measurement.ContentFlowWidth, lineHeight);
@@ -194,7 +194,7 @@ internal sealed class AtomicInlineObjectLayout(
             _lineHeightStrategy);
 
         var walker = new InlineRunTreeWalker(collector);
-        walker.CollectInlineObjectContent(block);
+        walker.CollectInlineBoxContent(block);
 
         return collector.Runs;
     }

@@ -19,7 +19,7 @@ internal static class GeometryPipelineComposer
 
         var geometryRequest = request ?? LayoutGeometryRequest.Default;
         var imageResolver = new ImageSizingRules(geometryRequest);
-        var inlineEngine = new InlineFlowLayout(
+        var inlineFlowLayout = new InlineFlowLayout(
             new FontMetricsProvider(),
             textMeasurer,
             new DefaultLineHeightStrategy(),
@@ -27,8 +27,8 @@ internal static class GeometryPipelineComposer
             imageResolver,
             diagnosticsSink);
         var blockBoxLayout = new BlockBoxLayout(
-            inlineEngine,
-            new(inlineEngine, imageResolver),
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageResolver),
             contentMeasurement,
             imageResolver,
             diagnosticsSink);

@@ -104,7 +104,7 @@ internal sealed class LayoutBoxStateWriter
         cell.ApplyLayoutGeometry(geometry);
     }
 
-    public void ApplyInlineObjectContentLayout(
+    public void ApplyInlineBoxContentLayout(
         BlockBox contentBox,
         Spacing margin,
         Spacing padding,

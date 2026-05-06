@@ -26,7 +26,7 @@ public sealed class InlineLineBoundsRulesTests
         var items = new InlineLineItemLayout[]
         {
             new InlineTextItemLayout(0, new(15f, 20f, 20f, 12f), [], []),
-            new InlineObjectItemLayout(1, new(50f, 20f, 10f, 12f), new(BoxRole.Block))
+            new InlineBoxItemLayout(1, new(50f, 20f, 10f, 12f), new(BoxRole.Block))
         };
 
         var rect = _calculator.CreateLineOccupiedRect(items, 10f, 20f, 12f);
