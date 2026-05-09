@@ -86,6 +86,9 @@ internal static class GeometrySnapshotMapper
                 LayoutSnapshotSchema.Fields.ColumnIndex,
                 FromNullable(placement.ColumnIndex)),
             DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.ColumnSpan,
+                FromNullable(placement.ColumnSpan)),
+            DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.IsHeader,
                 FromNullable(placement.IsHeader)),
             DiagnosticObject.Field(
@@ -137,6 +140,9 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.ColumnIndex,
                 FromNullable(box.ColumnIndex)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.ColumnSpan,
+                FromNullable(box.ColumnSpan)),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.IsHeader, FromNullable(box.IsHeader)),
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.MetadataOwner,
@@ -177,6 +183,7 @@ internal static class GeometrySnapshotMapper
             DerivedColumnCount = placement.DerivedColumnCount,
             RowIndex = placement.RowIndex,
             ColumnIndex = placement.ColumnIndex,
+            ColumnSpan = placement.ColumnSpan,
             IsHeader = placement.IsHeader,
             MetadataOwner = PublishedLayoutToFragmentProjector.MetadataOwnerName,
             MetadataConsumer = GeometrySnapshotSchema.Metadata.PaginationConsumer
@@ -228,6 +235,7 @@ internal static class GeometrySnapshotMapper
                 DerivedColumnCount = block.Table?.DerivedColumnCount,
                 RowIndex = block.Table?.RowIndex,
                 ColumnIndex = block.Table?.ColumnIndex,
+                ColumnSpan = block.Table?.ColumnSpan,
                 IsHeader = block.Table?.IsHeader,
                 MetadataOwner = GeometrySnapshotSchema.Metadata.BoxGeometryOwner,
                 MetadataConsumer = nameof(GeometrySnapshotMapper),

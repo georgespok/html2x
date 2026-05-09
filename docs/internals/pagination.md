@@ -1,8 +1,24 @@
 # Pagination
 
-Html2x paginates after block measurement. Layout computes measured fragments
-first, then `Html2x.LayoutEngine.Pagination` distributes block fragments across
-pages without remeasuring content.
+This page explains page placement after layout and fragment projection.
+`Html2x.LayoutEngine.Pagination` distributes measured render model block
+fragments across pages without remeasuring content.
+
+## Flow
+
+```mermaid
+flowchart TD
+    FragmentTree["FragmentTree"] --> Paginator["LayoutPaginator"]
+    Options["PaginationOptions"] --> Paginator
+    Paginator --> Decision{"Fits current page?"}
+    Decision -->|yes| Place["Place block on page"]
+    Decision -->|no| NewPage["Create next page"]
+    NewPage --> Place
+    Place --> Clone["Clone and translate fragment subtree"]
+    Clone --> Audit["PaginationPlacementAudit"]
+    Audit --> Result["PaginationResult"]
+    Result --> Layout["HtmlLayout"]
+```
 
 ## Current Behavior
 
@@ -82,4 +98,4 @@ created before pagination.
 - Do not mutate source fragments during pagination.
 - Preserve fragment width and height.
 - Preserve nested text origins, line baselines, image content rectangles, and metadata.
-- Add translator coverage before introducing a new fragment runtime type that can be paginated.
+- New paginated fragment runtime types need translation support before use.

@@ -1,6 +1,8 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
 using Shouldly;
@@ -409,7 +411,7 @@ public class BlockBoxLayoutTableTests
             Parent = row,
             Element = StyledElementFacts.Create(
                 HtmlCssConstants.HtmlTags.Td,
-                (HtmlCssConstants.HtmlAttributes.Colspan, "2")),
+                (HtmlCssConstants.HtmlAttributes.Rowspan, "2")),
             Style = new()
         };
         row.Children.Add(cell);
@@ -432,14 +434,14 @@ public class BlockBoxLayoutTableTests
         table.Children.ShouldBeEmpty();
         diagnosticsSink.Records.Any(e =>
                 e.Name == "layout/table/unsupported-structure" &&
-                e.Fields["structureKind"] is DiagnosticStringValue { Value: HtmlCssConstants.HtmlAttributes.Colspan } &&
-                e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." })
+                e.Fields["structureKind"] is DiagnosticStringValue { Value: HtmlCssConstants.HtmlAttributes.Rowspan } &&
+                e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell rowspan is not supported." })
             .ShouldBeTrue();
         diagnosticsSink.Records.Any(e =>
                 e.Name == "layout/table" &&
                 e.Fields["outcome"] is DiagnosticStringValue { Value: "Unsupported" } &&
                 e.Fields["rowCount"] is DiagnosticNumberValue { Value: 1 } &&
-                e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell colspan is not supported." })
+                e.Fields["reason"] is DiagnosticStringValue { Value: "Table cell rowspan is not supported." })
             .ShouldBeTrue();
     }
 

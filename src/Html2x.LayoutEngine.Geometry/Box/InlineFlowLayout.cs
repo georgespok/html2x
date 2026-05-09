@@ -1,6 +1,8 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Formatting;
-using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.RenderModel.Text;
 using Html2x.Text;
 
@@ -55,7 +57,7 @@ internal sealed class InlineFlowLayout
         ITextMeasurer? textMeasurer,
         ILineHeightStrategy lineHeightStrategy,
         BlockContentExtentMeasurement contentMeasurement,
-        IImageSizingRules? imageResolver = null,
+        ImageSizingRules? imageResolver = null,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -244,33 +246,15 @@ internal sealed class InlineFlowLayout
         float availableWidth,
         bool includeSyntheticListMarker)
     {
-        var collector = new InlineRunCollector(
-            blockContext.Style,
-            availableWidth,
+        var collection = new InlineRunCollection(
             _runConstruction,
             _textMeasurer,
             _lineHeightStrategy);
-
-        if (includeSyntheticListMarker)
-        {
-            TryAppendSyntheticListMarkerRun(blockContext, collector);
-        }
-
-        var walker = new InlineRunTreeWalker(collector);
-        walker.CollectInlineFlow(inlineChildren);
-
-        return collector.Runs;
-    }
-
-    private void TryAppendSyntheticListMarkerRun(
-        BlockBox blockContext,
-        InlineRunCollector collector)
-    {
-        var marker = ListMarkerPolicy.CreateSyntheticMarker(blockContext);
-        if (marker is not null)
-        {
-            collector.TryAppendTextRun(marker);
-        }
+        return collection.CollectInlineFlow(
+            blockContext,
+            inlineChildren,
+            availableWidth,
+            includeSyntheticListMarker);
     }
 
     private readonly record struct InlineFlowState(

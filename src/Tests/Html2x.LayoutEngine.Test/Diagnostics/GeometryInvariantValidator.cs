@@ -241,6 +241,7 @@ internal static class GeometryInvariantValidator
                 break;
             case (TableCellFragment sourceCell, TableCellFragment placedCell):
                 sourceCell.ColumnIndex.ShouldBe(placedCell.ColumnIndex, snapshotText);
+                sourceCell.ColumnSpan.ShouldBe(placedCell.ColumnSpan, snapshotText);
                 sourceCell.IsHeader.ShouldBe(placedCell.IsHeader, snapshotText);
                 break;
             case (LineBoxFragment sourceLine, LineBoxFragment placedLine):

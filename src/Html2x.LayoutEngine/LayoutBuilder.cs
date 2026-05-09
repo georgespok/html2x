@@ -3,7 +3,7 @@ using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;

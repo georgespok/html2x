@@ -4,8 +4,10 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Box.Publishing;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Style;
@@ -104,7 +106,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
         var BlockSizingRules = SourceFileFor<BlockSizingRules>("Box");
         BlockSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
 
-        var blockContentMeasurement = SourceFileFor<BlockContentExtentMeasurement>("Formatting");
+        var blockContentMeasurement = SourceFileFor<BlockContentExtentMeasurement>("Measurement");
         blockContentMeasurement.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
     }
 

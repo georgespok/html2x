@@ -94,6 +94,7 @@ internal sealed class LayoutPaginator
             DerivedColumnCount = fragment is TableFragment table ? table.DerivedColumnCount : null,
             RowIndex = fragment is TableRowFragment row ? row.RowIndex : null,
             ColumnIndex = fragment is TableCellFragment cell ? cell.ColumnIndex : null,
+            ColumnSpan = fragment is TableCellFragment spanCell ? spanCell.ColumnSpan : null,
             IsHeader = fragment is TableCellFragment headerCell ? headerCell.IsHeader : null
         };
     }

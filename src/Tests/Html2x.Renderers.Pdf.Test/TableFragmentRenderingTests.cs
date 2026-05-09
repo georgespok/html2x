@@ -136,6 +136,61 @@ public sealed class TableFragmentRenderingTests
         AssertColorClose(bitmap.GetPixel(99, 60), new(borderColor.R, borderColor.G, borderColor.B, borderColor.A));
     }
 
+    [Fact]
+    public void DrawPage_ColspanCell_PaintsResolvedSpannedCellBounds()
+    {
+        var spannedBackground = new ColorRgba(0xBA, 0xE6, 0xFD, 0xFF);
+        var normalBackground = new ColorRgba(0xFE, 0xF9, 0xC3, 0xFF);
+
+        var page = CreatePage(
+            new TableFragment([
+                new([
+                    new()
+                    {
+                        Rect = new(20, 20, 160, 40),
+                        ColumnIndex = 0,
+                        ColumnSpan = 2,
+                        Style = new(spannedBackground)
+                    }
+                ])
+                {
+                    Rect = new(20, 20, 160, 40),
+                    RowIndex = 0
+                },
+                new([
+                    new()
+                    {
+                        Rect = new(20, 60, 80, 40),
+                        ColumnIndex = 0,
+                        Style = new(normalBackground)
+                    },
+                    new()
+                    {
+                        Rect = new(100, 60, 80, 40),
+                        ColumnIndex = 1,
+                        Style = new(normalBackground)
+                    }
+                ])
+                {
+                    Rect = new(20, 60, 160, 40),
+                    RowIndex = 1
+                }
+            ])
+            {
+                Rect = new(20, 20, 160, 80),
+                DerivedColumnCount = 2
+            });
+
+        using var bitmap = Draw(page);
+
+        AssertColorClose(bitmap.GetPixel(60, 40),
+            new(spannedBackground.R, spannedBackground.G, spannedBackground.B, spannedBackground.A));
+        AssertColorClose(bitmap.GetPixel(140, 40),
+            new(spannedBackground.R, spannedBackground.G, spannedBackground.B, spannedBackground.A));
+        AssertColorClose(bitmap.GetPixel(140, 80),
+            new(normalBackground.R, normalBackground.G, normalBackground.B, normalBackground.A));
+    }
+
     private static LayoutPage CreatePage(Fragment fragment) =>
         new(
             new(200, 200),

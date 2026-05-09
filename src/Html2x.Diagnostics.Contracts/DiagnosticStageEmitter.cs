@@ -43,7 +43,6 @@ public static class DiagnosticStageEmitter
             severity,
             message,
             null,
-            fields ?? DiagnosticFields.Empty,
-            DateTimeOffset.UtcNow));
+            fields ?? DiagnosticFields.Empty));
     }
 }

@@ -30,7 +30,7 @@ internal sealed class FragmentBuilder
         ArgumentNullException.ThrowIfNull(layout);
 
         var fragments = new FragmentTree();
-        var context = new FragmentProjectionContext(1);
+        var context = new FragmentProjectionState(1);
 
         CreateBlockFragments(layout, fragments, context);
         AppendFlowFragments(layout, context);
@@ -42,7 +42,7 @@ internal sealed class FragmentBuilder
     private void CreateBlockFragments(
         PublishedLayoutTree layout,
         FragmentTree fragments,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         foreach (var block in layout.Blocks)
         {
@@ -53,7 +53,7 @@ internal sealed class FragmentBuilder
 
     private BlockFragment CreateBlockFragmentRecursive(
         PublishedBlock block,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         var fragment = _projector.CreateBlockFragment(block, context.ReserveFragmentId(), context.PageNumber);
 
@@ -69,7 +69,7 @@ internal sealed class FragmentBuilder
 
     private void AppendFlowFragments(
         PublishedLayoutTree layout,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (context.BlockBindings.Count == 0)
         {
@@ -91,7 +91,7 @@ internal sealed class FragmentBuilder
     private void AppendFlowFragments(
         PublishedBlock block,
         BlockFragment fragment,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (!context.VisitFlowBlock(block))
         {
@@ -118,7 +118,7 @@ internal sealed class FragmentBuilder
     }
 
     private void AppendSpecialFragments(
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (context.BlockBindings.Count == 0)
         {
@@ -137,7 +137,7 @@ internal sealed class FragmentBuilder
     private void AppendSpecialFragments(
         PublishedBlock block,
         BlockFragment fragment,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (!context.VisitSpecialBlock(block))
         {
@@ -158,7 +158,7 @@ internal sealed class FragmentBuilder
 
     private BlockFragment CreateInlineObjectBlockFragment(
         PublishedBlock block,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         var fragment = _projector.CreateBlockFragment(block, context.ReserveFragmentId(), context.PageNumber);
 
@@ -185,7 +185,7 @@ internal sealed class FragmentBuilder
     private void EmitSegment(
         BlockFragment parentFragment,
         PublishedInlineFlowSegment segment,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         foreach (var line in segment.Lines)
         {
@@ -209,7 +209,7 @@ internal sealed class FragmentBuilder
         BlockFragment parentFragment,
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (textItem.Runs.Count == 0)
         {
@@ -222,7 +222,7 @@ internal sealed class FragmentBuilder
     private LineBoxFragment CreateLineBoxFragment(
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
-        FragmentProjectionContext context) =>
+        FragmentProjectionState context) =>
         new()
         {
             FragmentId = context.ReserveFragmentId(),
@@ -237,7 +237,7 @@ internal sealed class FragmentBuilder
 
     private LayoutFragment CreateInlineObjectFragment(
         PublishedBlock content,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (HasSpecialFragment(content) &&
             _projector.CreateSpecialFragment(
@@ -256,7 +256,7 @@ internal sealed class FragmentBuilder
     private void AppendOwnSpecialFragment(
         PublishedBlock block,
         BlockFragment fragment,
-        FragmentProjectionContext context)
+        FragmentProjectionState context)
     {
         if (!HasSpecialFragment(block))
         {
@@ -273,40 +273,4 @@ internal sealed class FragmentBuilder
         }
     }
 
-    private sealed class FragmentProjectionContext(int pageNumber)
-    {
-        private readonly List<PublishedBlockFragmentBinding> _blockBindings = [];
-
-        private readonly Dictionary<PublishedBlock, BlockFragment> _blockFragments = new(
-            ReferenceEqualityComparer<PublishedBlock>.Instance);
-
-        private readonly HashSet<PublishedBlock> _flowVisited = new(
-            ReferenceEqualityComparer<PublishedBlock>.Instance);
-
-        private readonly HashSet<PublishedBlock> _specialVisited = new(
-            ReferenceEqualityComparer<PublishedBlock>.Instance);
-
-        private int _nextFragmentId = 1;
-
-        public int PageNumber { get; } = pageNumber;
-
-        public IReadOnlyList<PublishedBlockFragmentBinding> BlockBindings => _blockBindings;
-
-        public int ReserveFragmentId() => _nextFragmentId++;
-
-        public void BindBlock(PublishedBlock block, BlockFragment fragment)
-        {
-            _blockBindings.Add(new(block, fragment));
-            _blockFragments[block] = fragment;
-        }
-
-        public BlockFragment? FindBlockFragment(PublishedBlock block) =>
-            _blockFragments.TryGetValue(block, out var fragment)
-                ? fragment
-                : null;
-
-        public bool VisitFlowBlock(PublishedBlock block) => _flowVisited.Add(block);
-
-        public bool VisitSpecialBlock(PublishedBlock block) => _specialVisited.Add(block);
-    }
 }

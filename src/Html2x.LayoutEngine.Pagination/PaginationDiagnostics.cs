@@ -141,8 +141,7 @@ internal static class PaginationDiagnostics
                     FromNullable(payload.PageContentHeight)),
                 DiagnosticFields.Field(
                     PaginationDiagnosticNames.Fields.Reason,
-                    payload.Reason is null ? null : DiagnosticValue.From(payload.Reason))),
-            DateTimeOffset.UtcNow));
+                    payload.Reason is null ? null : DiagnosticValue.From(payload.Reason)))));
     }
 
     private static DiagnosticValue? FromNullable(int? value) =>

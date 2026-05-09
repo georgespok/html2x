@@ -2,6 +2,7 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Styles;
 using Shouldly;
 
@@ -192,6 +193,7 @@ public class TableGridLayoutTests
         var placement = new TableLayoutCellPlacement(
             cell,
             0,
+            1,
             false,
             UsedGeometryRules.FromBorderBox(
                 new(0f, 0f, 10f, 10f),
@@ -199,6 +201,7 @@ public class TableGridLayoutTests
                 new()));
 
         placement.UsedGeometry.BorderBoxRect.ShouldBe(new(0f, 0f, 10f, 10f));
+        placement.ColumnSpan.ShouldBe(1);
     }
 
     [Fact]
@@ -241,7 +244,7 @@ public class TableGridLayoutTests
                     row,
                     0,
                     rowGeometry,
-                    [new(cell, 0, false, cellGeometry)])
+                    [new(cell, 0, 2, false, cellGeometry)])
             ],
             ContentHeight = 20f,
             BorderBoxHeight = 20f
@@ -266,6 +269,7 @@ public class TableGridLayoutTests
         appliedCell.ContentBoxRect.ShouldBe(new(33f, 44f, 23f, 8f));
         appliedCell.Baseline.ShouldBe(48f);
         appliedCell.MarkerOffset.ShouldBe(4f);
+        cell.ColumnSpan.ShouldBe(2);
     }
 
     [Fact]
@@ -286,6 +290,52 @@ public class TableGridLayoutTests
         result.IsSupported.ShouldBeTrue();
         result.DerivedColumnCount.ShouldBe(3);
         result.Rows.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Layout_ColspanContributesToDerivedColumnCountAndCellWidth()
+    {
+        var spannedCell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Colspan, "2")));
+        var leftCell = CreateCell();
+        var rightCell = CreateCell();
+        var table = CreateTable(
+            240f,
+            CreateRow(spannedCell),
+            CreateRow(leftCell, rightCell));
+
+        var result = Layout(table, 300f);
+
+        result.IsSupported.ShouldBeTrue();
+        result.DerivedColumnCount.ShouldBe(2);
+        result.ColumnWidths.ShouldBe([120f, 120f]);
+
+        var firstRowCell = result.Rows[0].Cells.ShouldHaveSingleItem();
+        firstRowCell.SourceCell.ShouldBeSameAs(spannedCell);
+        firstRowCell.ColumnIndex.ShouldBe(0);
+        firstRowCell.ColumnSpan.ShouldBe(2);
+        firstRowCell.UsedGeometry.BorderBoxRect.ShouldBe(new(0f, 0f, 240f, firstRowCell.UsedGeometry.Height));
+
+        result.Rows[1].Cells.Select(static cell => cell.ColumnIndex).ShouldBe([0, 1]);
+        result.Rows[1].Cells.Select(static cell => cell.ColumnSpan).ShouldBe([1, 1]);
+        result.Rows[1].Cells.Select(static cell => cell.UsedGeometry.Width).ShouldBe([120f, 120f]);
+    }
+
+    [Fact]
+    public void Layout_HeaderColspan_PreservesHeaderIdentityAndSpan()
+    {
+        var headerCell = CreateCell(element: CreateElement("TH", (HtmlCssConstants.HtmlAttributes.Colspan, "3")));
+        var table = CreateTable(
+            300f,
+            CreateRow(headerCell),
+            CreateRow(CreateCell(), CreateCell(), CreateCell()));
+
+        var result = Layout(table, 400f);
+
+        var placement = result.Rows[0].Cells.ShouldHaveSingleItem();
+        placement.IsHeader.ShouldBeTrue();
+        placement.ColumnIndex.ShouldBe(0);
+        placement.ColumnSpan.ShouldBe(3);
+        placement.UsedGeometry.Width.ShouldBe(300f);
     }
 
     [Fact]
@@ -328,10 +378,10 @@ public class TableGridLayoutTests
         result.DerivedColumnCount.ShouldBe(2);
         result.ColumnWidths.ShouldBe([60f, 60f]);
         result.Rows.ShouldHaveSingleItem().Cells.Count.ShouldBe(2);
+        result.Rows.ShouldHaveSingleItem().Cells.Select(static cell => cell.ColumnSpan).ShouldBe([1, 1]);
     }
 
     [Theory]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "2")]
     [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "2")]
     [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "invalid")]
     [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "0")]
@@ -454,14 +504,10 @@ public class TableGridLayoutTests
         result.Rows[0].Cells.Count.ShouldBe(2);
     }
 
-    [Theory]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "Table cell colspan is not supported.")]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "Table cell rowspan is not supported.")]
-    public void Layout_UnsupportedCellSpan_ReturnsUnsupportedBeforeGeometry(
-        string attributeName,
-        string expectedReason)
+    [Fact]
+    public void Layout_UnsupportedRowspan_ReturnsUnsupportedBeforeGeometry()
     {
-        var cell = CreateCell(element: CreateElement("TD", (attributeName, "2")));
+        var cell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Rowspan, "2")));
         var table = CreateTable(
             120f,
             CreateRow(cell));
@@ -479,8 +525,8 @@ public class TableGridLayoutTests
 
         result.IsSupported.ShouldBeFalse();
         result.RowCount.ShouldBe(1);
-        result.UnsupportedStructureKind.ShouldBe(attributeName);
-        result.UnsupportedReason.ShouldBe(expectedReason);
+        result.UnsupportedStructureKind.ShouldBe(HtmlCssConstants.HtmlAttributes.Rowspan);
+        result.UnsupportedReason.ShouldBe("Table cell rowspan is not supported.");
         result.Rows.ShouldBeEmpty();
         result.ContentHeight.ShouldBe(0f);
         result.BorderBoxHeight.ShouldBe(0f);
@@ -489,7 +535,7 @@ public class TableGridLayoutTests
         var reason = unsupportedRecord.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value;
         unsupportedRecord.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
         unsupportedRecord.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(1));
-        reason.ShouldContain(attributeName);
+        reason.ShouldContain(HtmlCssConstants.HtmlAttributes.Rowspan);
     }
 
     [Fact]

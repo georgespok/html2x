@@ -1,8 +1,8 @@
 # Layout Engine
 
-`Html2x.LayoutEngine` composes the conversion pipeline from raw HTML to
-`HtmlLayout` pages. It does not own parser implementation details or layout
-geometry algorithms directly.
+This page explains the internal composition layer. `Html2x.LayoutEngine`
+coordinates style, geometry, fragment projection, and pagination, but it does
+not own the algorithms in those stages.
 
 ## Responsibilities
 
@@ -34,7 +34,7 @@ geometry algorithms directly.
 - `FragmentBuilder`
 - `LayoutPaginator`
 
-## Internal Boundaries
+## Composition Boundary
 
 `LayoutBuilder` constructs the concrete pipeline stages for the converter flow
 and is reached through the public `HtmlConverter` facade. Its `BuildAsync`
@@ -71,3 +71,12 @@ When adding behavior:
 Unsupported future layout modes must remain explicit. Floats, absolute
 positioning, and flexbox should emit diagnostics and use the documented fallback
 until a real formatting context exists.
+
+## See Also
+
+- [Processing Pipeline](../architecture/pipeline.md)
+- [Module Boundaries](../architecture/module-boundaries.md)
+- [Style Engine](style-engine.md)
+- [Geometry](geometry.md)
+- [Fragment Projection](fragment-projection.md)
+- [Pagination](pagination.md)

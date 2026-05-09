@@ -161,7 +161,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     }
 
     [Fact]
-    public async Task TableWithColspan_RejectsUnsupportedStructure()
+    public async Task TableWithColspan_RendersSupportedStructure()
     {
         const string html = """
                             <!DOCTYPE html>
@@ -169,7 +169,11 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
                               <body style='margin:0'>
                                 <table style='width: 400px; border: 1px solid black;'>
                                   <tr>
-                                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>A</td>
+                                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>Merged</td>
+                                  </tr>
+                                  <tr>
+                                    <td style='padding: 10px; border: 1px solid black;'>Left</td>
+                                    <td style='padding: 10px; border: 1px solid black;'>Right</td>
                                   </tr>
                                 </table>
                               </body>
@@ -181,22 +185,23 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
 
         var diagnostics = GetDiagnostics(result);
         var page = GetLayoutPageSnapshot(result);
-        var tableFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table").ToList();
+        var orderedTexts = EnumerateOrderedTexts(page.Fragments).ToList();
+        var tableFragment = Flatten(page.Fragments).Single(static fragment => fragment.Kind == "table");
         var rowFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-row").ToList();
         var cellFragments = Flatten(page.Fragments).Where(static fragment => fragment.Kind == "table-cell").ToList();
-        var unsupportedEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table/unsupported-structure");
         var tableLayoutEvent = diagnostics.Records.FirstOrDefault(e => e.Name == "layout/table");
 
         result.PdfBytes.ShouldNotBeEmpty();
-        unsupportedEvent.ShouldNotBeNull();
-        StringField(unsupportedEvent, "structureKind").ShouldBe("colspan");
         tableLayoutEvent.ShouldNotBeNull();
-        StringField(tableLayoutEvent, "outcome").ShouldBe("Unsupported");
-        StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
-        tableFragments.Count.ShouldBe(1);
-        tableFragments[0].Size.Height.ShouldBe(0f);
-        rowFragments.ShouldBeEmpty();
-        cellFragments.ShouldBeEmpty();
+        StringField(tableLayoutEvent, "outcome").ShouldBe("Supported");
+        orderedTexts.ShouldBe(["Merged", "Left", "Right"]);
+        tableFragment.DerivedColumnCount.ShouldBe(2);
+        rowFragments.Count.ShouldBe(2);
+        cellFragments.Count.ShouldBe(3);
+        cellFragments.Select(static fragment => fragment.ColumnIndex).ShouldBe([0, 0, 1]);
+        cellFragments.Select(static fragment => fragment.ColumnSpan).ShouldBe([2, 1, 1]);
+        cellFragments[0].Size.Width.ShouldBe(cellFragments[1].Size.Width + cellFragments[2].Size.Width, 0.01f);
+        cellFragments[1].Y.ShouldBeGreaterThan(cellFragments[0].Y);
     }
 
     [Fact]
@@ -209,7 +214,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
                                 <p>before table</p>
                                 <table style='width: 400px; border: 1px solid black;'>
                                   <tr>
-                                    <td colspan='2' style='padding: 10px; border: 1px solid black;'>merged cell</td>
+                                    <td rowspan='2' style='padding: 10px; border: 1px solid black;'>merged cell</td>
                                   </tr>
                                 </table>
                                 <p>after table</p>
@@ -231,11 +236,11 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
 
         result.PdfBytes.ShouldNotBeEmpty();
         unsupportedEvent.ShouldNotBeNull();
-        StringField(unsupportedEvent, "structureKind").ShouldBe("colspan");
+        StringField(unsupportedEvent, "structureKind").ShouldBe("rowspan");
         tableLayoutEvent.ShouldNotBeNull();
         StringField(tableLayoutEvent, "outcome").ShouldBe("Unsupported");
         NumberField(tableLayoutEvent, "rowCount").ShouldBe(1);
-        StringField(tableLayoutEvent, "reason").ShouldBe("Table cell colspan is not supported.");
+        StringField(tableLayoutEvent, "reason").ShouldBe("Table cell rowspan is not supported.");
 
         orderedTexts.ShouldBe(["before table", "after table"]);
         tableFragments.Count.ShouldBe(1);
@@ -345,6 +350,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
             DerivedColumnCount = NullableIntField(fragment, "derivedColumnCount"),
             RowIndex = NullableIntField(fragment, "rowIndex"),
             ColumnIndex = NullableIntField(fragment, "columnIndex"),
+            ColumnSpan = NullableIntField(fragment, "columnSpan"),
             IsHeader = NullableBoolField(fragment, "isHeader"),
             Children = ArrayField(fragment, "children")
                 .Select(static child => MapFragment(child.ShouldBeOfType<DiagnosticObject>()))
@@ -393,6 +399,7 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         public int? DerivedColumnCount { get; init; }
         public int? RowIndex { get; init; }
         public int? ColumnIndex { get; init; }
+        public int? ColumnSpan { get; init; }
         public bool? IsHeader { get; init; }
         public IReadOnlyList<FragmentSnapshot> Children { get; init; } = [];
     }

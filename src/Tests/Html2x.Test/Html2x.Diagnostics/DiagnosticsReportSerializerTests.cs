@@ -69,8 +69,7 @@ public sealed class DiagnosticsReportSerializerTests
                                                                      "path": "html/body/p[3]",
                                                                      "index": 3
                                                                    }
-                                                                 },
-                                                                 "timestamp": "2026-04-14T10:00:00.5+00:00"
+                                                                 }
                                                                }
                                                              ]
                                                            }
@@ -90,8 +89,7 @@ public sealed class DiagnosticsReportSerializerTests
                     DiagnosticSeverity.Info,
                     null,
                     null,
-                    DiagnosticFields.Empty,
-                    DateTimeOffset.Parse("2026-04-14T10:00:00Z"))
+                    DiagnosticFields.Empty)
             ]);
 
         var json = DiagnosticsReportSerializer.ToJson(report);
@@ -127,8 +125,7 @@ public sealed class DiagnosticsReportSerializerTests
                     "source",
                     DiagnosticObject.Create(
                         DiagnosticObject.Field("path", "html/body/p[3]"),
-                        DiagnosticObject.Field("index", 3)))),
-            DateTimeOffset.Parse("2026-04-14T10:00:00.5Z"));
+                        DiagnosticObject.Field("index", 3)))));
 
     private static string NormalizeNewLines(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal);

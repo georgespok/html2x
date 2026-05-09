@@ -91,6 +91,7 @@ internal sealed class FragmentPlacementCloner
             FormattingContext = source.FormattingContext,
             MarkerOffset = source.MarkerOffset,
             ColumnIndex = source.ColumnIndex,
+            ColumnSpan = source.ColumnSpan,
             IsHeader = source.IsHeader
         };
     }

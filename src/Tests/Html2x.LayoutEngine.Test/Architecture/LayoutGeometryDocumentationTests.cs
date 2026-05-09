@@ -1,7 +1,8 @@
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
@@ -26,18 +27,18 @@ public sealed class LayoutGeometryDocumentationTests
                 ResourcesAssemblyName);
         ArchitectureDocument.Load("docs", "architecture", "pipeline.md")
             .ShouldMentionTopicsInSection("Fragment Projection", nameof(PublishedLayoutTree), nameof(FragmentTree));
-        ArchitectureDocument.Load("docs", "architecture", "stage-ownership.md")
+        ArchitectureDocument.Load("docs", "architecture", "module-boundaries.md")
             .ShouldMentionTopicsInSection(
                 "Ownership Matrix",
                 AssemblyName<StyleNode>(),
                 AssemblyName<FragmentBuilder>(),
                 AssemblyName<LayoutPaginator>());
-        ArchitectureDocument.Load("docs", "architecture", "stage-ownership.md")
+        ArchitectureDocument.Load("docs", "architecture", "module-boundaries.md")
             .ShouldMentionTopicsInSection(
                 "Contracts Stage",
                 NamespaceOf<BlockBox>(),
                 NamespaceOf<PublishedLayoutTree>());
-        ArchitectureDocument.Load("docs", "architecture", "geometry.md")
+        ArchitectureDocument.Load("docs", "internals", "geometry.md")
             .ShouldMentionTopicsInSection(
                 "Helper Ownership",
                 AssemblyName<StyleNode>(),
@@ -45,7 +46,7 @@ public sealed class LayoutGeometryDocumentationTests
                 nameof(PointPt),
                 nameof(UsedGeometry),
                 nameof(PageContentArea));
-        ArchitectureDocument.Load("docs", "architecture", "geometry.md")
+        ArchitectureDocument.Load("docs", "internals", "geometry.md")
             .ShouldMentionTopicsInSection(
                 "Block Flow Locality",
                 nameof(BlockFlowLayout),
@@ -58,13 +59,13 @@ public sealed class LayoutGeometryDocumentationTests
     [Fact]
     public void TestingDocs_RecordFocusedTestOwnership()
     {
-        ArchitectureDocument.Load("docs", "development", "testing.md")
+        ArchitectureDocument.Load("docs", "development", "testing-strategy.md")
             .ShouldMentionTopicsInSection(
                 "Test Projects",
                 TestAssemblyNameFor<StyleTreeBuilder>(),
                 TestAssemblyNameFor<FragmentBuilder>(),
                 TestAssemblyNameFor<LayoutPaginator>());
-        ArchitectureDocument.Load("docs", "development", "testing.md")
+        ArchitectureDocument.Load("docs", "development", "testing-strategy.md")
             .ShouldMentionTopicsInSection(
                 "Ownership Rules",
                 "Geometry tests must not reference " + ParserPackageName(),

@@ -1,6 +1,7 @@
 # PDF Renderer
 
-`Html2x.Renderers.Pdf` renders `Html2x.RenderModel.HtmlLayout` pages to PDF bytes using SkiaSharp.
+This page explains how `Html2x.Renderers.Pdf` renders
+`Html2x.RenderModel.HtmlLayout` pages to PDF bytes using SkiaSharp.
 
 ## Responsibilities
 
@@ -20,9 +21,21 @@ typeface loading seams and must not perform font source resolution.
 
 `PdfRenderer()` is the public construction path. Dependency-injected renderer
 constructors that accept filesystem or typeface factory adapters are internal
-test seams and must not become public API.
+adapters and must not become public API.
 
-If renderer code needs a value that fragments do not carry, add that value to the layout or fragment contract and update tests across the affected stages.
+If renderer code needs a value that fragments do not carry, that value belongs
+in the layout or fragment contract.
+
+## Render Flow
+
+```text
+HtmlLayout
+  -> page iteration
+  -> fragment dispatch
+  -> paint command resolution
+  -> Skia PDF canvas drawing
+  -> PDF bytes
+```
 
 ## Paint Ordering
 
@@ -36,15 +49,24 @@ Current rendering preserves established visual order:
 6. Text.
 7. Table backgrounds and borders in table, row, cell, then content order.
 
-`ZOrder` can be carried as metadata, but new stacking behavior requires explicit design and tests.
+`ZOrder` can be carried as metadata, but stacking behavior must be explicit in
+the render model contract.
 
-## Testing
+## Fonts And Images
 
-Renderer tests should prefer semantic checks:
+Text runs must carry `ResolvedFont` facts before rendering. The renderer loads
+the referenced typefaces through renderer-local font cache behavior and does
+not resolve fonts through `IFontSource`.
 
-- PDF is valid.
-- Expected page count exists.
-- Expected text can be extracted where appropriate.
-- Diagnostics report expected unsupported or fallback behavior.
+When rendering through `HtmlConverter`, images are loaded from the
+conversion-scoped resource store that also supplied layout metadata. Direct
+`PdfRenderer` usage falls back to `Html2x.Resources` with renderer-owned
+resource settings. The renderer consumes image source, status, rectangle,
+padding, and border facts from render model fragments. It does not rederive
+layout geometry.
 
-Do not assert binary PDF equality.
+## Diagnostics
+
+The renderer emits render lifecycle records and renderer-owned diagnostics
+through `IDiagnosticsSink`. Render summary fields include page count and PDF
+byte size after `PdfRender` succeeds.

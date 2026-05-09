@@ -1,8 +1,11 @@
 # Public API
 
-The main public entry point is `HtmlConverter`.
+This page describes the supported public API surface for converting HTML to PDF
+and consuming diagnostics.
 
 ## Convert HTML To PDF
+
+The main public entry point is `HtmlConverter`.
 
 ```csharp
 using Html2x;
@@ -24,57 +27,43 @@ await File.WriteAllBytesAsync("output.pdf", result.PdfBytes);
 
 `ToPdfAsync` also accepts a `CancellationToken`.
 
-## `HtmlConverterOptions`
+## Default Font Path Requirement
 
-`HtmlConverterOptions` groups:
-
-- `Page`: page-level conversion options such as page size.
-- `Resources`: resource loading options such as base directory and image size limit.
-- `Css`: CSS processing options such as user agent stylesheet behavior.
-- `Fonts`: font resolution options.
-- `Diagnostics`: diagnostics enablement.
-
-## Required Font Path
-
-`HtmlConverterOptions.Fonts.FontPath` is required. It must point to an existing font file or directory before layout begins.
+With the default converter runtime, `HtmlConverterOptions.Fonts.FontPath` is
+required. It must point to an existing font file or directory before layout
+begins.
 
 Missing or invalid font paths throw `InvalidOperationException`. When
 diagnostics are enabled, the exception carries the diagnostics report in
 `Exception.Data["DiagnosticsReport"]`.
 
-## Shared Conversion Facts
+## Advanced Runtime Construction
 
-Set shared facts once on the public conversion request. `HtmlConverter` maps
-those values into stage-owned layout, style, and PDF render settings.
+Advanced in-process callers can provide a narrow runtime adapter set through
+`HtmlConverterRuntime`.
 
 ```csharp
-using Html2x.RenderModel;
+using Html2x;
 
-var options = new HtmlConverterOptions
+var converter = new HtmlConverter(new HtmlConverterRuntime
 {
-    Page = new PageOptions
-    {
-        Size = PaperSizes.A4
-    },
-    Resources = new ResourceOptions
-    {
-        BaseDirectory = resourceBaseDirectory,
-        MaxImageSizeBytes = 10 * 1024 * 1024
-    },
-    Css = new CssOptions
-    {
-        UseDefaultUserAgentStyleSheet = true
-    },
-    Fonts = new FontOptions
-    {
-        FontPath = fontPath
-    }
-};
+    FontSource = customFontSource
+});
 ```
 
-If `Resources.BaseDirectory` is not set, the converter uses
-`AppContext.BaseDirectory`. Set it explicitly when HTML references relative
-image paths.
+Supported runtime adapters are:
+
+- `FontSource`: custom `IFontSource` used by the built-in Skia text measurer.
+  When supplied, `HtmlConverterOptions.Fonts.FontPath` is not required. The
+  caller owns the font source lifetime.
+- `TextMeasurer`: custom `ITextMeasurer`. The caller owns its lifetime and must
+  return complete `TextMeasurement` facts, including resolved fonts suitable for
+  PDF rendering.
+
+If both are supplied, `TextMeasurer` is used and `FontSource` is ignored.
+`HtmlConverterRuntime` is not a service container. Layout algorithms, mutable
+boxes, style trees, image byte loading, published layout facts, and renderer
+internals are not public extension points.
 
 ## Diagnostics
 
@@ -105,25 +94,18 @@ payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
   mutation cannot change the stored result.
 - `DiagnosticsReport`: optional diagnostics report when enabled.
 
-`HtmlLayout.Pages` is read-only for consumers and renderers. Code that manually
-builds an `HtmlLayout` for advanced renderer usage should add pages through
-`HtmlLayout.AddPage` or the `HtmlLayout(IEnumerable<LayoutPage>)` constructor.
-`HtmlLayout` is sealed. Page mutation remains limited to explicit construction
-methods because renderer authors may manually assemble layouts.
-
 ## Public Surface
 
-The supported consumer facade is `HtmlConverter`, `HtmlConverterOptions`, and
-`Html2PdfResult`. `Html2x.RenderModel` remains public for direct renderer input
-and custom renderer authors.
+The supported consumer facade is `HtmlConverter`, `HtmlConverterRuntime`,
+`HtmlConverterOptions`, and `Html2PdfResult`.
 
 Public contract classification:
 
-- Consumer facade: `HtmlConverter`, `Html2PdfResult`, and option types under
-  `Html2x.Options`.
+- Consumer facade: `HtmlConverter`, `HtmlConverterRuntime`,
+  `Html2PdfResult`, and option types under `Html2x.Options`.
 - Renderer-author facts: `HtmlLayout`, `LayoutPage`, fragment types, render
-  geometry value types, render style value types, and
-  text facts under `Html2x.RenderModel`.
+  geometry value types, render style value types, and text facts under
+  `Html2x.RenderModel`.
 - Renderer entry point: `PdfRenderer` and `PdfRenderSettings`.
 - Diagnostics surface: diagnostics contracts plus `DiagnosticsCollector`,
   `DiagnosticsReport`, and `DiagnosticsReportSerializer`.
@@ -135,41 +117,14 @@ Public contract classification:
 trees, geometry requests, image metadata resolver contracts, published layout
 facts, and diagnostic snapshot mappers are not consumer extension points.
 
-Text runtime seams in `Html2x.Text` are intentionally public for advanced
-manual render model construction and tests: `IFontSource`, `FontPathSource`,
-`DiagnosticsFontSource`, `ITextMeasurer`, `SkiaTextMeasurer`,
-`TextMeasurement`, and `FontResolutionException`. Public constructors keep
-filesystem and Skia factory details internal.
+## Direct Renderer Usage
 
-## Compatibility Cleanup Stance
-
-`HtmlConverter`, `Html2PdfResult`, `HtmlLayout`, and `PdfRenderer` are sealed
-because subclassing them is not a supported extension model. This is an
-intentional public source compatibility break for accidental inheritance.
-
-`DiagnosticFields` and `DiagnosticObject` expose dictionary-like reads through
-indexers, `ContainsKey`, keys, values, count, and enumeration. They no longer
-implement `IReadOnlyDictionary` because the public `TryGetValue(..., out ...)`
-shape conflicted with the no by-reference production signature rule.
-
-The fragment model is a closed built-in set for the Html2x pipeline. `Fragment`
-and `BlockFragment` remain inheritable for source compatibility with existing
-manual renderer fixtures, but custom subclasses are unsupported by pagination
-and PDF rendering. A future major cleanup may close these types after replacing
-that compatibility shape with an explicit construction API.
-
-`HtmlLayout` no longer exposes document metadata because the built-in PDF
-renderer did not consume those values. `VisualStyle` exposes only renderer facts
-that are currently consumed or intentionally carried through the render model.
-`ColorRgba` is a pure renderer-facing value and no longer exposes `FromCss`;
-CSS color parsing is owned by the style stage before render facts are produced.
-
-`ImageLoadStatus` is the canonical image outcome used by resource loading,
-layout metadata, image fragments, and PDF diagnostics. `ImageFragment.IsMissing`
-and `ImageFragment.IsOversize` are derived from `ImageFragment.Status`; callers
-constructing image fragments manually should set `Status` instead of trying to
-maintain separate status flags.
+`HtmlLayout.Pages` is read-only for consumers and renderers. Code that manually
+builds an `HtmlLayout` for advanced renderer usage should add pages through
+`HtmlLayout.AddPage` or the `HtmlLayout(IEnumerable<LayoutPage>)` constructor.
 
 Direct `PdfRenderer.RenderAsync` usage validates `PdfRenderSettings`.
 `PdfRenderSettings.MaxImageSizeBytes` must be greater than zero and invalid
 values throw before rendering begins.
+
+Text runs passed directly to the renderer must include `ResolvedFont`.

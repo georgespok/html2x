@@ -4,6 +4,8 @@ internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
 {
     public int ColumnIndex { get; set; } = -1;
 
+    public int ColumnSpan { get; set; } = 1;
+
     public bool IsHeader { get; set; }
 
     protected override BoxNode CloneShallowForParent(BoxNode parent) =>
@@ -15,6 +17,7 @@ internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
             IsAnonymous = IsAnonymous,
             SourceIdentity = SourceIdentity,
             ColumnIndex = ColumnIndex,
+            ColumnSpan = ColumnSpan,
             IsHeader = IsHeader
         });
 }

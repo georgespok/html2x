@@ -1,12 +1,10 @@
-using Html2x.LayoutEngine.Contracts.Published;
-
 namespace Html2x.LayoutEngine.Geometry.Box;
 
 internal sealed record BlockLayoutRuleResult(
     BlockBox Block,
-    PublishedInlineLayout? InlineLayout,
-    IReadOnlyList<PublishedBlock> Children,
-    IReadOnlyList<PublishedBlockFlowItem>? Flow)
+    InlineLayoutResult? InlineLayout,
+    IReadOnlyList<BlockLayoutRuleResult> Children,
+    IReadOnlyList<BlockFlowItemLayout>? Flow)
 {
     public static BlockLayoutRuleResult ForResolvedBlock(BlockBox block)
     {
@@ -23,8 +21,8 @@ internal sealed record BlockLayoutRuleResult(
 
         return new(
             block,
-            flow.PublishedInlineLayout,
-            flow.PublishedChildren,
-            flow.PublishedFlow);
+            flow.InlineLayout,
+            flow.Children,
+            flow.Flow);
     }
 }

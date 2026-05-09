@@ -22,8 +22,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
                     DiagnosticSeverity.Info,
                     null,
                     null,
-                    DiagnosticFields.Empty,
-                    startTime)
+                    DiagnosticFields.Empty)
             ]);
         var options = new ConsoleOptions(
             Path.GetFullPath("input.html"),
@@ -185,6 +184,5 @@ public sealed class TestConsoleDiagnosticsSerializerTests
             DiagnosticSeverity.Info,
             null,
             null,
-            fields,
-            DateTimeOffset.Parse("2026-04-23T10:00:01Z"));
+            fields);
 }

@@ -1,3 +1,4 @@
+using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Box;
@@ -91,14 +92,17 @@ internal sealed class LayoutBoxStateWriter
     public void ApplyTableCellLayout(
         TableCellBox cell,
         int columnIndex,
+        int columnSpan,
         bool isHeader,
         UsedGeometry geometry)
     {
         ArgumentNullException.ThrowIfNull(cell);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(columnSpan);
 
         cell.Margin = cell.Style.Margin.Safe();
         cell.Padding = cell.Style.Padding.Safe();
         cell.ColumnIndex = columnIndex;
+        cell.ColumnSpan = columnSpan;
         cell.IsHeader = isHeader;
         cell.TextAlign = cell.Style.TextAlign;
         cell.ApplyLayoutGeometry(geometry);

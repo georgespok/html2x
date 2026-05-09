@@ -135,6 +135,11 @@ internal static class GeometryTestHarness
             extras.Add($"column={box.ColumnIndex.Value}");
         }
 
+        if (box.ColumnSpan is > 1)
+        {
+            extras.Add($"colspan={box.ColumnSpan.Value}");
+        }
+
         if (box.IsHeader.HasValue)
         {
             extras.Add($"header={box.IsHeader.Value.ToString().ToLowerInvariant()}");
@@ -183,6 +188,11 @@ internal static class GeometryTestHarness
         if (fragment.ColumnIndex.HasValue)
         {
             extras.Add($"column={fragment.ColumnIndex.Value}");
+        }
+
+        if (fragment.ColumnSpan is > 1)
+        {
+            extras.Add($"colspan={fragment.ColumnSpan.Value}");
         }
 
         if (fragment.IsHeader.HasValue)

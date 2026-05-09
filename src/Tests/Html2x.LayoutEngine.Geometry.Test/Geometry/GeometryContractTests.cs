@@ -1,5 +1,6 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.RenderModel.Fragments;

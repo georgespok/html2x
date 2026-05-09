@@ -15,6 +15,7 @@ namespace Html2x.Renderers.Pdf;
 internal sealed class ImageRenderer
 {
     private readonly IDiagnosticsSink? _diagnosticsSink;
+    private readonly IImageResourceReader? _imageResources;
     private readonly long _maxImageSizeBytes;
     private readonly string _resourceBaseDirectory;
 
@@ -26,6 +27,7 @@ internal sealed class ImageRenderer
 
         _resourceBaseDirectory = ImageResourceLoader.ResolveBaseDirectory(settings.ResourceBaseDirectory);
         _maxImageSizeBytes = settings.MaxImageSizeBytes;
+        _imageResources = settings.ImageResources;
         _diagnosticsSink = diagnosticsSink;
     }
 
@@ -53,7 +55,8 @@ internal sealed class ImageRenderer
             return;
         }
 
-        var resource = ImageResourceLoader.Load(command.Src, _resourceBaseDirectory, _maxImageSizeBytes);
+        var resource = _imageResources?.Load(command.Src)
+                       ?? ImageResourceLoader.Load(command.Src, _resourceBaseDirectory, _maxImageSizeBytes);
         status = resource.Status;
         if (resource.Bytes is null || status != ImageLoadStatus.Ok)
         {
@@ -122,8 +125,7 @@ internal sealed class ImageRenderer
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Status, DiagnosticValue.FromEnum(status)),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedWidth, width),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedHeight, height),
-                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Borders, MapBorders(command.Style.Borders))),
-            DateTimeOffset.UtcNow));
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Borders, MapBorders(command.Style.Borders)))));
     }
 
     private static DiagnosticObject MapBorders(BorderEdges? borders)

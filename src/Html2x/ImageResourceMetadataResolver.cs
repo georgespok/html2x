@@ -8,9 +8,16 @@ namespace Html2x;
 /// </summary>
 internal sealed class ImageResourceMetadataResolver : IImageMetadataResolver
 {
+    private readonly ConversionImageResourceStore _resources;
+
+    public ImageResourceMetadataResolver(ConversionImageResourceStore resources)
+    {
+        _resources = resources ?? throw new ArgumentNullException(nameof(resources));
+    }
+
     public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
     {
-        var resource = ImageResourceLoader.LoadMetadata(src, baseDirectory, maxBytes);
+        var resource = _resources.LoadMetadata(src);
         return new()
         {
             Src = resource.Src,

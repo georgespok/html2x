@@ -36,8 +36,7 @@ public static class DiagnosticsReportSerializer
             Severity = record.Severity.ToString(),
             Message = record.Message,
             Context = MapContext(record.Context),
-            Fields = MapFields(record.Fields),
-            Timestamp = record.Timestamp
+            Fields = MapFields(record.Fields)
         };
 
     private static DiagnosticsContextEnvelope? MapContext(DiagnosticContext? context) =>
@@ -99,8 +98,6 @@ public static class DiagnosticsReportSerializer
         public DiagnosticsContextEnvelope? Context { get; init; }
 
         public IReadOnlyDictionary<string, object?> Fields { get; init; } = new Dictionary<string, object?>();
-
-        public DateTimeOffset Timestamp { get; init; }
     }
 
     private sealed class DiagnosticsContextEnvelope

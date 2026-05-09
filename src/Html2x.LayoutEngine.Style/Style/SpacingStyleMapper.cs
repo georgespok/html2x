@@ -117,7 +117,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         IDiagnosticsSink? diagnosticsSink,
         Action<float> setter)
     {
-        var raw = InlineStyleSource.GetValue(css, element, property);
+        var raw = AuthoredCssDeclarationReader.GetValue(css, element, property);
 
         if (string.IsNullOrWhiteSpace(raw))
         {
@@ -137,7 +137,7 @@ internal sealed class SpacingStyleMapper(CssValueConverter converter)
         Action<float> setBottom,
         Action<float> setLeft)
     {
-        var shorthandValue = InlineStyleSource.GetValue(css, element, shorthandProperty);
+        var shorthandValue = AuthoredCssDeclarationReader.GetValue(css, element, shorthandProperty);
 
         if (string.IsNullOrWhiteSpace(shorthandValue))
         {

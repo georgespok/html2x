@@ -1,5 +1,6 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Fragments;
 using Shouldly;
 
@@ -59,6 +60,7 @@ public class TableGridDiagnosticsTests
         cells.Count.ShouldBe(4);
         cells[0].ShouldBeOfType<DiagnosticObject>()["rowIndex"].ShouldBe(new DiagnosticNumberValue(0));
         cells[0].ShouldBeOfType<DiagnosticObject>()["columnIndex"].ShouldBe(new DiagnosticNumberValue(0));
+        cells[0].ShouldBeOfType<DiagnosticObject>()["columnSpan"].ShouldBe(new DiagnosticNumberValue(1));
         cells[0].ShouldBeOfType<DiagnosticObject>()["isHeader"].ShouldBe(new DiagnosticBooleanValue(true));
 
         var columns = record.Fields["columns"].ShouldBeOfType<DiagnosticArray>();
@@ -115,8 +117,8 @@ public class TableGridDiagnosticsTests
 
         TableGridDiagnostics.EmitUnsupportedTable(
             "html/body/table",
-            "colspan",
-            "colspan is not supported",
+            "rowspan",
+            "rowspan is not supported",
             1,
             400f,
             400f,
@@ -127,8 +129,8 @@ public class TableGridDiagnosticsTests
         unsupported.Severity.ShouldBe(DiagnosticSeverity.Error);
         unsupported.Name.ShouldBe("layout/table/unsupported-structure");
         unsupported.Fields["nodePath"].ShouldBe(new DiagnosticStringValue("html/body/table"));
-        unsupported.Fields["structureKind"].ShouldBe(new DiagnosticStringValue("colspan"));
-        unsupported.Fields["reason"].ShouldBe(new DiagnosticStringValue("colspan is not supported"));
+        unsupported.Fields["structureKind"].ShouldBe(new DiagnosticStringValue("rowspan"));
+        unsupported.Fields["reason"].ShouldBe(new DiagnosticStringValue("rowspan is not supported"));
         unsupported.Fields["formattingContext"]
             .ShouldBe(new DiagnosticStringValue(nameof(FormattingContextKind.Block)));
 
@@ -142,7 +144,7 @@ public class TableGridDiagnosticsTests
         table.Fields["requestedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
         table.Fields["resolvedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
         table.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
-        table.Fields["reason"].ShouldBe(new DiagnosticStringValue("colspan is not supported"));
+        table.Fields["reason"].ShouldBe(new DiagnosticStringValue("rowspan is not supported"));
     }
 
     [Fact]
@@ -152,8 +154,8 @@ public class TableGridDiagnosticsTests
 
         TableGridDiagnostics.EmitUnsupportedTable(
             "html/body/table",
-            "colspan",
-            "colspan is not supported",
+            "rowspan",
+            "rowspan is not supported",
             1,
             400f,
             400f,
@@ -164,14 +166,14 @@ public class TableGridDiagnosticsTests
         unsupported.Name.ShouldBe("layout/table/unsupported-structure");
         unsupported.Severity.ShouldBe(DiagnosticSeverity.Error);
         unsupported.Fields["nodePath"].ShouldBe(new DiagnosticStringValue("html/body/table"));
-        unsupported.Fields["structureKind"].ShouldBe(new DiagnosticStringValue("colspan"));
-        unsupported.Fields["reason"].ShouldBe(new DiagnosticStringValue("colspan is not supported"));
+        unsupported.Fields["structureKind"].ShouldBe(new DiagnosticStringValue("rowspan"));
+        unsupported.Fields["reason"].ShouldBe(new DiagnosticStringValue("rowspan is not supported"));
 
         var table = sink.Records[1];
         table.Name.ShouldBe("layout/table");
         table.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(1));
         table.Fields["derivedColumnCount"].ShouldBeNull();
         table.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
-        table.Fields["reason"].ShouldBe(new DiagnosticStringValue("colspan is not supported"));
+        table.Fields["reason"].ShouldBe(new DiagnosticStringValue("rowspan is not supported"));
     }
 }

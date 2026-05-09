@@ -289,7 +289,7 @@
                 This compact page exercises the supported happy-path surface:
                 block flow, inline text, headings, spacing, dimensions,
                 colors, borders, lists, images, horizontal rules, and
-                rectangular tables.
+                deterministic tables with horizontal column spans.
             </p>
         </header>
 
@@ -406,8 +406,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="1" rowspan="1">Typography</td>
-                        <td class="pass">Supported</td>
+                        <td colspan="2" rowspan="1">Typography</td>
                         <td>Fonts, colors, and decorations render.</td>
                     </tr>
                     <tr>
@@ -423,9 +422,8 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td>Summary</td>
-                        <td>Happy path</td>
-                        <td>No spans beyond value 1 and no unsupported layout modes.</td>
+                        <td colspan="2">Summary</td>
+                        <td>Happy path without unsupported layout modes.</td>
                     </tr>
                 </tfoot>
             </table>
@@ -433,7 +431,7 @@
 
         <footer id="footer">
             This smoke example intentionally avoids unsupported features such as
-            flex, grid, absolute positioning, merged table cells, unsupported units,
+            flex, grid, absolute positioning, row-spanned table cells, unsupported units,
             and scripting.
         </footer>
     </body>

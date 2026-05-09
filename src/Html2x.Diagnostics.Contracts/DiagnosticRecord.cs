@@ -6,5 +6,4 @@ public sealed record DiagnosticRecord(
     DiagnosticSeverity Severity,
     string? Message,
     DiagnosticContext? Context,
-    DiagnosticFields Fields,
-    DateTimeOffset Timestamp);
+    DiagnosticFields Fields);

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-This page lists common local failures and the fastest recovery path.
+This page lists common developer failures and recovery paths.
 
 ## `HtmlConverterOptions.Fonts.FontPath` Does Not Exist
 
@@ -79,3 +79,18 @@ Recovery:
 1. Check [Supported HTML And CSS](../reference/supported-html-css.md).
 2. Enable diagnostics and look for `style/*` or `layout/unsupported-mode` events.
 3. Add a baseline test if the fallback is intentional and not already covered.
+
+## Direct Renderer Fails On Text
+
+Cause candidates:
+
+- A manually constructed `TextRun` does not include `ResolvedFont`.
+- `PdfRenderSettings.MaxImageSizeBytes` is invalid.
+- The referenced resolved font path is missing.
+
+Recovery:
+
+1. Use the converter path when possible so layout publishes resolved font facts.
+2. For direct renderer usage, construct text runs with `ResolvedFont`.
+3. Check [Text And Fonts](../internals/text-and-fonts.md) and
+   [Failure Modes](../reference/failure-modes.md).

@@ -1,6 +1,7 @@
-# Extending CSS Support
+# CSS Support
 
-Use this path when adding a CSS property, selector behavior, or supported value.
+Use this path when adding a CSS property, selector behavior, supported value, or
+documented fallback.
 
 ## 1. Define The Contract
 
@@ -13,12 +14,13 @@ Before code changes, decide:
 - Affected stages: style only, layout, fragments, renderer, diagnostics.
 - Unsupported values and fallback behavior.
 
-Record these decisions in the change summary and update [Supported HTML And CSS](../reference/supported-html-css.md).
+Update [Supported HTML And CSS](../reference/supported-html-css.md) when the
+supported input contract changes.
 
 ## 2. Update Style Computation
 
 - Extend parser or conversion helpers under layout style code.
-- Add defaults through user agent or initial value handling.
+- Add defaults through the built-in stylesheet or initial value handling.
 - Carry the computed value on the appropriate style record.
 - Emit style diagnostics for invalid, ignored, or partially applied declarations.
 
@@ -41,3 +43,11 @@ Add focused coverage in this order:
 3. Renderer tests when drawing changes.
 4. Integration tests when public converter behavior changes.
 5. Diagnostics serializer tests when record fields change.
+
+## Contract Checklist
+
+- The supported value space is documented.
+- Unsupported values have a deterministic fallback.
+- Diagnostics identify unsupported, ignored, or partially applied behavior.
+- Layout changes publish data forward rather than making renderers inspect
+  style or box internals.

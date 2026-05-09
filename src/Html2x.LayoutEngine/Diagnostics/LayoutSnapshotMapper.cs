@@ -106,6 +106,9 @@ internal static class LayoutSnapshotMapper
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.ColumnIndex,
                 FromNullable(fragment.ColumnIndex)),
+            DiagnosticObject.Field(
+                LayoutSnapshotSchema.Fields.ColumnSpan,
+                FromNullable(fragment.ColumnSpan)),
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.IsHeader, FromNullable(fragment.IsHeader)),
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.MetadataOwner,
@@ -168,6 +171,7 @@ internal static class LayoutSnapshotMapper
         int? derivedColumnCount = null,
         int? rowIndex = null,
         int? columnIndex = null,
+        int? columnSpan = null,
         bool? isHeader = null,
         string? metadataOwner = null,
         string? metadataConsumer = null)
@@ -201,6 +205,7 @@ internal static class LayoutSnapshotMapper
             DerivedColumnCount = derivedColumnCount,
             RowIndex = rowIndex,
             ColumnIndex = columnIndex,
+            ColumnSpan = columnSpan,
             IsHeader = isHeader,
             MetadataOwner = metadataOwner,
             MetadataConsumer = metadataConsumer,
@@ -216,6 +221,7 @@ internal static class LayoutSnapshotMapper
         int? derivedColumnCount = null,
         int? rowIndex = null,
         int? columnIndex = null,
+        int? columnSpan = null,
         bool? isHeader = null) =>
         CreateSnapshot(
             fragment,
@@ -228,6 +234,7 @@ internal static class LayoutSnapshotMapper
             derivedColumnCount: derivedColumnCount,
             rowIndex: rowIndex,
             columnIndex: columnIndex,
+            columnSpan: columnSpan,
             isHeader: isHeader,
             metadataOwner: PublishedLayoutToFragmentProjector.MetadataOwnerName,
             metadataConsumer: nameof(LayoutSnapshotMapper));
@@ -302,6 +309,7 @@ internal static class LayoutSnapshotMapper
                 LayoutSnapshotSchema.FragmentKinds.TableCell,
                 children,
                 columnIndex: cell.ColumnIndex,
+                columnSpan: cell.ColumnSpan,
                 isHeader: cell.IsHeader);
         }
 

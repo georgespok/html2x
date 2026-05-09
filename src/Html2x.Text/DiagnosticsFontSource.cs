@@ -73,9 +73,9 @@ public sealed class DiagnosticsFontSource(
             FontDiagnosticNames.Events.Resolve,
             severity,
             reason,
-            null,
-            DiagnosticFields.Create(
-                DiagnosticFields.Field(FontDiagnosticNames.Fields.Owner, nameof(FontPathSource)),
+                null,
+                DiagnosticFields.Create(
+                DiagnosticFields.Field(FontDiagnosticNames.Fields.Owner, _inner.GetType().Name),
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.Consumer, consumer),
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedFamily, requested.Family),
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.RequestedWeight,
@@ -106,8 +106,7 @@ public sealed class DiagnosticsFontSource(
                 DiagnosticFields.Field(FontDiagnosticNames.Fields.Outcome, outcome),
                 DiagnosticFields.Field(
                     FontDiagnosticNames.Fields.Reason,
-                    reason is null ? null : DiagnosticValue.From(reason))),
-            DateTimeOffset.UtcNow));
+                    reason is null ? null : DiagnosticValue.From(reason)))));
     }
 
     private static ResolvedFont? CreateFailedResolution(Exception exception)

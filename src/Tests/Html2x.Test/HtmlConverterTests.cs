@@ -3,6 +3,8 @@ using System.Text.Json;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Options;
+using Html2x.RenderModel.Text;
+using Html2x.Text;
 using Xunit.Abstractions;
 
 namespace Html2x.Test;
@@ -115,6 +117,36 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             e.Stage == "PdfRender" &&
             e.Name == "stage/skipped" &&
             e.Message == "Skipped because LayoutBuild failed.");
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_RuntimeFontSource_AllowsOptionsWithoutFontPath()
+    {
+        const string html = "<html><body><p>Runtime font source</p></body></html>";
+        var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf");
+        var converter = new HtmlConverter(new()
+        {
+            FontSource = new FixedFontSource(fontPath)
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var result = await converter.ToPdfAsync(html, options);
+
+        Assert.NotEmpty(result.PdfBytes);
+        Assert.NotNull(result.DiagnosticsReport);
+        Assert.Contains(result.DiagnosticsReport.Records, static record =>
+            record.Name == "font/resolve" &&
+            StringField(record, "owner") == nameof(FixedFontSource));
+    }
+
+    [Fact]
+    public void Constructor_RuntimeIsNull_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new HtmlConverter(null!));
     }
 
     [Fact]
@@ -502,4 +534,17 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
 
     private static byte[] TwoByOnePngBytes() =>
         Convert.FromBase64String(TwoByOnePngBase64);
+
+    private sealed class FixedFontSource(string fontPath) : IFontSource
+    {
+        public ResolvedFont Resolve(FontKey requested, string consumer) =>
+            new(
+                requested.Family,
+                requested.Weight,
+                requested.Style,
+                fontPath,
+                fontPath,
+                0,
+                fontPath);
+    }
 }

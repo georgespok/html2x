@@ -33,8 +33,7 @@ internal sealed class MarginCollapseRules
                 DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Consumer, consumerName),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(contextKind))),
-            DateTimeOffset.UtcNow));
+                    DiagnosticValue.FromEnum(contextKind)))));
 
         return collapsedTopMargin;
     }

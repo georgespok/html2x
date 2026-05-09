@@ -85,8 +85,7 @@ internal static class GeometryLayoutStructureValidator
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, payload.Reason),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(payload.FormattingContext))),
-            DateTimeOffset.UtcNow));
+                    DiagnosticValue.FromEnum(payload.FormattingContext)))));
     }
 
     private static BoxNode? FindUnsupportedInlineBlockStructure(BoxNode root)

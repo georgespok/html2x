@@ -9,27 +9,33 @@ Html2x is a modern, cross-platform .NET 8 library for converting static HTML and
 - Preserve clear module boundaries between public API, layout, diagnostics, and rendering.
 - Make unsupported input observable through diagnostics instead of silent behavior drift.
 
-## Repository Guidance
+## Documentation
 
-The current project map, module responsibilities, and build commands live in
-[developer documentation](docs/README.md). Agent workflow rules live in
+The durable project map, module responsibilities, public API, supported scope,
+runtime behavior, and developer commands live in
+[project documentation](docs/README.md). Local agent workflow rules live in
 [AGENTS.md](AGENTS.md).
 
 Primary source documents:
 
-- [Architecture Overview](docs/architecture/overview.md): project map, module
-  ownership, and primary data flow.
-- [Getting Started](docs/getting-started.md): restore, build, and test
-  commands.
-- [Testing](docs/development/testing.md): test project ownership, practices, and
-  focused commands.
-- [Coding Standards](docs/development/coding-standards.md): implementation
-  conventions, naming, layering, diagnostics, and review checks.
-- [Agent Guidance](AGENTS.md): feature records, validation, commits, PRs,
-  local artifacts, and shell guidance.
+- [Getting Started](docs/getting-started.md): first-run path for a clean
+  checkout.
+- [Architecture Overview](docs/architecture/overview.md): project map and
+  primary data flow.
+- [Processing Pipeline](docs/architecture/pipeline.md): HTML/CSS input through
+  PDF bytes.
+- [Public API](docs/reference/public-api.md): converter usage, options,
+  diagnostics, and failure behavior.
+- [Supported HTML And CSS](docs/reference/supported-html-css.md): current
+  behavior and explicit limitations.
+- [Diagnostics Events](docs/reference/diagnostics-events.md): emitted
+  diagnostic events and payload shapes.
+- [Agent Guidance](AGENTS.md): local workflow routing for contributors and
+  agents.
 
-For public API, supported HTML/CSS, internals, and extension docs, start with
-the [developer documentation index](docs/README.md).
+For concepts, architecture, internals, extension paths, public API, supported
+HTML/CSS, diagnostics, and troubleshooting, start with the
+[project documentation index](docs/README.md).
 
 ## Minimal Usage
 
@@ -51,7 +57,10 @@ var result = await converter.ToPdfAsync(
 await File.WriteAllBytesAsync("invoice.pdf", result.PdfBytes);
 ```
 
-`HtmlConverterOptions.Fonts.FontPath` must point to a font file or directory before layout begins.
+With the default converter runtime, `HtmlConverterOptions.Fonts.FontPath` must
+point to a font file or directory before layout begins. Advanced in-process
+callers may provide approved runtime font or text adapters through
+`HtmlConverterRuntime`.
 
 ## Scope
 

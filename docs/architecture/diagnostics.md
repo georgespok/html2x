@@ -1,8 +1,43 @@
 # Diagnostics Architecture
 
-Diagnostics are developer-facing troubleshooting artifacts. They explain
-conversion lifecycle, unsupported input, layout decisions, rendering decisions,
-and serializer output without requiring a debugger.
+Diagnostics are troubleshooting artifacts. They explain conversion lifecycle,
+unsupported input, layout decisions, rendering decisions, and serializer output
+without requiring a debugger. This page defines both runtime flow and dependency
+boundaries.
+
+## Dependency Direction
+
+Diagnostics producers depend on `Html2x.Diagnostics.Contracts` only. The
+diagnostics runtime depends on the same contracts and owns collection and
+serialization.
+
+```mermaid
+flowchart LR
+    Contracts["Html2x.Diagnostics.Contracts"]
+    Runtime["Html2x.Diagnostics<br/>collector, report, JSON"]
+    Style["Style producer"]
+    Geometry["Geometry producer"]
+    Pagination["Pagination producer"]
+    Layout["Layout composition producer"]
+    Renderer["PDF renderer producer"]
+    Facade["Html2x facade"]
+
+    Contracts --> Runtime
+    Contracts --> Style
+    Contracts --> Geometry
+    Contracts --> Pagination
+    Contracts --> Layout
+    Contracts --> Renderer
+    Runtime --> Facade
+```
+
+Diagnostic producer modules emit generic records. Producer-local diagnostic
+helpers may flatten local domain models into `DiagnosticFields`, but central
+diagnostics code must not understand those models.
+
+Diagnostics timing is report-level. `DiagnosticsReport` records conversion
+start and end time. Individual `DiagnosticRecord` values do not carry
+per-record timestamps.
 
 ## Report Flow
 
@@ -42,6 +77,68 @@ Pipeline stages own the events that describe their decisions:
 - The public facade owns conversion lifecycle and converter-level font path failures.
 - The PDF renderer owns renderer summaries and renderer-local failures.
 - Shared stage lifecycle event construction belongs in `Html2x.Diagnostics.Contracts`.
+
+## DiagnosticFields Value Rules
+
+`DiagnosticFields` must not accept arbitrary `object`. The allowed value set is
+intentionally narrow:
+
+- string
+- number
+- bool
+- enum represented as string
+- null
+- diagnostic array
+- nested diagnostic object
+
+These rules keep JSON serialization generic while preventing domain objects
+from leaking into the central diagnostics package.
+
+## Runtime Flow
+
+Producer projects receive `IDiagnosticsSink?` through method parameters and
+reference `Html2x.Diagnostics.Contracts` only. The public facade creates
+`DiagnosticsCollector` when diagnostics are enabled and exposes the resulting
+`DiagnosticsReport` on `Html2PdfResult`.
+
+Renderer diagnostics flow through the contracts project boundary, the same as
+style, geometry, layout, pagination, image, and font diagnostics.
+
+The diagnostics runtime must not reference pagination, layout stages, or
+producer-local event names such as `layout/pagination/*`. Producer modules own
+event names and translate their domain facts into generic diagnostic fields.
+
+## Runtime Ownership
+
+The sink-based runtime path is owned by `Html2x.Diagnostics`:
+
+- `DiagnosticsCollector` implements `IDiagnosticsSink`.
+- `DiagnosticsReport` is the immutable read model returned by the collector.
+- `DiagnosticsReportSerializer` serializes `DiagnosticsReport`.
+
+The report serializer must remain generic. It may reference
+`Html2x.Diagnostics.Contracts` and diagnostics-owned report types. It must not
+reference producer-specific models, snapshot DTOs, producer modules,
+AngleSharp, or SkiaSharp.
+
+## Facade Boundary
+
+Public facade options do not own diagnostics types. Diagnostics types are split
+between `Html2x.Diagnostics.Contracts` and `Html2x.Diagnostics`.
+
+`Html2x.Diagnostics.Contracts` owns `IDiagnosticsSink`, `DiagnosticRecord`,
+`DiagnosticSeverity`, `DiagnosticContext`, `DiagnosticFields`,
+`DiagnosticObject`, `DiagnosticArray`, `DiagnosticValue`, and
+`NullDiagnosticsSink`.
+
+`Html2x.Diagnostics` owns `DiagnosticsCollector`, `DiagnosticsReport`, and
+`DiagnosticsReportSerializer`.
+
+## Emission Rule
+
+Production code emits diagnostics through
+`IDiagnosticsSink.Emit(DiagnosticRecord)`. Producers do not mutate shared
+diagnostics collections directly.
 
 ## Severity
 

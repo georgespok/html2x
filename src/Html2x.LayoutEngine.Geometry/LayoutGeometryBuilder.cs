@@ -4,6 +4,7 @@ using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Composition;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry;

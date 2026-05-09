@@ -1,127 +1,61 @@
 # Processing Pipeline
 
-This document explains how Html2x turns HTML and CSS into PDF bytes.
+This page explains how Html2x turns static HTML and CSS into PDF bytes. It
+focuses on runtime flow and the facts handed from one stage to the next.
+
+## Pipeline Flow
+
+```mermaid
+flowchart TD
+    Input["HTML and CSS input"] --> Facade["HtmlConverter"]
+    Facade --> Style["Style stage<br/>StyleTree"]
+    Style --> Geometry["Geometry stage<br/>PublishedLayoutTree"]
+    Geometry --> Fragments["Fragment projection<br/>FragmentTree"]
+    Fragments --> Pagination["Pagination<br/>PaginationResult"]
+    Pagination --> Layout["HtmlLayout"]
+    Layout --> Renderer["PDF renderer"]
+    Renderer --> Output["PDF bytes"]
+
+    Facade -. maps options .-> Style
+    Facade -. maps options .-> Geometry
+    Facade -. maps options .-> Pagination
+    Facade -. maps options .-> Renderer
+```
 
 ## Composition
 
-`LayoutBuilder` is the internal composition layer. It coordinates style, geometry,
-fragment projection, pagination, and final layout assembly, but it does not own
-HTML parsing or CSS computation directly.
+`LayoutBuilder` is the internal composition layer. It coordinates style,
+geometry, fragment projection, pagination, and final layout assembly, but it
+does not own HTML parsing, CSS computation, geometry algorithms, fragment
+projection, page placement, or rendering.
 
 The composition flow is stage-first. `LayoutBuilder.BuildAsync` names the
 handoff facts between stages: `StyleTree`, `LayoutGeometryRequest`,
 `PublishedLayoutTree`, `FragmentTree`, `PaginationOptions`, and
-`PaginationResult`. `LayoutStageRunner` wraps the geometry, fragment, and
-pagination calls with lifecycle diagnostics so diagnostic plumbing does not
-become the visible structure of the pipeline. Producer-specific diagnostic
-payloads, such as the geometry snapshot, are emitted by focused diagnostics
-modules.
+`PaginationResult`. `LayoutStageRunner` wraps geometry, fragment projection,
+and pagination with lifecycle diagnostics so diagnostic plumbing does not
+become the structure of the pipeline.
 
-Production dependency direction:
+Composition connects these projects:
 
-```text
-Html2x.RenderModel
-  owns pure render facts, documents, and fragments
-  does not reference SkiaSharp, parser packages, layout engines, renderers, or filesystem seams
-
-Html2x
-  owns public converter options
-  maps public options into stage-owned settings and requests
-
-Html2x.LayoutEngine
-  uses Html2x.LayoutEngine.Contracts
-  uses Html2x.LayoutEngine.Style
-  uses Html2x.LayoutEngine.Geometry
-  uses Html2x.LayoutEngine.Fragments
-  uses Html2x.LayoutEngine.Pagination
-  uses Html2x.Text
-
-Html2x.Text
-  uses Html2x.RenderModel
-  uses Html2x.Diagnostics.Contracts
-  uses SkiaSharp and SkiaSharp.HarfBuzz internally
-  owns text measurement contracts and font resolution contracts
-  does not use facade options, layout engine projects, or renderers
-
-Html2x.LayoutEngine.Geometry
-  uses Html2x.LayoutEngine.Contracts
-  uses Html2x.Text
-  uses Html2x.Diagnostics.Contracts
-
-Html2x.LayoutEngine.Style
-  uses Html2x.LayoutEngine.Contracts
-  uses Html2x.Diagnostics.Contracts
-  uses AngleSharp internally
-  consumes StyleBuildSettings instead of public options
-
-Html2x.LayoutEngine.Fragments
-  uses Html2x.LayoutEngine.Contracts
-  uses Html2x.RenderModel
-
-Html2x.LayoutEngine.Pagination
-  uses Html2x.LayoutEngine.Contracts
-  uses Html2x.RenderModel
-  uses Html2x.Diagnostics.Contracts
-  consumes render model block fragments and returns PaginationResult
-  owns translated fragment clones and page assembly
-  does not use style, geometry implementation engines, fragment projection, parser packages, renderers, or SkiaSharp
-
-Html2x.Renderers.Pdf
-  uses Html2x.RenderModel
-  uses Html2x.Text
-  uses Html2x.Diagnostics.Contracts
-  consumes PdfRenderSettings instead of public converter options
-```
+- `Html2x.LayoutEngine.Contracts` owns `StyleTree`, geometry requests,
+  `PublishedLayoutTree`, and shared handoff facts.
+- `Html2x.LayoutEngine.Style` owns `StyleTreeBuilder`.
+- `Html2x.LayoutEngine.Geometry` owns mutable boxes such as `BlockBox` and
+  publishes layout facts.
+- `Html2x.LayoutEngine.Fragments` owns `FragmentBuilder`.
+- `Html2x.LayoutEngine.Pagination` owns `LayoutPaginator`.
+- `Html2x.Resources` owns scoped resource and image loading policy.
 
 AngleSharp and AngleSharp.Css are implementation details of
-`Html2x.LayoutEngine.Style`. `Html2x.LayoutEngine.Contracts` owns internal
-pipeline handoff contracts. Geometry and composition code consume those
-project-owned models and must not depend on parser objects.
+`Html2x.LayoutEngine.Style`. Geometry and composition code consume contract
+facts and must not depend on parser objects.
 
-Image metadata contracts live in `Html2x.LayoutEngine.Contracts` because they
-are geometry inputs. Geometry consumes `IImageMetadataResolver` for source,
-status, and intrinsic size only. `Html2x.Resources` owns image path scope, data
-URI parsing, byte limits, metadata-only intrinsic dimension decoding, and byte
-loading. PDF rendering consumes the same resource policy for image bytes.
-
-Fragment projection lives in `Html2x.LayoutEngine.Fragments`. Composition calls
-that internal module after geometry publishes layout facts. Renderer-facing
-fragment models live in `Html2x.RenderModel`.
-
-`Html2x.RenderModel` owns pure render facts: units, style value facts, font
-request facts, resolved font facts, renderer-facing documents, renderer-facing
-fragments, and render fact translation helpers. It has no project or package
-dependencies and must stay free of runtime adapters.
-
-`Html2x.Text` owns text measurement contracts and font resolution contracts. It
-is explicitly Skia-backed in this transition: Skia text measurement, font path
-resolution, directory font matching, typeface factory seams, and font
-diagnostics live in the text module. The PDF renderer consumes resolved font
-facts from `TextRun` and loads the referenced typefaces; it does not resolve
-fonts through `IFontSource`.
-
-Production composition uses high-level text construction:
-`FontPathSource(string)` for the configured font path and
-`SkiaTextMeasurer(IFontSource)` for layout measurement. It does not instantiate
-file directory or typeface factory seams directly.
-
-`Html2x` owns active public converter options. `HtmlConverterOptions` is the
-single public conversion request, with page, resources, CSS, fonts, and
-diagnostics groups. `Html2x` is the only production mapping boundary from
-public options into `StyleBuildSettings`, `LayoutBuildSettings`,
-`LayoutGeometryRequest`, `PaginationOptions`, and `PdfRenderSettings`. That
-keeps adapter seams owned by the text module while pure published facts stay
-independent from text runtime.
-
-No standalone options module sits between the facade and stages. Public
-configuration stays with `Html2x`, while internal settings stay with the stage
-that consumes them. Those settings and requests are internal stage request
-models.
-
-`FontKey`, `FontWeight`, `FontStyle`, and `ResolvedFont` live in
-`Html2x.RenderModel`. They define the shared language for measurement,
-resolution, resolved font facts, and renderer typeface loading without making
-render facts depend on Skia-backed text infrastructure.
+`Html2x` is the only production mapping boundary from public options into
+`StyleBuildSettings`, `LayoutBuildSettings`, `LayoutGeometryRequest`,
+`PaginationOptions`, and `PdfRenderSettings`. It also selects supported
+runtime adapters from `HtmlConverterRuntime` and creates the per-conversion
+image resource store used by layout metadata and rendering.
 
 ## Style
 
@@ -208,8 +142,7 @@ Contract namespace ownership is explicit: style handoff facts use
 `Html2x.LayoutEngine.Contracts.Style`, geometry request and value facts use
 `Html2x.LayoutEngine.Contracts.Geometry`, image metadata contracts use
 `Html2x.LayoutEngine.Contracts.Geometry.Images`, and published layout facts use
-`Html2x.LayoutEngine.Contracts.Published`. The old `Models` and
-`Geometry.Published` names are not used for contracts.
+`Html2x.LayoutEngine.Contracts.Published`.
 
 ## Fragment Projection
 
@@ -219,8 +152,6 @@ allocates fragment IDs, and copies style, geometry, and published text run facts
 into fragment models.
 
 Input: `PublishedLayoutTree`.
-
-Contract summary: PublishedLayoutTree in, FragmentTree out.
 
 Output: `FragmentTree`, containing blocks, lines, text runs, images, tables,
 cells, and rules.

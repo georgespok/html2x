@@ -1,7 +1,7 @@
 # Extending Diagnostics
 
-Add diagnostics when a behavior needs to be observable, testable, or
-explainable without stepping through a debugger.
+Add diagnostics when behavior needs to be observable, testable, or explainable
+without stepping through a debugger.
 
 ## Define The Record
 
@@ -41,6 +41,13 @@ small local helper methods when a record needs to flatten local domain models.
 `Html2x.Diagnostics.DiagnosticsReportSerializer` serializes
 `DiagnosticsReport` generically. New diagnostic families should not require
 serializer-specific mapping code.
+
+## Boundary Rules
+
+- Producers reference `Html2x.Diagnostics.Contracts`, not `Html2x.Diagnostics`.
+- `Html2x.Diagnostics` must not reference producer-local models.
+- Public facade options must not expose diagnostics runtime types.
+- Field values must use the constrained diagnostics value model.
 
 ## Test
 

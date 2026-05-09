@@ -18,6 +18,7 @@ public class TableFragmentContractsTests
         {
             Rect = new(10f, 16f, 80f, 24f),
             ColumnIndex = 1,
+            ColumnSpan = 2,
             IsHeader = true
         };
 
@@ -36,6 +37,7 @@ public class TableFragmentContractsTests
         table.DerivedColumnCount.ShouldBe(2);
         table.Rows.ShouldHaveSingleItem().RowIndex.ShouldBe(0);
         table.Rows[0].Cells.ShouldHaveSingleItem().ColumnIndex.ShouldBe(1);
+        table.Rows[0].Cells[0].ColumnSpan.ShouldBe(2);
         table.Rows[0].Cells[0].IsHeader.ShouldBeTrue();
         table.Rows[0].Cells[0].Children.ShouldHaveSingleItem().ShouldBeSameAs(line);
     }

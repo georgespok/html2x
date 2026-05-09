@@ -35,6 +35,7 @@ internal static class LayoutSnapshotSchema
         public const string DerivedColumnCount = "derivedColumnCount";
         public const string RowIndex = "rowIndex";
         public const string ColumnIndex = "columnIndex";
+        public const string ColumnSpan = "columnSpan";
         public const string IsHeader = "isHeader";
         public const string MetadataOwner = "metadataOwner";
         public const string MetadataConsumer = "metadataConsumer";

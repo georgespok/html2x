@@ -89,6 +89,7 @@ public sealed class FragmentPlacementClonerTests
             FragmentId = 3,
             Rect = new(14f, 26f, 50f, 20f),
             ColumnIndex = 2,
+            ColumnSpan = 3,
             IsHeader = true
         };
         var row = new TableRowFragment([cell])
@@ -116,6 +117,7 @@ public sealed class FragmentPlacementClonerTests
         movedRow.RowIndex.ShouldBe(row.RowIndex);
         movedCell.Rect.ShouldBe(new(9f, 14f, 50f, 20f));
         movedCell.ColumnIndex.ShouldBe(cell.ColumnIndex);
+        movedCell.ColumnSpan.ShouldBe(cell.ColumnSpan);
         movedCell.IsHeader.ShouldBeTrue();
         movedLine.Rect.ShouldBe(new(10f, 16f, 50f, 12f));
     }
@@ -178,6 +180,7 @@ public sealed class FragmentPlacementClonerTests
                     FormattingContext = FormattingContextKind.Block,
                     MarkerOffset = 3f,
                     ColumnIndex = 1,
+                    ColumnSpan = 2,
                     IsHeader = true
                 }
             ])
@@ -219,6 +222,7 @@ public sealed class FragmentPlacementClonerTests
         movedCell.FormattingContext.ShouldBe(table.Rows[0].Cells[0].FormattingContext);
         movedCell.MarkerOffset.ShouldBe(table.Rows[0].Cells[0].MarkerOffset);
         movedCell.ColumnIndex.ShouldBe(table.Rows[0].Cells[0].ColumnIndex);
+        movedCell.ColumnSpan.ShouldBe(table.Rows[0].Cells[0].ColumnSpan);
         movedCell.IsHeader.ShouldBe(table.Rows[0].Cells[0].IsHeader);
     }
 

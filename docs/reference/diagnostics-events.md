@@ -1,8 +1,47 @@
 # Diagnostics Events
 
-This reference lists the main diagnostics record families. Generic contracts
-live in `Html2x.Diagnostics.Contracts`; JSON export lives in
-`Html2x.Diagnostics`.
+This reference lists diagnostics record families, common fields, and a compact
+JSON example. Generic contracts live in `Html2x.Diagnostics.Contracts`; JSON
+export lives in `Html2x.Diagnostics`.
+
+## Record Shape
+
+Diagnostics are emitted as `DiagnosticRecord` values. A serialized record has
+these stable concepts:
+
+- Stage or owner.
+- Event name.
+- Severity.
+- Message when useful.
+- Context fields such as source path or node path when available.
+- Event-specific fields under the generic diagnostics value model.
+
+`DiagnosticFields` values may contain strings, numbers, booleans, enum names as
+strings, nulls, diagnostic arrays, or nested diagnostic objects.
+
+Timing is recorded on the report envelope as `startTime` and `endTime`.
+Individual records do not include a per-record timestamp.
+
+## Example JSON
+
+```json
+{
+  "startTime": "2026-05-08T10:15:30+00:00",
+  "endTime": "2026-05-08T10:15:31+00:00",
+  "records": [
+    {
+      "stage": "stage/pagination",
+      "name": "layout/pagination/page-created",
+      "severity": "Info",
+      "message": "Created page 2.",
+      "fields": {
+        "eventName": "layout/pagination/page-created",
+        "pageNumber": 2
+      }
+    }
+  ]
+}
+```
 
 ## Conversion Lifecycle
 
@@ -41,7 +80,7 @@ the private clone implementation.
 - `layout/table`
 - `layout/table/unsupported-structure`
 
-Table diagnostics describe supported table decisions and unsupported structures such as spans or non-rectangular grids.
+Table diagnostics describe supported table decisions and unsupported structures such as invalid spans or unsupported row spans. Supported table cell facts include `columnIndex`, `columnSpan`, header identity, width, and height.
 
 ## Pagination
 

@@ -74,6 +74,11 @@ internal sealed class PaginationPlacementAudit
     public int? ColumnIndex { get; init; }
 
     /// <summary>
+    ///     Gets the table column span copied from the placed fragment, when present.
+    /// </summary>
+    public int? ColumnSpan { get; init; }
+
+    /// <summary>
     ///     Gets the table header flag copied from the placed fragment, when present.
     /// </summary>
     public bool? IsHeader { get; init; }

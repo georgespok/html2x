@@ -136,7 +136,7 @@ public sealed class BehaviorBaselineGeometryTests
               <body style='margin: 0;'>
                 <table style='margin: 0; width: 120px;'>
                   <tr>
-                    <td colspan='2'>A</td>
+                    <td rowspan='2'>A</td>
                   </tr>
                 </table>
               </body>

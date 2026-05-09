@@ -135,7 +135,7 @@ public sealed class PublishedFragmentBuilderTests
             "body/table/tr/td",
             2,
             role: FragmentDisplayRole.TableCell,
-            table: new(null, null, 1, true));
+            table: new(null, null, 1, true, 2));
         var row = PublishedLayoutTestBuilder.Block(
             "body/table/tr",
             1,
@@ -164,6 +164,7 @@ public sealed class PublishedFragmentBuilderTests
         rowFragment.RowIndex.ShouldBe(3);
         var cellFragment = rowFragment.Cells.ShouldHaveSingleItem();
         cellFragment.ColumnIndex.ShouldBe(1);
+        cellFragment.ColumnSpan.ShouldBe(2);
         cellFragment.IsHeader.ShouldBeTrue();
     }
 

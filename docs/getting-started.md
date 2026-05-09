@@ -18,13 +18,14 @@ dotnet build src/Html2x.sln -c Release
 dotnet test src/Html2x.sln -c Release
 ```
 
-Use [Testing](development/testing.md) for focused test runs while developing a
-specific subsystem.
+Use [Build, Run, And Test](development/build-run-test.md) for command details
+and [Testing Strategy](development/testing-strategy.md) for focused test
+ownership.
 
 ## Manual Rendering Smoke Test
 
-Use the [Manual Test Console](development/manual-test-console.md) when a change
-needs local PDF output or diagnostics JSON verification.
+Use [Build, Run, And Test](development/build-run-test.md) when a change needs
+local PDF output or diagnostics JSON verification.
 
 ## Expected State
 

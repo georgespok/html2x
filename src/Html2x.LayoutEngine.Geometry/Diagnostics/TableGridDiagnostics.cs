@@ -1,4 +1,5 @@
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Fragments;
 
 namespace Html2x.LayoutEngine.Geometry.Diagnostics;
@@ -100,8 +101,7 @@ internal static class TableGridDiagnostics
             severity,
             table.Reason,
             null,
-            MapTableFields(table),
-            DateTimeOffset.UtcNow));
+            MapTableFields(table)));
     }
 
     private static void EmitUnsupportedStructure(
@@ -121,8 +121,7 @@ internal static class TableGridDiagnostics
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(unsupported.FormattingContext))),
-            DateTimeOffset.UtcNow));
+                    DiagnosticValue.FromEnum(unsupported.FormattingContext)))));
     }
 
     private static DiagnosticFields MapTableFields(TableGridDiagnosticPayload table) =>
@@ -154,6 +153,7 @@ internal static class TableGridDiagnostics
         new(cells.Select(static cell => DiagnosticObject.Create(
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.RowIndex, cell.RowIndex),
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.ColumnIndex, cell.ColumnIndex),
+            DiagnosticObject.Field(TableGridDiagnosticNames.Fields.ColumnSpan, cell.ColumnSpan),
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.IsHeader, cell.IsHeader),
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Width, cell.Width),
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.Height, cell.Height))));

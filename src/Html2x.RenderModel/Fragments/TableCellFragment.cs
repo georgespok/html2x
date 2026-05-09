@@ -12,5 +12,7 @@ public sealed class TableCellFragment(IEnumerable<Fragment>? children) : BlockFr
 
     public int ColumnIndex { get; init; }
 
+    public int ColumnSpan { get; init; } = 1;
+
     public bool IsHeader { get; init; }
 }

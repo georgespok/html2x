@@ -157,6 +157,7 @@ public sealed class GeometrySnapshotMapperTests
                             DerivedColumnCount = 4,
                             RowIndex = 2,
                             ColumnIndex = 1,
+                            ColumnSpan = 2,
                             IsHeader = true
                         }
                     ]
@@ -196,6 +197,7 @@ public sealed class GeometrySnapshotMapperTests
             "derivedColumnCount",
             "rowIndex",
             "columnIndex",
+            "columnSpan",
             "isHeader",
             "metadataOwner",
             "metadataConsumer",
@@ -220,6 +222,7 @@ public sealed class GeometrySnapshotMapperTests
         box["isAnonymous"].ShouldBe(new DiagnosticBooleanValue(false));
         box["isInlineBlockContext"].ShouldBe(new DiagnosticBooleanValue(false));
         box["derivedColumnCount"].ShouldBeNull();
+        box["columnSpan"].ShouldBeNull();
         box["metadataOwner"].ShouldBe(new DiagnosticStringValue("BlockLayoutEngine"));
         box["metadataConsumer"].ShouldBe(new DiagnosticStringValue("GeometrySnapshotMapper"));
         ArrayField(box, "children").Count.ShouldBe(0);
@@ -250,6 +253,7 @@ public sealed class GeometrySnapshotMapperTests
             "derivedColumnCount",
             "rowIndex",
             "columnIndex",
+            "columnSpan",
             "isHeader",
             "metadataOwner",
             "metadataConsumer");
@@ -265,6 +269,7 @@ public sealed class GeometrySnapshotMapperTests
         placement["derivedColumnCount"].ShouldBe(new DiagnosticNumberValue(4));
         placement["rowIndex"].ShouldBe(new DiagnosticNumberValue(2));
         placement["columnIndex"].ShouldBe(new DiagnosticNumberValue(1));
+        placement["columnSpan"].ShouldBe(new DiagnosticNumberValue(2));
         placement["isHeader"].ShouldBe(new DiagnosticBooleanValue(true));
         placement["metadataOwner"].ShouldBe(new DiagnosticStringValue("FragmentBuilder"));
         placement["metadataConsumer"].ShouldBe(new DiagnosticStringValue("Pagination"));

@@ -6,10 +6,13 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Box.Publishing;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Geometry.Primitives;
-using Html2x.LayoutEngine.Geometry.Text;
+using Html2x.LayoutEngine.Geometry.Tables;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Document;
@@ -62,7 +65,7 @@ public sealed class LayoutGeometryArchitectureTests
         geometryGuard.ShouldDeclareNamespace(NamespaceOf(typeof(GeometryGuard)));
         geometryGuard.ShouldContainType(nameof(GeometryGuard), InternalAccessibility);
 
-        var TablePlacementWriter = SourceFileFor<TablePlacementWriter>("Box");
+        var TablePlacementWriter = SourceFileFor<TablePlacementWriter>("Tables");
         TablePlacementWriter.ShouldUseIdentifier(nameof(GeometryTranslator));
         TablePlacementWriter.ShouldNotInvokeMemberOn(nameof(UsedGeometry), nameof(UsedGeometry.Translate));
     }
@@ -282,14 +285,14 @@ public sealed class LayoutGeometryArchitectureTests
         var blockBoxLayout = SourceFileFor<BlockBoxLayout>("Box");
         var blockFlow = SourceFileFor<BlockFlowLayout>("Box");
         var standardRule = SourceFileFor<StandardBlockLayoutRule>("Box");
-        var imageRule = SourceFileFor<ImageBlockLayoutRule>("Box");
+        var imageRule = SourceFileFor<ImageBlockLayoutRule>("Images");
         var ruleRule = SourceFileFor<RuleBlockLayoutRule>("Box");
-        var tableRule = SourceFileFor<TableBlockLayoutRule>("Box");
-        var imageWriter = SourceFileFor<ImageBlockLayoutWriter>("Box");
-        var tablePlacement = SourceFileFor<TablePlacementWriter>("Box");
-        var tableGrid = SourceFileFor<TableGridLayout>("Box");
-        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>("Text");
-        var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>("Box", "Publishing");
+        var tableRule = SourceFileFor<TableBlockLayoutRule>("Tables");
+        var imageWriter = SourceFileFor<ImageBlockLayoutWriter>("Images");
+        var tablePlacement = SourceFileFor<TablePlacementWriter>("Tables");
+        var tableGrid = SourceFileFor<TableGridLayout>("Tables");
+        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>("InlineFlow");
+        var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>("Publishing");
 
         layoutGeometryBuilder.ShouldUseIdentifier(nameof(BoxTreeConstruction));
         geometryPipelineComposer.ShouldConstructType(nameof(BoxTreeLayout));
@@ -315,10 +318,11 @@ public sealed class LayoutGeometryArchitectureTests
         blockFlow.ShouldNotUseIdentifier(nameof(BlockLayoutRuleSet));
         blockFlow.ShouldNotUseIdentifier(nameof(IBlockLayoutRule));
         blockFlow.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
-        blockFlow.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
+        blockFlow.ShouldNotUseIdentifier(nameof(PublishedLayoutWriter));
+        blockFlow.ShouldNotUseIdentifier(nameof(PublishedBlock));
+        blockFlow.ShouldNotUseIdentifier(nameof(PublishedInlineLayout));
+        blockFlow.ShouldNotUseIdentifier(nameof(PublishedBlockFlowItem));
         blockFlow.ShouldInvoke(nameof(LayoutBoxStateWriter.ApplyInlineLayout));
-        blockFlow.ShouldInvoke(nameof(PublishedLayoutWriter.WriteInlineLayout));
-        blockFlow.ShouldInvoke(nameof(PublishedLayoutWriter.WriteChildFlowItem));
         blockFlow.ShouldNotAssignToMember(nameof(BlockBox.InlineLayout));
         blockFlow.ShouldNotUseIdentifiers(
             nameof(StandardBlockLayoutRule),
@@ -392,20 +396,20 @@ public sealed class LayoutGeometryArchitectureTests
     {
         var measurementFiles = new[]
         {
-            SourceFileFor<BlockContentSizeMeasurement>("Box"),
-            SourceFileFor<BlockContentExtentMeasurement>("Formatting"),
-            SourceFileFor<BlockFlowMeasurement>("Box"),
+            SourceFileFor<BlockContentSizeMeasurement>("Measurement"),
+            SourceFileFor<BlockContentExtentMeasurement>("Measurement"),
+            SourceFileFor<BlockFlowMeasurement>("Measurement"),
             SourceFileFor<BlockSizingRules>("Box"),
-            SourceFileFor<BlockContentSizeFacts>("Box"),
-            SourceFileFor<TableCellMeasurement>("Box"),
-            SourceFileFor<TableGridLayout>("Box"),
-            SourceFileFor<AtomicInlineBoxLayout>("Text")
+            SourceFileFor<BlockContentSizeFacts>("Measurement"),
+            SourceFileFor<TableCellMeasurement>("Tables"),
+            SourceFileFor<TableGridLayout>("Tables"),
+            SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
         };
 
-        SourceFileFor<BlockContentSizeMeasurement>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<BlockContentSizeMeasurement>("Measurement").ShouldUseIdentifier(nameof(BlockSizingRules));
         SourceFileFor<StandardBlockLayoutRule>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
-        SourceFileFor<TableGridLayout>("Box").ShouldUseIdentifier(nameof(BlockSizingRules));
-        SourceFileFor<AtomicInlineBoxLayout>("Text").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<TableGridLayout>("Tables").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<AtomicInlineBoxLayout>("InlineFlow").ShouldUseIdentifier(nameof(BlockSizingRules));
 
         foreach (var file in measurementFiles)
         {
@@ -426,6 +430,59 @@ public sealed class LayoutGeometryArchitectureTests
             file.ShouldNotAssignToMember(nameof(BlockBox.UsedGeometry));
             file.ShouldNotAssignToMember(nameof(BlockBox.InlineLayout));
         }
+    }
+
+    [Fact]
+    public void PreLayoutMeasurement_DoesNotReadUsedGeometry()
+    {
+        foreach (var file in new[]
+                 {
+                     SourceFileFor<BlockContentSizeMeasurement>("Measurement"),
+                     SourceFileFor<BlockContentExtentMeasurement>("Measurement"),
+                     SourceFileFor<BlockFlowMeasurement>("Measurement"),
+                     SourceFileFor<TableCellMeasurement>("Tables"),
+                     SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
+                 })
+        {
+            file.ShouldNotUseIdentifier(nameof(UsedGeometry));
+        }
+    }
+
+    [Fact]
+    public void ProductionGeometry_UsesPrimitiveAuthoritiesForUsedGeometryTransforms()
+    {
+        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryBuilder>());
+        var allowedFiles = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "src/Html2x.LayoutEngine.Geometry/Primitives/GeometryTranslator.cs",
+            "src/Html2x.LayoutEngine.Geometry/Primitives/UsedGeometryRules.cs"
+        };
+        var helperPatterns = new[]
+        {
+            new Regex(@"\.Translate\s*\(", RegexOptions.Compiled),
+            new Regex(@"\.WithBorderX\s*\(", RegexOptions.Compiled),
+            new Regex(@"\.WithBorderY\s*\(", RegexOptions.Compiled),
+            new Regex(@"\.WithBorderWidth\s*\(", RegexOptions.Compiled),
+            new Regex(@"\.WithBorderHeight\s*\(", RegexOptions.Compiled),
+            new Regex(@"\.WithContentInsets\s*\(", RegexOptions.Compiled)
+        };
+
+        var violations = Directory
+            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(static path => !IsGeneratedOrBuildOutput(path))
+            .Where(path => !allowedFiles.Contains(RelativeSourcePath(path)))
+            .SelectMany(path => File
+                .ReadLines(path)
+                .Select((line, index) => new { Path = path, Line = line, Number = index + 1 }))
+            .Where(static item => !item.Line.Contains("GeometryTranslator.Translate", StringComparison.Ordinal))
+            .Where(static item => !item.Line.Contains("UsedGeometryRules.", StringComparison.Ordinal))
+            .Where(item => helperPatterns.Any(pattern => pattern.IsMatch(item.Line)))
+            .Select(item => $"{RelativeSourcePath(item.Path)}:{item.Number}: {item.Line.Trim()}")
+            .ToArray();
+
+        violations.ShouldBeEmpty(
+            "Production Layout Geometry should route UsedGeometry transforms through GeometryTranslator or UsedGeometryRules. "
+            + string.Join(" ", violations));
     }
 
     [Fact]
@@ -601,6 +658,7 @@ public sealed class LayoutGeometryArchitectureTests
         var resourceResult = CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceResult.cs");
         var resourceMetadataResult =
             CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceMetadataResult.cs");
+        var resourceStore = CSharpSourceFile.Load("src", ResourcesAssemblyName, "ConversionImageResourceStore.cs");
         var metadataResult = SourceFileFor<ImageMetadataResult>("Geometry", "Images");
         var publishedImageFacts = SourceFileFor<PublishedImageFacts>("Published");
         var imageFragment = SourceFileFor<ImageFragment>("Fragments");
@@ -638,7 +696,11 @@ public sealed class LayoutGeometryArchitectureTests
                 "ImageRenderStatus");
         }
 
-        imageProvider.ShouldUseIdentifier("ImageResourceLoader");
+        resourceStore.ShouldUseIdentifier("ImageResourceLoader");
+        resourceStore.ShouldUseIdentifier("ImageResourceResult");
+        resourceStore.ShouldUseIdentifier("ImageResourceMetadataResult");
+        imageProvider.ShouldUseIdentifier("ConversionImageResourceStore");
+        imageRenderer.ShouldUseIdentifier("IImageResourceReader");
         imageRenderer.ShouldUseIdentifier("ImageResourceLoader");
         imageProvider.ShouldNotUseIdentifier("ToMetadataStatus");
         imageRenderer.ShouldNotUseIdentifier("ToRenderStatus");
@@ -660,7 +722,8 @@ public sealed class LayoutGeometryArchitectureTests
                      CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverter.cs"),
                      SourceFileFor<LayoutBuildSettings>(),
                      SourceFileFor<LayoutGeometryRequest>("Geometry"),
-                     SourceFileFor<ImageSizingRules>("Box"),
+                     SourceFileFor<ImageSizingRules>("Images"),
+                     CSharpSourceFile.Load("src", ResourcesAssemblyName, "ConversionImageResourceStore.cs"),
                      CSharpSourceFile.Load("src", PdfRendererAssemblyName, "PdfRenderSettings.cs"),
                      CSharpSourceFile.Load("src", PdfRendererAssemblyName, "ImageRenderer.cs"),
                      CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceLoader.cs")

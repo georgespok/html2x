@@ -1,5 +1,8 @@
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;

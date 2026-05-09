@@ -78,6 +78,7 @@ internal sealed class PublishedLayoutToFragmentProjector
             FormattingContext = source.Display.FormattingContext,
             MarkerOffset = source.Display.MarkerOffset,
             ColumnIndex = source.Table?.ColumnIndex ?? 0,
+            ColumnSpan = source.Table?.ColumnSpan ?? 1,
             IsHeader = source.Table?.IsHeader == true
         };
 

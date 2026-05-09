@@ -72,8 +72,7 @@ internal sealed class UnsupportedLayoutModePolicy
                 DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(formattingContext))),
-            DateTimeOffset.UtcNow));
+                    DiagnosticValue.FromEnum(formattingContext)))));
     }
 
     private static FormattingContextKind ResolveFormattingContext(BoxNode node) =>

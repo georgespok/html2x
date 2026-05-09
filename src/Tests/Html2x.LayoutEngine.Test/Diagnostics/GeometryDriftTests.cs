@@ -36,7 +36,7 @@ public sealed class GeometryDriftTests
                   <tr><th>A</th><td>B</td></tr>
                 </table>
                 <table id='unsupported' style='margin: 0; width: 160px;'>
-                  <tr><td colspan='2'>C</td></tr>
+                  <tr><td rowspan='2'>C</td></tr>
                 </table>
               </body>
             </html>
@@ -103,8 +103,10 @@ public sealed class GeometryDriftTests
             .RowIndex
             .ShouldBe(0);
         supportedTable.Children[0].Children[0].Table.ShouldNotBeNull().ColumnIndex.ShouldBe(0);
+        supportedTable.Children[0].Children[0].Table!.ColumnSpan.ShouldBe(1);
         supportedTable.Children[0].Children[0].Table!.IsHeader.ShouldBe(true);
         supportedTable.Children[0].Children[1].Table.ShouldNotBeNull().ColumnIndex.ShouldBe(1);
+        supportedTable.Children[0].Children[1].Table!.ColumnSpan.ShouldBe(1);
         supportedTable.Children[0].Children[1].Table!.IsHeader.ShouldBe(false);
 
         var unsupportedTable = blocks[5];
@@ -157,6 +159,7 @@ public sealed class GeometryDriftTests
         table.DerivedColumnCount.ShouldBe(2);
         row.RowIndex.ShouldBe(0);
         header.ColumnIndex.ShouldBe(0);
+        header.ColumnSpan.ShouldBe(1);
 
         var boxSnapshots = result.Snapshot.Boxes
             .SelectMany(FlattenBoxes)
@@ -266,6 +269,7 @@ public sealed class GeometryDriftTests
             FormattingContext = FormattingContextKind.Block,
             MarkerOffset = 3f,
             ColumnIndex = 2,
+            ColumnSpan = 2,
             IsHeader = true
         };
         var row = new TableRowFragment([cell])
@@ -343,6 +347,7 @@ public sealed class GeometryDriftTests
         movedTable.DerivedColumnCount.ShouldBe(table.DerivedColumnCount);
         movedRow.RowIndex.ShouldBe(row.RowIndex);
         movedCell.ColumnIndex.ShouldBe(cell.ColumnIndex);
+        movedCell.ColumnSpan.ShouldBe(cell.ColumnSpan);
         movedCell.IsHeader.ShouldBe(cell.IsHeader);
         movedLine.BaselineY.ShouldBe(line.BaselineY + deltaY);
         movedLine.LineHeight.ShouldBe(line.LineHeight);

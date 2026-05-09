@@ -1,6 +1,7 @@
 # Extending Renderers
 
-Html2x is designed so renderers consume `HtmlLayout` and fragment contracts without depending on parser or layout internals.
+Html2x is designed so renderers consume `HtmlLayout` and fragment contracts
+without depending on parser or layout internals.
 
 ## New Renderer Shape
 
@@ -32,13 +33,15 @@ public sealed class SvgRenderer
 - Diagnostics tests for unsupported fragments and failure paths.
 - Semantic output assertions instead of raw string or binary equality when possible.
 
-## Contract Rule
-
-If the renderer needs data that is not present on fragments, extend the fragment contract and update layout projection. Do not make the renderer inspect DOM, CSS, style, or box objects.
+## Settings Ownership
 
 Renderer-specific settings belong with the renderer. Converter facade options
 belong in `Html2x` and should be mapped into renderer-owned settings by the
 facade or composition layer.
+
+## Contract Rule
+
+If the renderer needs data that is not present on fragments, extend the fragment contract and update layout projection. Do not make the renderer inspect DOM, CSS, style, or box objects.
 
 ## Fragment Policy
 
@@ -54,3 +57,5 @@ Adding a fragment kind requires coordinated updates to:
 - Diagnostics snapshot mapping.
 - Renderer paint command resolution and drawing.
 - Architecture and behavior tests for unsupported fragment handling.
+
+See [Fragment Kinds](fragment-kinds.md) before adding a new fragment type.

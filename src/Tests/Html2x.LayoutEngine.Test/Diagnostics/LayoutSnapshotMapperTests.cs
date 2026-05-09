@@ -127,6 +127,7 @@ public sealed class LayoutSnapshotMapperTests
             "derivedColumnCount",
             "rowIndex",
             "columnIndex",
+            "columnSpan",
             "isHeader",
             "metadataOwner",
             "metadataConsumer",
@@ -150,6 +151,7 @@ public sealed class LayoutSnapshotMapperTests
         block["displayRole"].ShouldBe(new DiagnosticStringValue(nameof(FragmentDisplayRole.Block)));
         block["formattingContext"].ShouldBe(new DiagnosticStringValue(nameof(FormattingContextKind.Block)));
         block["markerOffset"].ShouldBe(new DiagnosticNumberValue(9));
+        block["columnSpan"].ShouldBeNull();
         block["metadataOwner"].ShouldBe(new DiagnosticStringValue("FragmentBuilder"));
         block["metadataConsumer"].ShouldBe(new DiagnosticStringValue("LayoutSnapshotMapper"));
         ArrayField(block, "children").Count.ShouldBe(0);

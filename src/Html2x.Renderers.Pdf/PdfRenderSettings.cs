@@ -1,3 +1,5 @@
+using Html2x.Resources;
+
 namespace Html2x.Renderers.Pdf;
 
 /// <summary>
@@ -10,4 +12,6 @@ public sealed class PdfRenderSettings
 
     /// <summary>Maximum allowed image size in bytes; images over this are marked oversize.</summary>
     public long MaxImageSizeBytes { get; init; } = 10 * 1024 * 1024;
+
+    internal IImageResourceReader? ImageResources { get; init; }
 }

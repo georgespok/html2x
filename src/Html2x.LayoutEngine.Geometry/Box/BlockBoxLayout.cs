@@ -1,7 +1,10 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Geometry.Box.Publishing;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Publishing;
+using Html2x.LayoutEngine.Geometry.Tables;
 
 namespace Html2x.LayoutEngine.Geometry.Box;
 
@@ -26,7 +29,7 @@ internal sealed class BlockBoxLayout
         InlineFlowLayout inlineFlowLayout,
         TableGridLayout tableGridLayout,
         BlockContentExtentMeasurement contentMeasurement,
-        IImageSizingRules imageResolver,
+        ImageSizingRules imageResolver,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(inlineFlowLayout);
@@ -40,7 +43,6 @@ internal sealed class BlockBoxLayout
         _blockFlow = new(
             inlineFlowLayout,
             marginCollapseRules,
-            _publishedLayoutWriter,
             stateWriter,
             LayoutChildBlock,
             diagnosticsSink);
@@ -73,11 +75,14 @@ internal sealed class BlockBoxLayout
         ArgumentNullException.ThrowIfNull(request);
 
         _publishedLayoutWriter.Reset();
-        return _blockFlow.LayoutStack(request).PublishedBlocks;
+        return _blockFlow.LayoutStack(request)
+            .Results
+            .Select(_publishedLayoutWriter.WriteRuleResult)
+            .ToArray();
     }
 
-    private PublishedBlock LayoutChildBlock(BlockBox block, BlockLayoutRequest request) =>
-        _publishedLayoutWriter.WriteRuleResult(_rules.Layout(block, request));
+    private BlockLayoutRuleResult LayoutChildBlock(BlockBox block, BlockLayoutRequest request) =>
+        _rules.Layout(block, request);
 
     internal PublishedBlock LayoutStandardBlock(BlockBox node, BlockLayoutRequest request) =>
         _publishedLayoutWriter.WriteRuleResult(_standardBlockRule.Layout(node, request));
@@ -119,9 +124,9 @@ internal sealed class BlockBoxLayout
             parentContentTop));
         _publishedLayoutWriter.WriteBlock(
             parent,
-            flowLayout.PublishedInlineLayout,
-            flowLayout.PublishedChildren,
-            flowLayout.PublishedFlow);
+            flowLayout.InlineLayout,
+            flowLayout.Children,
+            flowLayout.Flow);
 
         return flowLayout.ContentHeight;
     }

@@ -1,12 +1,14 @@
 # Architecture Overview
 
-Html2x converts static HTML and CSS into PDF through explicit pipeline stages. The core design goal is stable stage ownership: each stage produces a named output that later stages consume without reaching backward into implementation details.
+This page maps the Html2x projects and the primary data flow from static HTML
+and CSS to PDF bytes. Use it as the entry point before reading subsystem
+internals.
 
 ## Project Map
 
 | Project | Responsibility | Must Not Do |
 | --- | --- | --- |
-| `Html2x` | Public converter facade, facade-owned options, public-to-stage settings mapping, and shared service construction. | Contain layout or rendering algorithms, or pass public option objects into internal stages. |
+| `Html2x` | Public converter facade, facade-owned options, public-to-stage settings mapping, supported runtime adapter selection, and conversion-scoped resource composition. | Contain layout or rendering algorithms, or pass public option objects into internal stages. |
 | `Html2x.RenderModel` | Pure render facts such as units, style values, font request facts, resolved font facts, documents, and fragments. | Reference runtime adapters, diagnostics runtime, parser packages, layout engines, fragment projection, renderers, or SkiaSharp. |
 | `Html2x.Text` | Text measurement contracts, font resolution contracts, and Skia-backed text/font implementation. | Reference facade options, layout engine projects, fragment projection, or renderers. |
 | `Html2x.Diagnostics.Contracts` | Generic diagnostics emission contracts and constrained diagnostic field values. | Reference layout, renderer, parser, or diagnostics runtime projects. |
@@ -22,9 +24,9 @@ Html2x converts static HTML and CSS into PDF through explicit pipeline stages. T
 
 ```text
 HTML/CSS
-  -> Html2x.LayoutEngine.Style -> Style tree
-  -> Html2x.LayoutEngine.Geometry -> Published layout tree
-  -> Html2x.LayoutEngine.Fragments -> Fragment tree
+  -> Html2x.LayoutEngine.Style -> StyleTree
+  -> Html2x.LayoutEngine.Geometry -> PublishedLayoutTree
+  -> Html2x.LayoutEngine.Fragments -> FragmentTree
   -> Html2x.LayoutEngine.Pagination -> PaginationResult
   -> HtmlLayout
   -> PDF renderer
@@ -49,7 +51,10 @@ renderer lookups into earlier stages.
 
 ## Developer Entry Points
 
+- Shared terms: [Core Concepts](../concepts/core-concepts.md) and
+  [Glossary](../concepts/glossary.md)
 - Pipeline details: [Processing Pipeline](pipeline.md)
-- Stage boundaries: [Stage Ownership](stage-ownership.md)
-- Geometry rules: [Geometry](geometry.md)
+- Module boundaries: [Module Boundaries](module-boundaries.md)
+- Contracts and invariants: [Contracts And Invariants](contracts-and-invariants.md)
+- Geometry internals: [Geometry](../internals/geometry.md)
 - Diagnostics flow: [Diagnostics Architecture](diagnostics.md)

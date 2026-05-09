@@ -40,7 +40,7 @@ Supported roles:
 | Inline text | `span`, `b`, `i`, `strong`, `u`, `s` | Participate in inline flow. Default styles apply bold, italic, underline, or line-through where appropriate. |
 | Line break | `br` | Creates a forced line break in inline content. |
 | Lists | `ul`, `ol`, `li` | Generates bullet markers for unordered lists and numeric markers for ordered lists. |
-| Tables | `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th` | Supports rectangular tables without spans. `th` is treated as a header cell and is bold by default. |
+| Tables | `table`, `thead`, `tbody`, `tfoot`, `tr`, `td`, `th` | Supports deterministic tables with horizontal `colspan`. `th` is treated as a header cell and is bold by default. |
 | Images | `img` | Supports `src`, intrinsic image metadata, HTML size attributes, CSS dimensions, padding, and borders. |
 | Horizontal rule | `hr` | Renders as a block rule with default top border and zero content height. |
 
@@ -54,7 +54,7 @@ Supported roles:
 | `src` | `img` | Image resource path used by image metadata and rendering. |
 | `width` | `img` | Numeric CSS pixel value. CSS `width` overrides it for layout sizing. |
 | `height` | `img` | Numeric CSS pixel value. CSS `height` overrides it for layout sizing. |
-| `colspan` | `td`, `th` | Only missing value or value `1` is supported. Other values reject the table layout and emit diagnostics. |
+| `colspan` | `td`, `th` | Positive integer values are supported as horizontal column spans. Invalid values reject the table layout and emit diagnostics. |
 | `rowspan` | `td`, `th` | Only missing value or value `1` is supported. Other values reject the table layout and emit diagnostics. |
 
 Attributes outside this table may be retained in parsed element facts, but they
@@ -194,7 +194,8 @@ Supported:
 - `table` with direct `thead`, `tbody`, or `tfoot` children containing direct
   `tr` children.
 - `tr` with direct `td` or `th` children.
-- Rectangular table structures without spans.
+- Horizontal `colspan` on `td` and `th` with positive integer values.
+- Deterministic table structures with sparse shorter rows.
 - Equal-width column derivation when explicit column widths are absent.
 - Header cell identity for `th`.
 - Row and cell backgrounds.
@@ -202,7 +203,8 @@ Supported:
 
 Unsupported:
 
-- `colspan` values other than missing or `1`.
+- Invalid `colspan` values such as `0`, negative numbers, empty strings, or
+  non-integers.
 - `rowspan` values other than missing or `1`.
 - Nested table sections.
 - Mixing direct rows and direct sections under the same table.
@@ -263,5 +265,5 @@ enabled and the declaration is authored in a supported diagnostic path.
 ## Determinism Notes
 
 Determinism depends on using the same HTML, options, fonts, image files,
-operating system font behavior, and dependency versions. Use repository test
-fonts for stable test scenarios.
+operating system font behavior, and dependency versions. Use a stable bundled
+or absolute font set when deterministic output matters.

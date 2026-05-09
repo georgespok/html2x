@@ -124,7 +124,7 @@ internal sealed class BorderStyleMapper(CssValueConverter converter)
         string property,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var authored = InlineStyleSource.GetValue(element, property);
+        var authored = AuthoredCssDeclarationReader.GetValue(element, property);
         if (string.IsNullOrWhiteSpace(authored))
         {
             return;
@@ -145,7 +145,7 @@ internal sealed class BorderStyleMapper(CssValueConverter converter)
         BorderLineStyle lineStyle,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var authored = InlineStyleSource.GetValue(element, property);
+        var authored = AuthoredCssDeclarationReader.GetValue(element, property);
         if (string.IsNullOrWhiteSpace(authored) ||
             lineStyle != BorderLineStyle.None ||
             string.Equals(authored.Trim(), HtmlCssConstants.CssValues.None, StringComparison.OrdinalIgnoreCase))
@@ -166,7 +166,7 @@ internal sealed class BorderStyleMapper(CssValueConverter converter)
         string property,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var authored = InlineStyleSource.GetValue(element, property);
+        var authored = AuthoredCssDeclarationReader.GetValue(element, property);
         if (string.IsNullOrWhiteSpace(authored) ||
             CssColorParser.TryParse(authored, out _))
         {

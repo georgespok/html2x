@@ -2,6 +2,8 @@ using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
@@ -450,7 +452,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         var cell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = row,
-            Element = CreateElement("td", (HtmlCssConstants.HtmlAttributes.Colspan, "2")),
+            Element = CreateElement("td", (HtmlCssConstants.HtmlAttributes.Rowspan, "2")),
             Style = new()
         };
 
@@ -678,6 +680,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
                 break;
             case (TableCellFragment actualCell, TableCellFragment expectedCell):
                 actualCell.ColumnIndex.ShouldBe(expectedCell.ColumnIndex);
+                actualCell.ColumnSpan.ShouldBe(expectedCell.ColumnSpan);
                 actualCell.IsHeader.ShouldBe(expectedCell.IsHeader);
                 AssertFragmentChildrenEquivalent(actualCell, expectedCell);
                 break;

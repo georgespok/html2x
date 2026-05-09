@@ -1,5 +1,5 @@
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Geometry.Box.Publishing;
+using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;

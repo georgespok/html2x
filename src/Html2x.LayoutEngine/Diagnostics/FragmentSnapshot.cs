@@ -58,6 +58,8 @@ internal sealed class FragmentSnapshot
 
     public int? ColumnIndex { get; init; }
 
+    public int? ColumnSpan { get; init; }
+
     public bool? IsHeader { get; init; }
 
     public string? MetadataOwner { get; init; }

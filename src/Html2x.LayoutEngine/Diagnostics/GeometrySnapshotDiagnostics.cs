@@ -24,7 +24,6 @@ internal static class GeometrySnapshotDiagnostics
             DiagnosticFields.Create(
                 DiagnosticFields.Field(
                     SnapshotFieldName,
-                    GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination))),
-            DateTimeOffset.UtcNow));
+                    GeometrySnapshotMapper.ToDiagnosticObject(publishedLayout, pagination)))));
     }
 }

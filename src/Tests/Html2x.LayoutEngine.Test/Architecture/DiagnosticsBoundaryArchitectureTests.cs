@@ -12,37 +12,37 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void DiagnosticsBoundaryDocs_DefineProductionRulesAndOwnership()
     {
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "Dependency Direction",
                 AssemblyName<IDiagnosticsSink>(),
                 DiagnosticsAssemblyName,
                 "Diagnostic producer modules");
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "DiagnosticFields Value Rules",
                 nameof(DiagnosticFields),
                 "object");
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "Runtime Flow",
                 nameof(IDiagnosticsSink),
                 "DiagnosticsCollector",
                 "DiagnosticsReport",
                 "Renderer diagnostics");
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "Runtime Ownership",
                 "DiagnosticsCollector",
                 "DiagnosticsReportSerializer",
                 "producer-specific models");
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "Facade Boundary",
                 "Public facade options",
                 AssemblyName<IDiagnosticsSink>(),
                 DiagnosticsAssemblyName);
-        ArchitectureDocument.Load("docs", "architecture", "diagnostics-boundary.md")
+        ArchitectureDocument.Load("docs", "architecture", "diagnostics.md")
             .ShouldMentionTopicsInSection(
                 "Emission Rule",
                 nameof(IDiagnosticsSink) + "." + nameof(IDiagnosticsSink.Emit),

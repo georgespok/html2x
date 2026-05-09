@@ -66,8 +66,7 @@ internal static class StyleDiagnostics
                     StyleDiagnosticNames.Fields.NormalizedValue,
                     normalizedValue is null ? null : DiagnosticValue.From(normalizedValue)),
                 DiagnosticFields.Field(StyleDiagnosticNames.Fields.Decision, decision),
-                DiagnosticFields.Field(StyleDiagnosticNames.Fields.Reason, reason)),
-            DateTimeOffset.UtcNow));
+                DiagnosticFields.Field(StyleDiagnosticNames.Fields.Reason, reason))));
     }
 
     private static DiagnosticContext CreateDiagnosticContext(
@@ -77,7 +76,7 @@ internal static class StyleDiagnostics
         new(
             CreateSelector(element),
             CreateElementIdentity(element),
-            InlineStyleSource.GetDeclaration(element, propertyName) ?? $"{propertyName}: {rawValue}",
+            AuthoredCssDeclarationReader.GetDeclaration(element, propertyName)?.Text ?? $"{propertyName}: {rawValue}",
             BuildStructuralPath(element),
             element.GetAttribute(HtmlCssConstants.HtmlAttributes.Style));
 
