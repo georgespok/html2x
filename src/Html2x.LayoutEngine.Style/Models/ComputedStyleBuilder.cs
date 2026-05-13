@@ -8,18 +8,18 @@ namespace Html2x.LayoutEngine.Style.Models;
 /// </summary>
 internal sealed class ComputedStyleBuilder
 {
-    public string FontFamily { get; set; } = HtmlCssConstants.Defaults.FontFamily;
+    public string FontFamily { get; set; } = HtmlCssVocabulary.Defaults.FontFamily;
     public float FontSizePt { get; set; } = 12;
-    public bool Bold { get; set; }
-    public bool Italic { get; set; }
+    public bool IsBold { get; set; }
+    public bool IsItalic { get; set; }
     public TextDecorations Decorations { get; set; }
-    public string TextAlign { get; set; } = HtmlCssConstants.Defaults.TextAlign;
+    public string TextAlign { get; set; } = HtmlCssVocabulary.Defaults.TextAlign;
     public float? LineHeightMultiplier { get; set; }
     public ColorRgba Color { get; set; } = ColorRgba.Black;
     public ColorRgba? BackgroundColor { get; set; }
     public string? Display { get; set; }
-    public string FloatDirection { get; set; } = HtmlCssConstants.Defaults.FloatDirection;
-    public string Position { get; set; } = HtmlCssConstants.Defaults.Position;
+    public string FloatDirection { get; set; } = HtmlCssVocabulary.Defaults.FloatDirection;
+    public string Position { get; set; } = HtmlCssVocabulary.Defaults.Position;
     public Spacing Margin { get; set; }
     public Spacing Padding { get; set; }
     public float? WidthPt { get; set; }
@@ -36,8 +36,8 @@ internal sealed class ComputedStyleBuilder
         {
             FontFamily = FontFamily,
             FontSizePt = FontSizePt,
-            Bold = Bold,
-            Italic = Italic,
+            IsBold = IsBold,
+            IsItalic = IsItalic,
             Decorations = Decorations,
             TextAlign = TextAlign,
             LineHeightMultiplier = LineHeightMultiplier ?? 1.2f,

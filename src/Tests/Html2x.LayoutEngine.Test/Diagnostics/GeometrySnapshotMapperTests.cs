@@ -79,7 +79,7 @@ public sealed class GeometrySnapshotMapperTests
         boxSnapshot.ContentY.ShouldBe(23f);
         boxSnapshot.ContentSize.ShouldBe(new SizePt(110f, 32f));
         boxSnapshot.MarkerOffset.ShouldBe(8f);
-        boxSnapshot.MetadataOwner.ShouldBe("BlockLayoutEngine");
+        boxSnapshot.MetadataOwner.ShouldBe("BlockFlowLayout");
         boxSnapshot.MetadataConsumer.ShouldBe("GeometrySnapshotMapper");
         boxSnapshot.SourceNodeId.ShouldBeNull();
         boxSnapshot.SourceContentId.ShouldBeNull();
@@ -193,7 +193,7 @@ public sealed class GeometrySnapshotMapperTests
             "markerOffset",
             "allowsOverflow",
             "isAnonymous",
-            "isInlineBlockContext",
+            "establishesInlineBlockFormattingContext",
             "derivedColumnCount",
             "rowIndex",
             "columnIndex",
@@ -220,10 +220,10 @@ public sealed class GeometrySnapshotMapperTests
         box["markerOffset"].ShouldBe(new DiagnosticNumberValue(8));
         box["allowsOverflow"].ShouldBe(new DiagnosticBooleanValue(false));
         box["isAnonymous"].ShouldBe(new DiagnosticBooleanValue(false));
-        box["isInlineBlockContext"].ShouldBe(new DiagnosticBooleanValue(false));
+        box["establishesInlineBlockFormattingContext"].ShouldBe(new DiagnosticBooleanValue(false));
         box["derivedColumnCount"].ShouldBeNull();
         box["columnSpan"].ShouldBeNull();
-        box["metadataOwner"].ShouldBe(new DiagnosticStringValue("BlockLayoutEngine"));
+        box["metadataOwner"].ShouldBe(new DiagnosticStringValue("BlockFlowLayout"));
         box["metadataConsumer"].ShouldBe(new DiagnosticStringValue("GeometrySnapshotMapper"));
         ArrayField(box, "children").Count.ShouldBe(0);
 

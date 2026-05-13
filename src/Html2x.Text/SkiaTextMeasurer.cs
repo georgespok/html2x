@@ -10,12 +10,12 @@ namespace Html2x.Text;
 /// </summary>
 public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 {
-    private readonly IFileDirectory _fileDirectory;
+    private readonly IFileSystemReader _fileDirectory;
     private readonly IFontSource _fontSource;
 
     private readonly ConcurrentDictionary<MetricKey, (float Ascent, float Descent)> _metricsBySourceAndSize = new();
 
-    // Render-scoped caches; not shared across conversions.
+    // Conversion-scoped caches when created through HtmlConverterDependencies factories.
     private readonly ConcurrentDictionary<FontKey, ResolvedFont> _resolvedFontsByRequest = new();
     private readonly ConcurrentDictionary<string, SKShaper> _shapersBySourceId = new(StringComparer.OrdinalIgnoreCase);
     private readonly ISkiaTypefaceFactory _typefaceFactory;
@@ -23,14 +23,14 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly ConcurrentDictionary<TextMeasureKey, float> _widthBySourceAndText = new();
+    private readonly ConcurrentDictionary<TextWidthCacheKey, float> _textWidthCache = new();
 
     public SkiaTextMeasurer(IFontSource fontSource)
-        : this(fontSource, new FileDirectory(), new SkiaTypefaceFactory())
+        : this(fontSource, new FileSystemReader(), new SkiaTypefaceFactory())
     {
     }
 
-    internal SkiaTextMeasurer(IFontSource fontSource, IFileDirectory fileDirectory,
+    internal SkiaTextMeasurer(IFontSource fontSource, IFileSystemReader fileDirectory,
         ISkiaTypefaceFactory typefaceFactory)
     {
         _fontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
@@ -55,7 +55,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
         var sourceId = GetRequiredSourceId(resolved);
         var width = string.IsNullOrEmpty(text)
             ? 0f
-            : _widthBySourceAndText.GetOrAdd(
+            : _textWidthCache.GetOrAdd(
                 new(sourceId, sizePt, text),
                 _ => MeasureWidthUsingShaper(font, sizePt, text, resolved));
         var metrics = _metricsBySourceAndSize.GetOrAdd(
@@ -63,29 +63,6 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
             _ => MeasureMetricsFromFont(font, sizePt, resolved));
 
         return new(width, metrics.Ascent, metrics.Descent, resolved);
-    }
-
-    public float MeasureWidth(FontKey font, float sizePt, string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return 0f;
-        }
-
-        var resolved = GetResolvedFont(font);
-        var sourceId = GetRequiredSourceId(resolved);
-        var key = new TextMeasureKey(sourceId, sizePt, text);
-
-        return _widthBySourceAndText.GetOrAdd(key, _ => MeasureWidthUsingShaper(font, sizePt, text, resolved));
-    }
-
-    public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt)
-    {
-        var resolved = GetResolvedFont(font);
-        var sourceId = GetRequiredSourceId(resolved);
-        var key = new MetricKey(sourceId, sizePt);
-
-        return _metricsBySourceAndSize.GetOrAdd(key, _ => MeasureMetricsFromFont(font, sizePt, resolved));
     }
 
     private float MeasureWidthUsingShaper(FontKey fontKey, float sizePt, string text, ResolvedFont resolved)
@@ -214,7 +191,7 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
             ? $"Failed to load font file '{path}' (face {faceIndex})."
             : $"Failed to load font file '{path}'.";
 
-    private readonly record struct TextMeasureKey(string SourceId, float SizePt, string Text);
+    private readonly record struct TextWidthCacheKey(string SourceId, float SizePt, string Text);
 
     private readonly record struct MetricKey(string SourceId, float SizePt);
 }

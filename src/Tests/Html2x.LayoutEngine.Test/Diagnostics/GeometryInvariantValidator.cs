@@ -313,7 +313,7 @@ internal static class GeometryInvariantValidator
         source.AuthoredSizePx.ShouldBe(placed.AuthoredSizePx, snapshotText);
         source.IntrinsicSizePx.ShouldBe(placed.IntrinsicSizePx, snapshotText);
         source.IsMissing.ShouldBe(placed.IsMissing, snapshotText);
-        source.IsOversize.ShouldBe(placed.IsOversize, snapshotText);
+        source.IsOversized.ShouldBe(placed.IsOversized, snapshotText);
         source.ContentRect.Width.ShouldBe(placed.ContentRect.Width, 0.01f, snapshotText);
         source.ContentRect.Height.ShouldBe(placed.ContentRect.Height, 0.01f, snapshotText);
         (placed.ContentRect.X - source.ContentRect.X).ShouldBe(deltaX, 0.01f, snapshotText);

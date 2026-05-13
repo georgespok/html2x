@@ -57,10 +57,10 @@ var result = await converter.ToPdfAsync(
 await File.WriteAllBytesAsync("invoice.pdf", result.PdfBytes);
 ```
 
-With the default converter runtime, `HtmlConverterOptions.Fonts.FontPath` must
-point to a font file or directory before layout begins. Advanced in-process
-callers may provide approved runtime font or text adapters through
-`HtmlConverterRuntime`.
+With the default converter dependencies, `HtmlConverterOptions.Fonts.FontPath`
+must point to a font file or directory before layout begins. Advanced
+in-process callers may provide approved font or text adapter factories through
+`HtmlConverterDependencies`.
 
 ## Scope
 

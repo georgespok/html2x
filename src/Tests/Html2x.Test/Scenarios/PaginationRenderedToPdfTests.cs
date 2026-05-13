@@ -97,7 +97,7 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         ArrayField(firstPage, "fragments").ShouldBeEmpty();
     }
 
-    private static DiagnosticObject GetLayoutSnapshot(Html2PdfResult result)
+    private static DiagnosticObject GetLayoutSnapshot(HtmlToPdfResult result)
     {
         var layoutEvent =
             result.DiagnosticsReport!.Records.FirstOrDefault(static x =>

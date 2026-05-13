@@ -1,5 +1,5 @@
-using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Contracts.Published;
 
@@ -29,5 +29,5 @@ internal sealed record PublishedImageFacts
 
     public bool IsMissing => ImageLoadStatusFacts.IsMissing(Status);
 
-    public bool IsOversize => ImageLoadStatusFacts.IsOversize(Status);
+    public bool IsOversized => ImageLoadStatusFacts.IsOversized(Status);
 }

@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Shouldly;
 

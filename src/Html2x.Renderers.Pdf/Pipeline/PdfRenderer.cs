@@ -11,23 +11,23 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 ///     Renders an <see cref="HtmlLayout" /> to PDF using a SkiaSharp drawing pipeline.
 ///     The renderer owns paint output only and treats layout pages and fragments as read-only inputs.
 /// </summary>
-public sealed class PdfRenderer
+internal sealed class PdfRenderer
 {
-    private readonly IFileDirectory _fileDirectory;
+    private readonly IFileSystemReader _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
-    public PdfRenderer()
-        : this(new FileDirectory(), new SkiaTypefaceFactory())
+    internal PdfRenderer()
+        : this(new FileSystemReader(), new SkiaTypefaceFactory())
     {
     }
 
-    internal PdfRenderer(IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal PdfRenderer(IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory)
     {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
     }
 
-    public Task<byte[]> RenderAsync(
+    public byte[] Render(
         HtmlLayout htmlLayout,
         PdfRenderSettings? settings = null,
         IDiagnosticsSink? diagnosticsSink = null,
@@ -37,8 +37,7 @@ public sealed class PdfRenderer
         settings ??= new();
         ValidateSettings(settings);
 
-        var bytes = RenderWithSkia(htmlLayout, settings, diagnosticsSink, cancellationToken);
-        return Task.FromResult(bytes);
+        return RenderWithSkia(htmlLayout, settings, diagnosticsSink, cancellationToken);
     }
 
     private static void ValidateSettings(PdfRenderSettings settings)
@@ -46,7 +45,7 @@ public sealed class PdfRenderer
         if (settings.MaxImageSizeBytes <= 0)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(settings),
+                nameof(PdfRenderSettings.MaxImageSizeBytes),
                 settings.MaxImageSizeBytes,
                 "PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
         }
@@ -68,7 +67,7 @@ public sealed class PdfRenderer
         }
 
         using var fontCache = new SkiaFontCache(_fileDirectory, _typefaceFactory);
-        var paintOrder = new PaintOrderResolver();
+        var paintOrder = new PaintCommandPlanner();
         var drawer = new SkiaPaintCommandDrawer(settings, fontCache, diagnosticsSink);
 
         foreach (var page in layout.Pages)

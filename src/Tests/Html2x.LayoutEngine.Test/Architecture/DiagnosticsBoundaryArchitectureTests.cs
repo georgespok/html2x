@@ -77,7 +77,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
                 "TableLayoutResult");
         SemanticProjectFor<IDiagnosticsSink>()
             .ShouldNotReferenceNamespaces(
-                AssemblyName<LayoutBuilder>(),
+                AssemblyName<LayoutPipeline>(),
                 "Html2x.Renderers",
                 ParserPackageName(),
                 SkiaSharpPackageName);
@@ -97,7 +97,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     [Fact]
     public void PaginationDiagnostics_AreLocalToPaginationProject()
     {
-        File.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Diagnostics", "PaginationDiagnostics.cs"))
+        File.Exists(PathFromRoot("src", AssemblyName<LayoutPipeline>(), "Diagnostics", "PaginationDiagnostics.cs"))
             .ShouldBeFalse();
 
         var diagnostics = SourceFileFor(typeof(PaginationDiagnostics));
@@ -114,26 +114,25 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     public void PipelineBoundaries_AcceptDiagnosticsSink()
     {
         CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverter.cs")
+            .ShouldUseIdentifier("HtmlConversionDiagnostics");
+        CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConversionDiagnostics.cs")
             .ShouldConstructType("DiagnosticsCollector");
-        CSharpSourceFile.Load("src", FacadeAssemblyName, "Html2PdfResult.cs")
-            .ShouldContainPropertyInType("Html2PdfResult", "DiagnosticsReport", "DiagnosticsReport?", "public");
-        SourceFileFor<LayoutBuilder>()
-            .ShouldHaveParameter(nameof(LayoutBuilder.BuildAsync), "diagnosticsSink",
+        CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlToPdfResult.cs")
+            .ShouldContainPropertyInType("HtmlToPdfResult", "DiagnosticsReport", "DiagnosticsReport?", "public");
+        SourceFileFor<LayoutPipeline>()
+            .ShouldHaveParameter(nameof(LayoutPipeline.BuildAsync), "diagnosticsSink",
                 NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<StyleTreeBuilder>()
             .ShouldHaveParameter(nameof(StyleTreeBuilder.BuildAsync), "diagnosticsSink",
                 NullableTypeName<IDiagnosticsSink>());
-        SourceFileFor<IStyleTreeBuilder>()
-            .ShouldHaveParameter(nameof(IStyleTreeBuilder.BuildAsync), "diagnosticsSink",
-                NullableTypeName<IDiagnosticsSink>());
-        SourceFileFor<LayoutGeometryBuilder>()
-            .ShouldHaveParameter(nameof(LayoutGeometryBuilder.Build), "diagnosticsSink",
+        SourceFileFor<LayoutGeometryConstruction>()
+            .ShouldHaveParameter(nameof(LayoutGeometryConstruction.Build), "diagnosticsSink",
                 NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<LayoutPaginator>()
             .ShouldHaveParameter(nameof(LayoutPaginator.Paginate), "diagnosticsSink",
                 NullableTypeName<IDiagnosticsSink>());
         CSharpSourceFile.Load("src", PdfRendererAssemblyName, "Pipeline", "PdfRenderer.cs")
-            .ShouldHaveParameter("RenderAsync", "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
+            .ShouldHaveParameter("Render", "diagnosticsSink", NullableTypeName<IDiagnosticsSink>());
     }
 
     [Fact]
@@ -141,7 +140,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     {
         ArchitectureProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
             .ShouldNotReferenceProjects(
-                AssemblyName<LayoutBuilder>(),
+                AssemblyName<LayoutPipeline>(),
                 AssemblyName<LayoutPaginator>(),
                 PdfRendererAssemblyName);
         ArchitectureProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
@@ -149,7 +148,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
 
         ArchitectureSemanticProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
             .ShouldNotReferenceNamespaces(
-                AssemblyName<LayoutBuilder>(),
+                AssemblyName<LayoutPipeline>(),
                 AssemblyName<LayoutPaginator>(),
                 PdfRendererAssemblyName,
                 ParserPackageName(),
@@ -211,7 +210,7 @@ public sealed class DiagnosticsBoundaryArchitectureTests
             "TableBox",
             "TableLayoutResult");
         ArchitectureSemanticProject.Load("src", DiagnosticsAssemblyName, DiagnosticsAssemblyName + ".csproj")
-            .ShouldNotReferenceNamespaces(AssemblyName<LayoutBuilder>(), "Html2x.Renderers", ParserPackageName(),
+            .ShouldNotReferenceNamespaces(AssemblyName<LayoutPipeline>(), "Html2x.Renderers", ParserPackageName(),
                 SkiaSharpPackageName);
     }
 
@@ -221,10 +220,10 @@ public sealed class DiagnosticsBoundaryArchitectureTests
         foreach (var sourceRoot in new[]
                  {
                      CSharpSourceSet.FromDirectory("src", FacadeAssemblyName),
-                     SourceSetFor<LayoutBuilder>(),
+                     SourceSetFor<LayoutPipeline>(),
                      SourceSetFor<LayoutPaginator>(),
                      SourceSetFor<StyleTreeBuilder>(),
-                     SourceSetFor<LayoutGeometryBuilder>(),
+                     SourceSetFor<LayoutGeometryConstruction>(),
                      CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
                  })
         {
@@ -235,9 +234,9 @@ public sealed class DiagnosticsBoundaryArchitectureTests
     private static IReadOnlyList<ArchitectureProject> StageProjects() =>
     [
         ProjectFor<StyleTreeBuilder>(),
-        ProjectFor<LayoutGeometryBuilder>(),
+        ProjectFor<LayoutGeometryConstruction>(),
         ProjectFor<LayoutPaginator>(),
-        ProjectFor<LayoutBuilder>(),
+        ProjectFor<LayoutPipeline>(),
         ArchitectureProject.Load("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj")
     ];
 }

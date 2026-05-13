@@ -30,7 +30,7 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     /// <summary>
     ///     Gets or sets the text alignment resolved for inline layout.
     /// </summary>
-    public string TextAlign { get; internal set; } = HtmlCssConstants.Defaults.TextAlign;
+    public string TextAlign { get; internal set; } = HtmlCssVocabulary.Defaults.TextAlign;
 
     public bool IsAnonymous { get; init; }
 
@@ -51,7 +51,7 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
     /// <summary>
     ///     Gets or sets whether this block is the content box for an inline-block formatting context.
     /// </summary>
-    public bool IsInlineBlockContext { get; internal set; }
+    public bool EstablishesInlineBlockFormattingContext { get; internal set; }
 
     internal void ApplyLayoutGeometry(UsedGeometry geometry)
     {
@@ -83,7 +83,7 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
         clone.Margin = Margin;
         clone.Padding = Padding;
         clone.TextAlign = TextAlign;
-        clone.IsInlineBlockContext = IsInlineBlockContext;
+        clone.EstablishesInlineBlockFormattingContext = EstablishesInlineBlockFormattingContext;
 
         return clone;
     }

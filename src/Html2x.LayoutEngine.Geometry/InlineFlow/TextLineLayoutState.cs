@@ -101,8 +101,8 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
 
     private void ProcessToken(TextRunInput run, string token)
     {
-        var processor = new TokenProcessor(this, run, token);
-        processor.Execute();
+        var lineBreaker = new TokenLineBreaker(this, run, token);
+        lineBreaker.Execute();
     }
 
     private void AppendAtomicToken(TextRunInput run, string token)
@@ -193,7 +193,7 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
         _currentWidth += buffer.LeftSpacing + tokenWidth + buffer.RightSpacing;
     }
 
-    private float MeasureWidth(TextRunInput run, string text) => _measurer.MeasureWidth(run.Font, run.FontSizePt, text);
+    private float MeasureWidth(TextRunInput run, string text) => _measurer.Measure(run.Font, run.FontSizePt, text).Width;
 
     private float GetAdditionalSpacing(TextRunInput run)
     {
@@ -263,9 +263,9 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
     /// <summary>
     ///     Processes one token against the current line buffer.
     /// </summary>
-    private readonly struct TokenProcessor(TextLineLayoutState builder, TextRunInput run, string token)
+    private readonly struct TokenLineBreaker(TextLineLayoutState state, TextRunInput run, string token)
     {
-        private readonly TextLineLayoutState _builder = builder;
+        private readonly TextLineLayoutState _state = state;
         private readonly TextRunInput _run = run;
         private readonly string _token = token;
 
@@ -276,26 +276,26 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
                 return;
             }
 
-            if (_builder.TryAppendToken(_run, _token))
+            if (_state.TryAppendToken(_run, _token))
             {
                 return;
             }
 
-            _builder.FlushLine();
+            _state.FlushLine();
 
             if (string.IsNullOrWhiteSpace(_token))
             {
                 return;
             }
 
-            if (_builder.TryAppendToken(_run, _token))
+            if (_state.TryAppendToken(_run, _token))
             {
                 return;
             }
 
-            _builder.ProcessTokenByGrapheme(_run, _token);
+            _state.ProcessTokenByGrapheme(_run, _token);
         }
 
-        private bool IsLeadingWhitespace() => string.IsNullOrWhiteSpace(_token) && _builder._currentLine.Count == 0;
+        private bool IsLeadingWhitespace() => string.IsNullOrWhiteSpace(_token) && _state._currentLine.Count == 0;
     }
 }

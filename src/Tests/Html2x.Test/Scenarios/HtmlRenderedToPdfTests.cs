@@ -236,7 +236,7 @@ public class HtmlRenderedToPdfTests(ITestOutputHelper output) : IntegrationTestB
         ]);
     }
 
-    private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
+    private static LayoutPageSnapshot GetLayoutPageSnapshot(HtmlToPdfResult result)
     {
         var endLayoutBuild =
             result.DiagnosticsReport!.Records.FirstOrDefault(x => x is

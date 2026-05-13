@@ -6,13 +6,14 @@ using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 
 public sealed class PublishedLayoutContractTests
 {
     [Fact]
-    public void PublishedBlock_WithGeometry_CarriesImmutableProjectionFacts()
+    public void PublishedBlock_WithGeometry_CarriesImmutableFacts()
     {
         var identity = new PublishedBlockIdentity("body/div[1]", "div#content", 1);
         var display = new PublishedDisplayFacts(
@@ -175,7 +176,7 @@ public sealed class PublishedLayoutContractTests
         {
             Element = StyledElementFacts.Create(
                 "section",
-                (HtmlCssConstants.HtmlAttributes.Id, "from-element")),
+                (HtmlCssVocabulary.HtmlAttributes.Id, "from-element")),
             SourceIdentity = sourceIdentity
         };
 
@@ -258,7 +259,18 @@ public sealed class PublishedLayoutContractTests
             0,
             children));
 
-        exception.ParamName.ShouldBe("block");
+        exception.ParamName.ShouldBe("children");
+    }
+
+    [Theory]
+    [MemberData(nameof(NullCollectionEntryCases))]
+    public void PublishedCollections_WithNullEntry_ThrowArgumentException(
+        Action createPublishedContract,
+        string parameterName)
+    {
+        var exception = Should.Throw<ArgumentException>(createPublishedContract);
+
+        exception.ParamName.ShouldBe(parameterName);
     }
 
     [Theory]
@@ -285,6 +297,24 @@ public sealed class PublishedLayoutContractTests
             markerOffset));
 
         exception.ParamName.ShouldBe("markerOffset");
+    }
+
+    [Theory]
+    [InlineData(-1f, 0f, 0f, 0f)]
+    [InlineData(0f, -1f, 0f, 0f)]
+    [InlineData(0f, 0f, -1f, 0f)]
+    [InlineData(0f, 0f, 0f, -1f)]
+    [InlineData(float.NaN, 0f, 0f, 0f)]
+    public void PublishedPage_InvalidMargin_ThrowsOutOfRange(
+        float top,
+        float right,
+        float bottom,
+        float left)
+    {
+        var exception = Should.Throw<ArgumentOutOfRangeException>(() =>
+            new PublishedPage(PaperSizes.A4, new(top, right, bottom, left)));
+
+        exception.ParamName.ShouldBe("margin");
     }
 
     private static PublishedBlock CreateBlock(
@@ -325,6 +355,89 @@ public sealed class PublishedLayoutContractTests
             30f,
             8f,
             3f);
+
+    public static IEnumerable<object[]> NullCollectionEntryCases()
+    {
+        var block = CreateBlock("body/div[0]", 0);
+        var run = CreateTextRun();
+        var source = new PublishedInlineSource("body/span[1]", "span", 0);
+        var textItem = new PublishedInlineTextItem(
+            0,
+            new(0f, 0f, 20f, 10f),
+            [run],
+            [source]);
+        var line = new PublishedInlineLine(
+            0,
+            new(0f, 0f, 20f, 10f),
+            new(0f, 0f, 20f, 10f),
+            8f,
+            10f,
+            null,
+            [textItem]);
+        var segment = new PublishedInlineFlowSegment([line], 0f, 10f);
+        var page = new PublishedPage(PaperSizes.A4, new(10f, 20f, 30f, 40f));
+
+        yield return Case(
+            () => _ = new PublishedLayoutTree(page, [null!]),
+            "blocks");
+        yield return Case(
+            () => _ = new PublishedInlineLayout([null!], 10f, 20f),
+            "segments");
+        yield return Case(
+            () => _ = new PublishedInlineFlowSegment([null!], 0f, 10f),
+            "lines");
+        yield return Case(
+            () => _ = new PublishedInlineLine(
+                0,
+                new(0f, 0f, 20f, 10f),
+                new(0f, 0f, 20f, 10f),
+                8f,
+                10f,
+                null,
+                [null!]),
+            "items");
+        yield return Case(
+            () => _ = new PublishedInlineTextItem(
+                0,
+                new(0f, 0f, 20f, 10f),
+                [null!],
+                [source]),
+            "runs");
+        yield return Case(
+            () => _ = new PublishedInlineTextItem(
+                0,
+                new(0f, 0f, 20f, 10f),
+                [run],
+                [null!]),
+            "sources");
+        yield return Case(
+            () => _ = new PublishedBlock(
+                block.Identity,
+                block.Display,
+                block.Style,
+                block.Geometry,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [null!]),
+            "flow");
+        yield return Case(
+            () => _ = new PublishedBlock(
+                block.Identity,
+                block.Display,
+                block.Style,
+                block.Geometry,
+                new([segment], 10f, 20f),
+                null,
+                null,
+                null,
+                [null!]),
+            "children");
+    }
+
+    private static object[] Case(Action action, string parameterName) => [action, parameterName];
 
     private static IEnumerable<TextRun> EnumeratePublishedTextRuns(IEnumerable<PublishedBlock> blocks)
     {

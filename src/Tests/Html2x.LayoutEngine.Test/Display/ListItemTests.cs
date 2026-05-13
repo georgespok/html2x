@@ -40,7 +40,7 @@ public class ListItemTests
         item1Line.Runs[0].Text.ShouldContain("•");
         item2Line.Runs[0].Text.ShouldContain("•");
 
-        var expectedOffset = HtmlCssConstants.Defaults.ListMarkerOffsetPt;
+        var expectedOffset = HtmlCssVocabulary.Defaults.ListMarkerOffsetPt;
         item1Line.Rect.X.ShouldBeGreaterThanOrEqualTo(expectedOffset - 0.5f);
         item2Line.Rect.X.ShouldBeGreaterThanOrEqualTo(expectedOffset - 0.5f);
     }

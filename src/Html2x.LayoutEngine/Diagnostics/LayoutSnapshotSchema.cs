@@ -58,5 +58,6 @@ internal static class LayoutSnapshotSchema
         public const string TableRow = "table-row";
         public const string TableCell = "table-cell";
         public const string Block = "block";
+        public const string Unsupported = "unsupported";
     }
 }

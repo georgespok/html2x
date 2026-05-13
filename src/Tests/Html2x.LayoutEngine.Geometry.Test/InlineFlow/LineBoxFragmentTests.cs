@@ -8,7 +8,7 @@ namespace Html2x.LayoutEngine.Geometry.Test.InlineFlow;
 
 public class LineBoxFragmentTests
 {
-    private static readonly LayoutBuilderFixture Fixture = new();
+    private static readonly LayoutPipelineFixture Fixture = new();
 
     [Fact]
     public async Task ParagraphWithLongText_ComputesHeightFromMultipleLines()

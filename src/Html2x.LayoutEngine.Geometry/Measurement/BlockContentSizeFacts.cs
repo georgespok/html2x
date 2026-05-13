@@ -49,7 +49,7 @@ internal readonly record struct BlockContentSizeFacts
 
     public static BlockContentSizeFacts ForImage(ImageLayoutResolution image) =>
         new(
-            image.TotalHeight,
+            image.BorderBoxHeight,
             image.ContentHeight,
             0f,
             0f,

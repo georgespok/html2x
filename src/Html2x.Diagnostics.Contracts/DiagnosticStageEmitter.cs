@@ -6,7 +6,7 @@ public static class DiagnosticStageEmitter
     private const string SucceededEvent = "stage/succeeded";
     private const string FailedEvent = "stage/failed";
     private const string SkippedEvent = "stage/skipped";
-    private const string CancelledEvent = "stage/cancelled";
+    private const string CanceledEvent = "stage/canceled";
 
     public static void Started(
         IDiagnosticsSink? diagnosticsSink,
@@ -26,8 +26,8 @@ public static class DiagnosticStageEmitter
     public static void Skipped(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
         Emit(diagnosticsSink, stage, SkippedEvent, DiagnosticSeverity.Info, message);
 
-    public static void Cancelled(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
-        Emit(diagnosticsSink, stage, CancelledEvent, DiagnosticSeverity.Info, message);
+    public static void Canceled(IDiagnosticsSink? diagnosticsSink, string stage, string message) =>
+        Emit(diagnosticsSink, stage, CanceledEvent, DiagnosticSeverity.Info, message);
 
     public static void Emit(
         IDiagnosticsSink? diagnosticsSink,

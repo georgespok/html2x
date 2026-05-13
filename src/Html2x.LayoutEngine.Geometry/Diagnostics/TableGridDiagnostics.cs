@@ -10,8 +10,8 @@ internal static class TableGridDiagnostics
         string nodePath,
         int rowCount,
         int derivedColumnCount,
-        float? requestedWidth,
-        float? resolvedWidth,
+        float? requestedContentWidth,
+        float? resolvedBorderBoxWidth,
         IReadOnlyList<TableRowDiagnosticFacts>? rowFacts = null,
         IReadOnlyList<TableCellDiagnosticFacts>? cellFacts = null,
         IReadOnlyList<TableColumnDiagnosticFacts>? columnFacts = null,
@@ -24,8 +24,8 @@ internal static class TableGridDiagnostics
             TablePath = nodePath,
             RowCount = rowCount,
             DerivedColumnCount = derivedColumnCount,
-            RequestedWidth = requestedWidth,
-            ResolvedWidth = resolvedWidth,
+            RequestedContentWidth = requestedContentWidth,
+            ResolvedBorderBoxWidth = resolvedBorderBoxWidth,
             Outcome = TableGridDiagnosticNames.Outcomes.Supported,
             RowFacts = rowFacts ?? [],
             CellFacts = cellFacts ?? [],
@@ -45,8 +45,8 @@ internal static class TableGridDiagnostics
         string structureKind,
         string reason,
         int rowCount = 0,
-        float? requestedWidth = null,
-        float? resolvedWidth = null,
+        float? requestedContentWidth = null,
+        float? resolvedBorderBoxWidth = null,
         FormattingContextKind formattingContext = FormattingContextKind.Block,
         IReadOnlyList<TableRowDiagnosticFacts>? rowFacts = null,
         IReadOnlyList<TableCellDiagnosticFacts>? cellFacts = null,
@@ -67,8 +67,8 @@ internal static class TableGridDiagnostics
             TablePath = nodePath,
             RowCount = rowCount,
             DerivedColumnCount = null,
-            RequestedWidth = requestedWidth,
-            ResolvedWidth = resolvedWidth,
+            RequestedContentWidth = requestedContentWidth,
+            ResolvedBorderBoxWidth = resolvedBorderBoxWidth,
             Outcome = TableGridDiagnosticNames.Outcomes.Unsupported,
             Reason = reason,
             RowFacts = rowFacts ?? [],
@@ -132,8 +132,8 @@ internal static class TableGridDiagnostics
             DiagnosticFields.Field(
                 TableGridDiagnosticNames.Fields.DerivedColumnCount,
                 FromNullable(table.DerivedColumnCount)),
-            DiagnosticFields.Field(TableGridDiagnosticNames.Fields.RequestedWidth, FromNullable(table.RequestedWidth)),
-            DiagnosticFields.Field(TableGridDiagnosticNames.Fields.ResolvedWidth, FromNullable(table.ResolvedWidth)),
+            DiagnosticFields.Field(TableGridDiagnosticNames.Fields.RequestedContentWidth, FromNullable(table.RequestedContentWidth)),
+            DiagnosticFields.Field(TableGridDiagnosticNames.Fields.ResolvedBorderBoxWidth, FromNullable(table.ResolvedBorderBoxWidth)),
             DiagnosticFields.Field(TableGridDiagnosticNames.Fields.Outcome, table.Outcome),
             DiagnosticFields.Field(
                 GeometryDiagnosticNames.Fields.Reason,
@@ -180,8 +180,8 @@ internal static class TableGridDiagnostics
         public string TablePath { get; init; } = string.Empty;
         public int RowCount { get; init; }
         public int? DerivedColumnCount { get; init; }
-        public float? RequestedWidth { get; init; }
-        public float? ResolvedWidth { get; init; }
+        public float? RequestedContentWidth { get; init; }
+        public float? ResolvedBorderBoxWidth { get; init; }
         public string Outcome { get; init; } = string.Empty;
         public string? Reason { get; init; }
         public IReadOnlyList<TableRowDiagnosticFacts> RowFacts { get; init; } = [];

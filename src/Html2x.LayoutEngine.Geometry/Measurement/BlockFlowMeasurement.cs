@@ -1,5 +1,4 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
@@ -21,7 +20,7 @@ internal sealed class BlockFlowMeasurement(MarginCollapseRules marginCollapseRul
         Func<TableBox, float, float>? tableHeightMeasurer = null,
         IDiagnosticsSink? diagnosticsSink = null,
         FormattingContextKind formattingContext = FormattingContextKind.Block,
-        string consumerName = "unknown")
+        string diagnosticConsumer = "unknown")
     {
         ArgumentNullException.ThrowIfNull(children);
 
@@ -54,7 +53,7 @@ internal sealed class BlockFlowMeasurement(MarginCollapseRules marginCollapseRul
                 currentMarginBottom,
                 nextMarginTop,
                 formattingContext,
-                consumerName,
+                diagnosticConsumer,
                 diagnosticsSink);
         }
 

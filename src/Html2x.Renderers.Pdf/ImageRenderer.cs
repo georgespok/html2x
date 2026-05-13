@@ -6,6 +6,7 @@ using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Styles;
 using Html2x.Resources;
 using SkiaSharp;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.Renderers.Pdf;
 
@@ -44,14 +45,14 @@ internal sealed class ImageRenderer
         if (width <= 0 || height <= 0)
         {
             RenderPlaceholder(canvas, rect);
-            Record(command, status, width, height);
+            EmitRenderDiagnostic(command, status, width, height);
             return;
         }
 
         if (status != ImageLoadStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
-            Record(command, status, width, height);
+            EmitRenderDiagnostic(command, status, width, height);
             return;
         }
 
@@ -61,27 +62,43 @@ internal sealed class ImageRenderer
         if (resource.Bytes is null || status != ImageLoadStatus.Ok)
         {
             RenderPlaceholder(canvas, rect);
-            Record(command, status, width, height);
+            EmitRenderDiagnostic(command, status, width, height);
             return;
         }
 
-        DrawImage(canvas, rect, resource.Bytes);
+        if (!DrawImage(canvas, rect, resource.Bytes))
+        {
+            status = ImageLoadStatus.DecodeFailed;
+        }
 
-        Record(command, status, width, height);
+        EmitRenderDiagnostic(command, status, width, height);
     }
 
-    private static void DrawImage(SKCanvas canvas, RectPt rect, byte[] bytes)
+    private static bool DrawImage(SKCanvas canvas, RectPt rect, byte[] bytes)
     {
-        using var bitmap = SKBitmap.Decode(bytes);
+        using var bitmap = TryDecodeBitmap(bytes);
         if (bitmap is null)
         {
             RenderPlaceholder(canvas, rect);
-            return;
+            return false;
         }
 
         using var image = SKImage.FromBitmap(bitmap);
-        var dest = SkiaGeometryMapper.ToSkRect(rect);
+        var dest = SkiaGeometryAdapter.ToSkRect(rect);
         canvas.DrawImage(image, dest);
+        return true;
+    }
+
+    private static SKBitmap? TryDecodeBitmap(byte[] bytes)
+    {
+        try
+        {
+            return SKBitmap.Decode(bytes);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static void RenderPlaceholder(SKCanvas canvas, RectPt rect)
@@ -99,17 +116,17 @@ internal sealed class ImageRenderer
             IsAntialias = true
         };
 
-        canvas.DrawRect(SkiaGeometryMapper.ToSkRect(rect), paint);
+        canvas.DrawRect(SkiaGeometryAdapter.ToSkRect(rect), paint);
     }
 
-    private void Record(ImagePaintCommand command, ImageLoadStatus status, float width, float height)
+    private void EmitRenderDiagnostic(ImagePaintCommand command, ImageLoadStatus status, float width, float height)
     {
         var severity = status == ImageLoadStatus.Ok
             ? DiagnosticSeverity.Info
             : DiagnosticSeverity.Warning;
         var context = new DiagnosticContext(
             null,
-            ImageRenderDiagnosticNames.Context.ImageElement,
+            ImageRenderDiagnosticNames.ContextValues.ImageElement,
             null,
             $"image:{command.Src}",
             command.Src);

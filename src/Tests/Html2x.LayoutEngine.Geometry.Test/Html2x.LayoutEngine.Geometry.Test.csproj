@@ -34,7 +34,7 @@
 
   <ItemGroup>
     <Compile Include="..\Html2x.LayoutEngine.Test\Builders\BlockBoxBuilder.cs" Link="Builders\BlockBoxBuilder.cs" />
-    <Compile Include="..\Html2x.LayoutEngine.Test\LayoutBuilderFixture.cs" Link="LayoutBuilderFixture.cs" />
+    <Compile Include="..\Html2x.LayoutEngine.Test\LayoutPipelineFixture.cs" Link="LayoutPipelineFixture.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\FakeTextMeasurer.cs" Link="TestDoubles\FakeTextMeasurer.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\NoopImageMetadataResolver.cs" Link="TestDoubles\NoopImageMetadataResolver.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestHelpers\GeometryTestHarness.cs" Link="TestHelpers\GeometryTestHarness.cs" />

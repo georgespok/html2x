@@ -1,8 +1,8 @@
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
@@ -39,7 +39,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         facts.AuthoredSizePx.ShouldBe(image.AuthoredSizePx);
         facts.IntrinsicSizePx.ShouldBe(image.IntrinsicSizePx);
         facts.IsMissing.ShouldBeFalse();
-        facts.IsOversize.ShouldBeFalse();
+        facts.IsOversized.ShouldBeFalse();
         published.Geometry.ShouldBe(image.UsedGeometry.ShouldNotBeNull());
         published.Children.ShouldBeEmpty();
     }
@@ -116,14 +116,14 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             "p",
             15,
             GeometryGeneratedSourceKind.AnonymousText);
-        block.Children.Add(new InlineBox(BoxRole.Inline)
+        block.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = block,
             Style = block.Style,
             TextContent = "alpha",
             SourceIdentity = sourceIdentity
         });
-        root.Children.Add(block);
+        root.AddChild(block);
 
         var published = ResolvePublished(root, DefaultPage())
             .Blocks
@@ -210,31 +210,31 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         _ = caseName;
         var createRoot = createRootFactory.ShouldBeOfType<Func<BlockBox>>();
         var published = ResolvePublished(createRoot(), DefaultPage());
-        var fragments = new FragmentBuilder().Build(published);
+        var fragments = new FragmentTreeBuilder().Build(published);
 
         AssertPublishedFragments(published, fragments);
     }
 
     private BlockBoxLayout CreateEngine()
     {
-        var formattingContext = new BlockContentExtentMeasurement();
-        var imageResolver = new ImageSizingRules();
+        var formattingContext = new BlockFormattingMetricsMeasurement();
+        var imageSizingRules = new ImageSizingRules();
         var inlineFlowLayout = new InlineFlowLayout(
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
             formattingContext,
-            imageResolver);
+            imageSizingRules);
 
         return new(
             inlineFlowLayout,
-            new(inlineFlowLayout, imageResolver),
+            new(inlineFlowLayout, imageSizingRules),
             formattingContext,
-            imageResolver);
+            imageSizingRules);
     }
 
     private PublishedLayoutTree ResolvePublished(BoxNode root, PageBox page) =>
-        PublishedLayoutTestResolver.Resolve(CreateEngine(), root, page);
+        PublishedLayoutTestRunner.Run(CreateEngine(), root, page);
 
     private static PageBox DefaultPage() => new()
     {
@@ -279,7 +279,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private static BlockBox CreateStandardRoot()
     {
         var root = CreateRoot();
-        root.Children.Add(new BlockBox(BoxRole.Block)
+        root.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = root,
             Style = new()
@@ -300,7 +300,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             Style = new()
         };
 
-        parent.Children.Add(new BlockBox(BoxRole.Block)
+        parent.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
             Style = new()
@@ -308,7 +308,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
                 HeightPt = 10f
             }
         });
-        parent.Children.Add(new BlockBox(BoxRole.Block)
+        parent.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
             Style = new()
@@ -316,7 +316,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
                 HeightPt = 12f
             }
         });
-        root.Children.Add(parent);
+        root.AddChild(parent);
 
         return root;
     }
@@ -324,7 +324,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private static BlockBox CreateImageRoot()
     {
         var root = CreateRoot();
-        root.Children.Add(CreateImageBlock(24f, parent: root));
+        root.AddChild(CreateImageBlock(24f, parent: root));
 
         return root;
     }
@@ -332,7 +332,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private static BlockBox CreateRuleRoot()
     {
         var root = CreateRoot();
-        root.Children.Add(CreateRuleBlock(new(1f, 0f, 1f, 0f), root));
+        root.AddChild(CreateRuleBlock(new(1f, 0f, 1f, 0f), root));
 
         return root;
     }
@@ -345,8 +345,8 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             Parent = root,
             Style = new()
         };
-        block.Children.Add(CreateInline(block, "alpha"));
-        root.Children.Add(block);
+        block.AddChild(CreateInline(block, "alpha"));
+        root.AddChild(block);
 
         return root;
     }
@@ -365,7 +365,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             Element = CreateElement("span"),
             Style = new()
             {
-                Display = HtmlCssConstants.CssValues.InlineBlock,
+                Display = HtmlCssVocabulary.CssValues.InlineBlock,
                 Padding = new(1f, 1f, 1f, 1f)
             }
         };
@@ -373,16 +373,16 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         {
             Parent = inlineBlock,
             Element = inlineBlock.Element,
-            IsInlineBlockContext = true,
+            EstablishesInlineBlockFormattingContext = true,
             Style = inlineBlock.Style
         };
-        content.Children.Add(CreateInline(content, "inside"));
-        inlineBlock.Children.Add(content);
+        content.AddChild(CreateInline(content, "inside"));
+        inlineBlock.AddChild(content);
 
-        block.Children.Add(CreateInline(block, "prefix "));
-        block.Children.Add(inlineBlock);
-        block.Children.Add(CreateInline(block, " suffix"));
-        root.Children.Add(block);
+        block.AddChild(CreateInline(block, "prefix "));
+        block.AddChild(inlineBlock);
+        block.AddChild(CreateInline(block, " suffix"));
+        root.AddChild(block);
 
         return root;
     }
@@ -391,7 +391,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     {
         var root = CreateRoot();
         var table = CreateSupportedTable(root);
-        root.Children.Add(table);
+        root.AddChild(table);
 
         return root;
     }
@@ -400,7 +400,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     {
         var root = CreateRoot();
         var table = CreateUnsupportedTable(root);
-        root.Children.Add(table);
+        root.AddChild(table);
 
         return root;
     }
@@ -425,9 +425,9 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         var header = CreateTableCell(row, "th", "head");
         var cell = CreateTableCell(row, "td", "body");
 
-        row.Children.Add(header);
-        row.Children.Add(cell);
-        table.Children.Add(row);
+        row.AddChild(header);
+        row.AddChild(cell);
+        table.AddChild(row);
 
         return table;
     }
@@ -452,12 +452,12 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         var cell = new TableCellBox(BoxRole.TableCell)
         {
             Parent = row,
-            Element = CreateElement("td", (HtmlCssConstants.HtmlAttributes.Rowspan, "2")),
+            Element = CreateElement("td", (HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")),
             Style = new()
         };
 
-        row.Children.Add(cell);
-        table.Children.Add(row);
+        row.AddChild(cell);
+        table.AddChild(row);
 
         return table;
     }
@@ -470,7 +470,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
             Element = CreateElement(tagName),
             Style = new()
         };
-        cell.Children.Add(CreateInline(cell, text));
+        cell.AddChild(CreateInline(cell, text));
 
         return cell;
     }
@@ -702,7 +702,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
                 actualImage.AuthoredSizePx.ShouldBe(expectedImage.AuthoredSizePx);
                 actualImage.IntrinsicSizePx.ShouldBe(expectedImage.IntrinsicSizePx);
                 actualImage.IsMissing.ShouldBe(expectedImage.IsMissing);
-                actualImage.IsOversize.ShouldBe(expectedImage.IsOversize);
+                actualImage.IsOversized.ShouldBe(expectedImage.IsOversized);
                 actualImage.ContentRect.ShouldBe(expectedImage.ContentRect);
                 break;
         }

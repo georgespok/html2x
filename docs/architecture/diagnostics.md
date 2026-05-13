@@ -41,7 +41,7 @@ per-record timestamps.
 
 ## Report Flow
 
-`HtmlConverter` creates a `DiagnosticsCollector` when `HtmlConverterOptions.Diagnostics.EnableDiagnostics` is true. The collector is passed as an `IDiagnosticsSink` through style, geometry, layout, pagination, font, and renderer boundaries. The completed `DiagnosticsReport` is exposed on `Html2PdfResult.DiagnosticsReport`.
+After option validation succeeds, `HtmlConverter` creates a `DiagnosticsCollector` when `HtmlConverterOptions.Diagnostics.EnableDiagnostics` is true. The collector is passed as an `IDiagnosticsSink` through style, geometry, layout, pagination, font, and renderer boundaries. The completed `DiagnosticsReport` is exposed on `HtmlToPdfResult.DiagnosticsReport`.
 
 Typical record flow:
 
@@ -54,7 +54,12 @@ PdfRender stage/started
 PdfRender stage/succeeded with render fields
 ```
 
-If layout fails, `PdfRender` is skipped and the diagnostics report is attached to the thrown exception as `DiagnosticsReport` when available. If cancellation is requested, the active stage emits `stage/cancelled` and downstream stages are skipped when they have not started.
+If layout fails, `PdfRender` is skipped and the diagnostics report is attached to the thrown exception as `DiagnosticsReport` when available. If cancellation is requested, the active stage emits `stage/canceled` and downstream stages are skipped when they have not started.
+
+If runtime configuration fails after diagnostics collection starts but before
+layout starts, such as a missing default font path, the facade emits a
+`Configuration` failure and skips both `LayoutBuild` and `PdfRender`. General
+option validation happens earlier and throws without diagnostics attachment.
 
 The layout start record includes `htmlLength`. Raw HTML is omitted by default. Consumers can opt in through `DiagnosticsOptions.IncludeRawHtml`; `DiagnosticsOptions.MaxRawHtmlLength` caps the captured value.
 
@@ -72,7 +77,8 @@ geometry, table, renderer, image, or font models.
 
 Pipeline stages own the events that describe their decisions:
 
-- Style owns unsupported and ignored CSS declaration diagnostics.
+- Style owns unsupported element and unsupported or ignored CSS declaration
+  diagnostics.
 - Layout owns geometry, formatting, table, pagination, image resolution, and unsupported layout mode diagnostics.
 - The public facade owns conversion lifecycle and converter-level font path failures.
 - The PDF renderer owns renderer summaries and renderer-local failures.
@@ -99,7 +105,7 @@ from leaking into the central diagnostics package.
 Producer projects receive `IDiagnosticsSink?` through method parameters and
 reference `Html2x.Diagnostics.Contracts` only. The public facade creates
 `DiagnosticsCollector` when diagnostics are enabled and exposes the resulting
-`DiagnosticsReport` on `Html2PdfResult`.
+`DiagnosticsReport` on `HtmlToPdfResult`.
 
 Renderer diagnostics flow through the contracts project boundary, the same as
 style, geometry, layout, pagination, image, and font diagnostics.

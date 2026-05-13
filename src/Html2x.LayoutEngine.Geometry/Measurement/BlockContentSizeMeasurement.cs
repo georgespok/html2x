@@ -1,5 +1,6 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
 
 namespace Html2x.LayoutEngine.Geometry.Measurement;
@@ -14,10 +15,10 @@ namespace Html2x.LayoutEngine.Geometry.Measurement;
 internal sealed class BlockContentSizeMeasurement(
     InlineFlowLayout inlineFlowLayout,
     BlockSizingRules sizingRules,
-    ImageSizingRules imageResolver)
+    ImageSizingRules imageSizingRules)
 {
-    private readonly ImageSizingRules _imageResolver =
-        imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
+    private readonly ImageSizingRules _imageSizingRules =
+        imageSizingRules ?? throw new ArgumentNullException(nameof(imageSizingRules));
 
     private readonly InlineFlowLayout _inlineFlowLayout =
         inlineFlowLayout ?? throw new ArgumentNullException(nameof(inlineFlowLayout));
@@ -38,24 +39,24 @@ internal sealed class BlockContentSizeMeasurement(
             case TableBox table:
                 return measureTable(table, availableWidth);
             case ImageBox imageBox:
-            {
-                var imageMeasurement = _sizingRules.Prepare(imageBox, availableWidth);
-                var image = _imageResolver.Resolve(imageBox, imageMeasurement.ContentFlowWidth);
-                return BlockContentSizeFacts.ForImage(image);
-            }
+                {
+                    var imageMeasurement = _sizingRules.ResolveBlockMeasurementBasis(imageBox, availableWidth);
+                    var image = _imageSizingRules.ResolveImageLayout(imageBox, imageMeasurement.ContentFlowWidth);
+                    return BlockContentSizeFacts.ForImage(image);
+                }
             case RuleBox ruleBox:
-            {
-                var ruleMeasurement = _sizingRules.Prepare(ruleBox, availableWidth);
-                return new(
-                    ruleMeasurement.Padding.Vertical + ruleMeasurement.Border.Vertical,
-                    0f,
-                    0f,
-                    0f);
-            }
+                {
+                    var ruleMeasurement = _sizingRules.ResolveBlockMeasurementBasis(ruleBox, availableWidth);
+                    return new(
+                        ruleMeasurement.Padding.Vertical + ruleMeasurement.Border.Vertical,
+                        0f,
+                        0f,
+                        0f);
+                }
         }
 
-        var measurement = _sizingRules.Prepare(block, availableWidth);
-        var inlineLayout = MeasureInlineLayout(block, InlineLayoutRequest.ForMeasurement(measurement.ContentFlowWidth));
+        var measurement = _sizingRules.ResolveBlockMeasurementBasis(block, availableWidth);
+        var inlineContent = MeasureInlineContent(block, InlineLayoutRequest.ForMeasurement(measurement.ContentFlowWidth));
         var nestedHeight = _sizingRules.MeasureStackedChildBlocks(
             block.Children,
             measurement.ContentFlowWidth,
@@ -63,7 +64,7 @@ internal sealed class BlockContentSizeMeasurement(
             (tableChild, tableAvailableWidth) => measureTable(tableChild, tableAvailableWidth).BorderBoxHeight);
         var contentHeight = _sizingRules.ResolveContentHeight(
             block,
-            Math.Max(inlineLayout.TotalHeight, nestedHeight));
+            Math.Max(inlineContent.TotalHeight, nestedHeight));
         var borderBoxHeight = UsedGeometryRules.ResolveBorderBoxHeight(
             contentHeight,
             measurement.Padding,
@@ -72,11 +73,10 @@ internal sealed class BlockContentSizeMeasurement(
         return new(
             borderBoxHeight,
             contentHeight,
-            inlineLayout.TotalHeight,
+            inlineContent.TotalHeight,
             nestedHeight);
     }
 
-    private InlineLayoutResult MeasureInlineLayout(BlockBox block, InlineLayoutRequest request) =>
-        _inlineFlowLayout.MeasureInlineFlow(block, request) ?? throw new InvalidOperationException(
-            $"{nameof(InlineFlowLayout.MeasureInlineFlow)} returned null for '{block.GetType().Name}'.");
+    private InlineContentSizeFacts MeasureInlineContent(BlockBox block, InlineLayoutRequest request) =>
+        _inlineFlowLayout.MeasureInlineFlow(block, request);
 }

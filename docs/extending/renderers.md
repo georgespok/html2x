@@ -1,30 +1,19 @@
-# Extending Renderers
+# Renderer Internals
 
-Html2x is designed so renderers consume `HtmlLayout` and fragment contracts
-without depending on parser or layout internals.
+Html2x does not expose a public renderer extension point. Renderer work is an
+internal codebase change: the built-in PDF renderer consumes `HtmlLayout` and
+fragment contracts without depending on parser or layout internals.
 
-## New Renderer Shape
+## Internal Renderer Shape
 
-A new renderer should:
+An internal renderer should:
 
-- Reference `Html2x.RenderModel` and diagnostics contracts as needed.
+- Reference render model and diagnostics contracts as needed.
 - Accept `HtmlLayout` and renderer-specific options.
 - Iterate pages in source order.
 - Dispatch by fragment type.
 - Treat fragments as read-only.
 - Emit diagnostics or structured warnings for unsupported fragment types.
-
-Example shape:
-
-```csharp
-public sealed class SvgRenderer
-{
-    public Task<byte[]> RenderAsync(HtmlLayout layout, SvgOptions options)
-    {
-        // Create an output surface, visit pages and fragments, return bytes.
-    }
-}
-```
 
 ## Required Coverage
 
@@ -35,13 +24,13 @@ public sealed class SvgRenderer
 
 ## Settings Ownership
 
-Renderer-specific settings belong with the renderer. Converter facade options
-belong in `Html2x` and should be mapped into renderer-owned settings by the
-facade or composition layer.
+Renderer-specific settings belong with the renderer and can stay internal.
+Converter facade options belong in `Html2x` and should be mapped into
+renderer-owned settings by the facade composition layer.
 
 ## Contract Rule
 
-If the renderer needs data that is not present on fragments, extend the fragment contract and update layout projection. Do not make the renderer inspect DOM, CSS, style, or box objects.
+If the renderer needs data that is not present on fragments, extend the fragment contract and update fragment tree building. Do not make the renderer inspect DOM, CSS, style, or box objects.
 
 ## Fragment Policy
 
@@ -52,7 +41,7 @@ extension model for the built-in pipeline.
 
 Adding a fragment kind requires coordinated updates to:
 
-- Fragment projection from published layout facts.
+- Fragment tree building from published layout facts.
 - Pagination clone and placement behavior.
 - Diagnostics snapshot mapping.
 - Renderer paint command resolution and drawing.

@@ -11,28 +11,28 @@ public sealed class UnsupportedLayoutModePolicyTests
     {
         var diagnostics = new RecordingDiagnosticsSink();
         var root = new BlockBox(BoxRole.Block);
-        root.Children.Add(new FloatBox(BoxRole.Float)
+        root.AddChild(new FloatBox(BoxRole.Float)
         {
             Parent = root,
             Style = new()
             {
-                FloatDirection = HtmlCssConstants.CssValues.Left
+                FloatDirection = HtmlCssVocabulary.CssValues.Left
             }
         });
-        root.Children.Add(new BlockBox(BoxRole.Block)
+        root.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = root,
             Style = new()
             {
-                Display = HtmlCssConstants.CssValues.Flex
+                Display = HtmlCssVocabulary.CssValues.Flex
             }
         });
-        root.Children.Add(new BlockBox(BoxRole.Block)
+        root.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = root,
             Style = new()
             {
-                Position = HtmlCssConstants.CssValues.Absolute
+                Position = HtmlCssVocabulary.CssValues.Absolute
             }
         });
 

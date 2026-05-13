@@ -10,13 +10,13 @@ namespace Html2x.LayoutEngine;
 
 internal sealed class LayoutStageRunner
 {
-    private readonly FragmentBuilder _fragmentBuilder;
-    private readonly LayoutGeometryBuilder _layoutGeometryBuilder;
+    private readonly FragmentTreeBuilder _fragmentBuilder;
+    private readonly LayoutGeometryConstruction _layoutGeometryBuilder;
     private readonly LayoutPaginator _layoutPaginator;
 
     public LayoutStageRunner(
-        LayoutGeometryBuilder layoutGeometryBuilder,
-        FragmentBuilder fragmentBuilder,
+        LayoutGeometryConstruction layoutGeometryBuilder,
+        FragmentTreeBuilder fragmentBuilder,
         LayoutPaginator layoutPaginator)
     {
         ArgumentNullException.ThrowIfNull(layoutGeometryBuilder);
@@ -34,19 +34,19 @@ internal sealed class LayoutStageRunner
         IDiagnosticsSink? diagnosticsSink,
         CancellationToken cancellationToken)
     {
-        return DiagnosticStage.Run(
+        return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.BoxTree,
             () => _layoutGeometryBuilder.Build(styleTree, request, diagnosticsSink),
             cancellationToken);
     }
 
-    public FragmentTree ProjectFragments(
+    public FragmentTree BuildFragmentTree(
         PublishedLayoutTree publishedLayout,
         IDiagnosticsSink? diagnosticsSink,
         CancellationToken cancellationToken)
     {
-        return DiagnosticStage.Run(
+        return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.FragmentTree,
             () => _fragmentBuilder.Build(publishedLayout),
@@ -57,19 +57,12 @@ internal sealed class LayoutStageRunner
         FragmentTree fragments,
         PaginationOptions options,
         IDiagnosticsSink? diagnosticsSink,
-        CancellationToken cancellationToken,
-        Action<PaginationResult>? afterPaginate = null)
+        CancellationToken cancellationToken)
     {
-        return DiagnosticStage.Run(
+        return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.Pagination,
-            () =>
-            {
-                var pagination = _layoutPaginator.Paginate(fragments.Blocks, options, diagnosticsSink);
-                afterPaginate?.Invoke(pagination);
-
-                return pagination;
-            },
+            () => _layoutPaginator.Paginate(fragments.Blocks, options, diagnosticsSink),
             cancellationToken);
     }
 }

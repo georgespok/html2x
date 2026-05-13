@@ -1,8 +1,9 @@
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.LayoutEngine.Geometry.Publishing;
+using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
@@ -22,16 +23,16 @@ public sealed class LayoutGeometryDocumentationTests
                 AssemblyName<StyleNode>(),
                 AssemblyName<StyleTreeBuilder>(),
                 AssemblyName<BlockBox>(),
-                AssemblyName<FragmentBuilder>(),
+                AssemblyName<FragmentTreeBuilder>(),
                 AssemblyName<LayoutPaginator>(),
                 ResourcesAssemblyName);
         ArchitectureDocument.Load("docs", "architecture", "pipeline.md")
-            .ShouldMentionTopicsInSection("Fragment Projection", nameof(PublishedLayoutTree), nameof(FragmentTree));
+            .ShouldMentionTopicsInSection("Fragment Tree Building", nameof(PublishedLayoutTree), nameof(FragmentTree));
         ArchitectureDocument.Load("docs", "architecture", "module-boundaries.md")
             .ShouldMentionTopicsInSection(
                 "Ownership Matrix",
                 AssemblyName<StyleNode>(),
-                AssemblyName<FragmentBuilder>(),
+                AssemblyName<FragmentTreeBuilder>(),
                 AssemblyName<LayoutPaginator>());
         ArchitectureDocument.Load("docs", "architecture", "module-boundaries.md")
             .ShouldMentionTopicsInSection(
@@ -63,7 +64,7 @@ public sealed class LayoutGeometryDocumentationTests
             .ShouldMentionTopicsInSection(
                 "Test Projects",
                 TestAssemblyNameFor<StyleTreeBuilder>(),
-                TestAssemblyNameFor<FragmentBuilder>(),
+                TestAssemblyNameFor<FragmentTreeBuilder>(),
                 TestAssemblyNameFor<LayoutPaginator>());
         ArchitectureDocument.Load("docs", "development", "testing-strategy.md")
             .ShouldMentionTopicsInSection(

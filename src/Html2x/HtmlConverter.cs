@@ -1,361 +1,188 @@
-using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.Options;
-using Html2x.Renderers.Pdf;
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
-using Html2x.Resources;
-using Html2x.Text;
 
 namespace Html2x;
 
-public sealed class HtmlConverter
+public sealed class HtmlConverter(HtmlConverterDependencies dependencies)
 {
-    private readonly HtmlConverterRuntime _runtime;
+    private readonly HtmlConverterDependencies _dependencies = 
+        dependencies ?? throw new ArgumentNullException(nameof(dependencies));
 
     public HtmlConverter()
-        : this(HtmlConverterRuntime.Default)
+        : this(HtmlConverterDependencies.Default)
     {
     }
 
-    public HtmlConverter(HtmlConverterRuntime runtime)
-    {
-        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-    }
-
-    public async Task<Html2PdfResult> ToPdfAsync(
+    public async Task<HtmlToPdfResult> ToPdfAsync(
         string html,
         HtmlConverterOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        if (html is null)
-        {
-            throw new ArgumentNullException(nameof(html));
-        }
+        ArgumentNullException.ThrowIfNull(html);
 
         options ??= new();
+        HtmlConverterOptionsValidator.Validate(options);
+        var baseDirectory = HtmlConverterOptionsValidator.ResolveExistingBaseDirectory(options);
+        var diagnostics = HtmlConversionDiagnostics.Create(options.Diagnostics);
 
-        DiagnosticsCollector? collector = null;
-        IDiagnosticsSink? diagnosticsSink = null;
-        if (options.Diagnostics.EnableDiagnostics)
-        {
-            var diagnosticsStartTime = DateTimeOffset.UtcNow;
-            collector = new DiagnosticsCollector(diagnosticsStartTime);
-            diagnosticsSink = collector;
-        }
-
-        ValidateOptions(options);
-        var baseDirectory = ResolveBaseDirectory(options);
-
-        using var ownedTextMeasurer = _runtime.TextMeasurer is null
-            ? CreateTextMeasurer(options, collector, diagnosticsSink)
-            : null;
-        var textMeasurer = _runtime.TextMeasurer
-                           ?? ownedTextMeasurer
-                           ?? throw new InvalidOperationException("Text measurer could not be resolved.");
-
-        var imageResources = new ConversionImageResourceStore(baseDirectory, options.Resources.MaxImageSizeBytes);
-        var imageMetadataResolver = new ImageResourceMetadataResolver(imageResources);
+        using var resources = CreateConversionResources(
+            _dependencies,
+            options,
+            baseDirectory,
+            diagnostics);
 
         DiagnosticStageEmitter.Started(
-            diagnosticsSink,
-            FacadeDiagnosticNames.Stages.LayoutBuild,
-            CreateLayoutStartFields(html, options.Diagnostics));
+            diagnostics.Sink,
+            HtmlConverterDiagnosticNames.Stages.LayoutBuild,
+            diagnostics.CreateLayoutStartFields(html, options.Diagnostics));
 
-        var layoutBuilder = new LayoutBuilder(textMeasurer, imageMetadataResolver);
-
-        HtmlLayout layout;
-        try
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            layout = await layoutBuilder.BuildAsync(
-                html,
-                ToLayoutBuildSettings(options, baseDirectory),
-                diagnosticsSink,
-                cancellationToken);
-        }
-        catch (OperationCanceledException exception)
-        {
-            DiagnosticStageEmitter.Cancelled(
-                diagnosticsSink,
-                FacadeDiagnosticNames.Stages.LayoutBuild,
-                "LayoutBuild canceled.");
-            DiagnosticStageEmitter.Skipped(
-                diagnosticsSink,
-                FacadeDiagnosticNames.Stages.PdfRender,
-                "Skipped because LayoutBuild was canceled.");
-            AttachDiagnosticsReport(exception, collector);
-            throw;
-        }
-        catch (Exception exception)
-        {
-            DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.LayoutBuild, exception.Message);
-            DiagnosticStageEmitter.Skipped(
-                diagnosticsSink,
-                FacadeDiagnosticNames.Stages.PdfRender,
-                FacadeDiagnosticNames.Messages.SkippedBecauseLayoutBuildFailed);
-            AttachDiagnosticsReport(exception, collector);
-            throw;
-        }
+        var layoutPipeline = new LayoutPipeline(resources.TextMeasurer, resources.ImageMetadataResolver);
+        var layout = await BuildLayoutAsync(
+            layoutPipeline,
+            html,
+            options,
+            diagnostics,
+            cancellationToken);
 
         DiagnosticStageEmitter.Succeeded(
-            diagnosticsSink,
-            FacadeDiagnosticNames.Stages.LayoutBuild,
+            diagnostics.Sink,
+            HtmlConverterDiagnosticNames.Stages.LayoutBuild,
             DiagnosticFields.Create(
                 DiagnosticFields.Field(
-                    FacadeDiagnosticNames.Fields.Snapshot,
+                    HtmlConverterDiagnosticNames.Fields.Snapshot,
                     LayoutSnapshotMapper.ToDiagnosticObject(layout))));
 
         var renderer = new PdfRenderer();
 
-        DiagnosticStageEmitter.Started(diagnosticsSink, FacadeDiagnosticNames.Stages.PdfRender);
+        DiagnosticStageEmitter.Started(diagnostics.Sink, HtmlConverterDiagnosticNames.Stages.PdfRender);
 
-        byte[] pdfBytes;
+        var pdfBytes = RenderPdf(
+            renderer,
+            layout,
+            options,
+            baseDirectory,
+            resources,
+            diagnostics,
+            cancellationToken);
+
+        DiagnosticStageEmitter.Succeeded(
+            diagnostics.Sink,
+            HtmlConverterDiagnosticNames.Stages.PdfRender,
+            DiagnosticFields.Create(
+                DiagnosticFields.Field(HtmlConverterDiagnosticNames.Fields.PdfSize, pdfBytes.Length),
+                DiagnosticFields.Field(HtmlConverterDiagnosticNames.Fields.PageCount, layout.Pages.Count)));
+
+        return new(pdfBytes)
+        {
+            DiagnosticsReport = diagnostics.Complete()
+        };
+    }
+
+    private static async Task<HtmlLayout> BuildLayoutAsync(
+        LayoutPipeline layoutPipeline,
+        string html,
+        HtmlConverterOptions options,
+        HtmlConversionDiagnostics diagnostics,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            pdfBytes = await renderer.RenderAsync(
-                layout,
-                ToPdfRenderSettings(options, baseDirectory, imageResources),
-                diagnosticsSink,
+            cancellationToken.ThrowIfCancellationRequested();
+            return await layoutPipeline.BuildAsync(
+                html,
+                HtmlConverterSettingsMapper.ToLayoutBuildSettings(options),
+                diagnostics.Sink,
                 cancellationToken);
         }
         catch (OperationCanceledException exception)
         {
-            DiagnosticStageEmitter.Cancelled(
-                diagnosticsSink,
-                FacadeDiagnosticNames.Stages.PdfRender,
-                "PdfRender canceled.");
-            AttachDiagnosticsReport(exception, collector);
+            DiagnosticStageEmitter.Canceled(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.LayoutBuild,
+                "LayoutBuild canceled.");
+            DiagnosticStageEmitter.Skipped(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.PdfRender,
+                "Skipped because LayoutBuild was canceled.");
+            diagnostics.AttachReportTo(exception);
             throw;
         }
         catch (Exception exception)
         {
-            DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.PdfRender, exception.Message);
-            AttachDiagnosticsReport(exception, collector);
+            DiagnosticStageEmitter.Failed(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.LayoutBuild,
+                exception.Message);
+            DiagnosticStageEmitter.Skipped(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.PdfRender,
+                HtmlConverterDiagnosticNames.Messages.SkippedBecauseLayoutBuildFailed);
+            diagnostics.AttachReportTo(exception);
             throw;
         }
-
-        DiagnosticStageEmitter.Succeeded(
-            diagnosticsSink,
-            FacadeDiagnosticNames.Stages.PdfRender,
-            DiagnosticFields.Create(
-                DiagnosticFields.Field(FacadeDiagnosticNames.Fields.PdfSize, pdfBytes.Length),
-                DiagnosticFields.Field(FacadeDiagnosticNames.Fields.PageCount, layout.Pages.Count)));
-
-        var report = CompleteDiagnostics(collector);
-
-        return new(pdfBytes)
-        {
-            DiagnosticsReport = report
-        };
-
-        SkiaTextMeasurer CreateTextMeasurer(
-            HtmlConverterOptions converterOptions,
-            DiagnosticsCollector? activeCollector,
-            IDiagnosticsSink? activeDiagnosticsSink)
-        {
-            var fontSource = ResolveFontSource(converterOptions, activeCollector);
-            if (activeDiagnosticsSink is not null)
-            {
-                fontSource = new DiagnosticsFontSource(fontSource, activeDiagnosticsSink);
-            }
-
-            return new(fontSource);
-        }
     }
 
-    private static LayoutBuildSettings ToLayoutBuildSettings(HtmlConverterOptions options, string baseDirectory)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        return new()
-        {
-            PageSize = options.Page.Size,
-            ResourceBaseDirectory = baseDirectory,
-            MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
-            Style = new()
-            {
-                UseDefaultUserAgentStyleSheet = options.Css.UseDefaultUserAgentStyleSheet,
-                UserAgentStyleSheet = options.Css.UserAgentStyleSheet
-            }
-        };
-    }
-
-    private static PdfRenderSettings ToPdfRenderSettings(
+    private static ConversionResources CreateConversionResources(
+        HtmlConverterDependencies dependencies,
         HtmlConverterOptions options,
         string baseDirectory,
-        IImageResourceReader imageResources)
+        HtmlConversionDiagnostics diagnostics)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(imageResources);
-
-        return new()
-        {
-            ResourceBaseDirectory = baseDirectory,
-            MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
-            ImageResources = imageResources
-        };
-    }
-
-    private IFontSource ResolveFontSource(
-        HtmlConverterOptions options,
-        DiagnosticsCollector? collector)
-    {
-        if (_runtime.FontSource is { } runtimeFontSource)
-        {
-            return runtimeFontSource;
-        }
-
-        var fontPath = options.Fonts.FontPath;
-        if (string.IsNullOrWhiteSpace(fontPath))
-        {
-            throw CreateFontPathException(
-                "HtmlConverterOptions.Fonts.FontPath must be provided before layout can begin.",
-                collector);
-        }
-
         try
         {
-            return new FontPathSource(fontPath);
+            return ConversionResources.Create(
+                dependencies,
+                options,
+                baseDirectory,
+                diagnostics);
         }
-        catch (FontResolutionException)
+        catch (Exception exception) when (
+            exception is not OperationCanceledException &&
+            !exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)))
         {
-            throw CreateFontPathException(
-                $"HtmlConverterOptions.Fonts.FontPath '{fontPath}' does not exist.",
-                collector);
-        }
-    }
-
-    private static void ValidateOptions(HtmlConverterOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(options.Page);
-        ArgumentNullException.ThrowIfNull(options.Resources);
-        ArgumentNullException.ThrowIfNull(options.Css);
-        ArgumentNullException.ThrowIfNull(options.Fonts);
-        ArgumentNullException.ThrowIfNull(options.Diagnostics);
-
-        if (options.Resources.MaxImageSizeBytes <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(ResourceOptions.MaxImageSizeBytes),
-                "HtmlConverterOptions.Resources.MaxImageSizeBytes must be greater than zero.");
-        }
-
-        if (options.Diagnostics.MaxRawHtmlLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(DiagnosticsOptions.MaxRawHtmlLength),
-                "HtmlConverterOptions.Diagnostics.MaxRawHtmlLength must be greater than zero.");
+            diagnostics.AttachConfigurationFailure(exception);
+            throw;
         }
     }
 
-    private static string ResolveBaseDirectory(HtmlConverterOptions options)
+    private static byte[] RenderPdf(
+        PdfRenderer renderer,
+        HtmlLayout layout,
+        HtmlConverterOptions options,
+        string baseDirectory,
+        ConversionResources resources,
+        HtmlConversionDiagnostics diagnostics,
+        CancellationToken cancellationToken)
     {
-        var configuredBaseDirectory = options.Resources.BaseDirectory;
-        var resolvedBaseDirectory = ImageResourceLoader.ResolveBaseDirectory(configuredBaseDirectory);
-        if (!string.IsNullOrWhiteSpace(configuredBaseDirectory) &&
-            !Directory.Exists(resolvedBaseDirectory))
+        try
         {
-            throw new DirectoryNotFoundException(
-                $"HtmlConverterOptions.Resources.BaseDirectory '{configuredBaseDirectory}' does not exist.");
+            return renderer.Render(
+                layout,
+                HtmlConverterSettingsMapper.ToPdfRenderSettings(options, baseDirectory, resources.ImageResources),
+                diagnostics.Sink,
+                cancellationToken);
         }
-
-        return resolvedBaseDirectory;
-    }
-
-    private static DiagnosticFields CreateLayoutStartFields(
-        string html,
-        DiagnosticsOptions diagnosticsOptions)
-    {
-        var fields = new List<KeyValuePair<string, DiagnosticValue?>>
+        catch (OperationCanceledException exception)
         {
-            DiagnosticFields.Field(FacadeDiagnosticNames.Fields.HtmlLength, html.Length)
-        };
-
-        if (diagnosticsOptions.IncludeRawHtml)
-        {
-            var rawHtml = html.Trim();
-            fields.Add(DiagnosticFields.Field(
-                FacadeDiagnosticNames.Fields.Html,
-                rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength
-                    ? rawHtml[..diagnosticsOptions.MaxRawHtmlLength]
-                    : rawHtml));
-            fields.Add(DiagnosticFields.Field(
-                FacadeDiagnosticNames.Fields.HtmlTruncated,
-                rawHtml.Length > diagnosticsOptions.MaxRawHtmlLength));
+            DiagnosticStageEmitter.Canceled(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.PdfRender,
+                "PdfRender canceled.");
+            diagnostics.AttachReportTo(exception);
+            throw;
         }
-
-        return new(fields);
-    }
-
-    private static InvalidOperationException CreateFontPathException(
-        string message,
-        DiagnosticsCollector? collector)
-    {
-        IDiagnosticsSink? diagnosticsSink = collector;
-        DiagnosticStageEmitter.Emit(
-            diagnosticsSink,
-            FacadeDiagnosticNames.Stages.Configuration,
-            FacadeDiagnosticNames.Events.FontPathError,
-            DiagnosticSeverity.Error,
-            message);
-        DiagnosticStageEmitter.Failed(diagnosticsSink, FacadeDiagnosticNames.Stages.LayoutBuild, message);
-        DiagnosticStageEmitter.Skipped(
-            diagnosticsSink,
-            FacadeDiagnosticNames.Stages.PdfRender,
-            FacadeDiagnosticNames.Messages.SkippedBecauseLayoutBuildFailed);
-
-        var exception = new InvalidOperationException(message);
-        AttachDiagnosticsReport(exception, collector);
-        return exception;
-    }
-
-    private static void AttachDiagnosticsReport(
-        Exception exception,
-        DiagnosticsCollector? collector)
-    {
-        var report = CompleteDiagnostics(collector);
-        if (report is not null)
+        catch (Exception exception)
         {
-            exception.Data[nameof(Html2PdfResult.DiagnosticsReport)] = report;
-        }
-    }
-
-    private static DiagnosticsReport? CompleteDiagnostics(DiagnosticsCollector? collector)
-    {
-        var endTime = DateTimeOffset.UtcNow;
-        return collector?.ToReport(endTime);
-    }
-
-    private static class FacadeDiagnosticNames
-    {
-        public static class Stages
-        {
-            public const string LayoutBuild = "LayoutBuild";
-            public const string PdfRender = "PdfRender";
-            public const string Configuration = "Configuration";
-        }
-
-        public static class Events
-        {
-            public const string FontPathError = "font-path/error";
-        }
-
-        public static class Fields
-        {
-            public const string Snapshot = "snapshot";
-            public const string PdfSize = "pdfSize";
-            public const string PageCount = "pageCount";
-            public const string HtmlLength = "htmlLength";
-            public const string Html = "html";
-            public const string HtmlTruncated = "htmlTruncated";
-        }
-
-        public static class Messages
-        {
-            public const string SkippedBecauseLayoutBuildFailed = "Skipped because LayoutBuild failed.";
+            DiagnosticStageEmitter.Failed(
+                diagnostics.Sink,
+                HtmlConverterDiagnosticNames.Stages.PdfRender,
+                exception.Message);
+            diagnostics.AttachReportTo(exception);
+            throw;
         }
     }
 }

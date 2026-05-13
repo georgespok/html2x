@@ -1,6 +1,7 @@
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 
 namespace Html2x.LayoutEngine.Geometry.Publishing;
 

@@ -45,6 +45,7 @@ Individual records do not include a per-record timestamp.
 
 ## Conversion Lifecycle
 
+- `Configuration`
 - `LayoutBuild`
 - `PdfRender`
 
@@ -58,10 +59,13 @@ Lifecycle states:
 ## Style
 
 - `style/unsupported-declaration`
+- `style/unsupported-element`
 - `style/ignored-declaration`
 - `style/partially-applied-declaration`
 
-Style diagnostics explain applied, ignored, partially applied, and unsupported CSS declarations.
+Style diagnostics explain applied, ignored, partially applied, and unsupported
+CSS declarations. Unsupported HTML elements are flattened into supported content
+when possible and emit `style/unsupported-element`.
 
 ## Layout And Geometry
 
@@ -73,7 +77,9 @@ Geometry snapshots capture box geometry, fragment geometry, and pagination
 audit placements for drift analysis. Pagination placement entries include
 `decisionKind`, `isOversized`, placed rectangle fields, and metadata ownership
 facts. `metadataConsumer` uses the stable value `Pagination`; it does not name
-the private clone implementation.
+the private clone implementation. Box entries include
+`establishesInlineBlockFormattingContext` when the box starts an inline-block
+formatting context.
 
 ## Tables
 
@@ -135,7 +141,7 @@ Known status values:
 
 - `Ok`
 - `Missing`
-- `Oversize`
+- `Oversized`
 - `InvalidDataUri`
 - `DecodeFailed`
 - `OutOfScope`

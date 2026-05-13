@@ -202,8 +202,8 @@ public sealed class TableFragmentRenderingTests
     private static SKBitmap Draw(LayoutPage page)
     {
         var options = new PdfRenderSettings();
-        using var fontCache = new SkiaFontCache(new TestFileDirectory(), new TestSkiaTypefaceFactory());
-        var commands = new PaintOrderResolver().Resolve(page);
+        using var fontCache = new SkiaFontCache(new TestFileSystemReader(), new TestSkiaTypefaceFactory());
+        var commands = new PaintCommandPlanner().Resolve(page);
         var drawer = new SkiaPaintCommandDrawer(options, fontCache);
 
         using var surface = SKSurface.Create(new SKImageInfo(200, 200, SKColorType.Bgra8888, SKAlphaType.Premul));

@@ -3,7 +3,9 @@ using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
+using Html2x.Resources;
 using Shouldly;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.Renderers.Pdf.Test;
 
@@ -16,7 +18,7 @@ public class ImageRenderingTests
         "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=";
 
     [Fact]
-    public async Task Render_Images_ReportStatusesAndRenderedSizes()
+    public void Render_Images_ReportStatusesAndRenderedSizes()
     {
         // arrange: construct layout with success, missing, and oversize cases
         var layout = new HtmlLayout();
@@ -27,11 +29,11 @@ public class ImageRenderingTests
             {
                 CreateImageFragment(24, 60, 120, 120, ImageLoadStatus.Ok),
                 CreateImageFragment(24, 120, 80, 80, ImageLoadStatus.Missing),
-                CreateImageFragment(24, 180, 140, 70, ImageLoadStatus.Oversize)
+                CreateImageFragment(24, 180, 140, 70, ImageLoadStatus.Oversized)
             }));
 
         // act
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+        var (bytes, diagnostics) = RenderLayout(layout);
 
         // assert
         bytes.ShouldNotBeNull();
@@ -41,7 +43,7 @@ public class ImageRenderingTests
         images.Count.ShouldBe(3);
         GetStatus(images[0]).ShouldBe("Ok");
         GetStatus(images[1]).ShouldBe("Missing");
-        GetStatus(images[2]).ShouldBe("Oversize");
+        GetStatus(images[2]).ShouldBe("Oversized");
 
         GetNumber(images[0], "renderedWidth").ShouldBe(120d, 1d);
         GetNumber(images[0], "renderedHeight").ShouldBe(120d, 1d);
@@ -54,7 +56,7 @@ public class ImageRenderingTests
     }
 
     [Fact]
-    public async Task Render_ImageDiagnostics_UseCanonicalEventAndContext()
+    public void Render_ImageDiagnostics_UseCanonicalEventAndContext()
     {
         var layout = new HtmlLayout();
         layout.AddPage(new(
@@ -65,7 +67,7 @@ public class ImageRenderingTests
                 CreateImageFragment(24, 60, 120, 80, ImageLoadStatus.Missing, src: "missing.png")
             }));
 
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+        var (bytes, diagnostics) = RenderLayout(layout);
 
         bytes.ShouldNotBeNull();
 
@@ -84,7 +86,7 @@ public class ImageRenderingTests
 
     [Theory]
     [MemberData(nameof(ImageBorderCases))]
-    public async Task Render_ImageWithBorder_ReportsBorderMetadata(
+    public void Render_ImageWithBorder_ReportsBorderMetadata(
         ImageLoadStatus status,
         float borderWidth,
         ColorRgba borderColor,
@@ -101,7 +103,7 @@ public class ImageRenderingTests
                 CreateImageFragment(24, 40, 64, 64, status, borders)
             }));
 
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+        var (bytes, diagnostics) = RenderLayout(layout);
 
         bytes.ShouldNotBeNull();
 
@@ -118,7 +120,7 @@ public class ImageRenderingTests
     }
 
     [Fact]
-    public async Task Render_ImageWithNoBorder_ReportNoBorders()
+    public void Render_ImageWithNoBorder_ReportNoBorders()
     {
         var borders = BorderEdges.Uniform(new(0f, ColorRgba.Black, BorderLineStyle.None));
 
@@ -131,7 +133,7 @@ public class ImageRenderingTests
                 CreateImageFragment(48, 72, 64, 64, ImageLoadStatus.Ok, borders)
             }));
 
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+        var (bytes, diagnostics) = RenderLayout(layout);
 
         bytes.ShouldNotBeNull();
 
@@ -146,11 +148,11 @@ public class ImageRenderingTests
 
     [Theory]
     [InlineData(ImageLoadStatus.Missing, "Missing")]
-    [InlineData(ImageLoadStatus.Oversize, "Oversize")]
+    [InlineData(ImageLoadStatus.Oversized, "Oversized")]
     [InlineData(ImageLoadStatus.InvalidDataUri, "InvalidDataUri")]
     [InlineData(ImageLoadStatus.DecodeFailed, "DecodeFailed")]
     [InlineData(ImageLoadStatus.OutOfScope, "OutOfScope")]
-    public async Task Render_ImageLoadStatus_MapsRenderModelStatusToDiagnostics(
+    public void Render_ImageLoadStatus_MapsRenderModelStatusToDiagnostics(
         ImageLoadStatus loadStatus,
         string expectedStatus)
     {
@@ -163,7 +165,7 @@ public class ImageRenderingTests
                 CreateImageFragmentWithLoadStatus(loadStatus)
             }));
 
-        var (bytes, diagnostics) = await RenderLayoutAsync(layout);
+        var (bytes, diagnostics) = RenderLayout(layout);
 
         bytes.ShouldNotBeNull();
         GetStatus(GetSingleImageRenderRecord(diagnostics).ShouldNotBeNull()).ShouldBe(expectedStatus);
@@ -199,17 +201,45 @@ public class ImageRenderingTests
                 MaxImageSizeBytes = 1
             };
 
-            var (bytes, diagnostics) = await RenderLayoutAsync(layout, settings);
+            var (bytes, diagnostics) = RenderLayout(layout, settings);
 
             bytes.ShouldNotBeNull();
             GetImageRenderRecords(diagnostics)
                 .Select(GetStatus)
-                .ShouldBe(["Missing", "OutOfScope", "Oversize", "InvalidDataUri", "DecodeFailed"]);
+                .ShouldBe(["Missing", "OutOfScope", "Oversized", "InvalidDataUri", "DecodeFailed"]);
         }
         finally
         {
             rootDirectory.Delete(true);
         }
+    }
+
+    [Fact]
+    public void Render_OkResourceWithInvalidBytes_RecordsDecodeFailed()
+    {
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(612, 792),
+            new(0, 0, 0, 0),
+            new List<Fragment>
+            {
+                CreateImageFragment(24, 40, 16, 16, ImageLoadStatus.Ok, src: "corrupt.png")
+            }));
+        var settings = new PdfRenderSettings
+        {
+            ImageResources = new FixedImageResourceReader(new()
+            {
+                Src = "corrupt.png",
+                Status = ImageLoadStatus.Ok,
+                Bytes = [1],
+                IntrinsicSizePx = new(16d, 16d)
+            })
+        };
+
+        var (bytes, diagnostics) = RenderLayout(layout, settings);
+
+        bytes.ShouldNotBeNull();
+        GetStatus(GetSingleImageRenderRecord(diagnostics).ShouldNotBeNull()).ShouldBe("DecodeFailed");
     }
 
     private static ImageFragment CreateImageFragment(
@@ -300,7 +330,7 @@ public class ImageRenderingTests
     private static DiagnosticObject? GetBorderSide(DiagnosticObject borders, string side) =>
         borders[side]?.ShouldBeOfType<DiagnosticObject>();
 
-    private static async Task<(byte[]? Bytes, IReadOnlyList<DiagnosticRecord> Diagnostics)> RenderLayoutAsync(
+    private static (byte[]? Bytes, IReadOnlyList<DiagnosticRecord> Diagnostics) RenderLayout(
         HtmlLayout layout,
         PdfRenderSettings? settings = null)
     {
@@ -313,7 +343,7 @@ public class ImageRenderingTests
 
         var renderer = new PdfRenderer();
 
-        var bytes = await renderer.RenderAsync(layout, pdfOptions, diagnostics);
+        var bytes = renderer.Render(layout, pdfOptions, diagnostics);
         return (bytes, diagnostics.Records);
     }
 
@@ -330,5 +360,10 @@ public class ImageRenderingTests
         {
             _records.Add(record);
         }
+    }
+
+    private sealed class FixedImageResourceReader(ImageResourceResult result) : IImageResourceReader
+    {
+        public ImageResourceResult Load(string src) => result;
     }
 }

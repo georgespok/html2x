@@ -14,7 +14,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class PdfRendererTests
 {
     [Fact]
-    public async Task RenderAsync_LayoutIsValid_CreatePdfFile()
+    public void Render_LayoutIsValid_CreatePdfFile()
     {
         // Arrange
         var layout = CreateSimpleLayout();
@@ -22,11 +22,11 @@ public class PdfRendererTests
         var renderer = new PdfRenderer();
 
         // Act
-        var pdfBytes = await renderer.RenderAsync(layout, options);
+        var pdfBytes = renderer.Render(layout, options);
 
         // Assert
         pdfBytes.ShouldNotBeNull();
-        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        PdfValidator.HasPdfHeader(pdfBytes).ShouldBeTrue();
 
         using var stream = new MemoryStream(pdfBytes);
         using var pdf = PdfDocument.Open(stream);
@@ -34,7 +34,7 @@ public class PdfRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_BlockHasChildOffsets_RespectChildOffsets()
+    public void Render_BlockHasChildOffsets_RespectChildOffsets()
     {
         // Arrange
         var layout = CreateLayoutWithOffsetBlock();
@@ -42,10 +42,10 @@ public class PdfRendererTests
         var options = new PdfRenderSettings();
 
         // Act
-        var pdfBytes = await renderer.RenderAsync(layout, options);
+        var pdfBytes = renderer.Render(layout, options);
 
         // Assert
-        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        PdfValidator.HasPdfHeader(pdfBytes).ShouldBeTrue();
 
         var words = PdfWordParser.GetRawWords(pdfBytes);
         var edgeWord = PdfWordParser.FindWordByText(words, "Edge");
@@ -59,7 +59,7 @@ public class PdfRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_FragmentsAreRendered_DoesNotMutateLayoutGeometry()
+    public void Render_FragmentsAreRendered_DoesNotMutateLayoutGeometry()
     {
         var line = CreateLineFragment("Stable", 24, 40, 120, 18);
         var block = new BlockFragment([line])
@@ -80,9 +80,9 @@ public class PdfRendererTests
         var originalLineRect = line.Rect;
         var originalRunOrigin = line.Runs.ShouldHaveSingleItem().Origin;
 
-        var pdfBytes = await renderer.RenderAsync(layout, options);
+        var pdfBytes = renderer.Render(layout, options);
 
-        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        PdfValidator.HasPdfHeader(pdfBytes).ShouldBeTrue();
         layout.Pages.ShouldHaveSingleItem().Children.ShouldHaveSingleItem().ShouldBeSameAs(block);
         block.Rect.ShouldBe(originalBlockRect);
         line.Rect.ShouldBe(originalLineRect);
@@ -90,7 +90,7 @@ public class PdfRendererTests
     }
 
     [Fact]
-    public async Task RenderAsync_TextRunWithoutResolvedFont_ThrowsClearException()
+    public void Render_TextRunWithoutResolvedFont_ThrowsClearException()
     {
         var layout = new HtmlLayout();
         layout.AddPage(new(
@@ -119,7 +119,7 @@ public class PdfRendererTests
             new ColorRgba(255, 255, 255, 255)));
         var renderer = new PdfRenderer();
 
-        var exception = await Should.ThrowAsync<FontResolutionException>(() => renderer.RenderAsync(layout, new()));
+        var exception = Should.Throw<FontResolutionException>(() => renderer.Render(layout, new()));
 
         exception.Message.ShouldContain("TextRun.ResolvedFont is required before PDF rendering");
         exception.RequestedFont.ShouldNotBeNull().Family.ShouldBe("Inter");
@@ -129,7 +129,7 @@ public class PdfRendererTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task RenderAsync_InvalidMaxImageSizeBytes_Throws(long maxImageSizeBytes)
+    public void Render_InvalidMaxImageSizeBytes_Throws(long maxImageSizeBytes)
     {
         var renderer = new PdfRenderer();
         var settings = new PdfRenderSettings
@@ -138,11 +138,11 @@ public class PdfRendererTests
         };
 
         var exception =
-            await Should.ThrowAsync<ArgumentOutOfRangeException>(() =>
-                renderer.RenderAsync(CreateSimpleLayout(), settings));
+            Should.Throw<ArgumentOutOfRangeException>(() =>
+                renderer.Render(CreateSimpleLayout(), settings));
 
         exception.Message.ShouldContain("PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
-        exception.ParamName.ShouldBe("settings");
+        exception.ParamName.ShouldBe("MaxImageSizeBytes");
     }
 
     private static HtmlLayout CreateSimpleLayout()

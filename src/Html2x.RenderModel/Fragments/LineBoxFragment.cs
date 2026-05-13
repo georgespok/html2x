@@ -5,7 +5,7 @@ namespace Html2x.RenderModel.Fragments;
 /// <summary>
 ///     Represents one line slot of inline content, including tight occupied bounds, text runs, and line metrics.
 /// </summary>
-public sealed class LineBoxFragment : Fragment
+internal sealed class LineBoxFragment : Fragment
 {
     private readonly float _baselineY;
     private readonly bool _hasOccupiedRect;

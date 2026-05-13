@@ -23,8 +23,8 @@ internal static class GeometryDiagnosticNames
 
     public static class Consumers
     {
-        public const string BlockBoxLayout = "BlockLayoutEngine";
-        public const string InlineLayoutEngine = "InlineLayoutEngine";
+        public const string BlockFlowLayout = "BlockFlowLayout";
+        public const string InlineFlowLayout = "InlineFlowLayout";
     }
 
     public static class Owners

@@ -23,7 +23,7 @@ internal sealed class RenderSettings : CommandSettings
 
     [CommandOption("--diagnostics")]
     [Description("Enable diagnostic logging and overlays.")]
-    public bool Diagnostics { get; init; }
+    public bool EnableDiagnostics { get; init; }
 
     [CommandOption("--diagnostics-json <PATH>")]
     [Description("Optional path for structured diagnostics output.")]

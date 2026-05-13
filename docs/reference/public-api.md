@@ -29,7 +29,7 @@ await File.WriteAllBytesAsync("output.pdf", result.PdfBytes);
 
 ## Default Font Path Requirement
 
-With the default converter runtime, `HtmlConverterOptions.Fonts.FontPath` is
+With the default converter dependencies, `HtmlConverterOptions.Fonts.FontPath` is
 required. It must point to an existing font file or directory before layout
 begins.
 
@@ -37,33 +37,46 @@ Missing or invalid font paths throw `InvalidOperationException`. When
 diagnostics are enabled, the exception carries the diagnostics report in
 `Exception.Data["DiagnosticsReport"]`.
 
-## Advanced Runtime Construction
+## Advanced Converter Dependencies
 
-Advanced in-process callers can provide a narrow runtime adapter set through
-`HtmlConverterRuntime`.
+Advanced in-process callers can provide narrow adapter dependencies through
+`HtmlConverterDependencies`.
 
 ```csharp
 using Html2x;
 
-var converter = new HtmlConverter(new HtmlConverterRuntime
+var converter = new HtmlConverter(new HtmlConverterDependencies
 {
-    FontSource = customFontSource
+    FontSourceFactory = () => CreateCustomFontSource()
 });
 ```
 
-Supported runtime adapters are:
+Supported dependency factories are:
 
-- `FontSource`: custom `IFontSource` used by the built-in Skia text measurer.
-  When supplied, `HtmlConverterOptions.Fonts.FontPath` is not required. The
-  caller owns the font source lifetime.
-- `TextMeasurer`: custom `ITextMeasurer`. The caller owns its lifetime and must
-  return complete `TextMeasurement` facts, including resolved fonts suitable for
-  PDF rendering.
+- `FontSourceFactory`: creates a conversion-scoped `IFontSource` used by the
+  built-in Skia text measurer. When supplied,
+  `HtmlConverterOptions.Fonts.FontPath` is not required.
+- `TextMeasurerFactory`: creates a conversion-scoped `ITextMeasurer`. The
+  measurer must implement `Measure(FontKey font, float sizePt, string text)`.
+  Each call must return complete `TextMeasurement` facts: finite non-negative
+  width, ascent, and descent values plus a resolved font with a non-empty source
+  id.
 
-If both are supplied, `TextMeasurer` is used and `FontSource` is ignored.
-`HtmlConverterRuntime` is not a service container. Layout algorithms, mutable
+If both factories are supplied, `TextMeasurerFactory` is used and
+`FontSourceFactory` is ignored. The converter owns the returned adapter for the
+single conversion and disposes it when it implements `IDisposable`.
+Factories must return non-null adapters. After option validation succeeds, if a
+factory returns null or throws before layout begins, diagnostics-enabled
+conversions attach a diagnostics report to the original exception and record the
+failure as a configuration failure.
+`HtmlConverterDependencies` is not a service container. Layout algorithms, mutable
 boxes, style trees, image byte loading, published layout facts, and renderer
 internals are not public extension points.
+
+Html2x validates the structural shape of custom text measurement results near
+the layout boundary. It does not validate renderer font file loadability there;
+the PDF renderer validates that `ResolvedFont.FilePath` can be loaded when it
+renders text.
 
 ## Diagnostics
 
@@ -88,7 +101,7 @@ payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
 
 ## Result
 
-`Html2PdfResult` contains:
+`HtmlToPdfResult` contains:
 
 - `PdfBytes`: rendered PDF bytes. Each read returns a defensive copy so caller
   mutation cannot change the stored result.
@@ -96,35 +109,26 @@ payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
 
 ## Public Surface
 
-The supported consumer facade is `HtmlConverter`, `HtmlConverterRuntime`,
-`HtmlConverterOptions`, and `Html2PdfResult`.
+The supported consumer facade is `HtmlConverter`, `HtmlConverterDependencies`,
+`HtmlConverterOptions`, and `HtmlToPdfResult`.
 
 Public contract classification:
 
-- Consumer facade: `HtmlConverter`, `HtmlConverterRuntime`,
-  `Html2PdfResult`, and option types under `Html2x.Options`.
-- Renderer-author facts: `HtmlLayout`, `LayoutPage`, fragment types, render
-  geometry value types, render style value types, and text facts under
-  `Html2x.RenderModel`.
-- Renderer entry point: `PdfRenderer` and `PdfRenderSettings`.
+- Consumer facade: `HtmlConverter`, `HtmlConverterDependencies`,
+  `HtmlToPdfResult`, and option types under `Html2x.Options`.
+- Public value facts needed by options and runtime seams, including page size
+  values and text measurement/font facts.
 - Diagnostics surface: diagnostics contracts plus `DiagnosticsCollector`,
   `DiagnosticsReport`, and `DiagnosticsReportSerializer`.
-- Advanced runtime seams: `IFontSource`, `FontPathSource`,
-  `DiagnosticsFontSource`, `ITextMeasurer`, `SkiaTextMeasurer`,
-  `TextMeasurement`, and `FontResolutionException`.
+- Advanced dependency seams: `IFontSource`, `FontPathSource`,
+  `ITextMeasurer`, `SkiaTextMeasurer`, `TextMeasurement`, and
+  `FontResolutionException`. Custom adapters are created through
+  converter-scoped dependency factories.
 
 `Html2x.LayoutEngine.Contracts` is an internal pipeline handoff assembly. Style
 trees, geometry requests, image metadata resolver contracts, published layout
 facts, and diagnostic snapshot mappers are not consumer extension points.
 
-## Direct Renderer Usage
-
-`HtmlLayout.Pages` is read-only for consumers and renderers. Code that manually
-builds an `HtmlLayout` for advanced renderer usage should add pages through
-`HtmlLayout.AddPage` or the `HtmlLayout(IEnumerable<LayoutPage>)` constructor.
-
-Direct `PdfRenderer.RenderAsync` usage validates `PdfRenderSettings`.
-`PdfRenderSettings.MaxImageSizeBytes` must be greater than zero and invalid
-values throw before rendering begins.
-
-Text runs passed directly to the renderer must include `ResolvedFont`.
+The PDF renderer, render model documents, page models, and fragment types are
+internal implementation surface. They are not supported consumer extension
+points.

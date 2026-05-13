@@ -8,16 +8,16 @@ internals.
 
 | Project | Responsibility | Must Not Do |
 | --- | --- | --- |
-| `Html2x` | Public converter facade, facade-owned options, public-to-stage settings mapping, supported runtime adapter selection, and conversion-scoped resource composition. | Contain layout or rendering algorithms, or pass public option objects into internal stages. |
-| `Html2x.RenderModel` | Pure render facts such as units, style values, font request facts, resolved font facts, documents, and fragments. | Reference runtime adapters, diagnostics runtime, parser packages, layout engines, fragment projection, renderers, or SkiaSharp. |
-| `Html2x.Text` | Text measurement contracts, font resolution contracts, and Skia-backed text/font implementation. | Reference facade options, layout engine projects, fragment projection, or renderers. |
+| `Html2x` | Public converter facade, facade-owned options, public-to-stage settings mapping, supported dependency selection, and conversion-scoped resource composition. | Contain layout or rendering algorithms, or pass public option objects into internal stages. |
+| `Html2x.RenderModel` | Pure render facts such as units, style values, font request facts, resolved font facts, documents, and fragments. | Reference dependency adapters, diagnostics runtime, parser packages, layout engines, fragment tree building, renderers, or SkiaSharp. |
+| `Html2x.Text` | Text measurement contracts, font resolution contracts, and Skia-backed text/font implementation. | Reference facade options, layout engine projects, fragment tree building, or renderers. |
 | `Html2x.Diagnostics.Contracts` | Generic diagnostics emission contracts and constrained diagnostic field values. | Reference layout, renderer, parser, or diagnostics runtime projects. |
 | `Html2x.Diagnostics` | Diagnostics collection, report model, and JSON serialization. | Own layout or renderer decisions. |
 | `Html2x.LayoutEngine.Style` | HTML parsing, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics, style-owned settings, and parser-free `StyleTree` output. | Own layout geometry, fragments, pagination, or renderer state. |
 | `Html2x.LayoutEngine.Geometry` | Geometry construction from `StyleTree` into published layout facts. | Parse HTML or CSS, reference parser objects, or expose mutable boxes as the public handoff. |
-| `Html2x.LayoutEngine.Fragments` | Projection from published layout facts into renderer-facing fragment trees. | Consume mutable boxes, parser objects, pagination pages, or renderer state. |
-| `Html2x.LayoutEngine.Pagination` | Page placement for render model fragments. Returns `PaginationResult` with final `HtmlLayout` and pagination audit facts. | Reference style, geometry implementation engines, fragment projection, parser packages, renderers, or SkiaSharp. |
-| `Html2x.LayoutEngine` | Pipeline composition from style, geometry, fragment projection, and pagination into the converter-facing layout result. Owns layout build settings and maps them into stage requests. | Own parser, geometry, fragment projection, pagination, text measurement, or rendering algorithms. |
+| `Html2x.LayoutEngine.Fragments` | Fragment tree construction from published layout facts into renderer-facing fragments. | Consume mutable boxes, parser objects, pagination pages, or renderer state. |
+| `Html2x.LayoutEngine.Pagination` | Page placement for render model fragments. Returns `PaginationResult` with final `HtmlLayout` and pagination audit facts. | Reference style, geometry implementation engines, fragment tree building, parser packages, renderers, or SkiaSharp. |
+| `Html2x.LayoutEngine` | Pipeline composition from style, geometry, fragment tree building, and pagination into the converter-facing layout result. Owns layout build settings and maps them into stage requests. | Own parser, geometry, fragment tree building, pagination, text measurement, or rendering algorithms. |
 | `Html2x.Renderers.Pdf` | PDF rendering with SkiaSharp from `HtmlLayout`, resolved font facts, and renderer-owned PDF render settings. | Reach back to DOM, CSS, style tree, box tree types, public converter options, or font source adapters. |
 
 ## Primary Data Flow

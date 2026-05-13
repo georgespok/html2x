@@ -12,6 +12,8 @@ internal static class PublishedLayoutGuard
     private const string NegativeOrNonFiniteValueMessage = "Published layout value must be finite and non-negative.";
     private const string NegativeOrNonFiniteSizeMessage = "Published layout size must be finite and non-negative.";
     private const string NonFiniteSpacingMessage = "Published layout spacing must be finite.";
+    private const string NegativeOrNonFiniteSpacingMessage =
+        "Published layout spacing must be finite and non-negative.";
 
     public static IReadOnlyList<T> CopyList<T>(IReadOnlyList<T>? values, string parameterName)
         where T : class
@@ -25,7 +27,7 @@ internal static class PublishedLayoutGuard
     public static void ThrowIfContainsNull<T>(IReadOnlyList<T> values, string parameterName)
         where T : class
     {
-        if (values.Any(static value => false))
+        if (values.Any(static value => value is null))
         {
             throw new ArgumentException(ContainsNullMessage, parameterName);
         }
@@ -77,6 +79,21 @@ internal static class PublishedLayoutGuard
             !float.IsFinite(value.Left))
         {
             throw new ArgumentOutOfRangeException(parameterName, value, NonFiniteSpacingMessage);
+        }
+    }
+
+    public static void ThrowIfNegativeOrNonFinite(Spacing value, string parameterName)
+    {
+        if (!float.IsFinite(value.Top) ||
+            !float.IsFinite(value.Right) ||
+            !float.IsFinite(value.Bottom) ||
+            !float.IsFinite(value.Left) ||
+            value.Top < 0f ||
+            value.Right < 0f ||
+            value.Bottom < 0f ||
+            value.Left < 0f)
+        {
+            throw new ArgumentOutOfRangeException(parameterName, value, NegativeOrNonFiniteSpacingMessage);
         }
     }
 

@@ -1,5 +1,6 @@
 using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.RenderModel.Fragments;
 
@@ -7,7 +8,7 @@ namespace Html2x.RenderModel.Fragments;
 ///     Represents an HTML &lt;img&gt; element after style resolution and basic validation.
 ///     Values are immutable and passed to layout/rendering stages.
 /// </summary>
-public sealed class ImageFragment : Fragment
+internal sealed class ImageFragment : Fragment
 {
     private readonly RectPt _contentRect;
 
@@ -43,5 +44,5 @@ public sealed class ImageFragment : Fragment
     public bool IsMissing => ImageLoadStatusFacts.IsMissing(Status);
 
     /// <summary>True when the image exceeded size caps and will be rendered as a placeholder.</summary>
-    public bool IsOversize => ImageLoadStatusFacts.IsOversize(Status);
+    public bool IsOversized => ImageLoadStatusFacts.IsOversized(Status);
 }

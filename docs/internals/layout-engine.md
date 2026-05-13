@@ -1,7 +1,7 @@
 # Layout Engine
 
 This page explains the internal composition layer. `Html2x.LayoutEngine`
-coordinates style, geometry, fragment projection, and pagination, but it does
+coordinates style, geometry, fragment tree building, and pagination, but it does
 not own the algorithms in those stages.
 
 ## Responsibilities
@@ -26,28 +26,27 @@ not own the algorithms in those stages.
 
 ## Internal Entry Points
 
-- `LayoutBuilder`
+- `LayoutPipeline`
 - `LayoutStageRunner`
-- `IStyleTreeBuilder`
 - `StyleTreeBuilder`
-- `LayoutGeometryBuilder`
-- `FragmentBuilder`
+- `LayoutGeometryConstruction`
+- `FragmentTreeBuilder`
 - `LayoutPaginator`
 
 ## Composition Boundary
 
-`LayoutBuilder` constructs the concrete pipeline stages for the converter flow
+`LayoutPipeline` constructs the concrete pipeline stages for the converter flow
 and is reached through the public `HtmlConverter` facade. Its `BuildAsync`
 method should read as the stage handoff sequence: style tree, published
 geometry, fragments, pagination result, final layout.
 
 `LayoutStageRunner` owns the diagnostics lifecycle wrapper for geometry,
-fragment projection, and pagination. Diagnostics observe stage execution, but
+fragment tree building, and pagination. Diagnostics observe stage execution, but
 they do not define the composition flow. Layout-specific diagnostic payloads,
 including the geometry snapshot, live in focused diagnostics modules.
 
-The style stage is reached through `IStyleTreeBuilder`. The geometry stage is
-reached through `LayoutGeometryBuilder`.
+The style stage is reached through `StyleTreeBuilder`. The geometry stage is
+reached through `LayoutGeometryConstruction`.
 
 The layout engine should keep style, geometry, fragment, and pagination
 responsibilities separable even when implementation classes coordinate multiple
@@ -78,5 +77,5 @@ until a real formatting context exists.
 - [Module Boundaries](../architecture/module-boundaries.md)
 - [Style Engine](style-engine.md)
 - [Geometry](geometry.md)
-- [Fragment Projection](fragment-projection.md)
+- [Fragment Tree Building](fragment-tree-building.md)
 - [Pagination](pagination.md)

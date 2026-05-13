@@ -6,22 +6,22 @@ namespace Html2x.Text;
 public sealed class FontPathSource : IFontSource
 {
     private readonly Lazy<IReadOnlyList<FontFaceEntry>> _directoryFaces;
-    private readonly IFileDirectory _fileDirectory;
+    private readonly IFileSystemReader _fileDirectory;
     private readonly string _fontPath;
     private readonly Lazy<bool> _singleFileValidated;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
     public FontPathSource(string fontPath)
-        : this(fontPath, new FileDirectory(), new SkiaTypefaceFactory())
+        : this(fontPath, new FileSystemReader(), new SkiaTypefaceFactory())
     {
     }
 
-    internal FontPathSource(string fontPath, IFileDirectory fileDirectory)
+    internal FontPathSource(string fontPath, IFileSystemReader fileDirectory)
         : this(fontPath, fileDirectory, new SkiaTypefaceFactory())
     {
     }
 
-    internal FontPathSource(string fontPath, IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal FontPathSource(string fontPath, IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory)
     {
         if (string.IsNullOrWhiteSpace(fontPath))
         {
@@ -34,7 +34,7 @@ public sealed class FontPathSource : IFontSource
         _directoryFaces = new(
             () => FontDirectoryIndex.Build(_fileDirectory, _typefaceFactory, _fontPath),
             LazyThreadSafetyMode.ExecutionAndPublication);
-        _singleFileValidated = new(ValidateSingleFileFont, LazyThreadSafetyMode.ExecutionAndPublication);
+        _singleFileValidated = new(EnsureSingleFileFontCanLoad, LazyThreadSafetyMode.ExecutionAndPublication);
 
         if (!_fileDirectory.FileExists(_fontPath) && !_fileDirectory.DirectoryExists(_fontPath))
         {
@@ -78,8 +78,8 @@ public sealed class FontPathSource : IFontSource
                 best.Family,
                 (FontWeight)best.Weight,
                 best.IsItalic ? FontStyle.Italic : FontStyle.Normal,
-                BuildSourceId(best.Path, best.FaceIndex),
-                best.Path,
+                BuildSourceId(best.FilePath, best.FaceIndex),
+                best.FilePath,
                 best.FaceIndex,
                 _fontPath);
         }
@@ -90,7 +90,7 @@ public sealed class FontPathSource : IFontSource
             _fontPath);
     }
 
-    private bool ValidateSingleFileFont()
+    private bool EnsureSingleFileFontCanLoad()
     {
         SKTypeface? typeface = null;
         try

@@ -6,16 +6,11 @@ namespace Html2x;
 /// <summary>
 ///     Adapts shared image resource loading to the layout image metadata seam.
 /// </summary>
-internal sealed class ImageResourceMetadataResolver : IImageMetadataResolver
+internal sealed class ImageResourceMetadataResolver(ImageResourceStore resources) : IImageMetadataResolver
 {
-    private readonly ConversionImageResourceStore _resources;
+    private readonly ImageResourceStore _resources = resources ?? throw new ArgumentNullException(nameof(resources));
 
-    public ImageResourceMetadataResolver(ConversionImageResourceStore resources)
-    {
-        _resources = resources ?? throw new ArgumentNullException(nameof(resources));
-    }
-
-    public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes)
+    public ImageMetadataResult Resolve(string src)
     {
         var resource = _resources.LoadMetadata(src);
         return new()

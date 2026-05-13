@@ -90,9 +90,9 @@ internal static class GeometryLayoutStructureValidator
 
     private static BoxNode? FindUnsupportedInlineBlockStructure(BoxNode root)
     {
-        var rootIsInlineBlockContext = root is BlockBox rootBlock && rootBlock.IsInlineBlockContext;
+        var rootEstablishesInlineBlockFormattingContext = root is BlockBox rootBlock && rootBlock.EstablishesInlineBlockFormattingContext;
         var stack = new Stack<(BoxNode Node, bool InInlineBlockContext)>();
-        stack.Push((root, rootIsInlineBlockContext));
+        stack.Push((root, rootEstablishesInlineBlockFormattingContext));
 
         while (stack.Count > 0)
         {
@@ -103,7 +103,7 @@ internal static class GeometryLayoutStructureValidator
             }
 
             var childInlineBlockContext = inInlineBlockContext ||
-                                          (current is BlockBox block && block.IsInlineBlockContext);
+                                          (current is BlockBox block && block.EstablishesInlineBlockFormattingContext);
 
             for (var i = current.Children.Count - 1; i >= 0; i--)
             {

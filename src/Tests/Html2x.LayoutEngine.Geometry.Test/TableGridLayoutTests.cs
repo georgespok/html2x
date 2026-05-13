@@ -1,5 +1,4 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Geometry.Tables;
@@ -22,7 +21,7 @@ public class TableGridLayoutTests
         var result = Layout(table, 500f);
 
         result.IsSupported.ShouldBeTrue();
-        result.ResolvedWidth.ShouldBe(400f);
+        result.ResolvedBorderBoxWidth.ShouldBe(400f);
     }
 
     [Fact]
@@ -45,7 +44,7 @@ public class TableGridLayoutTests
     }
 
     [Fact]
-    public void Layout_EqualWidthDistribution_SplitsResolvedWidthAcrossDerivedColumns()
+    public void Layout_EqualWidthDistribution_SplitsResolvedBorderBoxWidthAcrossDerivedColumns()
     {
         var table = CreateTable(
             400f,
@@ -71,14 +70,14 @@ public class TableGridLayoutTests
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        table.Children.Add(CreateRow(
+        table.AddChild(CreateRow(
             CreateCell(),
             CreateCell()));
 
         var result = Layout(table, 200f);
 
         result.IsSupported.ShouldBeTrue();
-        result.ResolvedWidth.ShouldBe(144f);
+        result.ResolvedBorderBoxWidth.ShouldBe(144f);
         result.ColumnWidths.ShouldBe([60f, 60f]);
         result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(120f);
         result.Rows[0].Cells[1].UsedGeometry.X.ShouldBe(60f);
@@ -99,13 +98,13 @@ public class TableGridLayoutTests
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        table.Children.Add(CreateRow(
+        table.AddChild(CreateRow(
             CreateCell(),
             CreateCell()));
 
         var result = Layout(table, 100f);
 
-        result.ResolvedWidth.ShouldBe(134f);
+        result.ResolvedBorderBoxWidth.ShouldBe(134f);
         result.ColumnWidths.ShouldBe([56.5f, 56.5f]);
         result.Rows[0].UsedGeometry.BorderBoxRect.Width.ShouldBe(113f);
     }
@@ -125,7 +124,7 @@ public class TableGridLayoutTests
 
         var result = Layout(table, 300f);
 
-        result.ResolvedWidth.ShouldBe(150f);
+        result.ResolvedBorderBoxWidth.ShouldBe(150f);
         result.ColumnWidths.ShouldBe([75f, 75f]);
     }
 
@@ -140,7 +139,7 @@ public class TableGridLayoutTests
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        row.Children.Add(CreateCell());
+        row.AddChild(CreateCell());
 
         var table = new TableBox(BoxRole.Table)
         {
@@ -149,7 +148,7 @@ public class TableGridLayoutTests
                 WidthPt = 120f
             }
         };
-        table.Children.Add(row);
+        table.AddChild(row);
 
         var result = Layout(table, 200f);
 
@@ -209,12 +208,12 @@ public class TableGridLayoutTests
     {
         var row = new TableRowBox(BoxRole.TableRow);
         var cell = CreateCell();
-        row.Children.Add(cell);
+        row.AddChild(cell);
         var table = new TableBox(BoxRole.Table)
         {
             Style = new()
         };
-        table.Children.Add(row);
+        table.AddChild(row);
         var rowGeometry = UsedGeometryRules.FromBorderBox(
             0f,
             1f,
@@ -236,7 +235,7 @@ public class TableGridLayoutTests
         var result = new TableLayoutResult
         {
             IsSupported = true,
-            ResolvedWidth = 50f,
+            ResolvedBorderBoxWidth = 50f,
             DerivedColumnCount = 1,
             Rows =
             [
@@ -256,7 +255,7 @@ public class TableGridLayoutTests
             30f,
             40f,
             new(),
-            static (_, _, _, _, _) => 0f);
+            static _ => 0f);
 
         var appliedRow = row.UsedGeometry.ShouldNotBeNull();
         var appliedCell = cell.UsedGeometry.ShouldNotBeNull();
@@ -295,7 +294,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_ColspanContributesToDerivedColumnCountAndCellWidth()
     {
-        var spannedCell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Colspan, "2")));
+        var spannedCell = CreateCell(element: CreateElement("TD", (HtmlCssVocabulary.HtmlAttributes.Colspan, "2")));
         var leftCell = CreateCell();
         var rightCell = CreateCell();
         var table = CreateTable(
@@ -323,7 +322,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_HeaderColspan_PreservesHeaderIdentityAndSpan()
     {
-        var headerCell = CreateCell(element: CreateElement("TH", (HtmlCssConstants.HtmlAttributes.Colspan, "3")));
+        var headerCell = CreateCell(element: CreateElement("TH", (HtmlCssVocabulary.HtmlAttributes.Colspan, "3")));
         var table = CreateTable(
             300f,
             CreateRow(headerCell),
@@ -363,8 +362,8 @@ public class TableGridLayoutTests
     }
 
     [Theory]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Colspan)]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan)]
+    [InlineData(HtmlCssVocabulary.HtmlAttributes.Colspan)]
+    [InlineData(HtmlCssVocabulary.HtmlAttributes.Rowspan)]
     public void Layout_SpanOne_RemainsSupportedAndUsesCurrentGridFacts(string attributeName)
     {
         var cell = CreateCell(element: CreateElement("TD", (attributeName, "1")));
@@ -382,9 +381,9 @@ public class TableGridLayoutTests
     }
 
     [Theory]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "2")]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Colspan, "invalid")]
-    [InlineData(HtmlCssConstants.HtmlAttributes.Rowspan, "0")]
+    [InlineData(HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")]
+    [InlineData(HtmlCssVocabulary.HtmlAttributes.Colspan, "invalid")]
+    [InlineData(HtmlCssVocabulary.HtmlAttributes.Rowspan, "0")]
     public void Layout_UnsupportedSpans_StopBeforeGridFacts(string attributeName, string value)
     {
         var cell = CreateCell(element: CreateElement("TD", (attributeName, value)));
@@ -425,7 +424,7 @@ public class TableGridLayoutTests
     public void Layout_GenericContainerInsideTable_ReturnsUnsupportedResult()
     {
         var section = new InlineBox(BoxRole.Inline);
-        section.Children.Add(CreateRow(
+        section.AddChild(CreateRow(
             CreateCell(),
             CreateCell()));
 
@@ -436,7 +435,7 @@ public class TableGridLayoutTests
                 WidthPt = 400f
             }
         };
-        table.Children.Add(section);
+        table.AddChild(section);
 
         var result = Layout(table, 500f);
 
@@ -457,8 +456,8 @@ public class TableGridLayoutTests
             CreateCell(),
             CreateCell());
         var section = new TableSectionBox(BoxRole.TableSection);
-        section.Children.Add(firstRow);
-        section.Children.Add(secondRow);
+        section.AddChild(firstRow);
+        section.AddChild(secondRow);
 
         var table = new TableBox(BoxRole.Table)
         {
@@ -467,7 +466,7 @@ public class TableGridLayoutTests
                 WidthPt = 400f
             }
         };
-        table.Children.Add(section);
+        table.AddChild(section);
 
         var result = Layout(table, 500f);
 
@@ -488,7 +487,7 @@ public class TableGridLayoutTests
             CreateRow(CreateCell()));
 
         var outerCell = CreateCell();
-        outerCell.Children.Add(innerTable);
+        outerCell.AddChild(innerTable);
 
         var outerTable = CreateTable(
             300f,
@@ -507,7 +506,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_UnsupportedRowspan_ReturnsUnsupportedBeforeGeometry()
     {
-        var cell = CreateCell(element: CreateElement("TD", (HtmlCssConstants.HtmlAttributes.Rowspan, "2")));
+        var cell = CreateCell(element: CreateElement("TD", (HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")));
         var table = CreateTable(
             120f,
             CreateRow(cell));
@@ -519,13 +518,13 @@ public class TableGridLayoutTests
             result.UnsupportedStructureKind ?? string.Empty,
             result.UnsupportedReason ?? string.Empty,
             result.RowCount,
-            result.RequestedWidth,
-            result.ResolvedWidth,
+            result.RequestedContentWidth,
+            result.ResolvedBorderBoxWidth,
             diagnosticsSink: diagnosticsSink);
 
         result.IsSupported.ShouldBeFalse();
         result.RowCount.ShouldBe(1);
-        result.UnsupportedStructureKind.ShouldBe(HtmlCssConstants.HtmlAttributes.Rowspan);
+        result.UnsupportedStructureKind.ShouldBe(HtmlCssVocabulary.HtmlAttributes.Rowspan);
         result.UnsupportedReason.ShouldBe("Table cell rowspan is not supported.");
         result.Rows.ShouldBeEmpty();
         result.ContentHeight.ShouldBe(0f);
@@ -535,17 +534,17 @@ public class TableGridLayoutTests
         var reason = unsupportedRecord.Fields["reason"].ShouldBeOfType<DiagnosticStringValue>().Value;
         unsupportedRecord.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
         unsupportedRecord.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(1));
-        reason.ShouldContain(HtmlCssConstants.HtmlAttributes.Rowspan);
+        reason.ShouldContain(HtmlCssVocabulary.HtmlAttributes.Rowspan);
     }
 
     [Fact]
     public void Layout_SectionContainingNestedSection_ReturnsUnsupportedResult()
     {
         var innerSection = new TableSectionBox(BoxRole.TableSection);
-        innerSection.Children.Add(CreateRow(CreateCell()));
+        innerSection.AddChild(CreateRow(CreateCell()));
 
         var outerSection = new TableSectionBox(BoxRole.TableSection);
-        outerSection.Children.Add(innerSection);
+        outerSection.AddChild(innerSection);
 
         var table = new TableBox(BoxRole.Table)
         {
@@ -554,7 +553,7 @@ public class TableGridLayoutTests
                 WidthPt = 120f
             }
         };
-        table.Children.Add(outerSection);
+        table.AddChild(outerSection);
 
         var result = Layout(table, 200f);
 
@@ -572,7 +571,7 @@ public class TableGridLayoutTests
             Padding = new(7.5f, 7.5f, 7.5f, 7.5f),
             Borders = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         });
-        paddedCell.Children.Add(new InlineBox(BoxRole.Inline)
+        paddedCell.AddChild(new InlineBox(BoxRole.Inline)
         {
             TextContent = "A",
             Style = paddedCell.Style,
@@ -580,7 +579,7 @@ public class TableGridLayoutTests
         });
 
         var defaultCell = CreateCell();
-        defaultCell.Children.Add(new InlineBox(BoxRole.Inline)
+        defaultCell.AddChild(new InlineBox(BoxRole.Inline)
         {
             TextContent = "B",
             Style = defaultCell.Style,
@@ -614,7 +613,7 @@ public class TableGridLayoutTests
     public void Layout_CellWithStackedBlockChildren_UsesSharedCollapsedMarginHeight()
     {
         var cell = CreateCell();
-        cell.Children.Add(new BlockBox(BoxRole.Block)
+        cell.AddChild(new BlockBox(BoxRole.Block)
         {
             Style = new()
             {
@@ -622,7 +621,7 @@ public class TableGridLayoutTests
                 Margin = new(0f, 0f, 12f, 0f)
             }
         });
-        cell.Children.Add(new BlockBox(BoxRole.Block)
+        cell.AddChild(new BlockBox(BoxRole.Block)
         {
             Style = new()
             {
@@ -652,10 +651,10 @@ public class TableGridLayoutTests
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        innerTable.Children.Add(CreateRow(CreateCell()));
+        innerTable.AddChild(CreateRow(CreateCell()));
 
         var outerCell = CreateCell();
-        outerCell.Children.Add(innerTable);
+        outerCell.AddChild(innerTable);
         var outerTable = CreateTable(120f, CreateRow(outerCell));
 
         var result = Layout(outerTable, 200f);
@@ -681,7 +680,7 @@ public class TableGridLayoutTests
 
         foreach (var row in rows)
         {
-            table.Children.Add(row);
+            table.AddChild(row);
         }
 
         return table;
@@ -693,7 +692,7 @@ public class TableGridLayoutTests
 
         foreach (var cell in cells)
         {
-            row.Children.Add(cell);
+            row.AddChild(cell);
         }
 
         return row;

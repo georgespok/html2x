@@ -3,7 +3,7 @@ using Html2x.RenderModel.Text;
 
 namespace Html2x.Text;
 
-public sealed class DiagnosticsFontSource(
+internal sealed class DiagnosticsFontSource(
     IFontSource inner,
     IDiagnosticsSink diagnosticsSink) : IFontSource
 {

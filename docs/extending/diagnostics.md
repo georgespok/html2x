@@ -30,7 +30,7 @@ Emit records from the module that owns the decision:
 - Conversion lifecycle diagnostics from the converter facade.
 - Render summaries and renderer failures from the renderer.
 
-Producer modules should use `DiagnosticStage` for standard run-bound lifecycle
+Producer modules should use `DiagnosticStageRunner` for standard run-bound lifecycle
 records. Use `DiagnosticStageEmitter` when a facade must coordinate lifecycle
 events directly, such as emitting skipped stages after a prior failure. Use
 small local helper methods when a record needs to flatten local domain models.

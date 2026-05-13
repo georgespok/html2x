@@ -1,11 +1,15 @@
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Composition;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.Measurement;
-using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
+using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Publishing;
+using Html2x.LayoutEngine.Geometry.Style;
+using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.LayoutEngine.Pagination;
 using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
 
@@ -28,13 +32,64 @@ public sealed class LayoutGeometryOwnerArchitectureTests
                 "Publishing",
                 "Diagnostics",
                 "Primitives",
+                "Style",
+                "Writing",
                 "Models");
+    }
+
+    [Fact]
+    public void ConstructionOwner_HasExpectedNamespaceAndForbiddenDependencies()
+    {
+        var construction = CSharpSourceSet.FromDirectory(
+            "src",
+            AssemblyName<LayoutGeometryConstruction>(),
+            "Construction");
+
+        construction.ShouldDeclareNamespace(NamespaceOf<BoxTreeConstruction>());
+        SourceFileFor<BoxTreeConstruction>("Construction")
+            .ShouldContainType(nameof(BoxTreeConstruction), InternalAccessibility, true);
+        CSharpSourceFile.Load(
+                "src",
+                AssemblyName<LayoutGeometryConstruction>(),
+                "Construction",
+                "BoxTreeNormalization.cs")
+            .ShouldContainType(nameof(BoxTreeNormalization), InternalAccessibility);
+        CSharpSourceFile.Load(
+                "src",
+                AssemblyName<LayoutGeometryConstruction>(),
+                "Construction",
+                "StringNormalizer.cs")
+            .ShouldContainType(nameof(StringNormalizer), InternalAccessibility);
+        SourceFileFor<TextNormalizationState>("Construction")
+            .ShouldContainType(nameof(TextNormalizationState), InternalAccessibility, true);
+        CSharpSourceFile.Load(
+                "src",
+                AssemblyName<LayoutGeometryConstruction>(),
+                "Construction",
+                "ListMarkerPolicy.cs")
+            .ShouldContainType(nameof(ListMarkerPolicy), InternalAccessibility);
+
+        construction.ShouldNotUseNamespaces(
+            NamespaceOf<PublishedLayoutWriter>(),
+            NamespaceOf<FragmentTreeBuilder>(),
+            NamespaceOf<LayoutPaginator>(),
+            "Html2x.Renderers",
+            ResourcesAssemblyName,
+            ParserPackageName(),
+            "Html2x.LayoutEngine.Geometry.Composition");
+        construction.ShouldNotUseIdentifiers(
+            nameof(LayoutGeometryConstruction),
+            nameof(GeometryPipelineConstruction),
+            nameof(FragmentTreeBuilder),
+            nameof(LayoutPaginator),
+            nameof(PublishedLayoutWriter),
+            "ImageResourceLoader");
     }
 
     [Fact]
     public void ImagesOwner_HasExpectedNamespaceAndForbiddenDependencies()
     {
-        var images = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryBuilder>(), "Images");
+        var images = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Images");
 
         images.ShouldDeclareNamespace(NamespaceOf<ImageSizingRules>());
         SourceFileFor<ImageSizingRules>("Images")
@@ -49,16 +104,16 @@ public sealed class LayoutGeometryOwnerArchitectureTests
         images.ShouldNotUseNamespaces(
             NamespaceOf<PublishedLayoutWriter>(),
             "Html2x.LayoutEngine.Geometry.Publishing",
-            NamespaceOf<FragmentBuilder>(),
+            NamespaceOf<FragmentTreeBuilder>(),
             NamespaceOf<LayoutPaginator>(),
             "Html2x.Renderers",
             ResourcesAssemblyName,
             ParserPackageName(),
             "Html2x.LayoutEngine.Geometry.Composition");
         images.ShouldNotUseIdentifiers(
-            nameof(LayoutGeometryBuilder),
-            nameof(GeometryPipelineComposer),
-            nameof(FragmentBuilder),
+            nameof(LayoutGeometryConstruction),
+            nameof(GeometryPipelineConstruction),
+            nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(PublishedLayoutWriter),
             "IImageSizingRules",
@@ -68,7 +123,13 @@ public sealed class LayoutGeometryOwnerArchitectureTests
     [Fact]
     public void BlockFlowOwner_DoesNotPublishLayoutContracts()
     {
-        var blockFlow = SourceFileFor<BlockFlowLayout>("Box");
+        var blockFlowSources = CSharpSourceSet.FromDirectory(
+            "src",
+            AssemblyName<LayoutGeometryConstruction>(),
+            "BlockFlow");
+        var blockFlow = SourceFileFor<BlockFlowLayout>("BlockFlow");
+
+        blockFlowSources.ShouldDeclareNamespace(NamespaceOf<BlockFlowLayout>());
 
         blockFlow.ShouldNotUseNamespace(NamespaceOf<PublishedLayoutWriter>());
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedLayoutWriter));
@@ -81,7 +142,7 @@ public sealed class LayoutGeometryOwnerArchitectureTests
     [Fact]
     public void PublishingOwner_HasExpectedNamespaceAndForbiddenDependencies()
     {
-        var publishing = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryBuilder>(), "Publishing");
+        var publishing = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Publishing");
 
         publishing.ShouldDeclareNamespace(NamespaceOf<PublishedLayoutWriter>());
         SourceFileFor<PublishedLayoutWriter>("Publishing")
@@ -90,16 +151,16 @@ public sealed class LayoutGeometryOwnerArchitectureTests
             .ShouldContainType(nameof(PublishedBlockFacts), InternalAccessibility);
 
         publishing.ShouldNotUseNamespaces(
-            NamespaceOf<FragmentBuilder>(),
+            NamespaceOf<FragmentTreeBuilder>(),
             NamespaceOf<LayoutPaginator>(),
             "Html2x.Renderers",
             ResourcesAssemblyName,
             ParserPackageName(),
             "Html2x.LayoutEngine.Geometry.Composition");
         publishing.ShouldNotUseIdentifiers(
-            nameof(LayoutGeometryBuilder),
-            nameof(GeometryPipelineComposer),
-            nameof(FragmentBuilder),
+            nameof(LayoutGeometryConstruction),
+            nameof(GeometryPipelineConstruction),
+            nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             "ImageResourceLoader");
     }
@@ -107,24 +168,24 @@ public sealed class LayoutGeometryOwnerArchitectureTests
     [Fact]
     public void MeasurementOwner_HasExpectedNamespaceAndForbiddenDependencies()
     {
-        var measurement = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryBuilder>(), "Measurement");
+        var measurement = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Measurement");
 
-        measurement.ShouldDeclareNamespace(NamespaceOf<BlockContentExtentMeasurement>());
-        SourceFileFor<BlockContentExtentMeasurement>("Measurement")
-            .ShouldContainType(nameof(BlockContentExtentMeasurement), InternalAccessibility, true);
+        measurement.ShouldDeclareNamespace(NamespaceOf<BlockFormattingMetricsMeasurement>());
+        SourceFileFor<BlockFormattingMetricsMeasurement>("Measurement")
+            .ShouldContainType(nameof(BlockFormattingMetricsMeasurement), InternalAccessibility, true);
 
         measurement.ShouldNotUseNamespaces(
             NamespaceOf<PublishedLayoutWriter>(),
-            NamespaceOf<FragmentBuilder>(),
+            NamespaceOf<FragmentTreeBuilder>(),
             NamespaceOf<LayoutPaginator>(),
             "Html2x.Renderers",
             ResourcesAssemblyName,
             ParserPackageName(),
             "Html2x.LayoutEngine.Geometry.Composition");
         measurement.ShouldNotUseIdentifiers(
-            nameof(LayoutGeometryBuilder),
-            nameof(GeometryPipelineComposer),
-            nameof(FragmentBuilder),
+            nameof(LayoutGeometryConstruction),
+            nameof(GeometryPipelineConstruction),
+            nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(PublishedLayoutWriter),
             "ImageResourceLoader");
@@ -133,14 +194,38 @@ public sealed class LayoutGeometryOwnerArchitectureTests
     [Fact]
     public void InlineFlowOwner_UsesSharedRunAndBaselineRules()
     {
-        SourceFileFor<InlineFlowLayout>("Box")
-            .ShouldUseIdentifier(nameof(InlineRunCollection));
+        CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "InlineFlow")
+            .ShouldDeclareNamespace(NamespaceOf<InlineFlowLayout>());
+        SourceFileFor<InlineFlowMeasurement>("Measurement")
+            .ShouldUseIdentifier(nameof(InlineRunCollector));
         SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
-            .ShouldUseIdentifier(nameof(InlineRunCollection));
+            .ShouldUseIdentifier(nameof(InlineRunCollector));
+        SourceFileFor<InlineFlowLayout>("InlineFlow")
+            .ShouldUseIdentifier(nameof(InlineLayoutWriter));
         SourceFileFor<InlineLayoutWriter>("InlineFlow")
             .ShouldUseIdentifier(nameof(InlineBaselineRules));
         SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
             .ShouldUseIdentifier(nameof(InlineBaselineRules));
+    }
+
+    [Fact]
+    public void PrimitiveWritingAndStyleOwners_HaveExpectedNamespaces()
+    {
+        CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Primitives")
+            .ShouldDeclareNamespace(NamespaceOf(typeof(BoxDimensionRules)));
+        CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Writing")
+            .ShouldDeclareNamespace(NamespaceOf<LayoutBoxStateWriter>());
+        CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Style")
+            .ShouldDeclareNamespace(NamespaceOf(typeof(HtmlElementRules)));
+    }
+
+    [Fact]
+    public void GeometryBoxNamespace_IsRetired()
+    {
+        var geometry = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>());
+
+        geometry.ShouldNotDeclareNamespaces("Html2x.LayoutEngine.Geometry.Box");
+        geometry.ShouldNotUseNamespaces("Html2x.LayoutEngine.Geometry.Box");
     }
 
     [Fact]
@@ -155,7 +240,7 @@ public sealed class LayoutGeometryOwnerArchitectureTests
                 "Diagnostics",
                 "Models");
 
-        var tableSourceSet = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryBuilder>(), "Tables");
+        var tableSourceSet = CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryConstruction>(), "Tables");
         tableSourceSet.ShouldDeclareNamespace(TablesNamespace);
 
         var tables = TableOwnerSources()
@@ -163,7 +248,7 @@ public sealed class LayoutGeometryOwnerArchitectureTests
             {
                 Source = CSharpSourceFile.Load(
                     "src",
-                    AssemblyName<LayoutGeometryBuilder>(),
+                    AssemblyName<LayoutGeometryConstruction>(),
                     "Tables",
                     source.FileName),
                 source.TypeName,
@@ -185,16 +270,16 @@ public sealed class LayoutGeometryOwnerArchitectureTests
             table.Source.ShouldNotUseNamespaces(
                 NamespaceOf<PublishedLayoutWriter>(),
                 "Html2x.LayoutEngine.Geometry.Publishing",
-                NamespaceOf<FragmentBuilder>(),
+                NamespaceOf<FragmentTreeBuilder>(),
                 NamespaceOf<LayoutPaginator>(),
                 "Html2x.Renderers",
                 ResourcesAssemblyName,
                 ParserPackageName(),
                 "Html2x.LayoutEngine.Geometry.Composition");
             table.Source.ShouldNotUseIdentifiers(
-                nameof(LayoutGeometryBuilder),
-                nameof(GeometryPipelineComposer),
-                nameof(FragmentBuilder),
+                nameof(LayoutGeometryConstruction),
+                nameof(GeometryPipelineConstruction),
+                nameof(FragmentTreeBuilder),
                 nameof(LayoutPaginator),
                 nameof(PublishedLayoutWriter),
                 "ImageResourceLoader");
@@ -202,7 +287,7 @@ public sealed class LayoutGeometryOwnerArchitectureTests
 
         var diagnostics = CSharpSourceFile.Load(
             "src",
-            AssemblyName<LayoutGeometryBuilder>(),
+            AssemblyName<LayoutGeometryConstruction>(),
             "Diagnostics",
             "TableGridDiagnostics.cs");
         diagnostics.ShouldDeclareNamespace(DiagnosticsNamespace);
@@ -217,7 +302,6 @@ public sealed class LayoutGeometryOwnerArchitectureTests
     [
         new("TableBlockLayout.cs", "TableBlockLayout"),
         new("TableBlockLayoutRule.cs", "TableBlockLayoutRule"),
-        new("TableCellMeasurement.cs", "TableCellMeasurement"),
         new("TableGridLayout.cs", "TableGridLayout"),
         new("TableLayoutCellPlacement.cs", "TableLayoutCellPlacement"),
         new("TableLayoutResult.cs", "TableLayoutResult"),

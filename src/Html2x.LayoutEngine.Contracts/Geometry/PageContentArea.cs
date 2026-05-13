@@ -9,9 +9,9 @@ internal readonly record struct PageContentArea(float X, float Y, float Width, f
 
     public static PageContentArea From(SizePt pageSize, Spacing margin)
     {
-        var width = RequireNonNegative(pageSize.Width);
-        var height = RequireNonNegative(pageSize.Height);
-        var safeMargin = NormalizeMargin(margin);
+        var width = RequirePositiveFinite(pageSize.Width, nameof(pageSize));
+        var height = RequirePositiveFinite(pageSize.Height, nameof(pageSize));
+        var safeMargin = RequireMargin(margin);
         var contentWidth = Math.Max(0f, width - safeMargin.Left - safeMargin.Right);
         var contentHeight = Math.Max(0f, height - safeMargin.Top - safeMargin.Bottom);
 
@@ -22,20 +22,32 @@ internal readonly record struct PageContentArea(float X, float Y, float Width, f
             contentHeight);
     }
 
-    private static Spacing NormalizeMargin(Spacing margin) =>
+    private static Spacing RequireMargin(Spacing margin) =>
         new(
-            RequireNonNegative(margin.Top),
-            RequireNonNegative(margin.Right),
-            RequireNonNegative(margin.Bottom),
-            RequireNonNegative(margin.Left));
+            RequireNonNegativeFinite(margin.Top, nameof(margin)),
+            RequireNonNegativeFinite(margin.Right, nameof(margin)),
+            RequireNonNegativeFinite(margin.Bottom, nameof(margin)),
+            RequireNonNegativeFinite(margin.Left, nameof(margin)));
 
-    private static float RequireNonNegative(float value)
+    private static float RequirePositiveFinite(float value, string parameterName)
     {
-        if (!float.IsFinite(value))
+        if (!float.IsFinite(value) ||
+            value <= 0f)
         {
-            return 0f;
+            throw new ArgumentOutOfRangeException(parameterName, value, "Page size must be finite and positive.");
         }
 
-        return Math.Max(0f, value);
+        return value;
+    }
+
+    private static float RequireNonNegativeFinite(float value, string parameterName)
+    {
+        if (!float.IsFinite(value) ||
+            value < 0f)
+        {
+            throw new ArgumentOutOfRangeException(parameterName, value, "Page margin must be finite and non-negative.");
+        }
+
+        return value;
     }
 }

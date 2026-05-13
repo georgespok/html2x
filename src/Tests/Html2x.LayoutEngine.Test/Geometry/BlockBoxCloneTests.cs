@@ -65,7 +65,7 @@ public sealed class BlockBoxCloneTests
         source.Margin = new(1f, 2f, 3f, 4f);
         source.Padding = new(3f, 4f, 5f, 6f);
         source.TextAlign = "center";
-        source.IsInlineBlockContext = true;
+        source.EstablishesInlineBlockFormattingContext = true;
         source.MarkerOffset = 7f;
         source.ApplyLayoutGeometry(geometry);
 
@@ -78,7 +78,7 @@ public sealed class BlockBoxCloneTests
         clone.Padding.ShouldBe(source.Padding);
         clone.TextAlign.ShouldBe(source.TextAlign);
         clone.IsAnonymous.ShouldBe(source.IsAnonymous);
-        clone.IsInlineBlockContext.ShouldBe(source.IsInlineBlockContext);
+        clone.EstablishesInlineBlockFormattingContext.ShouldBe(source.EstablishesInlineBlockFormattingContext);
         clone.UsedGeometry.ShouldBe(source.UsedGeometry);
         clone.MarkerOffset.ShouldBe(source.MarkerOffset);
         clone.SourceIdentity.ShouldBe(sourceIdentity);
@@ -141,14 +141,14 @@ public sealed class BlockBoxCloneTests
         var source = new FloatBox(BoxRole.Float)
         {
             SourceIdentity = sourceIdentity,
-            FloatDirection = HtmlCssConstants.CssValues.Right
+            FloatDirection = HtmlCssVocabulary.CssValues.Right
         };
 
         var clone = source.CloneForParent(parent).ShouldBeOfType<FloatBox>();
 
         clone.SourceIdentity.ShouldBe(sourceIdentity);
         clone.Parent.ShouldBeSameAs(parent);
-        clone.FloatDirection.ShouldBe(HtmlCssConstants.CssValues.Right);
+        clone.FloatDirection.ShouldBe(HtmlCssVocabulary.CssValues.Right);
     }
 
     private static GeometrySourceIdentity CreateSourceIdentity() =>

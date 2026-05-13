@@ -3,6 +3,7 @@ using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
 using Shouldly;
 using CoreFragment = Html2x.RenderModel.Fragments.Fragment;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -23,7 +24,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.Letter
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         var page = layout.Pages[0];
@@ -56,7 +57,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.Letter
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         var page = layout.Pages[0];
@@ -83,7 +84,7 @@ public partial class LayoutIntegrationTests
               </body>
             </html>";
 
-        var layout = await CreateLayoutBuilder(new FixedImageMetadataResolver(src =>
+        var layout = await CreateLayoutPipeline(new FixedImageMetadataResolver(src =>
                 string.Equals(src, "intrinsic.png", StringComparison.OrdinalIgnoreCase)
                     ? new(400d, 200d)
                     : new SizePx(80d, 40d)))
@@ -148,7 +149,7 @@ public partial class LayoutIntegrationTests
     {
         private readonly Func<string, SizePx> _resolveSize = resolveSize;
 
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+        public ImageMetadataResult Resolve(string src) =>
             new()
             {
                 Src = src,

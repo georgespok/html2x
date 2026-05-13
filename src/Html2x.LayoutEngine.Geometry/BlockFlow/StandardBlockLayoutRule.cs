@@ -1,0 +1,69 @@
+using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Writing;
+
+namespace Html2x.LayoutEngine.Geometry.BlockFlow;
+
+/// <summary>
+///     Lays out normal block boxes that do not need specialized replaced, rule, or table behavior.
+/// </summary>
+internal sealed class StandardBlockLayoutRule(
+    BlockSizingRules sizingRules,
+    BlockFlowLayout blockFlow,
+    LayoutBoxStateWriter stateWriter) : IBlockLayoutRule
+{
+    private readonly BlockFlowLayout _blockFlow = blockFlow ?? throw new ArgumentNullException(nameof(blockFlow));
+
+    private readonly BlockSizingRules
+        _sizingRules = sizingRules ?? throw new ArgumentNullException(nameof(sizingRules));
+
+    private readonly LayoutBoxStateWriter _stateWriter =
+        stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
+
+    public bool CanLayout(BlockBox block) => block is not TableBox and not ImageBox and not RuleBox;
+
+    public BlockLayoutRuleResult Layout(BlockBox block, BlockLayoutRequest request)
+    {
+        var flowLayout = ApplyLayout(block, request);
+        return BlockLayoutRuleResult.ForFlow(block, flowLayout);
+    }
+
+    private BlockFlowLayoutResult ApplyLayout(BlockBox block, BlockLayoutRequest request)
+    {
+        var measurement = _sizingRules.ResolveBlockMeasurementBasis(block, request.ContentWidth);
+        var origin = BlockOriginRules.ResolveOrigin(request, measurement.Margin);
+        var contentArea = UsedGeometryRules.ResolveContentFlowArea(
+            origin.X,
+            origin.Y,
+            measurement.BorderBoxWidth,
+            0f,
+            measurement.Padding,
+            measurement.Border,
+            block.MarkerOffset);
+
+        _stateWriter.ApplyTextAlignment(block);
+
+        var flowLayout = _blockFlow.Layout(new(
+            block,
+            contentArea.X,
+            contentArea.Y,
+            contentArea.Width,
+            contentArea.Y));
+        var contentHeight = _sizingRules.ResolveContentHeight(
+            block,
+            flowLayout.ContentHeight);
+
+        _stateWriter.ApplyBlockLayout(
+            block,
+            measurement,
+            UsedGeometryRules.FromBorderBoxWithContentHeight(
+                origin.X,
+                origin.Y,
+                UsedGeometryRules.RequireNonNegativeFinite(measurement.BorderBoxWidth),
+                UsedGeometryRules.RequireNonNegativeFinite(contentHeight),
+                measurement.Padding,
+                measurement.Border,
+                markerOffset: block.MarkerOffset));
+
+        return flowLayout;
+    }
+}

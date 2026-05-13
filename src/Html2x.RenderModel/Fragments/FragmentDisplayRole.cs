@@ -1,6 +1,6 @@
 namespace Html2x.RenderModel.Fragments;
 
-public enum FragmentDisplayRole
+internal enum FragmentDisplayRole
 {
     Block,
     Inline,

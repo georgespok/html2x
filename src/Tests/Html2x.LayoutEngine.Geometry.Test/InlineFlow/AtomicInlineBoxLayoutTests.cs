@@ -1,10 +1,8 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
-using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Html2x.Text;
@@ -18,7 +16,7 @@ public sealed class AtomicInlineBoxLayoutTests
     public void MeasureInlineBlock_ImageContent_UsesImageSizingWithoutTextLineMeasurement()
     {
         var textMeasurer = new CountingTextMeasurer();
-        var imageResolver = new ImageSizingRules(new()
+        var imageSizingRules = new ImageSizingRules(new()
         {
             ImageMetadataResolver = new FixedImageMetadataResolver(new(32d, 16d))
         });
@@ -26,7 +24,7 @@ public sealed class AtomicInlineBoxLayoutTests
         {
             Style = new()
         };
-        inlineBlock.Children.Add(new ImageBox(BoxRole.Block)
+        inlineBlock.AddChild(new ImageBox(BoxRole.Block)
         {
             Parent = inlineBlock,
             Src = "image.png",
@@ -39,10 +37,10 @@ public sealed class AtomicInlineBoxLayoutTests
         });
         var layout = new AtomicInlineBoxLayout(
             textMeasurer,
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             new DefaultLineHeightStrategy(),
             new(),
-            imageResolver);
+            imageSizingRules);
 
         var result = layout.MeasureInlineBlock(inlineBlock, 100f);
 
@@ -55,9 +53,8 @@ public sealed class AtomicInlineBoxLayoutTests
         imageResolution.Src.ShouldBe("image.png");
         imageResolution.IntrinsicSizePx.ShouldBe(new SizePx(32d, 16d));
         imageResolution.Status.ShouldBe(ImageLoadStatus.Ok);
-        result.Layout.Lines.ShouldBeEmpty();
-        textMeasurer.MeasureCount.ShouldBe(0);
-        textMeasurer.MeasureWidthCount.ShouldBe(0);
+        result.TextLayout.Lines.ShouldBeEmpty();
+        textMeasurer.MeasuredTexts.ShouldBe([""]);
     }
 
     [Fact]
@@ -71,7 +68,7 @@ public sealed class AtomicInlineBoxLayoutTests
         var contentBox = new BlockBox(BoxRole.Block)
         {
             Parent = inlineBlock,
-            IsInlineBlockContext = true,
+            EstablishesInlineBlockFormattingContext = true,
             Style = new()
             {
                 WidthPt = 42f,
@@ -80,16 +77,16 @@ public sealed class AtomicInlineBoxLayoutTests
                 Borders = BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid))
             }
         };
-        contentBox.Children.Add(new InlineBox(BoxRole.Inline)
+        contentBox.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = contentBox,
             Style = contentBox.Style,
             TextContent = "alpha beta"
         });
-        inlineBlock.Children.Add(contentBox);
+        inlineBlock.AddChild(contentBox);
         var layout = new AtomicInlineBoxLayout(
             textMeasurer,
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             new DefaultLineHeightStrategy(),
             new(),
             new ImageSizingRules());
@@ -102,7 +99,7 @@ public sealed class AtomicInlineBoxLayoutTests
         result.ContentHeight.ShouldBe(18f);
         result.BorderBoxWidth.ShouldBe(52f);
         result.BorderBoxHeight.ShouldBe(26f);
-        result.Layout.Lines.ShouldNotBeEmpty();
+        result.TextLayout.Lines.ShouldNotBeEmpty();
         textMeasurer.MeasureCount.ShouldBeGreaterThan(0);
         contentBox.UsedGeometry.ShouldBeNull();
         contentBox.InlineLayout.ShouldBeNull();
@@ -110,7 +107,7 @@ public sealed class AtomicInlineBoxLayoutTests
 
     private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+        public ImageMetadataResult Resolve(string src) =>
             new()
             {
                 Src = src,
@@ -123,13 +120,14 @@ public sealed class AtomicInlineBoxLayoutTests
     {
         public int MeasureCount { get; private set; }
 
-        public int MeasureWidthCount { get; private set; }
+        public List<string> MeasuredTexts { get; } = [];
 
         public TextMeasurement Measure(FontKey font, float sizePt, string text)
         {
             MeasureCount++;
+            MeasuredTexts.Add(text);
             return new(
-                MeasureWidth(font, sizePt, text),
+                MeasureWidth(text),
                 9f,
                 3f,
                 new(
@@ -139,12 +137,6 @@ public sealed class AtomicInlineBoxLayoutTests
                     "test://font"));
         }
 
-        public float MeasureWidth(FontKey font, float sizePt, string text)
-        {
-            MeasureWidthCount++;
-            return text.Length;
-        }
-
-        public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) => (9f, 3f);
+        private static float MeasureWidth(string text) => text.Length;
     }
 }

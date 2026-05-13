@@ -24,12 +24,12 @@ internal static class GeometrySnapshotSchema
         public const string Baseline = "baseline";
         public const string AllowsOverflow = "allowsOverflow";
         public const string IsAnonymous = "isAnonymous";
-        public const string IsInlineBlockContext = "isInlineBlockContext";
+        public const string EstablishesInlineBlockFormattingContext = "establishesInlineBlockFormattingContext";
     }
 
     public static class Metadata
     {
         public const string PaginationConsumer = "Pagination";
-        public const string BoxGeometryOwner = "BlockLayoutEngine";
+        public const string GeometryLayoutOwner = "BlockFlowLayout";
     }
 }

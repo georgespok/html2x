@@ -18,14 +18,14 @@ internal sealed class InlineAlignmentRules
             return 0f;
         }
 
-        var align = textAlign?.ToLowerInvariant() ?? HtmlCssConstants.Defaults.TextAlign;
+        var align = textAlign?.ToLowerInvariant() ?? HtmlCssVocabulary.Defaults.TextAlign;
         var extra = Math.Max(0f, contentWidth - lineWidth);
 
         return align switch
         {
-            HtmlCssConstants.CssValues.Center => extra / 2f,
-            HtmlCssConstants.CssValues.Right => extra,
-            HtmlCssConstants.CssValues.Justify when ShouldJustifyLine(line, lineIndex, lineCount) => 0f,
+            HtmlCssVocabulary.CssValues.Center => extra / 2f,
+            HtmlCssVocabulary.CssValues.Right => extra,
+            HtmlCssVocabulary.CssValues.Justify when ShouldJustifyLine(line, lineIndex, lineCount) => 0f,
             _ => 0f
         };
     }

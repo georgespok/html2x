@@ -13,15 +13,15 @@ This page explains how `Html2x.Renderers.Pdf` renders
 
 ## Boundary
 
-The PDF renderer consumes render model fragments and page models as read-only facts. `HtmlLayout.Pages` is exposed as a read-only list at this seam. It must not reach back into DOM, style tree, box tree objects, fragment projection, layout implementation packages, or font source adapters.
+The PDF renderer consumes render model fragments and page models as read-only facts. `HtmlLayout.Pages` is exposed as a read-only list at this seam. It must not reach back into DOM, style tree, box tree objects, fragment tree building, layout implementation packages, or font source adapters.
 
-The renderer consumes renderer-owned `PdfRenderSettings` and does not reference
-public converter options. It references `Html2x.Text` only for internal
-typeface loading seams and must not perform font source resolution.
+The renderer consumes internal renderer-owned `PdfRenderSettings` and does not
+reference public converter options. It references `Html2x.Text` only for
+internal typeface loading seams and must not perform font source resolution.
 
-`PdfRenderer()` is the public construction path. Dependency-injected renderer
-constructors that accept filesystem or typeface factory adapters are internal
-adapters and must not become public API.
+`PdfRenderer` is an internal implementation behind `HtmlConverter`.
+Dependency-injected renderer constructors that accept filesystem or typeface
+factory adapters are internal adapters and must not become public API.
 
 If renderer code needs a value that fragments do not carry, that value belongs
 in the layout or fragment contract.
@@ -39,18 +39,18 @@ HtmlLayout
 
 ## Paint Ordering
 
-Current rendering preserves established visual order:
+Paint command resolution emits page background first, then fragment commands in
+stable traversal order and sorts by `ZOrder` followed by command index.
 
-1. Page background.
-2. Block backgrounds.
-3. Borders.
-4. Images and image borders.
-5. Rules.
-6. Text.
-7. Table backgrounds and borders in table, row, cell, then content order.
+Standard block fragments emit background, border, then child content in
+fragment order. Image fragments emit image content and then image border when a
+border is present. Rule fragments emit a rule command. Table fragments use a
+specialized order: table, row, and cell backgrounds first, then table, row, and
+cell borders, then cell content.
 
-`ZOrder` can be carried as metadata, but stacking behavior must be explicit in
-the render model contract.
+Unsupported fragment or paint command runtime types fail explicitly instead of
+being silently skipped. Layout diagnostics snapshots use the bounded
+`unsupported` fragment kind for unknown fragment subclasses.
 
 ## Fonts And Images
 
@@ -59,8 +59,8 @@ the referenced typefaces through renderer-local font cache behavior and does
 not resolve fonts through `IFontSource`.
 
 When rendering through `HtmlConverter`, images are loaded from the
-conversion-scoped resource store that also supplied layout metadata. Direct
-`PdfRenderer` usage falls back to `Html2x.Resources` with renderer-owned
+conversion-scoped resource store that also supplied layout metadata. Renderer
+tests can exercise the fallback `Html2x.Resources` path with renderer-owned
 resource settings. The renderer consumes image source, status, rectangle,
 padding, and border facts from render model fragments. It does not rederive
 layout geometry.

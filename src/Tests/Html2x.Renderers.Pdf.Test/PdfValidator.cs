@@ -2,7 +2,7 @@ namespace Html2x.Renderers.Pdf.Test;
 
 public class PdfValidator
 {
-    public static bool Validate(byte[] pdfBytes)
+    public static bool HasPdfHeader(byte[] pdfBytes)
     {
         if (pdfBytes.Length < PdfHeader.MinimumLength)
         {

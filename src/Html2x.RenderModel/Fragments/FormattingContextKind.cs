@@ -1,6 +1,6 @@
 namespace Html2x.RenderModel.Fragments;
 
-public enum FormattingContextKind
+internal enum FormattingContextKind
 {
     Block,
     InlineBlock

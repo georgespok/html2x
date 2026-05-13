@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 
 namespace Html2x.LayoutEngine.Geometry.Images;
 
@@ -20,7 +20,7 @@ internal sealed class ImageBlockLayoutRule(
     public BlockLayoutRuleResult Layout(BlockBox block, BlockLayoutRequest request)
     {
         var image = (ImageBox)block;
-        var measurement = _sizingRules.Prepare(image, request.ContentWidth);
+        var measurement = _sizingRules.ResolveBlockMeasurementBasis(image, request.ContentWidth);
         _imageBlockLayoutWriter.Write(image, request, measurement);
         return BlockLayoutRuleResult.ForResolvedBlock(image);
     }

@@ -40,7 +40,7 @@ Cause candidates:
 Recovery:
 
 1. Enable diagnostics and inspect `image/render`.
-2. Check the `status` field for `Missing`, `OutOfScope`, `InvalidDataUri`, `DecodeFailed`, or `Oversize`.
+2. Check the `status` field for `Missing`, `OutOfScope`, `InvalidDataUri`, `DecodeFailed`, or `Oversized`.
 3. Set an explicit `Resources.BaseDirectory` when HTML references relative image paths.
 
 ## Page Count Drift
@@ -80,17 +80,16 @@ Recovery:
 2. Enable diagnostics and look for `style/*` or `layout/unsupported-mode` events.
 3. Add a baseline test if the fallback is intentional and not already covered.
 
-## Direct Renderer Fails On Text
+## Renderer Fails On Text
 
 Cause candidates:
 
 - A manually constructed `TextRun` does not include `ResolvedFont`.
-- `PdfRenderSettings.MaxImageSizeBytes` is invalid.
 - The referenced resolved font path is missing.
 
 Recovery:
 
 1. Use the converter path when possible so layout publishes resolved font facts.
-2. For direct renderer usage, construct text runs with `ResolvedFont`.
+2. For renderer-level tests, construct text runs with `ResolvedFont`.
 3. Check [Text And Fonts](../internals/text-and-fonts.md) and
    [Failure Modes](../reference/failure-modes.md).

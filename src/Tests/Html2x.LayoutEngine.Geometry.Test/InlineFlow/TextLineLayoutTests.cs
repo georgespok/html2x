@@ -9,7 +9,7 @@ namespace Html2x.LayoutEngine.Geometry.Test.InlineFlow;
 
 public class TextLineLayoutTests
 {
-    private static readonly LayoutBuilderFixture Fixture = new();
+    private static readonly LayoutPipelineFixture Fixture = new();
 
     [Fact]
     public void Layout_SingleLine_PreservesRunOrder()
@@ -334,15 +334,13 @@ public class TextLineLayoutTests
             }
 
             return new(
-                MeasureWidth(font, sizePt, text),
+                MeasureWidth(text),
                 ascent,
                 descent,
                 resolvedFont);
         }
 
-        public float MeasureWidth(FontKey font, float sizePt, string text) =>
+        private float MeasureWidth(string text) =>
             string.IsNullOrEmpty(text) ? 0f : text.Length * widthPerChar;
-
-        public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) => (ascent, descent);
     }
 }

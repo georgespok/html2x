@@ -565,10 +565,10 @@ public class InlineBlockTests
 
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var layoutPipeline = CreateLayoutPipeline(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink));
+            await layoutPipeline.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink));
 
         diagnosticsSink.Records
             .Any(e => e.Name == "layout/inline-block/unsupported-structure" &&
@@ -607,10 +607,10 @@ public class InlineBlockTests
         var topLevelDiagnostics = new RecordingDiagnosticsSink();
         var inlineBlockDiagnostics = new RecordingDiagnosticsSink();
 
-        var layoutBuilder = CreateLayoutBuilder(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
+        var layoutPipeline = CreateLayoutPipeline(InlineFlowTestHelpers.CreateLinearMeasurer(6f));
         var topLevelLayout =
-            await layoutBuilder.BuildAsync(topLevelHtml, new() { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
-        var inlineBlockLayout = await layoutBuilder.BuildAsync(inlineBlockHtml, new() { PageSize = PaperSizes.A4 },
+            await layoutPipeline.BuildAsync(topLevelHtml, new() { PageSize = PaperSizes.A4 }, topLevelDiagnostics);
+        var inlineBlockLayout = await layoutPipeline.BuildAsync(inlineBlockHtml, new() { PageSize = PaperSizes.A4 },
             inlineBlockDiagnostics);
 
         var topLevelContainer = FindContainerWithDirectChildren(
@@ -636,7 +636,7 @@ public class InlineBlockTests
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
                 StringField(payload, "owner") == "BlockFormattingContext" &&
-                StringField(payload, "consumer") == "BlockLayoutEngine" &&
+                StringField(payload, "consumer") == "BlockFlowLayout" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
@@ -645,7 +645,7 @@ public class InlineBlockTests
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
                 StringField(payload, "owner") == "BlockFormattingContext" &&
-                StringField(payload, "consumer") == "InlineLayoutEngine" &&
+                StringField(payload, "consumer") == "InlineFlowLayout" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.InlineBlock) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
             .ShouldBeTrue();
@@ -673,7 +673,7 @@ public class InlineBlockTests
         }
     }
 
-    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer) =>
+    private static LayoutPipeline CreateLayoutPipeline(ITextMeasurer textMeasurer) =>
         new(
             textMeasurer,
             new NoopImageMetadataResolver());

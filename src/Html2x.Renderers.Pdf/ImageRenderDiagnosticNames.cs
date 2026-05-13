@@ -28,7 +28,7 @@ internal static class ImageRenderDiagnosticNames
         public const string LineStyle = "lineStyle";
     }
 
-    public static class Context
+    public static class ContextValues
     {
         public const string ImageElement = "img";
     }

@@ -279,13 +279,13 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
         orderedTexts.ShouldBe(["A", "B", "C", "D"]);
     }
 
-    private static DiagnosticsReport GetDiagnostics(Html2PdfResult result)
+    private static DiagnosticsReport GetDiagnostics(HtmlToPdfResult result)
     {
         result.DiagnosticsReport.ShouldNotBeNull();
         return result.DiagnosticsReport!;
     }
 
-    private static LayoutPageSnapshot GetLayoutPageSnapshot(Html2PdfResult result)
+    private static LayoutPageSnapshot GetLayoutPageSnapshot(HtmlToPdfResult result)
     {
         var diagnostics = GetDiagnostics(result);
         var endLayoutBuild = diagnostics.Records.FirstOrDefault(x =>

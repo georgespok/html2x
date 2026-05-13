@@ -1,4 +1,3 @@
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Images;
 
 namespace Html2x.LayoutEngine.Geometry.InlineFlow;
@@ -8,7 +7,7 @@ namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 /// </summary>
 internal sealed record InlineBoxLayout(
     BlockBox ContentBox,
-    TextLayoutResult Layout,
+    TextLayoutResult TextLayout,
     float ContentWidth,
     float ContentHeight,
     float BorderBoxWidth,

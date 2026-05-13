@@ -4,7 +4,7 @@ namespace Html2x.LayoutEngine.Contracts.Published;
 ///     Defines the published output seam of the layout geometry module.
 /// </summary>
 /// <remarks>
-///     This seam sits between layout geometry and fragment projection. It is intended
+///     This seam sits between layout geometry and fragment tree building. It is intended
 ///     to carry only facts that are stable after layout completes: geometry, inline
 ///     layout, display facts, image facts, rule facts, table facts, and child order.
 ///     Core geometry values, published facts, and geometry guards belong to the layout
@@ -20,7 +20,7 @@ namespace Html2x.LayoutEngine.Contracts.Published;
 ///             <description>Every published block carries final used geometry.</description>
 ///         </item>
 ///         <item>
-///             <description>Children are already in fragment projection source order.</description>
+///             <description>Children are already in fragment tree source order.</description>
 ///         </item>
 ///         <item>
 ///             <description>Block flow preserves the relative order of inline segments and child blocks.</description>

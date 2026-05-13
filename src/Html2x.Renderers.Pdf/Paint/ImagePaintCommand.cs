@@ -2,6 +2,7 @@ using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.Renderers.Pdf.Paint;
 

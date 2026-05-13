@@ -1,5 +1,6 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Writing;
 
 namespace Html2x.LayoutEngine.Geometry.Images;
 
@@ -7,11 +8,11 @@ namespace Html2x.LayoutEngine.Geometry.Images;
 ///     Writes resolved image metadata and block geometry to image boxes.
 /// </summary>
 internal sealed class ImageBlockLayoutWriter(
-    ImageSizingRules imageResolver,
+    ImageSizingRules imageSizingRules,
     LayoutBoxStateWriter stateWriter)
 {
-    private readonly ImageSizingRules _imageResolver =
-        imageResolver ?? throw new ArgumentNullException(nameof(imageResolver));
+    private readonly ImageSizingRules _imageSizingRules =
+        imageSizingRules ?? throw new ArgumentNullException(nameof(imageSizingRules));
 
     private readonly LayoutBoxStateWriter _stateWriter =
         stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
@@ -20,7 +21,7 @@ internal sealed class ImageBlockLayoutWriter(
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        var image = _imageResolver.Resolve(node, measurement.ContentFlowWidth);
+        var image = _imageSizingRules.ResolveImageLayout(node, measurement.ContentFlowWidth);
         var origin = BlockOriginRules.ResolveOrigin(request, measurement.Margin);
 
         _stateWriter.ApplyImageBlockLayout(
@@ -29,8 +30,8 @@ internal sealed class ImageBlockLayoutWriter(
             UsedGeometryRules.FromBorderBox(
                 origin.X,
                 origin.Y,
-                image.TotalWidth,
-                image.TotalHeight,
+                image.BorderBoxWidth,
+                image.BorderBoxHeight,
                 measurement.Padding,
                 measurement.Border,
                 markerOffset: node.MarkerOffset),

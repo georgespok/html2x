@@ -42,7 +42,7 @@ under `.work/`, not under `docs/`.
   construction.
 - [Geometry](internals/geometry.md): geometry authority, `UsedGeometry`,
   publishing, and layout invariants.
-- [Fragment Projection](internals/fragment-projection.md): published layout to
+- [Fragment Tree Building](internals/fragment-tree-building.md): published layout to
   render model fragments.
 - [Pagination](internals/pagination.md): page placement and pagination audit
   facts.

@@ -43,8 +43,8 @@ internal sealed class StyledElementFacts
             }
         }
 
-        values.TryGetValue(HtmlCssConstants.HtmlAttributes.Id, out var id);
-        values.TryGetValue(HtmlCssConstants.HtmlAttributes.Class, out var classAttribute);
+        values.TryGetValue(HtmlCssVocabulary.HtmlAttributes.Id, out var id);
+        values.TryGetValue(HtmlCssVocabulary.HtmlAttributes.Class, out var classAttribute);
 
         return new(tagName, tagName.ToLowerInvariant(), id, classAttribute, values);
     }
@@ -79,12 +79,12 @@ internal sealed class StyledElementFacts
 
         if (!string.IsNullOrWhiteSpace(id))
         {
-            normalized[HtmlCssConstants.HtmlAttributes.Id] = id;
+            normalized[HtmlCssVocabulary.HtmlAttributes.Id] = id;
         }
 
         if (!string.IsNullOrWhiteSpace(classAttribute))
         {
-            normalized[HtmlCssConstants.HtmlAttributes.Class] = classAttribute;
+            normalized[HtmlCssVocabulary.HtmlAttributes.Class] = classAttribute;
         }
 
         return normalized;

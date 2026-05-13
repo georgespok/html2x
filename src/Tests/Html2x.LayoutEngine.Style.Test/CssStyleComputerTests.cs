@@ -3,7 +3,7 @@ using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Style.Document;
-using Html2x.LayoutEngine.Style.Style;
+using Html2x.LayoutEngine.Style.Computation;
 using Html2x.LayoutEngine.Style.Test.Assertions;
 using Html2x.RenderModel.Styles;
 using Shouldly;
@@ -43,7 +43,7 @@ public class CssStyleComputerTests
                 new("h1", new()
                 {
                     FontFamily = fontHelvetica, FontSizePt = 30, Color = red,
-                    TextAlign = "right", Bold = true
+                    TextAlign = "right", IsBold = true
                 }),
                 new("p", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red }),
                 new("div", new() { FontFamily = fontHelvetica, FontSizePt = bodyFontSize, Color = red })
@@ -87,9 +87,9 @@ public class CssStyleComputerTests
     }
 
     [Theory]
-    [InlineData("left", HtmlCssConstants.CssValues.Left)]
-    [InlineData("right", HtmlCssConstants.CssValues.Right)]
-    [InlineData("none", HtmlCssConstants.Defaults.FloatDirection)]
+    [InlineData("left", HtmlCssVocabulary.CssValues.Left)]
+    [InlineData("right", HtmlCssVocabulary.CssValues.Right)]
+    [InlineData("none", HtmlCssVocabulary.Defaults.FloatDirection)]
     public async Task Compute_WithFloatDeclaration_StoresComputedFloatDirection(
         string floatValue,
         string expectedDirection)
@@ -120,7 +120,7 @@ public class CssStyleComputerTests
         var tree = _sut.Compute(document);
 
         var blockStyle = tree.Root!.Children.ShouldHaveSingleItem().Style;
-        blockStyle.Position.ShouldBe(HtmlCssConstants.CssValues.Absolute);
+        blockStyle.Position.ShouldBe(HtmlCssVocabulary.CssValues.Absolute);
     }
 
     [Fact]
@@ -499,6 +499,40 @@ public class CssStyleComputerTests
     }
 
     [Fact]
+    public async Task Compute_DuplicateInlineDimension_UsesLastParsedDeclaration()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div style='width: 10px; width: 20px;'>Box</div>
+            </body></html>");
+
+        var tree = _sut.Compute(document);
+
+        tree.Root!.Children.ShouldHaveSingleItem().Style.WidthPt.ShouldBe(15f);
+    }
+
+    [Fact]
+    public async Task Compute_MalformedInlineFragment_KeepsDiagnosticSchemaForParsedDeclaration()
+    {
+        var document = await CreateHtmlDocument(
+            @"<html><body>
+                <div id='hero' style='width 10px; max-width: 2rem;'>Box</div>
+            </body></html>");
+        var sink = new RecordingDiagnosticsSink();
+
+        _sut.Compute(document, sink);
+
+        var diagnostic = SingleDiagnostic(sink, "style/unsupported-declaration");
+        AssertStringField(diagnostic, "propertyName", "max-width");
+        AssertStringField(diagnostic, "rawValue", "2rem");
+        AssertStringField(diagnostic, "decision", "Unsupported");
+        diagnostic.Context.ShouldNotBeNull().ElementIdentity.ShouldBe("div#hero");
+        diagnostic.Context.StyleDeclaration.ShouldBe("max-width: 2rem");
+        diagnostic.Fields.Keys.ShouldContain("normalizedValue");
+        diagnostic.Fields.Keys.ShouldContain("reason");
+    }
+
+    [Fact]
     public async Task Compute_InvalidSpacingShorthand_EmitsIgnoredStyleDiagnostic()
     {
         var document = await CreateHtmlDocument(
@@ -613,7 +647,7 @@ public class CssStyleComputerTests
             new("h1", new()
             {
                 FontSizePt = 18,
-                Bold = true
+                IsBold = true
             }),
             new("p", new()
             {
@@ -683,9 +717,9 @@ public class CssStyleComputerTests
     private static async Task<StyleSnapshot> ComputeStyleTreeAsync(string html, StyleBuildSettings options)
     {
         var config = Configuration.Default.WithCss();
-        var domProvider = new AngleSharpDomProvider(config);
+        var documentLoader = new AngleSharpDocumentLoader(config);
         var styleComputer = new CssStyleComputer();
-        var document = await domProvider.LoadAsync(html, options);
+        var document = await documentLoader.LoadAsync(html, options);
         var tree = styleComputer.Compute(document);
         return StyleTreeSnapshot.FromTree(tree);
     }

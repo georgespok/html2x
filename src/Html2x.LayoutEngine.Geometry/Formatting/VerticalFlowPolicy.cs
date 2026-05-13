@@ -9,8 +9,8 @@ internal static class VerticalFlowPolicy
         MarginCollapseRules marginCollapseRules,
         float previousBottomMargin,
         float nextTopMargin,
-        FormattingContextKind contextKind,
-        string consumerName,
+        FormattingContextKind formattingContext,
+        string diagnosticConsumer,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(marginCollapseRules);
@@ -18,8 +18,8 @@ internal static class VerticalFlowPolicy
         return marginCollapseRules.Collapse(
             previousBottomMargin,
             nextTopMargin,
-            contextKind,
-            consumerName,
+            formattingContext,
+            diagnosticConsumer,
             diagnosticsSink);
     }
 

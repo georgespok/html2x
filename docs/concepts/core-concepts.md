@@ -39,14 +39,14 @@ allowance. Geometry computes it once and publishes it forward.
 ## `PublishedLayoutTree`
 
 `PublishedLayoutTree` is the immutable layout handoff from geometry to fragment
-projection. It contains published block, inline, image, rule, table, source
+fragment tree building. It contains published block, inline, image, rule, table, source
 identity, and final geometry facts. Downstream stages consume this instead of
 mutable boxes.
 
 ## `FragmentTree`
 
 `FragmentTree` is the renderer-facing tree before page placement. Fragment
-projection copies published geometry, visual style, text runs, resolved font
+fragment tree building copies published geometry, visual style, text runs, resolved font
 facts, image facts, tables, rules, and display metadata into render model
 fragments.
 
@@ -60,7 +60,7 @@ total placement count. Pagination owns page-local translated fragment clones.
 
 `HtmlLayout` is the renderer input. It contains read-only `LayoutPage` values
 and page-local fragments. The PDF renderer consumes it without inspecting style,
-geometry, boxes, parser objects, or fragment projection internals.
+geometry, boxes, parser objects, or fragment tree building internals.
 
 ## Diagnostics
 

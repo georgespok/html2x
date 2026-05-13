@@ -14,8 +14,8 @@ internal static class TableGridDiagnosticNames
         public const string CellCount = "cellCount";
         public const string ColumnSpan = "columnSpan";
         public const string DerivedColumnCount = "derivedColumnCount";
-        public const string RequestedWidth = "requestedWidth";
-        public const string ResolvedWidth = "resolvedWidth";
+        public const string RequestedContentWidth = "requestedContentWidth";
+        public const string ResolvedBorderBoxWidth = "resolvedBorderBoxWidth";
         public const string Outcome = "outcome";
         public const string Rows = "rows";
         public const string Cells = "cells";

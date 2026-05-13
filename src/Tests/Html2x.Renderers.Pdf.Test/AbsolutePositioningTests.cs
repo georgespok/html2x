@@ -11,7 +11,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public sealed class AbsolutePositioningTests
 {
     [Fact]
-    public async Task RenderAsync_PositionedLines_PreservesPageCoordinates()
+    public void Render_PositionedLines_PreservesPageCoordinates()
     {
         var layout = new HtmlLayout();
         layout.AddPage(new(
@@ -25,9 +25,9 @@ public sealed class AbsolutePositioningTests
             new ColorRgba(255, 255, 255, 255)));
         var renderer = new PdfRenderer();
 
-        var pdfBytes = await renderer.RenderAsync(layout, new());
+        var pdfBytes = renderer.Render(layout, new());
 
-        PdfValidator.Validate(pdfBytes).ShouldBeTrue();
+        PdfValidator.HasPdfHeader(pdfBytes).ShouldBeTrue();
         var words = PdfWordParser.GetRawWords(pdfBytes);
         var anchor = PdfWordParser.FindWordByText(words, "Anchor").ShouldNotBeNull();
         var offset = PdfWordParser.FindWordByText(words, "Offset").ShouldNotBeNull();

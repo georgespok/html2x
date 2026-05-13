@@ -11,35 +11,49 @@ Pure font facts such as `FontKey`, `FontWeight`, `FontStyle`, and
 
 ## Converter-Owned Font Source
 
-With the default runtime, `HtmlConverter` requires
+With the default converter dependencies, `HtmlConverter` requires
 `HtmlConverterOptions.Fonts.FontPath`. The path may point to a font file or a
 directory. The converter creates a `FontPathSource` and passes it to:
 
-- `DiagnosticsFontSource` when diagnostics are enabled.
+- An internal diagnostics font source wrapper when diagnostics are enabled.
 - `SkiaTextMeasurer` during layout.
 
 Geometry publishes the resulting `ResolvedFont` facts on normal pipeline text
-runs. Fragment projection copies those facts, and PDF rendering loads typefaces
+runs. Fragment tree building copies those facts, and PDF rendering loads typefaces
 from them without resolving fonts again.
 
-## Runtime Font And Text Adapters
+## Font And Text Dependency Factories
 
-`HtmlConverterRuntime` is the supported advanced in-process construction path.
+`HtmlConverterDependencies` is the supported advanced in-process construction path.
 It may supply:
 
-- `IFontSource`, used by the built-in `SkiaTextMeasurer`.
-- `ITextMeasurer`, used directly for layout measurement.
+- `FontSourceFactory`, which creates a conversion-scoped `IFontSource` used by
+  the built-in `SkiaTextMeasurer`.
+- `TextMeasurerFactory`, which creates a conversion-scoped `ITextMeasurer` used
+  directly for layout measurement.
 
-When a runtime font source is supplied, `FontOptions.FontPath` is not required
-and the caller owns the font source lifetime. When a runtime text measurer is
-supplied, the caller owns the measurer lifetime and must return
-`TextMeasurement` values with usable `ResolvedFont` facts. The runtime surface
-does not expose layout boxes, style trees, image byte loading, or renderer
-state.
+When a dependency font source factory is supplied, `FontOptions.FontPath` is not
+required. Dependency adapters are converter-scoped: the converter calls the
+chosen factory once per conversion and disposes the returned adapter when it
+implements `IDisposable`. A dependency text measurer must return complete
+`TextMeasurement` values from one `Measure` call. Width, ascent, descent, and
+`ResolvedFont` must be available together. Html2x validates the structural
+measurement facts before layout consumes them: measured values must be finite
+and non-negative, the resolved font must be present, and the resolved font
+source id must not be empty. The dependency surface does not expose layout
+boxes, style trees, image byte loading, or renderer state.
+Factory creation is configuration work. A dependency factory that returns null
+or throws before layout begins fails the conversion before layout starts, and
+diagnostics-enabled conversions attach the diagnostics report to the original
+exception.
 
-## Direct Renderer Usage
+Resolved font file loadability remains renderer-owned. A custom text measurer
+can pass layout validation with a structurally valid `ResolvedFont`, but PDF
+rendering still requires a loadable `ResolvedFont.FilePath`.
 
-Direct renderer callers must provide `TextRun.ResolvedFont` on every text run.
+## Renderer Font Loading
+
+Renderer inputs must provide `TextRun.ResolvedFont` on every text run.
 `SkiaFontCache` loads the referenced font file from those resolved facts. It
 does not call `IFontSource` or perform renderer-local fallback resolution.
 
@@ -57,8 +71,10 @@ Font resolution diagnostics should include:
 ## Failure Modes
 
 - Missing `HtmlConverterOptions.Fonts.FontPath` fails before layout begins when
-  the default runtime has no custom font source or text measurer.
+  the default dependencies have no custom font source or text measurer factory.
 - Invalid font paths fail before layout begins.
+- Invalid custom text measurement values fail before layout consumes the
+  measurement.
 - Font path and renderer font failures use `FontResolutionException` with
   typed request, resolved font, configured path, resolved path, and text facts.
 - Missing `TextRun.ResolvedFont` fails during PDF rendering with a renderer

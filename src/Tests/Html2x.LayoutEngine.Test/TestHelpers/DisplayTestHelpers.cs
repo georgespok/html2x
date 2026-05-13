@@ -7,7 +7,7 @@ namespace Html2x.LayoutEngine.Test.TestHelpers;
 
 internal static class DisplayTestHelpers
 {
-    private static readonly LayoutBuilderFixture Fixture = new();
+    private static readonly LayoutPipelineFixture Fixture = new();
 
     public static Task<HtmlLayout> BuildLayoutAsync(string html, float widthPerChar) =>
         Fixture.BuildLayoutAsync(html, CreateLinearMeasurer(widthPerChar), new()

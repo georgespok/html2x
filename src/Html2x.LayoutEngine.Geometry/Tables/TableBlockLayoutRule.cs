@@ -1,5 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Models;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 
 namespace Html2x.LayoutEngine.Geometry.Tables;
 
@@ -8,9 +7,9 @@ namespace Html2x.LayoutEngine.Geometry.Tables;
 /// </summary>
 internal sealed class TableBlockLayoutRule(
     TableBlockLayout tableBlockLayout,
-    Func<BlockBox, float, float, float, float, float> layoutChildBlocks) : IBlockLayoutRule
+    Func<BlockChildLayoutRequest, float> layoutChildBlocks) : IBlockLayoutRule
 {
-    private readonly Func<BlockBox, float, float, float, float, float> _layoutChildBlocks =
+    private readonly Func<BlockChildLayoutRequest, float> _layoutChildBlocks =
         layoutChildBlocks ?? throw new ArgumentNullException(nameof(layoutChildBlocks));
 
     private readonly TableBlockLayout _tableBlockLayout =

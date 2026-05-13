@@ -11,7 +11,7 @@ namespace Html2x.LayoutEngine.Geometry.Test.InlineFlow;
 /// </summary>
 public class TextAlignmentLayoutTests
 {
-    private static readonly LayoutBuilderFixture Fixture = new();
+    private static readonly LayoutPipelineFixture Fixture = new();
 
     [Theory]
     [InlineData("center", "Center", 60f)]

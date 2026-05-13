@@ -13,7 +13,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
     public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings,
         CancellationToken cancellationToken)
     {
-        var runContext = ConsoleRunContext.FromArguments(context.Arguments);
+        var runContext = ConsoleInvocation.FromArguments(context.Arguments);
         var inputPath = ResolveInputPath(settings);
         if (!string.IsNullOrWhiteSpace(inputPath))
         {
@@ -36,7 +36,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
     private static async Task<int> RunConversionAsync(
         RenderSettings settings,
         string inputPath,
-        ConsoleRunContext runContext,
+        ConsoleInvocation runContext,
         bool interactive,
         string? selectedSamplePath)
     {
@@ -44,13 +44,13 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
         var options = new ConsoleOptions(
             paths.InputPath,
             paths.OutputPath,
-            settings.Diagnostics,
+            settings.EnableDiagnostics,
             settings.DiagnosticsJson,
             settings.EnableDebugging,
             runContext.RawArguments,
             interactive,
             paths.SelectedSamplePath);
-        var service = new HtmlConversionService(options);
+        var service = new ConsoleHtmlConversionRunner(options);
 
         var (result, actualOutputPath) = await service.ExecuteAsync().ConfigureAwait(false);
 
@@ -84,7 +84,7 @@ internal sealed class RenderCommand : AsyncCommand<RenderSettings>
 
     private static async Task<int> RunInteractiveLoopAsync(
         RenderSettings settings,
-        ConsoleRunContext runContext,
+        ConsoleInvocation runContext,
         CancellationToken cancellationToken)
     {
         if (Console.IsInputRedirected)

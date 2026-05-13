@@ -1,10 +1,8 @@
-using Html2x.LayoutEngine.Geometry.Box;
-
 namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 
-internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
+internal sealed class InlineRunTreeWalker(InlineRunBuffer runBuffer)
 {
-    private readonly InlineRunCollector _collector = collector ?? throw new ArgumentNullException(nameof(collector));
+    private readonly InlineRunBuffer _runBuffer = runBuffer ?? throw new ArgumentNullException(nameof(runBuffer));
 
     public void CollectInlineFlow(IEnumerable<BoxNode> nodes)
     {
@@ -21,7 +19,7 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
         ArgumentNullException.ThrowIfNull(block);
 
         CollectInlineBoxNodes(block.Children, block.Style);
-        _collector.TrimBoundaryLineBreaks();
+        _runBuffer.TrimBoundaryLineBreaks();
     }
 
     private void CollectInlineFlowNode(BoxNode node)
@@ -52,7 +50,7 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
     {
         if (node is InlineBlockBoundaryBox boundary)
         {
-            return _collector.TryAppendInlineBlockBoundaryRun(boundary);
+            return _runBuffer.TryAppendInlineBlockBoundaryRun(boundary);
         }
 
         if (node is not InlineBox inline)
@@ -60,9 +58,9 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
             return false;
         }
 
-        return _collector.TryAppendInlineBlockRun(inline) ||
-               _collector.TryAppendLineBreakRun(inline) ||
-               _collector.TryAppendTextRun(inline);
+        return _runBuffer.TryAppendInlineBlockRun(inline) ||
+               _runBuffer.TryAppendLineBreakRun(inline) ||
+               _runBuffer.TryAppendTextRun(inline);
     }
 
     private void CollectInlineBoxNodes(IEnumerable<BoxNode> nodes, ComputedStyle blockStyle)
@@ -90,37 +88,37 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
 
     private void CollectInlineBoxBlockChild(BlockBox blockChild, ComputedStyle parentStyle)
     {
-        var runCountBeforeBoundary = _collector.Count;
+        var runCountBeforeBoundary = _runBuffer.Count;
         AppendBlockBoundaryBreak(parentStyle);
-        var runCountAfterBoundary = _collector.Count;
+        var runCountAfterBoundary = _runBuffer.Count;
 
         CollectInlineBoxNodes(blockChild.Children, blockChild.Style);
 
-        if (_collector.Count > runCountAfterBoundary)
+        if (_runBuffer.Count > runCountAfterBoundary)
         {
             AppendBlockBoundaryBreak(parentStyle);
             return;
         }
 
-        if (_collector.Count > runCountBeforeBoundary && _collector.LastKind == TextRunKind.LineBreak)
+        if (_runBuffer.Count > runCountBeforeBoundary && _runBuffer.LastKind == TextRunKind.LineBreak)
         {
-            _collector.RemoveLast();
+            _runBuffer.RemoveLast();
         }
     }
 
     private void CollectInlineBoxInline(InlineBox inline, ComputedStyle blockStyle)
     {
-        if (_collector.TryAppendInlineBlockRun(inline))
+        if (_runBuffer.TryAppendInlineBlockRun(inline))
         {
             return;
         }
 
-        if (_collector.TryAppendLineBreakRun(inline, blockStyle))
+        if (_runBuffer.TryAppendLineBreakRun(inline, blockStyle))
         {
             return;
         }
 
-        _ = _collector.TryAppendTextRun(inline);
+        _ = _runBuffer.TryAppendTextRun(inline);
 
         foreach (var childInline in inline.Children.OfType<InlineBox>())
         {
@@ -130,11 +128,11 @@ internal sealed class InlineRunTreeWalker(InlineRunCollector collector)
 
     private void AppendBlockBoundaryBreak(ComputedStyle style)
     {
-        if (_collector.Count == 0 || _collector.LastKind == TextRunKind.LineBreak)
+        if (_runBuffer.Count == 0 || _runBuffer.LastKind == TextRunKind.LineBreak)
         {
             return;
         }
 
-        _collector.AppendSyntheticLineBreakRun(style);
+        _runBuffer.AppendSyntheticLineBreakRun(style);
     }
 }

@@ -10,7 +10,7 @@ flowchart TD
     Input["HTML and CSS input"] --> Facade["HtmlConverter"]
     Facade --> Style["Style stage<br/>StyleTree"]
     Style --> Geometry["Geometry stage<br/>PublishedLayoutTree"]
-    Geometry --> Fragments["Fragment projection<br/>FragmentTree"]
+    Geometry --> Fragments["Fragment tree building<br/>FragmentTree"]
     Fragments --> Pagination["Pagination<br/>PaginationResult"]
     Pagination --> Layout["HtmlLayout"]
     Layout --> Renderer["PDF renderer"]
@@ -24,15 +24,15 @@ flowchart TD
 
 ## Composition
 
-`LayoutBuilder` is the internal composition layer. It coordinates style,
-geometry, fragment projection, pagination, and final layout assembly, but it
+`LayoutPipeline` is the internal composition layer. It coordinates style,
+geometry, fragment tree building, pagination, and final layout assembly, but it
 does not own HTML parsing, CSS computation, geometry algorithms, fragment
-projection, page placement, or rendering.
+tree building, page placement, or rendering.
 
-The composition flow is stage-first. `LayoutBuilder.BuildAsync` names the
+The composition flow is stage-first. `LayoutPipeline.BuildAsync` names the
 handoff facts between stages: `StyleTree`, `LayoutGeometryRequest`,
 `PublishedLayoutTree`, `FragmentTree`, `PaginationOptions`, and
-`PaginationResult`. `LayoutStageRunner` wraps geometry, fragment projection,
+`PaginationResult`. `LayoutStageRunner` wraps geometry, fragment tree building,
 and pagination with lifecycle diagnostics so diagnostic plumbing does not
 become the structure of the pipeline.
 
@@ -43,7 +43,7 @@ Composition connects these projects:
 - `Html2x.LayoutEngine.Style` owns `StyleTreeBuilder`.
 - `Html2x.LayoutEngine.Geometry` owns mutable boxes such as `BlockBox` and
   publishes layout facts.
-- `Html2x.LayoutEngine.Fragments` owns `FragmentBuilder`.
+- `Html2x.LayoutEngine.Fragments` owns `FragmentTreeBuilder`.
 - `Html2x.LayoutEngine.Pagination` owns `LayoutPaginator`.
 - `Html2x.Resources` owns scoped resource and image loading policy.
 
@@ -53,9 +53,9 @@ facts and must not depend on parser objects.
 
 `Html2x` is the only production mapping boundary from public options into
 `StyleBuildSettings`, `LayoutBuildSettings`, `LayoutGeometryRequest`,
-`PaginationOptions`, and `PdfRenderSettings`. It also selects supported
-runtime adapters from `HtmlConverterRuntime` and creates the per-conversion
-image resource store used by layout metadata and rendering.
+`PaginationOptions`, and internal `PdfRenderSettings`. It also selects supported
+adapter dependencies from `HtmlConverterDependencies` and creates the
+per-conversion image resource store used by layout metadata and rendering.
 
 ## Style
 
@@ -144,10 +144,10 @@ Contract namespace ownership is explicit: style handoff facts use
 `Html2x.LayoutEngine.Contracts.Geometry.Images`, and published layout facts use
 `Html2x.LayoutEngine.Contracts.Published`.
 
-## Fragment Projection
+## Fragment Tree Building
 
-`Html2x.LayoutEngine.Fragments` owns the projection from published layout facts
-into render model fragments. `FragmentBuilder` consumes `PublishedLayoutTree`,
+`Html2x.LayoutEngine.Fragments` owns fragment tree construction from published layout facts
+into render model fragments. `FragmentTreeBuilder` consumes `PublishedLayoutTree`,
 allocates fragment IDs, and copies style, geometry, and published text run facts
 into fragment models.
 
@@ -156,7 +156,7 @@ Input: `PublishedLayoutTree`.
 Output: `FragmentTree`, containing blocks, lines, text runs, images, tables,
 cells, and rules.
 
-Fragment projection does not consume mutable boxes, CSS parser state, DOM
+Fragment tree building does not consume mutable boxes, CSS parser state, DOM
 objects, text or font adapter seams, pagination pages, or renderer state. It
 must not remeasure text, resolve fonts, or reconstruct geometry already owned by
 layout.
@@ -183,8 +183,8 @@ does not split lines, images, table rows, or paragraphs internally.
 
 ## PDF Rendering
 
-`PdfRenderer` consumes `HtmlLayout` and `PdfRenderSettings`, builds paint
-commands, and draws to a SkiaSharp PDF document.
+Internal `PdfRenderer` consumes `HtmlLayout` and `PdfRenderSettings`, builds
+paint commands, and draws to a SkiaSharp PDF document.
 
 Input: `HtmlLayout`.
 

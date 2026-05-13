@@ -8,9 +8,9 @@ internal sealed class TableLayoutResult
 
     public string? UnsupportedReason { get; init; }
 
-    public float? RequestedWidth { get; init; }
+    public float? RequestedContentWidth { get; init; }
 
-    public float ResolvedWidth { get; init; }
+    public float ResolvedBorderBoxWidth { get; init; }
 
     public int RowCount { get; init; }
 
@@ -25,16 +25,16 @@ internal sealed class TableLayoutResult
     public float BorderBoxHeight { get; init; }
 
     public static TableLayoutResult Unsupported(
-        float? requestedWidth,
-        float resolvedWidth,
+        float? requestedContentWidth,
+        float resolvedBorderBoxWidth,
         string structureKind,
         string reason,
         int rowCount = 0) =>
         new()
         {
             IsSupported = false,
-            RequestedWidth = requestedWidth,
-            ResolvedWidth = resolvedWidth,
+            RequestedContentWidth = requestedContentWidth,
+            ResolvedBorderBoxWidth = resolvedBorderBoxWidth,
             RowCount = rowCount,
             UnsupportedStructureKind = structureKind,
             UnsupportedReason = reason,

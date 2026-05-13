@@ -1,6 +1,6 @@
 namespace Html2x.LayoutEngine.Test.Builders;
 
-internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssConstants.HtmlTags.Body)
+internal sealed class StyleTreeBuilder(string rootTagName = HtmlCssVocabulary.HtmlTags.Body)
 {
     private readonly PageStyle _page = new();
     private readonly StyleNodeBuilder _root = CreateNodeBuilder(StyledElementFacts.Create(rootTagName));

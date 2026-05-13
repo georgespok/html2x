@@ -3,6 +3,7 @@ using System.Text.Json;
 using Html2x.Diagnostics;
 using Html2x.Diagnostics.Contracts;
 using Html2x.Options;
+using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Text;
 using Html2x.Text;
 using Xunit.Abstractions;
@@ -77,14 +78,18 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             e.Name == "font-path/error" &&
             e.Severity == DiagnosticSeverity.Error);
         Assert.Contains(diagnostics.Records, e =>
-            e.Stage == "LayoutBuild" &&
+            e.Stage == "Configuration" &&
             e.Name == "stage/failed" &&
             e.Severity == DiagnosticSeverity.Error &&
             e.Message == "HtmlConverterOptions.Fonts.FontPath must be provided before layout can begin.");
         Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because Configuration failed.");
+        Assert.Contains(diagnostics.Records, e =>
             e.Stage == "PdfRender" &&
             e.Name == "stage/skipped" &&
-            e.Message == "Skipped because LayoutBuild failed.");
+            e.Message == "Skipped because Configuration failed.");
     }
 
     [Fact]
@@ -109,24 +114,69 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             e.Name == "font-path/error" &&
             e.Severity == DiagnosticSeverity.Error);
         Assert.Contains(diagnostics.Records, e =>
-            e.Stage == "LayoutBuild" &&
+            e.Stage == "Configuration" &&
             e.Name == "stage/failed" &&
             e.Severity == DiagnosticSeverity.Error &&
             e.Message == exception.Message);
         Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because Configuration failed.");
+        Assert.Contains(diagnostics.Records, e =>
             e.Stage == "PdfRender" &&
             e.Name == "stage/skipped" &&
-            e.Message == "Skipped because LayoutBuild failed.");
+            e.Message == "Skipped because Configuration failed.");
+    }
+
+    [Theory]
+    [MemberData(nameof(NullDependencyFactoryCases))]
+    public async Task ToPdfAsync_DependencyFactoryReturnsNull_AttachesConfigurationDiagnostics(
+        HtmlConverterDependencies dependencies,
+        string expectedMessage)
+    {
+        var converter = new HtmlConverter(dependencies);
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            converter.ToPdfAsync("<html><body><p>Dependency failure</p></body></html>", options));
+
+        Assert.Equal(expectedMessage, exception.Message);
+        AssertConfigurationFailureDiagnostics(exception, expectedMessage);
     }
 
     [Fact]
-    public async Task ToPdfAsync_RuntimeFontSource_AllowsOptionsWithoutFontPath()
+    public async Task ToPdfAsync_DependencyFactoryThrows_AttachesConfigurationDiagnosticsAndPreservesException()
     {
-        const string html = "<html><body><p>Runtime font source</p></body></html>";
+        var expectedException = new DependencyFactoryException("Dependency factory failed.");
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () => throw expectedException
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var exception = await Assert.ThrowsAsync<DependencyFactoryException>(() =>
+            converter.ToPdfAsync("<html><body><p>Dependency failure</p></body></html>", options));
+
+        Assert.Same(expectedException, exception);
+        AssertConfigurationFailureDiagnostics(exception, expectedException.Message);
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DependencyFontSource_AllowsOptionsWithoutFontPath()
+    {
+        const string html = "<html><body><p>Dependency font source</p></body></html>";
         var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf");
         var converter = new HtmlConverter(new()
         {
-            FontSource = new FixedFontSource(fontPath)
+            FontSourceFactory = () => new FixedFontSource(fontPath)
         });
         var options = new HtmlConverterOptions
         {
@@ -144,9 +194,203 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     }
 
     [Fact]
-    public void Constructor_RuntimeIsNull_ThrowsArgumentNullException()
+    public async Task ToPdfAsync_DependencyTextMeasurer_AllowsOptionsWithoutFontPath()
     {
-        Assert.Throws<ArgumentNullException>(() => new HtmlConverter(null!));
+        const string html = "<html><body><p>Dependency text measurer</p></body></html>";
+        var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf");
+        var textMeasurers = new List<CountingDependencyTextMeasurer>();
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () =>
+            {
+                var textMeasurer = new CountingDependencyTextMeasurer(fontPath);
+                textMeasurers.Add(textMeasurer);
+                return textMeasurer;
+            }
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null }
+        };
+
+        var result = await converter.ToPdfAsync(html, options);
+
+        Assert.NotEmpty(result.PdfBytes);
+        Assert.Single(textMeasurers);
+        Assert.True(textMeasurers.Sum(static textMeasurer => textMeasurer.MeasureCount) > 0);
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DependencyTextMeasurerFactory_DisposesConversionScopedMeasurer()
+    {
+        const string html = "<html><body><p>Dependency text measurer disposal</p></body></html>";
+        var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf");
+        var textMeasurers = new List<DisposableDependencyTextMeasurer>();
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () =>
+            {
+                var textMeasurer = new DisposableDependencyTextMeasurer(fontPath);
+                textMeasurers.Add(textMeasurer);
+                return textMeasurer;
+            }
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null }
+        };
+
+        await converter.ToPdfAsync(html, options);
+
+        var created = Assert.Single(textMeasurers);
+        Assert.True(created.MeasureCount > 0);
+        Assert.True(created.Disposed);
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DependencyTextMeasurerReturnsNull_ThrowsInvalidOperationException()
+    {
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () => new NullTextMeasurer()
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            converter.ToPdfAsync("<html><body><p>Invalid measurement</p></body></html>", options));
+
+        Assert.Contains("ITextMeasurer.Measure returned null.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_DependencyTextMeasurerReturnsInvalidMeasurement_ThrowsOutOfRange()
+    {
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () => new InvalidTextMeasurer()
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null }
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            converter.ToPdfAsync("<html><body><p>Invalid measurement</p></body></html>", options));
+
+        Assert.Equal("Width", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_DependenciesAreNull_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() => new HtmlConverter(null!));
+
+        Assert.Equal("dependencies", exception.ParamName);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidPageSizeCases))]
+    public async Task ToPdfAsync_InvalidPageSize_ThrowsArgumentOutOfRangeException(
+        float width,
+        float height)
+    {
+        var options = new HtmlConverterOptions
+        {
+            Page = new() { Size = new SizePt(width, height) },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _htmlConverter.ToPdfAsync("<html><body><p>Invalid page size</p></body></html>", options));
+
+        Assert.Equal("HtmlConverterOptions.Page.Size", exception.ParamName);
+        Assert.Contains("HtmlConverterOptions.Page.Size", exception.Message, StringComparison.Ordinal);
+        Assert.False(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_InvalidResourceBaseDirectory_ThrowsWithoutDiagnostics()
+    {
+        var options = new HtmlConverterOptions
+        {
+            Resources = new()
+            {
+                BaseDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+            },
+            Diagnostics = new()
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<DirectoryNotFoundException>(() =>
+            _htmlConverter.ToPdfAsync("<html><body><p>Invalid resource base directory</p></body></html>", options));
+
+        Assert.Contains("HtmlConverterOptions.Resources.BaseDirectory", exception.Message, StringComparison.Ordinal);
+        Assert.False(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task ToPdfAsync_InvalidMaxImageSizeBytes_ThrowsWithoutDiagnostics(long maxImageSizeBytes)
+    {
+        var options = new HtmlConverterOptions
+        {
+            Resources = new()
+            {
+                MaxImageSizeBytes = maxImageSizeBytes
+            },
+            Diagnostics = new()
+            {
+                EnableDiagnostics = true
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _htmlConverter.ToPdfAsync("<html><body><p>Invalid image limit</p></body></html>", options));
+
+        Assert.Equal("MaxImageSizeBytes", exception.ParamName);
+        Assert.False(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task ToPdfAsync_InvalidMaxRawHtmlLength_ThrowsWithoutDiagnostics(int maxRawHtmlLength)
+    {
+        var options = new HtmlConverterOptions
+        {
+            Diagnostics = new()
+            {
+                EnableDiagnostics = true,
+                MaxRawHtmlLength = maxRawHtmlLength
+            }
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            _htmlConverter.ToPdfAsync("<html><body><p>Invalid raw HTML limit</p></body></html>", options));
+
+        Assert.Equal("MaxRawHtmlLength", exception.ParamName);
+        Assert.False(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_NullDiagnosticsOptions_ThrowsArgumentNullException()
+    {
+        var options = new HtmlConverterOptions
+        {
+            Diagnostics = null!
+        };
+
+        var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            _htmlConverter.ToPdfAsync("<html><body><p>Invalid diagnostics options</p></body></html>", options));
+
+        Assert.Equal("Diagnostics", exception.ParamName);
+        Assert.False(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
     }
 
     [Fact]
@@ -221,7 +465,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             var imageRecord = Assert.Single(
                 result.DiagnosticsReport.Records,
                 static record => record.Name == "image/render");
-            Assert.Equal("Oversize", StringField(imageRecord, "status"));
+            Assert.Equal("Oversized", StringField(imageRecord, "status"));
         }
         finally
         {
@@ -328,7 +572,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             Assert.Equal(5, imageRecords.Count);
             Assert.Equal("Missing", StringField(imageRecords[0], "status"));
             Assert.Equal("OutOfScope", StringField(imageRecords[1], "status"));
-            Assert.Equal("Oversize", StringField(imageRecords[2], "status"));
+            Assert.Equal("Oversized", StringField(imageRecords[2], "status"));
             Assert.Equal("InvalidDataUri", StringField(imageRecords[3], "status"));
             Assert.Equal("DecodeFailed", StringField(imageRecords[4], "status"));
         }
@@ -449,7 +693,7 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
             record.Name == "stage/started");
         Assert.Contains(diagnostics.Records, static record =>
             record.Stage == "LayoutBuild" &&
-            record.Name == "stage/cancelled");
+            record.Name == "stage/canceled");
         Assert.Contains(diagnostics.Records, static record =>
             record.Stage == "PdfRender" &&
             record.Name == "stage/skipped" &&
@@ -509,7 +753,28 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     private static bool BoolField(DiagnosticRecord record, string fieldName) =>
         Assert.IsType<DiagnosticBooleanValue>(record.Fields[fieldName]).Value;
 
-    private static DiagnosticRecord SingleImageRecord(Html2PdfResult result)
+    private static void AssertConfigurationFailureDiagnostics(Exception exception, string expectedMessage)
+    {
+        Assert.True(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));
+        var diagnostics = Assert.IsType<DiagnosticsReport>(
+            exception.Data[nameof(HtmlToPdfResult.DiagnosticsReport)]);
+
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "Configuration" &&
+            e.Name == "stage/failed" &&
+            e.Severity == DiagnosticSeverity.Error &&
+            e.Message == expectedMessage);
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "LayoutBuild" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because Configuration failed.");
+        Assert.Contains(diagnostics.Records, e =>
+            e.Stage == "PdfRender" &&
+            e.Name == "stage/skipped" &&
+            e.Message == "Skipped because Configuration failed.");
+    }
+
+    private static DiagnosticRecord SingleImageRecord(HtmlToPdfResult result)
     {
         Assert.NotNull(result.DiagnosticsReport);
         return Assert.Single(result.DiagnosticsReport.Records, static record => record.Name == "image/render");
@@ -535,6 +800,42 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     private static byte[] TwoByOnePngBytes() =>
         Convert.FromBase64String(TwoByOnePngBase64);
 
+    public static IEnumerable<object[]> InvalidPageSizeCases()
+    {
+        yield return [0f, PaperSizes.Letter.Height];
+        yield return [-1f, PaperSizes.Letter.Height];
+        yield return [float.NaN, PaperSizes.Letter.Height];
+        yield return [float.PositiveInfinity, PaperSizes.Letter.Height];
+        yield return [float.NegativeInfinity, PaperSizes.Letter.Height];
+        yield return [PaperSizes.Letter.Width, 0f];
+        yield return [PaperSizes.Letter.Width, -1f];
+        yield return [PaperSizes.Letter.Width, float.NaN];
+        yield return [PaperSizes.Letter.Width, float.PositiveInfinity];
+        yield return [PaperSizes.Letter.Width, float.NegativeInfinity];
+    }
+
+    public static IEnumerable<object[]> NullDependencyFactoryCases()
+    {
+        yield return
+        [
+            new HtmlConverterDependencies
+            {
+                FontSourceFactory = () => null!
+            },
+            "HtmlConverterDependencies.FontSourceFactory returned null."
+        ];
+        yield return
+        [
+            new HtmlConverterDependencies
+            {
+                TextMeasurerFactory = () => null!
+            },
+            "HtmlConverterDependencies.TextMeasurerFactory returned null."
+        ];
+    }
+
+    private sealed class DependencyFactoryException(string message) : Exception(message);
+
     private sealed class FixedFontSource(string fontPath) : IFontSource
     {
         public ResolvedFont Resolve(FontKey requested, string consumer) =>
@@ -546,5 +847,72 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
                 fontPath,
                 0,
                 fontPath);
+    }
+
+    private sealed class CountingDependencyTextMeasurer(string fontPath) : ITextMeasurer
+    {
+        public int MeasureCount { get; private set; }
+
+        public TextMeasurement Measure(FontKey font, float sizePt, string text)
+        {
+            MeasureCount++;
+            return new(
+                string.IsNullOrEmpty(text) ? 0f : text.Length * 5f,
+                8f,
+                3f,
+                new(
+                    font.Family,
+                    font.Weight,
+                    font.Style,
+                    fontPath,
+                    fontPath,
+                0,
+                fontPath));
+        }
+    }
+
+    private sealed class DisposableDependencyTextMeasurer(string fontPath) : ITextMeasurer, IDisposable
+    {
+        public int MeasureCount { get; private set; }
+
+        public bool Disposed { get; private set; }
+
+        public void Dispose() => Disposed = true;
+
+        public TextMeasurement Measure(FontKey font, float sizePt, string text)
+        {
+            MeasureCount++;
+            return new(
+                string.IsNullOrEmpty(text) ? 0f : text.Length * 5f,
+                8f,
+                3f,
+                new(
+                    font.Family,
+                    font.Weight,
+                    font.Style,
+                    fontPath,
+                    fontPath,
+                    0,
+                    fontPath));
+        }
+    }
+
+    private sealed class NullTextMeasurer : ITextMeasurer
+    {
+        public TextMeasurement Measure(FontKey font, float sizePt, string text) => null!;
+    }
+
+    private sealed class InvalidTextMeasurer : ITextMeasurer
+    {
+        public TextMeasurement Measure(FontKey font, float sizePt, string text) =>
+            new(
+                float.NaN,
+                8f,
+                3f,
+                new(
+                    font.Family,
+                    font.Weight,
+                    font.Style,
+                    "test://font"));
     }
 }

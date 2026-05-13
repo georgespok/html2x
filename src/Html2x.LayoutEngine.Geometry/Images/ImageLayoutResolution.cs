@@ -1,5 +1,5 @@
-using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Geometry.Images;
 
@@ -13,5 +13,5 @@ internal readonly record struct ImageLayoutResolution(
     ImageLoadStatus Status,
     float ContentWidth,
     float ContentHeight,
-    float TotalWidth,
-    float TotalHeight);
+    float BorderBoxWidth,
+    float BorderBoxHeight);

@@ -1,5 +1,5 @@
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Styles;
 
@@ -42,14 +42,14 @@ internal sealed class AtomicInlineBoxPlacementWriter(
             [
                 _writeSegment(
                     contentBox,
-                    inlineBox.Layout,
+                    inlineBox.TextLayout,
                     contentArea.X,
                     contentArea.Y,
                     contentArea.Width,
                     contentBox.Style.TextAlign)
             ],
             inlineBox.ContentHeight,
-            inlineBox.Layout.MaxLineWidth);
+            inlineBox.TextLayout.MaxLineWidth);
 
         _stateWriter.ApplyInlineBoxContentLayout(
             contentBox,

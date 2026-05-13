@@ -34,7 +34,7 @@ public class FragmentIdTests
                 new PublishedInlineFlowSegmentItem(0, segment),
                 new PublishedChildBlockItem(1, nestedBlock)
             ]);
-        var builder = new FragmentBuilder();
+        var builder = new FragmentTreeBuilder();
 
         var fragments = builder.Build(PublishedLayoutTestBuilder.Tree(root));
 

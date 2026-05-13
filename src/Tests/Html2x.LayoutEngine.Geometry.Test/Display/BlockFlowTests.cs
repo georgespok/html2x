@@ -1,21 +1,22 @@
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
-using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
+using Shouldly;
 using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
 public class BlockFlowTests
 {
-    private static readonly LayoutBuilderFixture Fixture = new();
+    private static readonly LayoutPipelineFixture Fixture = new();
 
     [Fact]
     public async Task BlockStacking_UsesCollapsedMarginsAndIncludesPaddingInHeight()
@@ -100,8 +101,8 @@ public class BlockFlowTests
 
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        _ = await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        var layoutPipeline = CreateLayoutPipeline(CreateLinearMeasurer(10f));
+        _ = await layoutPipeline.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         var marginEvents = diagnosticsSink.Records
             .Where(e => e.Name == "layout/margin-collapse")
@@ -233,11 +234,11 @@ public class BlockFlowTests
             "div");
         var row = new BlockBox(BoxRole.Block)
         {
-            IsInlineBlockContext = true,
+            EstablishesInlineBlockFormattingContext = true,
             Style = new()
         };
 
-        row.Children.Add(new InlineBox(BoxRole.Inline)
+        row.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = row,
             TextContent = "Prefix text",
@@ -256,22 +257,22 @@ public class BlockFlowTests
         {
             Parent = inlineBlock,
             IsAnonymous = true,
-            IsInlineBlockContext = true,
+            EstablishesInlineBlockFormattingContext = true,
             Style = new(),
             SourceIdentity = inlineBlockContentIdentity
         };
 
-        inlineBlockContent.Children.Add(new InlineBox(BoxRole.Inline)
+        inlineBlockContent.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = inlineBlockContent,
             TextContent = "Alpha inline-block",
             Style = new()
         });
 
-        inlineBlock.Children.Add(inlineBlockContent);
-        row.Children.Add(inlineBlock);
+        inlineBlock.AddChild(inlineBlockContent);
+        row.AddChild(inlineBlock);
 
-        row.Children.Add(new InlineBox(BoxRole.Inline)
+        row.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = row,
             TextContent = "suffix text",
@@ -279,7 +280,7 @@ public class BlockFlowTests
             SourceIdentity = suffixIdentity
         });
 
-        BlockFlowNormalization.NormalizeChildrenForBlock(row);
+        BoxTreeNormalization.NormalizeChildrenForBlock(row);
 
         row.Children.Count.ShouldBe(3);
 
@@ -289,7 +290,7 @@ public class BlockFlowTests
 
         leadingAnonymous.IsAnonymous.ShouldBeTrue();
         boundaryBlock.IsAnonymous.ShouldBeTrue();
-        boundaryBlock.IsInlineBlockContext.ShouldBeTrue();
+        boundaryBlock.EstablishesInlineBlockFormattingContext.ShouldBeTrue();
         boundaryBlock.SourceInline.ShouldBeSameAs(inlineBlock);
         boundaryBlock.SourceContentBox.ShouldBeSameAs(inlineBlockContent);
         trailingAnonymous.IsAnonymous.ShouldBeTrue();
@@ -331,14 +332,14 @@ public class BlockFlowTests
             BaselineOffset = 6f,
             SourceIdentity = sourceIdentity
         };
-        parent.Children.Add(inline);
-        parent.Children.Add(new BlockBox(BoxRole.Block)
+        parent.AddChild(inline);
+        parent.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
             Style = new()
         });
 
-        BlockFlowNormalization.NormalizeChildrenForBlock(parent);
+        BoxTreeNormalization.NormalizeChildrenForBlock(parent);
 
         var anonymous = parent.Children[0].ShouldBeOfType<BlockBox>();
         var clonedInline = anonymous.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
@@ -414,8 +415,8 @@ public class BlockFlowTests
 
         var diagnosticsSink = new RecordingDiagnosticsSink();
 
-        var layoutBuilder = CreateLayoutBuilder(CreateLinearMeasurer(10f));
-        var layout = await layoutBuilder.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
+        var layoutPipeline = CreateLayoutPipeline(CreateLinearMeasurer(10f));
+        var layout = await layoutPipeline.BuildAsync(html, new() { PageSize = PaperSizes.A4 }, diagnosticsSink);
 
         layout.Pages.Count.ShouldBe(1);
         diagnosticsSink.Records
@@ -471,16 +472,16 @@ public class BlockFlowTests
     public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
     {
         var diagnosticsSink = new RecordingDiagnosticsSink();
-        var formattingContext = new BlockContentExtentMeasurement();
+        var formattingContext = new BlockFormattingMetricsMeasurement();
         var sizingRules = new BlockSizingRules(formattingContext.MarginCollapseRules);
-        var imageResolver = new ImageSizingRules();
+        var imageSizingRules = new ImageSizingRules();
         var inlineFlowLayout = new InlineFlowLayout(
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             CreateLinearMeasurer(10f),
             new DefaultLineHeightStrategy(),
             formattingContext,
-            imageResolver);
-        var tableGridLayout = new TableGridLayout(inlineFlowLayout, imageResolver);
+            imageSizingRules);
+        var tableGridLayout = new TableGridLayout(inlineFlowLayout, imageSizingRules);
 
         var container = new BlockBox(BoxRole.Block)
         {
@@ -490,7 +491,7 @@ public class BlockFlowTests
             }
         };
 
-        container.Children.Add(new BlockBox(BoxRole.Block)
+        container.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = container,
             Style = new()
@@ -500,7 +501,7 @@ public class BlockFlowTests
             }
         });
 
-        container.Children.Add(new BlockBox(BoxRole.Block)
+        container.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = container,
             Style = new()
@@ -514,16 +515,16 @@ public class BlockFlowTests
         {
             Style = new()
         };
-        root.Children.Add(container);
+        root.AddChild(container);
 
         var engine = new BlockBoxLayout(
             inlineFlowLayout,
             tableGridLayout,
             formattingContext,
-            imageResolver,
+            imageSizingRules,
             diagnosticsSink);
 
-        _ = PublishedLayoutTestResolver.Resolve(engine, root, new()
+        _ = PublishedLayoutTestRunner.Run(engine, root, new()
         {
             Margin = new(),
             Size = new(400f, 400f)
@@ -542,7 +543,7 @@ public class BlockFlowTests
         diagnosticsSink.Records
             .Where(static e => e.Name == "layout/margin-collapse")
             .Any(payload =>
-                StringField(payload, "consumer") == "BlockLayoutEngine" &&
+                StringField(payload, "consumer") == "BlockFlowLayout" &&
                 StringField(payload, "owner") == "BlockFormattingContext" &&
                 StringField(payload, "formattingContext") == nameof(FormattingContextKind.Block) &&
                 Math.Abs(NumberField(payload, "collapsedTopMargin") - 12f) < 0.01f)
@@ -564,7 +565,7 @@ public class BlockFlowTests
             PageSize = PaperSizes.A4
         });
 
-    private static LayoutBuilder CreateLayoutBuilder(ITextMeasurer textMeasurer) =>
+    private static LayoutPipeline CreateLayoutPipeline(ITextMeasurer textMeasurer) =>
         new(
             textMeasurer,
             new NoopImageMetadataResolver());

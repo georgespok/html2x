@@ -150,7 +150,7 @@ internal static class LayoutSnapshotMapper
         CreateSnapshot(rule, sequenceId, LayoutSnapshotSchema.FragmentKinds.Rule, []);
 
     private static FragmentSnapshot MapUnknown(LayoutFragment fragment, int sequenceId) =>
-        CreateSnapshot(fragment, sequenceId, fragment.GetType().Name.ToLowerInvariant(), []);
+        CreateSnapshot(fragment, sequenceId, LayoutSnapshotSchema.FragmentKinds.Unsupported, []);
 
     private static FragmentSnapshot CreateSnapshot(
         LayoutFragment fragment,
@@ -236,7 +236,7 @@ internal static class LayoutSnapshotMapper
             columnIndex: columnIndex,
             columnSpan: columnSpan,
             isHeader: isHeader,
-            metadataOwner: PublishedLayoutToFragmentProjector.MetadataOwnerName,
+            metadataOwner: PublishedFragmentFactory.MetadataOwnerName,
             metadataConsumer: nameof(LayoutSnapshotMapper));
 
     private static ColorRgba? ResolveLineColor(LineBoxFragment line)

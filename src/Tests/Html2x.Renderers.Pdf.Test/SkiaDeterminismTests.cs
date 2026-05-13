@@ -12,7 +12,7 @@ namespace Html2x.Renderers.Pdf.Test;
 public class SkiaDeterminismTests
 {
     [Fact]
-    public async Task RenderTwice_ProduceIdenticalWordGeometry()
+    public void RenderTwice_ProduceIdenticalWordGeometry()
     {
         var layout1 = CreateSimpleLayout();
         var layout2 = CreateSimpleLayout();
@@ -20,10 +20,10 @@ public class SkiaDeterminismTests
         var renderer = new PdfRenderer();
 
         // Warm up renderer/font caches to avoid first-render variance.
-        await renderer.RenderAsync(CreateSimpleLayout(), options);
+        renderer.Render(CreateSimpleLayout(), options);
 
-        var pdf1 = await renderer.RenderAsync(layout1, options);
-        var pdf2 = await renderer.RenderAsync(layout2, options);
+        var pdf1 = renderer.Render(layout1, options);
+        var pdf2 = renderer.Render(layout2, options);
 
         var words1 = PdfWordParser.GetRawWords(pdf1)
             .Select(w => (w.Text, Rect: w.BoundingBox))

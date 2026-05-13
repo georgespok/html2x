@@ -1,8 +1,9 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
@@ -53,7 +54,7 @@ public class BlockBoxLayoutTests
         {
             Style = new()
         };
-        root.Children.Add(new BlockBox(BoxRole.Block)
+        root.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = root,
             Style = style,
@@ -184,9 +185,9 @@ public class BlockBoxLayoutTests
             Parent = parent,
             Style = new() { HeightPt = 12f }
         };
-        parent.Children.Add(first);
-        parent.Children.Add(second);
-        root.Children.Add(parent);
+        parent.AddChild(first);
+        parent.AddChild(second);
+        root.AddChild(parent);
 
         var published = ResolvePublished(root, DefaultPage())
             .Blocks
@@ -217,13 +218,13 @@ public class BlockBoxLayoutTests
             Style = style,
             MarkerOffset = 11f
         };
-        listItem.Children.Add(new InlineBox(BoxRole.Inline)
+        listItem.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = listItem,
             Style = new(),
             TextContent = "content"
         });
-        root.Children.Add(listItem);
+        root.AddChild(listItem);
 
         var result = LayoutMutableBlocks(root);
 
@@ -249,7 +250,7 @@ public class BlockBoxLayoutTests
                 HeightPt = 12f
             }
         };
-        parent.Children.Add(new BlockBox(BoxRole.Block)
+        parent.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = parent,
             Style = new()
@@ -261,7 +262,7 @@ public class BlockBoxLayoutTests
         {
             Style = new()
         };
-        root.Children.Add(parent);
+        root.AddChild(parent);
 
         var result = LayoutMutableBlocks(root);
 
@@ -288,13 +289,13 @@ public class BlockBoxLayoutTests
             Style = new(),
             MarkerOffset = 12f
         };
-        listItem.Children.Add(new InlineBox(BoxRole.Inline)
+        listItem.AddChild(new InlineBox(BoxRole.Inline)
         {
             Parent = listItem,
             Style = new(),
             TextContent = "content"
         });
-        root.Children.Add(listItem);
+        root.AddChild(listItem);
 
         _ = LayoutMutableBlocks(root);
 
@@ -345,8 +346,8 @@ public class BlockBoxLayoutTests
             }
         };
 
-        root.Children.Add(new InlineBox(BoxRole.Inline) { TextContent = "inline" });
-        root.Children.Add(new BlockBox(BoxRole.Block) { Style = new() });
+        root.AddChild(new InlineBox(BoxRole.Inline) { TextContent = "inline" });
+        root.AddChild(new BlockBox(BoxRole.Block) { Style = new() });
 
         NormalizeForBlockLayout(root);
 
@@ -406,20 +407,20 @@ public class BlockBoxLayoutTests
 
     private BlockBoxLayout CreateBlockBoxLayout(IDiagnosticsSink? diagnosticsSink = null)
     {
-        var formattingContext = new BlockContentExtentMeasurement();
-        var imageResolver = new ImageSizingRules();
+        var formattingContext = new BlockFormattingMetricsMeasurement();
+        var imageSizingRules = new ImageSizingRules();
         var inlineFlowLayout = new InlineFlowLayout(
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
             formattingContext,
-            imageResolver,
+            imageSizingRules,
             diagnosticsSink);
         return new(
             inlineFlowLayout,
-            new(inlineFlowLayout, imageResolver),
+            new(inlineFlowLayout, imageSizingRules),
             formattingContext,
-            imageResolver,
+            imageSizingRules,
             diagnosticsSink);
     }
 
@@ -445,13 +446,13 @@ public class BlockBoxLayoutTests
         BoxNode root,
         PageBox page,
         IDiagnosticsSink? diagnosticsSink = null) =>
-        PublishedLayoutTestResolver.Resolve(CreateBlockBoxLayout(diagnosticsSink), root, page);
+        PublishedLayoutTestRunner.Run(CreateBlockBoxLayout(diagnosticsSink), root, page);
 
     private static void NormalizeForBlockLayout(BoxNode root)
     {
         if (root is BlockBox block)
         {
-            BlockFlowNormalization.NormalizeChildrenForBlock(block);
+            BoxTreeNormalization.NormalizeChildrenForBlock(block);
         }
     }
 
@@ -461,7 +462,7 @@ public class BlockBoxLayoutTests
         {
             Style = new()
         };
-        root.Children.Add(new BlockBox(BoxRole.Block)
+        root.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = root,
             Style = new()

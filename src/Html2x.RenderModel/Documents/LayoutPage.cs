@@ -12,7 +12,7 @@ namespace Html2x.RenderModel.Documents;
 /// <param name="Children">Fragments positioned in absolute page coordinates.</param>
 /// <param name="PageNumber">One-based page number.</param>
 /// <param name="PageBackground">Optional page background color. A null value means white.</param>
-public sealed record LayoutPage(
+internal sealed record LayoutPage(
     SizePt Size,
     Spacing Margins,
     IReadOnlyList<Fragment> Children,

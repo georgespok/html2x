@@ -88,7 +88,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
                     "layout/margin-collapse",
                     DiagnosticFields.Create(
                         DiagnosticFields.Field("owner", "BlockFormattingContext"),
-                        DiagnosticFields.Field("consumer", "InlineLayoutEngine"),
+                        DiagnosticFields.Field("consumer", "InlineFlowLayout"),
                         DiagnosticFields.Field("formattingContext", "InlineBlock"),
                         DiagnosticFields.Field("previousBottomMargin", 12f),
                         DiagnosticFields.Field("nextTopMargin", 4f),
@@ -158,7 +158,7 @@ public sealed class TestConsoleDiagnosticsSerializerTests
         var records = root.GetProperty("diagnosticsReport").GetProperty("records").EnumerateArray().ToList();
         var margin = records.Single(static item => item.GetProperty("name").GetString() == "layout/margin-collapse");
         margin.GetProperty("fields").GetProperty("owner").GetString().ShouldBe("BlockFormattingContext");
-        margin.GetProperty("fields").GetProperty("consumer").GetString().ShouldBe("InlineLayoutEngine");
+        margin.GetProperty("fields").GetProperty("consumer").GetString().ShouldBe("InlineFlowLayout");
 
         var font = records.Single(static item => item.GetProperty("name").GetString() == "font/resolve");
         font.GetProperty("fields").GetProperty("owner").GetString().ShouldBe("FontPathSource");

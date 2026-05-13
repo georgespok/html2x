@@ -21,20 +21,20 @@ public class InlineRunConstructionTests
             Parent = inlineBlock,
             IsAnonymous = true
         };
-        contentBlock.Children.Add(new InlineBox(BoxRole.Inline)
+        contentBlock.AddChild(new InlineBox(BoxRole.Inline)
         {
             Style = style,
             TextContent = "Inline-block A",
             Parent = contentBlock
         });
-        inlineBlock.Children.Add(contentBlock);
+        inlineBlock.AddChild(contentBlock);
 
         var factory = new InlineRunConstruction(new FakeMetricsProvider());
 
         factory.BuildInlineBlockRun(inlineBlock, 1, null).ShouldBeNull();
     }
 
-    private sealed class FakeMetricsProvider : IFontMetricsProvider
+    private sealed class FakeMetricsProvider : IFontMetricsMeasurer
     {
         public FontKey GetFontKey(ComputedStyle style) => new("Test", FontWeight.W400, FontStyle.Normal);
 

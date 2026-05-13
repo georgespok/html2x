@@ -12,8 +12,8 @@ internal sealed class MarginCollapseRules
     public float Collapse(
         float previousBottomMargin,
         float nextTopMargin,
-        FormattingContextKind contextKind,
-        string consumerName,
+        FormattingContextKind formattingContext,
+        string diagnosticConsumer,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         var collapsedTopMargin = CollapseMarginPair(previousBottomMargin, nextTopMargin);
@@ -30,10 +30,10 @@ internal sealed class MarginCollapseRules
                 DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.CollapsedTopMargin, collapsedTopMargin),
                 DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Owner,
                     GeometryDiagnosticNames.Owners.BlockFormattingContext),
-                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Consumer, consumerName),
+                DiagnosticFields.Field(MarginCollapseDiagnosticNames.Fields.Consumer, diagnosticConsumer),
                 DiagnosticFields.Field(
                     GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(contextKind)))));
+                    DiagnosticValue.FromEnum(formattingContext)))));
 
         return collapsedTopMargin;
     }

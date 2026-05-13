@@ -1,7 +1,7 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Box;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Geometry.Style;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
 
@@ -9,25 +9,25 @@ namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 
 internal sealed class InlineRunConstruction
 {
-    private readonly BlockContentExtentMeasurement _blockContentMeasurement;
+    private readonly BlockFormattingMetricsMeasurement _blockContentMeasurement;
     private readonly IDiagnosticsSink? _diagnosticsSink;
-    private readonly ImageSizingRules? _imageResolver;
-    private readonly IFontMetricsProvider _metrics;
+    private readonly ImageSizingRules? _imageSizingRules;
+    private readonly IFontMetricsMeasurer _metrics;
 
-    public InlineRunConstruction(IFontMetricsProvider metrics)
+    public InlineRunConstruction(IFontMetricsMeasurer metrics)
         : this(metrics, new())
     {
     }
 
     internal InlineRunConstruction(
-        IFontMetricsProvider metrics,
-        BlockContentExtentMeasurement contentMeasurement,
-        ImageSizingRules? imageResolver = null,
+        IFontMetricsMeasurer metrics,
+        BlockFormattingMetricsMeasurement contentMeasurement,
+        ImageSizingRules? imageSizingRules = null,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
         _blockContentMeasurement = contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
-        _imageResolver = imageResolver;
+        _imageSizingRules = imageSizingRules;
         _diagnosticsSink = diagnosticsSink;
     }
 
@@ -63,12 +63,12 @@ internal sealed class InlineRunConstruction
             _metrics,
             lineHeightStrategy,
             _blockContentMeasurement,
-            _imageResolver,
+            _imageSizingRules,
             _diagnosticsSink);
         return layout.MeasureInlineBlock(inline, availableWidth);
     }
 
-    public TextRunInput? BuildLineBreakRunFromBlockContext(InlineBox inline, ComputedStyle blockStyle, int runId) =>
+    public TextRunInput? TryBuildLineBreakRun(InlineBox inline, ComputedStyle blockStyle, int runId) =>
         BuildLineBreakRun(inline, blockStyle, runId);
 
     internal TextRunInput CreateSyntheticLineBreakRun(ComputedStyle style, int runId)

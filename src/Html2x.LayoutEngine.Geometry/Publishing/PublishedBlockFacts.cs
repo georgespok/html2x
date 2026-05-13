@@ -135,14 +135,14 @@ internal static class PublishedBlockFacts
         }
 
         var builder = new StringBuilder(element.TagName.Trim().ToLowerInvariant());
-        var id = element.GetAttribute(HtmlCssConstants.HtmlAttributes.Id);
+        var id = element.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Id);
         if (!string.IsNullOrWhiteSpace(id))
         {
             builder.Append('#');
             builder.Append(id.Trim());
         }
 
-        var classAttribute = element.GetAttribute(HtmlCssConstants.HtmlAttributes.Class);
+        var classAttribute = element.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Class);
         if (!string.IsNullOrWhiteSpace(classAttribute))
         {
             foreach (var className in classAttribute.Split(
@@ -158,7 +158,7 @@ internal static class PublishedBlockFacts
     }
 
     private static FormattingContextKind ResolveFormattingContext(BlockBox source) =>
-        source.IsInlineBlockContext
+        source.EstablishesInlineBlockFormattingContext
             ? FormattingContextKind.InlineBlock
             : FormattingContextKind.Block;
 

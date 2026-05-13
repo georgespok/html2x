@@ -3,7 +3,7 @@ namespace Html2x.RenderModel.Documents;
 /// <summary>
 ///     Renderer-facing document layout made of immutable page facts.
 /// </summary>
-public sealed class HtmlLayout
+internal sealed class HtmlLayout
 {
     private readonly List<LayoutPage> _pages = [];
 

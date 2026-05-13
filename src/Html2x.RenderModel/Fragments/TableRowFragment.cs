@@ -3,7 +3,7 @@ namespace Html2x.RenderModel.Fragments;
 /// <summary>
 ///     Represents a table row fragment with cell children and row metadata.
 /// </summary>
-public sealed class TableRowFragment : BlockFragment
+internal sealed class TableRowFragment : BlockFragment
 {
     private readonly List<TableCellFragment> _cells;
 

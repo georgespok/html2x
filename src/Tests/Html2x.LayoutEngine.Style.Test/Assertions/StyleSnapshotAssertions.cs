@@ -45,14 +45,14 @@ internal static class StyleSnapshotAssertions
         actual.Color.ShouldBe(expected.Color, "Color mismatch");
         actual.Borders.ShouldBeEquivalentTo(expected.Borders, "Borders mismatch");
 
-        if (expected.Bold)
+        if (expected.IsBold)
         {
-            actual.Bold.ShouldBeTrue("Bold mismatch");
+            actual.IsBold.ShouldBeTrue("Bold mismatch");
         }
 
-        if (expected.Italic)
+        if (expected.IsItalic)
         {
-            actual.Italic.ShouldBeTrue("Italic mismatch");
+            actual.IsItalic.ShouldBeTrue("Italic mismatch");
         }
 
         if (expected.Decorations != TextDecorations.None)

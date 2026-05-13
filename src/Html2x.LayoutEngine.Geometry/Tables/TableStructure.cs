@@ -138,19 +138,19 @@ internal static class TableStructure
 
     private static TableStructureValidation BuildCellFacts(TableCellBox cell)
     {
-        var colspan = GetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Colspan);
+        var colspan = GetSpanValue(cell.Element, HtmlCssVocabulary.HtmlAttributes.Colspan);
         if (colspan.HasValue && colspan.Value < 1)
         {
             return TableStructureValidation.Unsupported(
-                HtmlCssConstants.HtmlAttributes.Colspan,
+                HtmlCssVocabulary.HtmlAttributes.Colspan,
                 TableStructureDiagnosticNames.Reasons.InvalidColspan);
         }
 
-        var rowspan = GetSpanValue(cell.Element, HtmlCssConstants.HtmlAttributes.Rowspan);
+        var rowspan = GetSpanValue(cell.Element, HtmlCssVocabulary.HtmlAttributes.Rowspan);
         if (rowspan.HasValue && rowspan.Value != 1)
         {
             return TableStructureValidation.Unsupported(
-                HtmlCssConstants.HtmlAttributes.Rowspan,
+                HtmlCssVocabulary.HtmlAttributes.Rowspan,
                 TableStructureDiagnosticNames.Reasons.UnsupportedRowspan);
         }
 

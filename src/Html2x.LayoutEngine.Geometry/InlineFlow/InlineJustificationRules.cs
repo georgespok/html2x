@@ -25,8 +25,8 @@ internal sealed class InlineJustificationRules(ITextMeasurer measurer, InlineAli
             return JustificationPlan.None;
         }
 
-        var align = textAlign?.ToLowerInvariant() ?? HtmlCssConstants.Defaults.TextAlign;
-        if (!string.Equals(align, HtmlCssConstants.CssValues.Justify, StringComparison.OrdinalIgnoreCase))
+        var align = textAlign?.ToLowerInvariant() ?? HtmlCssVocabulary.Defaults.TextAlign;
+        if (!string.Equals(align, HtmlCssVocabulary.CssValues.Justify, StringComparison.OrdinalIgnoreCase))
         {
             return JustificationPlan.None;
         }
@@ -77,7 +77,7 @@ internal sealed class InlineJustificationRules(ITextMeasurer measurer, InlineAli
             var isLastToken = tokenIndex == tokens.Count - 1;
             var leftSpacing = isFirstToken ? run.LeftSpacing : 0f;
             var rightSpacing = isLastToken ? run.RightSpacing : 0f;
-            var tokenWidth = _measurer.MeasureWidth(run.Font, run.FontSizePt, token);
+            var tokenWidth = _measurer.Measure(run.Font, run.FontSizePt, token).Width;
             var whitespaceCount = CountWhitespace(token);
             var tokenExtra = whitespaceCount > 0 ? whitespaceCount * plan.PerWhitespaceExtra : 0f;
 

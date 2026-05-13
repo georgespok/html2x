@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Display;
@@ -8,7 +8,7 @@ public sealed class ListMarkerPolicyTests
     [Fact]
     public void CreateMarker_UnorderedList_ReturnsBulletMarker()
     {
-        var list = CreateList(HtmlCssConstants.HtmlTags.Ul);
+        var list = CreateList(HtmlCssVocabulary.HtmlTags.Ul);
         var item = new BlockBox(BoxRole.ListItem)
         {
             Parent = list
@@ -22,11 +22,11 @@ public sealed class ListMarkerPolicyTests
     [Fact]
     public void CreateSyntheticMarker_OrderedList_UsesListItemPosition()
     {
-        var list = CreateList(HtmlCssConstants.HtmlTags.Ol);
+        var list = CreateList(HtmlCssVocabulary.HtmlTags.Ol);
         var first = new BlockBox(BoxRole.ListItem) { Parent = list };
         var second = new BlockBox(BoxRole.ListItem) { Parent = list };
-        list.Children.Add(first);
-        list.Children.Add(second);
+        list.AddChild(first);
+        list.AddChild(second);
 
         var marker = ListMarkerPolicy.CreateSyntheticMarker(second).ShouldNotBeNull();
         marker.TextContent.ShouldBe("2. ");
@@ -35,13 +35,13 @@ public sealed class ListMarkerPolicyTests
     [Fact]
     public void CreateSyntheticMarker_ExistingMarkerOffset_ReturnsNull()
     {
-        var list = CreateList(HtmlCssConstants.HtmlTags.Ul);
+        var list = CreateList(HtmlCssVocabulary.HtmlTags.Ul);
         var item = new BlockBox(BoxRole.ListItem)
         {
             Parent = list,
-            MarkerOffset = HtmlCssConstants.Defaults.ListMarkerOffsetPt
+            MarkerOffset = HtmlCssVocabulary.Defaults.ListMarkerOffsetPt
         };
-        list.Children.Add(item);
+        list.AddChild(item);
 
         var marker = ListMarkerPolicy.CreateSyntheticMarker(item);
 

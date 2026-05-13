@@ -18,7 +18,7 @@ how options map into internal stage settings.
 
 ```csharp
 using Html2x;
-using Html2x.RenderModel;
+using Html2x.RenderModel.Measurements.Units;
 
 var options = new HtmlConverterOptions
 {
@@ -49,7 +49,8 @@ var options = new HtmlConverterOptions
 ## Page Options
 
 `PageOptions.Size` controls the page size used by layout, pagination, and PDF
-rendering. Paper size values are render model facts under `Html2x.RenderModel`.
+rendering. Paper size values are public unit facts under
+`Html2x.RenderModel.Measurements.Units`.
 
 ## Resource Options
 
@@ -67,16 +68,24 @@ default stylesheet before authored CSS.
 
 ## Font Options
 
-With the default converter runtime, `FontOptions.FontPath` is required. It must
-point to an existing font file or directory before layout begins.
+With the default converter dependencies, `FontOptions.FontPath` is required. It
+must point to an existing font file or directory before layout begins.
 
-The converter maps this path into `FontPathSource`,
-`DiagnosticsFontSource` when enabled, and `SkiaTextMeasurer` during layout.
+The converter maps this path into `FontPathSource`, an internal diagnostics
+font wrapper when diagnostics are enabled, and `SkiaTextMeasurer` during
+layout.
 
-When a caller constructs `HtmlConverter` with `HtmlConverterRuntime.FontSource`,
-the converter uses that source instead of `FontOptions.FontPath`. When a caller
-supplies `HtmlConverterRuntime.TextMeasurer`, the converter uses that measurer
-directly and the caller owns its lifetime.
+When a caller constructs `HtmlConverter` with
+`HtmlConverterDependencies.FontSourceFactory`, the converter uses the
+factory-created source instead of `FontOptions.FontPath`. When a caller
+supplies `HtmlConverterDependencies.TextMeasurerFactory`, the converter uses
+the factory-created measurer directly. Dependency factories are called once per
+conversion, and the converter disposes returned adapters that implement
+`IDisposable`. A custom text measurer implements a single always-complete
+`Measure` method and must return finite non-negative width, ascent, and descent
+values plus a resolved font with a non-empty source id.
+Factories must return non-null adapters. A null return or thrown exception fails
+as converter configuration before layout begins.
 
 ## Diagnostics Options
 
@@ -94,6 +103,6 @@ Raw HTML is omitted by default.
 - `LayoutBuildSettings`
 - `LayoutGeometryRequest`
 - `PaginationOptions`
-- `PdfRenderSettings`
+- internal `PdfRenderSettings`
 
 Internal stages consume those settings instead of public option objects.

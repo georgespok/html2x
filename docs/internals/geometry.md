@@ -14,7 +14,7 @@ flowchart TD
     Layout --> UsedGeometry["UsedGeometry"]
     UsedGeometry --> Publish["PublishedLayoutWriter"]
     Publish --> PublishedLayoutTree["PublishedLayoutTree"]
-    PublishedLayoutTree --> Fragments["FragmentBuilder<br/>FragmentTree"]
+    PublishedLayoutTree --> Fragments["FragmentTreeBuilder<br/>FragmentTree"]
     Fragments --> Pagination["LayoutPaginator<br/>translated clones"]
     Pagination --> Renderer["PDF renderer<br/>draws page-local facts"]
 ```
@@ -69,7 +69,7 @@ Geometry uses these role names consistently:
 ## Block Flow Locality
 
 `BoxTreeConstruction` builds the internal box tree and owns generated boxes,
-text normalization, list markers, and source identity.
+box tree normalization, text normalization, list markers, and source identity.
 
 `BoxTreeLayout` owns the constructed box root and page-content-area resolution
 step. It selects top-level layout candidates and asks block layout to resolve
@@ -81,6 +81,7 @@ behavior navigable:
 
 - `BlockFlowLayout` owns laid-out block-flow sequencing.
 - `BlockFlowMeasurement` owns state-independent stacked block measurement.
+- `InlineFlowMeasurement` owns state-independent inline-flow line measurement.
 - `BlockLayoutRuleSet` selects the internal rule for supported block kinds.
 - `LayoutBoxStateWriter` owns mutable writes to block, image, table, inline
   layout, and atomic inline box content.
@@ -97,17 +98,28 @@ post-layout `UsedGeometry` as a sizing fallback.
 
 The geometry project is organized by behavior owner:
 
-- `Construction`: internal box tree creation and generated source identity.
-- `BlockFlow`: normal block-flow sequencing and sizing policy.
-- `InlineFlow`: inline run construction, line layout, and inline placement.
-- `Measurement`: state-independent content extent measurement.
+- `Construction`: internal box tree creation and generated source identity
+  under `Html2x.LayoutEngine.Geometry.Construction`.
+- `BlockFlow`: normal block-flow sequencing, top-level box tree layout, block
+  requests/results, block-kind rules, block origin rules, and block sizing
+  policy under `Html2x.LayoutEngine.Geometry.BlockFlow`.
+- `InlineFlow`: inline-flow layout, buffering rules, inline run construction,
+  line layout, and inline placement under
+  `Html2x.LayoutEngine.Geometry.InlineFlow`.
+- `Measurement`: state-independent content metrics measurement and inline-flow
+  measurement facts.
 - `Tables`: table structure, grid calculation, table measurement, placement,
   and table-specific diagnostic vocabulary.
 - `Images`: image sizing, image layout resolution, and image block layout.
 - `Publishing`: published layout facts and published block caching under
   `Html2x.LayoutEngine.Geometry.Publishing`.
 - `Diagnostics`: geometry diagnostic names, emitters, and snapshot mapping.
-- `Primitives`: geometry validation, translation, and scalar rules.
+- `Primitives`: geometry validation, translation, and scalar dimension rules
+  under `Html2x.LayoutEngine.Geometry.Primitives`.
+- `Style`: geometry-local element tag policy under
+  `Html2x.LayoutEngine.Geometry.Style`.
+- `Writing`: mutable box state writes under
+  `Html2x.LayoutEngine.Geometry.Writing`.
 - `Models`: mutable internal box models.
 
 `Html2x.LayoutEngine.Geometry.Tables` owns current table behavior. Table
@@ -118,8 +130,14 @@ emission remains in the focused diagnostics emitter, `TableGridDiagnostics`.
 Image metadata contracts remain under
 `Html2x.LayoutEngine.Contracts.Geometry.Images`; byte loading and path scope
 remain under `Html2x.Resources`. `ImageSizingRules` is the concrete geometry
-policy; `IImageMetadataResolver` is the supported variation point for image
-inputs.
+policy; `IImageMetadataResolver` is the internal handoff for image metadata
+facts. Geometry consumes source, status, and intrinsic size, but does not carry
+base-directory or byte-limit policy through measurement calls.
+
+`InlineFlowMeasurement` owns non-mutating inline-flow measurement. The
+`InlineFlow` owner contains the inline-flow layout adapter, inline buffering,
+inline run collection, text line layout, baseline rules, justification, and
+atomic inline box placement.
 
 ## Validation Policy
 
@@ -142,4 +160,4 @@ close to the producing stage.
 
 When diagnostics are enabled, `layout/geometry-snapshot` captures box geometry,
 fragment geometry, and pagination placements. Use it to investigate drift
-between layout, fragment projection, and pagination.
+between layout, fragment tree building, and pagination.

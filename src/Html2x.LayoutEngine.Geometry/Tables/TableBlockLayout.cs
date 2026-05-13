@@ -1,7 +1,6 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
-using Html2x.LayoutEngine.Geometry.Models;
 
 namespace Html2x.LayoutEngine.Geometry.Tables;
 
@@ -22,7 +21,7 @@ internal sealed class TableBlockLayout(
     public void Layout(
         TableBox node,
         BlockLayoutRequest request,
-        Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
+        Func<BlockChildLayoutRequest, float> layoutChildBlocks)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(layoutChildBlocks);
@@ -38,12 +37,12 @@ internal sealed class TableBlockLayout(
                 TableStructureDiagnosticNames.StructureKinds.UnsupportedTableStructure,
                 result.UnsupportedReason ?? TableStructureDiagnosticNames.Reasons.UnsupportedTableStructure,
                 result.RowCount,
-                result.RequestedWidth,
-                result.ResolvedWidth,
+                result.RequestedContentWidth,
+                result.ResolvedBorderBoxWidth,
                 groupFacts: BuildTableGroupFacts(node),
                 diagnosticsSink: diagnosticsSink);
 
-            _tablePlacementWriter.WriteUnsupportedPlaceholder(node, origin.X, origin.Y, result.ResolvedWidth, margin);
+            _tablePlacementWriter.WriteUnsupportedPlaceholder(node, origin.X, origin.Y, result.ResolvedBorderBoxWidth, margin);
             return;
         }
 
@@ -51,8 +50,8 @@ internal sealed class TableBlockLayout(
             BoxNodePath.Build(node),
             result.Rows.Count,
             result.DerivedColumnCount,
-            result.RequestedWidth,
-            result.ResolvedWidth,
+            result.RequestedContentWidth,
+            result.ResolvedBorderBoxWidth,
             BuildTableRowDiagnostics(result),
             BuildTableCellDiagnostics(result),
             BuildTableColumnFacts(result),

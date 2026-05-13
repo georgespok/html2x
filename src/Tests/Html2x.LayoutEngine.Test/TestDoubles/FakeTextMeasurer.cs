@@ -15,7 +15,7 @@ public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float des
             ascent,
             descent);
 
-    public float MeasureWidth(FontKey font, float sizePt, string text)
+    private float MeasureWidth(FontKey font, float sizePt, string text)
     {
         if (string.IsNullOrEmpty(text))
         {
@@ -24,8 +24,6 @@ public sealed class FakeTextMeasurer(float widthPerChar, float ascent, float des
 
         return text.Length * widthPerChar;
     }
-
-    public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) => (ascent, descent);
 }
 
 /// <summary>
@@ -35,8 +33,4 @@ public sealed class ConstantTextMeasurer(float widthPt, float ascent, float desc
 {
     public TextMeasurement Measure(FontKey font, float sizePt, string text) =>
         TextMeasurement.CreateFallback(font, widthPt, ascent, descent);
-
-    public float MeasureWidth(FontKey font, float sizePt, string text) => widthPt;
-
-    public (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) => (ascent, descent);
 }

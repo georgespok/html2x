@@ -27,9 +27,9 @@ internal sealed class UnsupportedLayoutModePolicy
     private static IEnumerable<UnsupportedLayoutMode> ResolveUnsupportedModes(BoxNode node)
     {
         if (node is FloatBox ||
-            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Left,
+            string.Equals(node.Style.FloatDirection, HtmlCssVocabulary.CssValues.Left,
                 StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(node.Style.FloatDirection, HtmlCssConstants.CssValues.Right,
+            string.Equals(node.Style.FloatDirection, HtmlCssVocabulary.CssValues.Right,
                 StringComparison.OrdinalIgnoreCase))
         {
             yield return new(
@@ -37,14 +37,14 @@ internal sealed class UnsupportedLayoutModePolicy
                 UnsupportedDiagnosticNames.Reasons.CssFloats);
         }
 
-        if (string.Equals(node.Style.Display, HtmlCssConstants.CssValues.Flex, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(node.Style.Display, HtmlCssVocabulary.CssValues.Flex, StringComparison.OrdinalIgnoreCase))
         {
             yield return new(
                 UnsupportedDiagnosticNames.StructureKinds.DisplayFlex,
                 UnsupportedDiagnosticNames.Reasons.CssFlex);
         }
 
-        if (string.Equals(node.Style.Position, HtmlCssConstants.CssValues.Absolute, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(node.Style.Position, HtmlCssVocabulary.CssValues.Absolute, StringComparison.OrdinalIgnoreCase))
         {
             yield return new(
                 UnsupportedDiagnosticNames.StructureKinds.PositionAbsolute,
@@ -76,7 +76,7 @@ internal sealed class UnsupportedLayoutModePolicy
     }
 
     private static FormattingContextKind ResolveFormattingContext(BoxNode node) =>
-        node is BlockBox { IsInlineBlockContext: true }
+        node is BlockBox { EstablishesInlineBlockFormattingContext: true }
             ? FormattingContextKind.InlineBlock
             : FormattingContextKind.Block;
 

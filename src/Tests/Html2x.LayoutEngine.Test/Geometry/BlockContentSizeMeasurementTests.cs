@@ -1,13 +1,14 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Geometry;
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.LayoutEngine.Test.TestDoubles;
-using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
 using Shouldly;
@@ -46,6 +47,19 @@ public sealed class BlockContentSizeMeasurementTests
     }
 
     [Fact]
+    public void Measure_WithWrappedInlineText_ReturnsInlineContentSizeFacts()
+    {
+        var block = CreateInlineTextBlock("abcd efgh ijkl mnop");
+
+        var measurement = CreateMeasurer().Measure(block, 35f, MeasureNoTables);
+
+        measurement.InlineHeight.ShouldBeGreaterThan(0f);
+        measurement.ContentHeight.ShouldBe(measurement.InlineHeight);
+        measurement.NestedBlockHeight.ShouldBe(0f);
+        block.InlineLayout.ShouldBeNull();
+    }
+
+    [Fact]
     public void Measure_Image_ReturnsFactsWithoutMutatingInputs()
     {
         var image = new ImageBox(BoxRole.Block)
@@ -53,7 +67,7 @@ public sealed class BlockContentSizeMeasurementTests
             Src = "before.png",
             AuthoredSizePx = new(1d, 2d),
             IntrinsicSizePx = new(3d, 4d),
-            Status = ImageLoadStatus.Oversize,
+            Status = ImageLoadStatus.Oversized,
             Style = new()
             {
                 WidthPt = 30f,
@@ -75,7 +89,7 @@ public sealed class BlockContentSizeMeasurementTests
         image.AuthoredSizePx.ShouldBe(new(1d, 2d));
         image.IntrinsicSizePx.ShouldBe(new(3d, 4d));
         image.IsMissing.ShouldBeFalse();
-        image.IsOversize.ShouldBeTrue();
+        image.IsOversized.ShouldBeTrue();
     }
 
     [Fact]
@@ -199,39 +213,39 @@ public sealed class BlockContentSizeMeasurementTests
 
     private BlockContentSizeMeasurement CreateMeasurer(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageMetadataResolver);
+        var imageSizingRules = CreateImageSizingRules(imageMetadataResolver);
         return new(
-            CreateInlineFlowLayout(imageResolver),
+            CreateInlineFlowLayout(imageSizingRules),
             new(),
-            imageResolver);
+            imageSizingRules);
     }
 
     private BlockBoxLayout CreateBlockBoxLayout(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageMetadataResolver);
-        var inlineFlowLayout = CreateInlineFlowLayout(imageResolver);
+        var imageSizingRules = CreateImageSizingRules(imageMetadataResolver);
+        var inlineFlowLayout = CreateInlineFlowLayout(imageSizingRules);
         return new(
             inlineFlowLayout,
-            new(inlineFlowLayout, imageResolver),
+            new(inlineFlowLayout, imageSizingRules),
             new(),
-            imageResolver);
+            imageSizingRules);
     }
 
     private TableGridLayout CreateTableGridLayout(IImageMetadataResolver? imageMetadataResolver = null)
     {
-        var imageResolver = CreateImageResolver(imageMetadataResolver);
-        return new(CreateInlineFlowLayout(imageResolver), imageResolver);
+        var imageSizingRules = CreateImageSizingRules(imageMetadataResolver);
+        return new(CreateInlineFlowLayout(imageSizingRules), imageSizingRules);
     }
 
-    private InlineFlowLayout CreateInlineFlowLayout(ImageSizingRules imageResolver) =>
+    private InlineFlowLayout CreateInlineFlowLayout(ImageSizingRules imageSizingRules) =>
         new(
-            new FontMetricsProvider(),
+            new DefaultFontMetricsMeasurer(),
             _textMeasurer,
             new DefaultLineHeightStrategy(),
             new(),
-            imageResolver);
+            imageSizingRules);
 
-    private static ImageSizingRules CreateImageResolver(IImageMetadataResolver? imageMetadataResolver = null) =>
+    private static ImageSizingRules CreateImageSizingRules(IImageMetadataResolver? imageMetadataResolver = null) =>
         new(imageMetadataResolver is null
             ? null
             : new LayoutGeometryRequest
@@ -251,7 +265,7 @@ public sealed class BlockContentSizeMeasurementTests
         {
             Style = new()
         };
-        block.Children.Add(CreateInline(block, text));
+        block.AddChild(CreateInline(block, text));
         return block;
     }
 
@@ -261,7 +275,7 @@ public sealed class BlockContentSizeMeasurementTests
         {
             Style = new()
         };
-        block.Children.Add(new BlockBox(BoxRole.Block)
+        block.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = block,
             Style = new()
@@ -270,7 +284,7 @@ public sealed class BlockContentSizeMeasurementTests
                 Margin = new(0f, 0f, 4f, 0f)
             }
         });
-        block.Children.Add(new BlockBox(BoxRole.Block)
+        block.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = block,
             Style = new()
@@ -289,7 +303,7 @@ public sealed class BlockContentSizeMeasurementTests
             Style = new()
         };
         var table = CreateSupportedTable("nested table text that wraps", 80f, block);
-        block.Children.Add(table);
+        block.AddChild(table);
         return block;
     }
 
@@ -301,8 +315,8 @@ public sealed class BlockContentSizeMeasurementTests
         };
         var inlineBlock = CreateInlineBlock(block);
         var content = inlineBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
-        content.Children.Add(CreateInline(content, "inside inline block"));
-        block.Children.Add(inlineBlock);
+        content.AddChild(CreateInline(content, "inside inline block"));
+        block.AddChild(inlineBlock);
         return block;
     }
 
@@ -314,7 +328,7 @@ public sealed class BlockContentSizeMeasurementTests
         };
         var inlineBlock = CreateInlineBlock(block);
         var content = inlineBlock.Children.ShouldHaveSingleItem().ShouldBeOfType<BlockBox>();
-        content.Children.Add(CreateInline(content, "before"));
+        content.AddChild(CreateInline(content, "before"));
         var childBlock = new BlockBox(BoxRole.Block)
         {
             Parent = content,
@@ -323,10 +337,10 @@ public sealed class BlockContentSizeMeasurementTests
                 HeightPt = 14f
             }
         };
-        childBlock.Children.Add(CreateInline(childBlock, "block child"));
-        content.Children.Add(childBlock);
-        content.Children.Add(CreateInline(content, "after"));
-        block.Children.Add(inlineBlock);
+        childBlock.AddChild(CreateInline(childBlock, "block child"));
+        content.AddChild(childBlock);
+        content.AddChild(CreateInline(content, "after"));
+        block.AddChild(inlineBlock);
         return block;
     }
 
@@ -336,7 +350,7 @@ public sealed class BlockContentSizeMeasurementTests
         {
             Style = new()
         };
-        block.Children.Add(new ImageBox(BoxRole.Block)
+        block.AddChild(new ImageBox(BoxRole.Block)
         {
             Parent = block,
             Src = "image.png",
@@ -355,7 +369,7 @@ public sealed class BlockContentSizeMeasurementTests
         {
             Style = new()
         };
-        block.Children.Add(new RuleBox(BoxRole.Block)
+        block.AddChild(new RuleBox(BoxRole.Block)
         {
             Parent = block,
             Style = new()
@@ -373,15 +387,15 @@ public sealed class BlockContentSizeMeasurementTests
             Parent = parent,
             Style = new()
             {
-                Display = HtmlCssConstants.CssValues.InlineBlock,
+                Display = HtmlCssVocabulary.CssValues.InlineBlock,
                 Padding = new(1f, 1f, 1f, 1f)
             }
         };
-        inlineBlock.Children.Add(new BlockBox(BoxRole.Block)
+        inlineBlock.AddChild(new BlockBox(BoxRole.Block)
         {
             Parent = inlineBlock,
             Style = inlineBlock.Style,
-            IsInlineBlockContext = true
+            EstablishesInlineBlockFormattingContext = true
         });
         return inlineBlock;
     }
@@ -409,9 +423,9 @@ public sealed class BlockContentSizeMeasurementTests
             Parent = row,
             Style = new()
         };
-        cell.Children.Add(CreateInline(cell, text));
-        row.Children.Add(cell);
-        table.Children.Add(row);
+        cell.AddChild(CreateInline(cell, text));
+        row.AddChild(cell);
+        table.AddChild(row);
         return table;
     }
 
@@ -442,7 +456,7 @@ public sealed class BlockContentSizeMeasurementTests
 
     private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+        public ImageMetadataResult Resolve(string src) =>
             new()
             {
                 Src = src,

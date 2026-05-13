@@ -10,7 +10,7 @@ internal static class FontDirectoryIndex
 {
     private static readonly string[] FontExtensions = [".ttf", ".otf", ".ttc"];
 
-    public static IReadOnlyList<FontFaceEntry> Build(IFileDirectory fileDirectory, ISkiaTypefaceFactory typefaceFactory,
+    public static IReadOnlyList<FontFaceEntry> Build(IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory,
         string directory)
     {
         ArgumentNullException.ThrowIfNull(fileDirectory);
@@ -55,7 +55,7 @@ internal static class FontDirectoryIndex
         return SelectBestMatch(candidates, wantsItalic, requestedWeight);
     }
 
-    private static IReadOnlyList<string> ListFontFiles(IFileDirectory fileDirectory, string directory)
+    private static IReadOnlyList<string> ListFontFiles(IFileSystemReader fileDirectory, string directory)
     {
         if (!fileDirectory.DirectoryExists(directory))
         {
@@ -122,12 +122,12 @@ internal static class FontDirectoryIndex
 
         // Selection order: slant match, weight distance, family, path, face index.
         var best = candidates[0];
-        var bestScore = GetMatchScore(best, wantsItalic, requestedWeight);
+        var bestScore = GetFontMatchScore(best, wantsItalic, requestedWeight);
 
         for (var i = 1; i < candidates.Count; i++)
         {
             var entry = candidates[i];
-            var score = GetMatchScore(entry, wantsItalic, requestedWeight);
+            var score = GetFontMatchScore(entry, wantsItalic, requestedWeight);
             if (CompareScores(score, bestScore) < 0)
             {
                 best = entry;
@@ -138,15 +138,15 @@ internal static class FontDirectoryIndex
         return best;
     }
 
-    private static MatchScore GetMatchScore(FontFaceEntry entry, bool wantsItalic, int requestedWeight) =>
+    private static FontMatchScore GetFontMatchScore(FontFaceEntry entry, bool wantsItalic, int requestedWeight) =>
         new(
             entry.IsItalic == wantsItalic ? 0 : 1,
             Math.Abs(entry.Weight - requestedWeight),
             entry.Family,
-            entry.Path,
+            entry.FilePath,
             entry.FaceIndex);
 
-    private static int CompareScores(MatchScore left, MatchScore right)
+    private static int CompareScores(FontMatchScore left, FontMatchScore right)
     {
         var slantCompare = left.SlantMismatch.CompareTo(right.SlantMismatch);
         if (slantCompare != 0)
@@ -166,7 +166,7 @@ internal static class FontDirectoryIndex
             return familyCompare;
         }
 
-        var pathCompare = StringComparer.OrdinalIgnoreCase.Compare(left.Path, right.Path);
+        var pathCompare = StringComparer.OrdinalIgnoreCase.Compare(left.FilePath, right.FilePath);
         if (pathCompare != 0)
         {
             return pathCompare;

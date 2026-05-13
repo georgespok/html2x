@@ -44,7 +44,7 @@ internal sealed class BoxGeometrySnapshot
 
     public bool IsAnonymous { get; init; }
 
-    public bool IsInlineBlockContext { get; init; }
+    public bool EstablishesInlineBlockFormattingContext { get; init; }
 
     public int? DerivedColumnCount { get; init; }
 

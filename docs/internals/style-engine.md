@@ -71,5 +71,8 @@ Diagnostics should identify the declaration, supported fallback, source
 context, and severity when available.
 
 Authored CSS declaration lookup is centralized in Style-owned code. Mapper and
-diagnostic paths should use that reader instead of manually splitting inline
-style text.
+diagnostic paths use parser-backed inline style declarations instead of
+manually splitting inline style text. Style keeps a narrow raw declaration
+recovery path only for invalid known declarations that the parser drops, so
+diagnostics can still report the authored property and value without changing
+event names or field names.

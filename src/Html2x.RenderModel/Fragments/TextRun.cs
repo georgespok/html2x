@@ -7,7 +7,7 @@ namespace Html2x.RenderModel.Fragments;
 /// <summary>
 ///     Represents a measured run of text with absolute baseline origin and resolved font data.
 /// </summary>
-public sealed record TextRun(
+internal sealed record TextRun(
     string Text, // exact substring for this run (post line-wrapping)
     FontKey Font,
     float FontSizePt,

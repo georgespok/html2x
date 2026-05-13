@@ -12,9 +12,5 @@ internal sealed class LayoutGeometryRequest
 
     public IImageMetadataResolver? ImageMetadataResolver { get; init; }
 
-    public string? ResourceBaseDirectory { get; init; }
-
-    public long MaxImageSizeBytes { get; init; } = 10 * 1024 * 1024;
-
     public static LayoutGeometryRequest Default { get; } = new();
 }

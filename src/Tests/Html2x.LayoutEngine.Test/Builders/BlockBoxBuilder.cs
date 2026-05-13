@@ -50,7 +50,7 @@ internal sealed class BlockBoxBuilder
 
     public BlockBoxBuilder Inline(string textContent, ComputedStyle? style = null)
     {
-        _block.Children.Add(new InlineBox(BoxRole.Inline)
+        _block.AddChild(new InlineBox(BoxRole.Inline)
         {
             TextContent = textContent,
             Style = style ?? new ComputedStyle()
@@ -100,7 +100,7 @@ internal sealed class BlockBoxBuilder
 
     private BlockBoxBuilder Attach(BlockBox child)
     {
-        _block.Children.Add(child);
+        _block.AddChild(child);
         return new(child, this);
     }
 }

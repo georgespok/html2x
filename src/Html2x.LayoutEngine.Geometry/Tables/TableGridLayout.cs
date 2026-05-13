@@ -1,8 +1,9 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
-using Html2x.LayoutEngine.Geometry.Models;
 using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Style;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Tables;
@@ -21,7 +22,7 @@ internal sealed class TableGridLayout
     {
     }
 
-    internal TableGridLayout(InlineFlowLayout inlineFlowLayout, ImageSizingRules? imageResolver = null)
+    internal TableGridLayout(InlineFlowLayout inlineFlowLayout, ImageSizingRules? imageSizingRules = null)
     {
         ArgumentNullException.ThrowIfNull(inlineFlowLayout);
         _sizingRules = new();
@@ -29,23 +30,23 @@ internal sealed class TableGridLayout
             new(
                 inlineFlowLayout,
                 _sizingRules,
-                imageResolver ?? new ImageSizingRules()));
+                imageSizingRules ?? new ImageSizingRules()));
     }
 
     public TableLayoutResult Layout(TableBox table, float availableWidth)
     {
         ArgumentNullException.ThrowIfNull(table);
 
-        var measurement = _sizingRules.Prepare(table, availableWidth);
-        var requestedWidth = table.Style.WidthPt;
-        var resolvedWidth = measurement.BorderBoxWidth;
+        var measurement = _sizingRules.ResolveBlockMeasurementBasis(table, availableWidth);
+        var requestedContentWidth = table.Style.WidthPt;
+        var resolvedBorderBoxWidth = measurement.BorderBoxWidth;
         var contentWidth = measurement.ContentFlowWidth;
         var rowModel = TableStructure.Build(table);
         if (!rowModel.IsSupported)
         {
             return TableLayoutResult.Unsupported(
-                requestedWidth,
-                resolvedWidth,
+                requestedContentWidth,
+                resolvedBorderBoxWidth,
                 rowModel.UnsupportedStructureKind,
                 rowModel.UnsupportedReason,
                 rowModel.RowCount);
@@ -62,8 +63,8 @@ internal sealed class TableGridLayout
 
         return new()
         {
-            RequestedWidth = requestedWidth,
-            ResolvedWidth = resolvedWidth,
+            RequestedContentWidth = requestedContentWidth,
+            ResolvedBorderBoxWidth = resolvedBorderBoxWidth,
             RowCount = rowResults.Count,
             DerivedColumnCount = derivedColumnCount,
             ColumnWidths = columnWidths,
@@ -76,14 +77,14 @@ internal sealed class TableGridLayout
         };
     }
 
-    private static IReadOnlyList<float> BuildEqualColumnWidths(float resolvedWidth, int derivedColumnCount)
+    private static IReadOnlyList<float> BuildEqualColumnWidths(float contentWidth, int derivedColumnCount)
     {
         if (derivedColumnCount <= 0)
         {
             return [];
         }
 
-        var widthPerColumn = resolvedWidth / derivedColumnCount;
+        var widthPerColumn = contentWidth / derivedColumnCount;
         return Enumerable.Repeat(widthPerColumn, derivedColumnCount).ToList();
     }
 
@@ -104,7 +105,7 @@ internal sealed class TableGridLayout
         return results;
     }
 
-    private RowPlacementBuildResult BuildRowPlacement(
+    private RowPlacementResult BuildRowPlacement(
         TableRowFacts row,
         int rowIndex,
         float rowY,
@@ -254,7 +255,7 @@ internal sealed class TableGridLayout
         return BlockContentSizeFacts.ForTable(result);
     }
 
-    private readonly record struct RowPlacementBuildResult(
+    private readonly record struct RowPlacementResult(
         TableLayoutRowResult Row,
         float BorderBoxHeight);
 }

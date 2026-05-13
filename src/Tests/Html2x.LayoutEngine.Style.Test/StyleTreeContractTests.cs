@@ -10,12 +10,12 @@ public sealed class StyleTreeContractTests
     {
         var node = new StyleNode
         {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Div),
+            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Div),
             Style = new()
         };
 
         node.Element.ShouldBeOfType<StyledElementFacts>();
-        node.Element.IsTag(HtmlCssConstants.HtmlTags.Div).ShouldBeTrue();
+        node.Element.IsTag(HtmlCssVocabulary.HtmlTags.Div).ShouldBeTrue();
     }
 
     [Fact]
@@ -23,12 +23,12 @@ public sealed class StyleTreeContractTests
     {
         var child = new StyleNode
         {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
+            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Span),
             Style = new()
         };
         var node = new StyleNode(
             StyleSourceIdentity.Unspecified,
-            StyledElementFacts.Create(HtmlCssConstants.HtmlTags.P),
+            StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.P),
             new(),
             content:
             [
@@ -48,7 +48,7 @@ public sealed class StyleTreeContractTests
     public void StyledElementFacts_AttributeLookup_IsCaseInsensitive()
     {
         var element = StyledElementFacts.Create(
-            HtmlCssConstants.HtmlTags.Img,
+            HtmlCssVocabulary.HtmlTags.Img,
             ("SRC", "hero.png"),
             ("Width", "200"));
 
@@ -75,19 +75,19 @@ public sealed class StyleTreeContractTests
         var image = imageNode.Element;
         imageNode.Identity.NodeId.IsSpecified.ShouldBeTrue();
         imageNode.Identity.ElementIdentity.ShouldBe("img#hero.lead.art");
-        image.IsTag(HtmlCssConstants.HtmlTags.Img).ShouldBeTrue();
+        image.IsTag(HtmlCssVocabulary.HtmlTags.Img).ShouldBeTrue();
         image.Id.ShouldBe("hero");
         image.ClassAttribute.ShouldBe("lead art");
-        image.GetAttribute(HtmlCssConstants.HtmlAttributes.Src).ShouldBe("hero.png");
-        image.GetAttribute(HtmlCssConstants.HtmlAttributes.Width).ShouldBe("200");
-        image.GetAttribute(HtmlCssConstants.HtmlAttributes.Height).ShouldBe("100");
+        image.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Src).ShouldBe("hero.png");
+        image.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Width).ShouldBe("200");
+        image.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Height).ShouldBe("100");
 
-        var cellNode = FindFirst(tree.Root, HtmlCssConstants.HtmlTags.Td);
+        var cellNode = FindFirst(tree.Root, HtmlCssVocabulary.HtmlTags.Td);
         cellNode.Identity.NodeId.IsSpecified.ShouldBeTrue();
         cellNode.Identity.ElementIdentity.ShouldBe("td");
         var cell = cellNode.Element;
-        cell.GetAttribute(HtmlCssConstants.HtmlAttributes.Colspan).ShouldBe("2");
-        cell.GetAttribute(HtmlCssConstants.HtmlAttributes.Rowspan).ShouldBe("3");
+        cell.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Colspan).ShouldBe("2");
+        cell.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Rowspan).ShouldBe("3");
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public sealed class StyleTreeContractTests
     {
         var child = new StyleNode
         {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Br),
+            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Br),
             Style = new()
         };
 
@@ -199,7 +199,7 @@ public sealed class StyleTreeContractTests
     {
         var child = new StyleNode
         {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
+            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Span),
             Style = new()
         };
         var children = new List<StyleNode> { child };
@@ -207,7 +207,7 @@ public sealed class StyleTreeContractTests
 
         var node = new StyleNode(
             StyleSourceIdentity.Unspecified,
-            StyledElementFacts.Create(HtmlCssConstants.HtmlTags.P),
+            StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.P),
             new(),
             children,
             content);
@@ -224,7 +224,7 @@ public sealed class StyleTreeContractTests
     {
         var child = new StyleNode
         {
-            Element = StyledElementFacts.Create(HtmlCssConstants.HtmlTags.Span),
+            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Span),
             Style = new()
         };
 

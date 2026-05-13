@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test;
@@ -13,7 +13,7 @@ public class StringNormalizerTests
     {
         var state = new TextNormalizationState();
 
-        var result = StringNormalizer.NormalizeWhiteSpaceNormal(input, state);
+        var result = StringNormalizer.CollapseNormalWhiteSpace(input, state);
 
         result.ShouldBe(expected);
     }
@@ -26,7 +26,7 @@ public class StringNormalizerTests
         string expectedConcat)
     {
         var state = new TextNormalizationState();
-        var results = chunks.Select(chunk => StringNormalizer.NormalizeWhiteSpaceNormal(chunk, state)).ToArray();
+        var results = chunks.Select(chunk => StringNormalizer.CollapseNormalWhiteSpace(chunk, state)).ToArray();
 
         results.ShouldBe(expectedOutputs);
         string.Concat(results).ShouldBe(expectedConcat);

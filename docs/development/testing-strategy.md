@@ -8,11 +8,11 @@ diagnostics, PDF validity, extracted text, and public API results.
 
 | Project | Scope |
 | --- | --- |
-| `Html2x.LayoutEngine.Contracts` | Internal pipeline boundary contracts shared by style, geometry, composition, diagnostics, and fragment projection. |
+| `Html2x.LayoutEngine.Contracts` | Internal pipeline boundary contracts shared by style, geometry, composition, diagnostics, and fragment tree building. |
 | `Html2x.LayoutEngine.Style.Test` | CSS computation, `StyleTreeBuilder`, parser-backed style behavior, default stylesheet behavior, style diagnostics, and the parser-free `StyleTree` boundary contract. |
 | `Html2x.LayoutEngine.Test` | Pipeline integration, composition behavior, diagnostics snapshots, and architecture guardrails. |
 | `Html2x.LayoutEngine.Geometry.Test` | Geometry algorithms, published layout output, table layout, image layout, block and inline geometry, and parser-free `StyleTree` inputs. |
-| `Html2x.LayoutEngine.Fragments.Test` | Fragment projection from `PublishedLayoutTree` to renderer-facing `FragmentTree` models. |
+| `Html2x.LayoutEngine.Fragments.Test` | Fragment tree building from `PublishedLayoutTree` to renderer-facing `FragmentTree` models. |
 | `Html2x.LayoutEngine.Pagination.Test` | Focused pagination behavior through the internal `LayoutPaginator`, translated fragment clone coverage, pagination diagnostics, and audit facts. |
 | `Html2x.Renderers.Pdf.Test` | PDF renderer behavior, drawing helpers, fonts, images, borders, table rendering, and PDF validation helpers. |
 | `Html2x.Test` | End-to-end `HtmlConverter` scenarios and diagnostics behavior. |
@@ -40,7 +40,7 @@ layout geometry or published layout facts. Geometry tests must not reference Ang
 Use parser-free builders with `StyledElementFacts` and `StyleContentNode` when
 constructing `StyleTree` input.
 
-Geometry tests should prefer observable seams: `LayoutGeometryBuilder`,
+Geometry tests should prefer observable seams: `LayoutGeometryConstruction`,
 `PublishedLayoutTree`, geometry snapshots, and fragment output. Use architecture
 tests to pin ownership rules such as `BoxTreeConstruction` owning style-to-box
 construction, `LayoutBoxStateWriter` owning mutable writes, block layout rules not
@@ -50,14 +50,14 @@ Geometry tests must not add parser references just because contracts moved to
 `Html2x.LayoutEngine.Contracts`. Use contract style input for geometry
 algorithms and reserve parser-backed traversal for Style.Test.
 
-Fragment projection tests belong in `Html2x.LayoutEngine.Fragments.Test` when
-they exercise `FragmentBuilder`, `FragmentTree`, fragment IDs, flow ordering,
-inline text projection, image fragments, rule fragments, or table fragments.
-Fragment projection tests build PublishedLayoutTree inputs directly and assert
+Fragment tree building tests belong in `Html2x.LayoutEngine.Fragments.Test` when
+they exercise `FragmentTreeBuilder`, `FragmentTree`, fragment IDs, flow ordering,
+inline text fragments, image fragments, rule fragments, or table fragments.
+Fragment tree building tests build PublishedLayoutTree inputs directly and assert
 that published text run facts are preserved. Font resolution behavior belongs in
-text or geometry tests, not fragment projection tests.
+text or geometry tests, not fragment tree building tests.
 
-Fragment projection tests must not construct mutable boxes or reference
+Fragment tree building tests must not construct mutable boxes or reference
 `Html2x.LayoutEngine`, `Html2x.LayoutEngine.Geometry`,
 `Html2x.LayoutEngine.Style`, renderers, AngleSharp, AngleSharp.Css, or
 SkiaSharp. Renderer tests remain renderer-owned.
@@ -67,11 +67,11 @@ exercise the internal `LayoutPaginator`, page placement, cloned translated fragm
 pagination diagnostics, `PaginationResult`, `PaginationPageAudit`, or
 `PaginationPlacementAudit`. Pagination tests should build render model
 fragments directly. They must not reference style, geometry implementation,
-fragment projection, text runtime seams, parser packages, renderers, or
+fragment tree building, text runtime seams, parser packages, renderers, or
 SkiaSharp.
 
 Pipeline tests belong in `Html2x.LayoutEngine.Test` when they exercise
-`LayoutBuilder`, diagnostics flow, or architecture guardrails. Pipeline tests
+`LayoutPipeline`, diagnostics flow, or architecture guardrails. Pipeline tests
 may assert that composition calls pagination and returns the final layout, but
 focused pagination behavior belongs in `Html2x.LayoutEngine.Pagination.Test`.
 Pipeline tests should use the public or intended module facades, not direct

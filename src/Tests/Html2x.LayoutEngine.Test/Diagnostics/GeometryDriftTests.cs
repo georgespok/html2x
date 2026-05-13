@@ -7,6 +7,7 @@ using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Test.Diagnostics;
 
@@ -168,7 +169,7 @@ public sealed class GeometryDriftTests
 
         boxSnapshots.ShouldNotBeEmpty();
         boxSnapshots.ShouldAllBe(static box =>
-            box.MetadataOwner == "BlockLayoutEngine" &&
+            box.MetadataOwner == "BlockFlowLayout" &&
             box.MetadataConsumer == "GeometrySnapshotMapper");
 
         var placement = result.Snapshot.Pagination
@@ -363,7 +364,7 @@ public sealed class GeometryDriftTests
         movedImage.AuthoredSizePx.ShouldBe(image.AuthoredSizePx);
         movedImage.IntrinsicSizePx.ShouldBe(image.IntrinsicSizePx);
         movedImage.IsMissing.ShouldBe(image.IsMissing);
-        movedImage.IsOversize.ShouldBe(image.IsOversize);
+        movedImage.IsOversized.ShouldBe(image.IsOversized);
     }
 
     [Fact]

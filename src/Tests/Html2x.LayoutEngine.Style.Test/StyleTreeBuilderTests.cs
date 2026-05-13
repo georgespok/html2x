@@ -12,8 +12,8 @@ public sealed class StyleTreeBuilderTests
         var tree = await BuildAsync("<html><body><p>Text</p></body></html>", DefaultOptions());
 
         tree.Root.ShouldNotBeNull();
-        tree.Root.Element.IsTag(HtmlCssConstants.HtmlTags.Body).ShouldBeTrue();
-        tree.Root.Children.ShouldHaveSingleItem().Element.IsTag(HtmlCssConstants.HtmlTags.P).ShouldBeTrue();
+        tree.Root.Element.IsTag(HtmlCssVocabulary.HtmlTags.Body).ShouldBeTrue();
+        tree.Root.Children.ShouldHaveSingleItem().Element.IsTag(HtmlCssVocabulary.HtmlTags.P).ShouldBeTrue();
     }
 
     [Fact]
@@ -27,7 +27,7 @@ public sealed class StyleTreeBuilderTests
         var paragraph = tree.Root.Children[1];
 
         heading.Style.FontSizePt.ShouldBe(18f);
-        heading.Style.Bold.ShouldBeTrue();
+        heading.Style.IsBold.ShouldBeTrue();
         paragraph.Style.Margin.ShouldBe(new(6f, 0f, 6f, 0f));
     }
 
@@ -64,7 +64,7 @@ public sealed class StyleTreeBuilderTests
         diagnostics.Records.ShouldContain(static e => e.Name == "style/unsupported-declaration");
 
         var styleEvent = diagnostics.Records.Single(static e => e.Name == "style/unsupported-declaration");
-        styleEvent.Fields["propertyName"].ShouldBe(new DiagnosticStringValue(HtmlCssConstants.CssProperties.Width));
+        styleEvent.Fields["propertyName"].ShouldBe(new DiagnosticStringValue(HtmlCssVocabulary.CssProperties.Width));
         styleEvent.Context.ShouldNotBeNull();
         styleEvent.Context.ElementIdentity.ShouldBe("div#hero");
     }
@@ -89,6 +89,27 @@ public sealed class StyleTreeBuilderTests
     }
 
     [Fact]
+    public async Task BuildAsync_CancellationRequestedDuringStyleStage_EmitsCanceledWithoutSucceeded()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var sink = new CancellingDiagnosticsSink(
+            cancellation,
+            static record => record is { Stage: "stage/style", Name: "style/unsupported-declaration" });
+
+        await Should.ThrowAsync<OperationCanceledException>(async () =>
+            await new StyleTreeBuilder().BuildAsync(
+                "<html><body><div style='width: 10rem;'></div></body></html>",
+                DefaultOptions(),
+                cancellation.Token,
+                sink));
+
+        sink.Records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/started");
+        sink.Records.ShouldContain(static record => record.Stage == "stage/style" && record.Name == "stage/canceled");
+        sink.Records.ShouldNotContain(static record =>
+            record.Stage == "stage/style" && record.Name == "stage/succeeded");
+    }
+
+    [Fact]
     public async Task BuildAsync_MixedContent_PreservesOrderedTextAndElementContent()
     {
         var tree = await BuildAsync(
@@ -101,7 +122,7 @@ public sealed class StyleTreeBuilderTests
         paragraph.Content[0].Kind.ShouldBe(StyleContentNodeKind.Text);
         paragraph.Content[0].Text.ShouldBe("alpha ");
         paragraph.Content[1].Kind.ShouldBe(StyleContentNodeKind.Element);
-        paragraph.Content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssConstants.HtmlTags.Span).ShouldBeTrue();
+        paragraph.Content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssVocabulary.HtmlTags.Span).ShouldBeTrue();
         paragraph.Content[2].Kind.ShouldBe(StyleContentNodeKind.Text);
         paragraph.Content[2].Text.ShouldBe(" gamma");
     }
@@ -123,9 +144,9 @@ public sealed class StyleTreeBuilderTests
 
         children.Count.ShouldBe(3);
         children.Select(static child => child.Element.TagName.ToLowerInvariant()).ShouldBe([
-            HtmlCssConstants.HtmlTags.Div,
-            HtmlCssConstants.HtmlTags.Div,
-            HtmlCssConstants.HtmlTags.Div
+            HtmlCssVocabulary.HtmlTags.Div,
+            HtmlCssVocabulary.HtmlTags.Div,
+            HtmlCssVocabulary.HtmlTags.Div
         ]);
         children.Select(static child => child.Element.ClassAttribute).ShouldBe([
             "item",
@@ -157,13 +178,13 @@ public sealed class StyleTreeBuilderTests
         paragraph.Content[0].Text.ShouldBe("alpha ");
         paragraph.Content[2].Text.ShouldBe(" gamma");
 
-        span.Element.IsTag(HtmlCssConstants.HtmlTags.Span).ShouldBeTrue();
+        span.Element.IsTag(HtmlCssVocabulary.HtmlTags.Span).ShouldBeTrue();
         span.Content.Select(static content => content.Kind).ShouldBe([
             StyleContentNodeKind.Text,
             StyleContentNodeKind.Element
         ]);
         span.Content[0].Text.ShouldBe("beta ");
-        span.Content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssConstants.HtmlTags.B).ShouldBeTrue();
+        span.Content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssVocabulary.HtmlTags.B).ShouldBeTrue();
     }
 
     [Fact]
@@ -189,6 +210,26 @@ public sealed class StyleTreeBuilderTests
         paragraph.Content[2].Element.ShouldBeNull();
         paragraph.Content[3].Text.ShouldBe("gamma");
         paragraph.Content[4].Text.ShouldBe(" omega");
+    }
+
+    [Fact]
+    public async Task BuildAsync_UnsupportedElement_EmitsFlattenedDiagnostic()
+    {
+        var diagnostics = new RecordingDiagnosticsSink();
+
+        await BuildAsync(
+            "<html><body><p>alpha <custom id='x'>beta</custom> omega</p></body></html>",
+            DefaultOptions(),
+            diagnostics);
+
+        var record = diagnostics.Records.Single(static record => record.Name == "style/unsupported-element");
+        record.Stage.ShouldBe("stage/style");
+        record.Severity.ShouldBe(DiagnosticSeverity.Warning);
+        record.Message.ShouldBe("Unsupported element 'custom' was flattened.");
+        record.Context.ShouldNotBeNull();
+        record.Context.ElementIdentity.ShouldBe("custom#x");
+        record.Fields["tagName"].ShouldBe(new DiagnosticStringValue("custom"));
+        record.Fields["decision"].ShouldBe(new DiagnosticStringValue("Unsupported"));
     }
 
     [Fact]
@@ -293,7 +334,7 @@ public sealed class StyleTreeBuilderTests
         content.Select(static item => item.Identity.ContentId.Value).Distinct().Count().ShouldBe(3);
         content[0].Identity.SourceOrder.ShouldBeLessThan(content[1].Identity.SourceOrder);
         content[1].Identity.SourceOrder.ShouldBeLessThan(content[2].Identity.SourceOrder);
-        content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssConstants.HtmlTags.Span).ShouldBeTrue();
+        content[1].Element.ShouldNotBeNull().Element.IsTag(HtmlCssVocabulary.HtmlTags.Span).ShouldBeTrue();
     }
 
     [Fact]
@@ -383,5 +424,23 @@ public sealed class StyleTreeBuilderTests
         node.Identity.SiblingIndex.ShouldBe(siblingIndex);
         node.Identity.SourcePath.ShouldBe(sourcePath);
         node.Identity.ElementIdentity.ShouldBe(elementIdentity);
+    }
+
+    private sealed class CancellingDiagnosticsSink(
+        CancellationTokenSource cancellation,
+        Predicate<DiagnosticRecord> shouldCancel) : IDiagnosticsSink
+    {
+        private readonly List<DiagnosticRecord> _records = [];
+
+        public IReadOnlyList<DiagnosticRecord> Records => _records;
+
+        public void Emit(DiagnosticRecord record)
+        {
+            _records.Add(record);
+            if (shouldCancel(record))
+            {
+                cancellation.Cancel();
+            }
+        }
     }
 }

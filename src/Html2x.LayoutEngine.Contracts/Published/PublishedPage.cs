@@ -8,7 +8,7 @@ internal sealed record PublishedPage
     public PublishedPage(SizePt size, Spacing margin)
     {
         PublishedLayoutGuard.ThrowIfNegativeOrNonFinite(size, nameof(size));
-        PublishedLayoutGuard.ThrowIfNonFinite(margin, nameof(margin));
+        PublishedLayoutGuard.ThrowIfNegativeOrNonFinite(margin, nameof(margin));
 
         Size = size;
         Margin = margin;

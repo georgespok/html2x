@@ -1,6 +1,6 @@
 # Pagination
 
-This page explains page placement after layout and fragment projection.
+This page explains page placement after layout and fragment tree building.
 `Html2x.LayoutEngine.Pagination` distributes measured render model block
 fragments across pages without remeasuring content.
 

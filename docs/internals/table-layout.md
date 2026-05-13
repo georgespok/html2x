@@ -1,7 +1,7 @@
 # Table Layout
 
 This page explains table behavior across style, geometry, diagnostics, fragment
-projection, pagination, and PDF rendering.
+fragment tree building, pagination, and PDF rendering.
 
 ## Current Model
 
@@ -50,7 +50,7 @@ measurement, placement, and table-specific diagnostic vocabulary. Mutable table
 models remain internal geometry state. `TableGridDiagnostics` emits diagnostic
 records from the diagnostics owner.
 
-Fragment projection copies published table facts into render model fragments.
+Fragment tree building copies published table facts into render model fragments.
 Pagination treats table fragments as block-boundary content and preserves table
 metadata in placement audit facts. The PDF renderer paints table backgrounds,
 borders, and cell content from render model facts only.

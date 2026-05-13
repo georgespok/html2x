@@ -24,10 +24,12 @@ Resource loading must not depend on the process current directory.
 Images have a maximum allowed size:
 
 - Public converter option: `HtmlConverterOptions.Resources.MaxImageSizeBytes`.
-- Renderer setting: `PdfRenderSettings.MaxImageSizeBytes`.
+- Internal renderer setting: `PdfRenderSettings.MaxImageSizeBytes`.
 
 Invalid renderer settings fail before rendering. Oversized images are reported
-through image status and diagnostics.
+through image status and diagnostics. File image length and reliably estimated
+data URI decoded length are checked before full byte allocation; final image
+decoder memory remains best-effort.
 
 ## Geometry Metadata
 
@@ -41,6 +43,10 @@ conversion-scoped resource store. The store owns path scope, data URI parsing,
 byte limits, status, retained bytes, and intrinsic dimension decoding for that
 single conversion. It is not global cache state.
 
+Geometry consumes image metadata through an internal resolver that accepts the
+image source only. Base directory and byte-limit policy stay inside the
+conversion-scoped resource store.
+
 ## Render Byte Loading
 
 When the public converter drives rendering, the PDF renderer reads image bytes
@@ -48,21 +54,23 @@ from the same conversion-scoped resource store used for metadata. Successful
 image bytes are retained only for that conversion and are bounded by
 `MaxImageSizeBytes`.
 
-Direct `PdfRenderer` usage remains supported. Without a converter-provided
-resource store, the renderer loads image bytes through `Html2x.Resources` using
+Without a converter-provided resource store, internal renderer tests and
+diagnostic paths can still load image bytes through `Html2x.Resources` using
 renderer-owned resource settings. Rendering consumes fragment data and must not
 rederive layout geometry.
 
 ## Status Vocabulary
 
-`ImageLoadStatus` is the single outcome vocabulary across resources, metadata,
-published image facts, `ImageFragment`, and PDF diagnostics.
+`ImageLoadStatus` is the single resource-owned outcome vocabulary across
+resources, metadata, published image facts, `ImageFragment`, and PDF
+diagnostics. The type lives under `Html2x.RenderModel.Resources`, not fragment
+tree building.
 
 Known statuses:
 
 - `Ok`
 - `Missing`
-- `Oversize`
+- `Oversized`
 - `InvalidDataUri`
 - `DecodeFailed`
 - `OutOfScope`

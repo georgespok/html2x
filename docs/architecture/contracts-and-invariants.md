@@ -8,10 +8,10 @@ boundary.
 
 | Producer | Handoff | Consumer |
 | --- | --- | --- |
-| Public facade | `StyleBuildSettings`, `LayoutBuildSettings`, `LayoutGeometryRequest`, `PaginationOptions`, `PdfRenderSettings` | Internal stages and renderer |
+| Public facade | `StyleBuildSettings`, `LayoutBuildSettings`, `LayoutGeometryRequest`, `PaginationOptions`, internal `PdfRenderSettings` | Internal stages and renderer |
 | Style | `StyleTree` | Geometry |
-| Geometry | `PublishedLayoutTree` | Fragment projection |
-| Fragment projection | `FragmentTree` | Pagination |
+| Geometry | `PublishedLayoutTree` | Fragment tree building |
+| Fragment tree building | `FragmentTree` | Pagination |
 | Pagination | `PaginationResult` and `HtmlLayout` | Converter and renderer |
 | Renderer | PDF bytes | Public result |
 
@@ -21,7 +21,7 @@ Earlier stage outputs become read-only inputs after handoff. Later stages may
 read them, but must not repair, reinterpret, or mutate them.
 
 The style stage is the last stage allowed to interpret parser state. Geometry
-is the last stage allowed to write normal-flow geometry. Fragment projection
+is the last stage allowed to write normal-flow geometry. Fragment tree building
 copies geometry forward. Pagination owns page placement and uses cloned,
 translated render model fragments. Paint owns drawing only.
 
@@ -45,7 +45,7 @@ geometry fails close to the producing stage.
 
 If a later stage needs data that only exists in an earlier stage, add that data
 to the owning stage output consumed by the next stage. Do not add backward
-references to parser objects, mutable boxes, fragment projection internals, or
+references to parser objects, mutable boxes, fragment tree building internals, or
 renderer state.
 
 ## Diagnostics Rule

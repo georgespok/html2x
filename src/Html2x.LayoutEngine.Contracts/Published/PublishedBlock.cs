@@ -4,7 +4,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Contracts.Published;
 
 /// <summary>
-///     Carries the immutable block facts that fragment projection consumes after layout geometry completes.
+///     Carries the immutable block facts that fragment tree building consumes after layout geometry completes.
 /// </summary>
 internal sealed record PublishedBlock
 {

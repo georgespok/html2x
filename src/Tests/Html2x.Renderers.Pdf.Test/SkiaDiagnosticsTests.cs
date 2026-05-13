@@ -5,6 +5,7 @@ using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Shouldly;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.Renderers.Pdf.Test;
 
@@ -12,14 +13,14 @@ namespace Html2x.Renderers.Pdf.Test;
 public class SkiaDiagnosticsTests
 {
     [Fact]
-    public async Task MissingImage_DiagnosticsSink_EmitsImageRenderFields()
+    public void MissingImage_DiagnosticsSink_EmitsImageRenderFields()
     {
         var sink = new RecordingDiagnosticsSink();
         var layout = CreateLayoutWithMissingImage();
         var renderer = new PdfRenderer();
         var options = new PdfRenderSettings { ResourceBaseDirectory = "." };
 
-        var pdf = await renderer.RenderAsync(layout, options, sink);
+        var pdf = renderer.Render(layout, options, sink);
 
         pdf.ShouldNotBeNull();
         var record = sink.Records.Single(static x => x.Name == "image/render");

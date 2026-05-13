@@ -1,5 +1,6 @@
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Geometry.Models;
 
@@ -15,7 +16,7 @@ internal sealed class ImageBox(BoxRole role) : BlockBox(role)
 
     public bool IsMissing => ImageLoadStatusFacts.IsMissing(Status);
 
-    public bool IsOversize => ImageLoadStatusFacts.IsOversize(Status);
+    public bool IsOversized => ImageLoadStatusFacts.IsOversized(Status);
 
     internal void ApplyImageMetadata(
         string src,

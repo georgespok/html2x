@@ -4,7 +4,7 @@ namespace Html2x.RenderModel.Fragments;
 ///     Defines text decoration flags used when painting a text run.
 /// </summary>
 [Flags]
-public enum TextDecorations
+internal enum TextDecorations
 {
     None = 0,
     Underline = 1,

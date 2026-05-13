@@ -32,7 +32,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -63,7 +63,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.A4
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(2);
@@ -85,9 +85,9 @@ public partial class LayoutIntegrationTests
 
         var styleTreeBuilder = new StyleTreeBuilder();
         var textMeasurer = CreateTextMeasurer();
-        var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
-        var fragmentBuilder = new FragmentBuilder();
-        var builder = CreateLayoutBuilder();
+        var layoutGeometryBuilder = new LayoutGeometryConstruction(textMeasurer);
+        var fragmentBuilder = new FragmentTreeBuilder();
+        var builder = CreateLayoutPipeline();
         var layoutOptions = new LayoutBuildSettings
         {
             PageSize = PaperSizes.A4
@@ -99,9 +99,7 @@ public partial class LayoutIntegrationTests
             new()
             {
                 PageSize = layoutOptions.PageSize,
-                ImageMetadataResolver = new NoopImageMetadataResolver(),
-                ResourceBaseDirectory = Directory.GetCurrentDirectory(),
-                MaxImageSizeBytes = layoutOptions.MaxImageSizeBytes
+                ImageMetadataResolver = new NoopImageMetadataResolver()
             });
         var fragmentTree = fragmentBuilder.Build(publishedLayout);
         var layout = await builder.BuildAsync(html, layoutOptions);
@@ -146,7 +144,7 @@ public partial class LayoutIntegrationTests
         {
             PageSize = PaperSizes.Letter
         };
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         var page = layout.Pages[0];
         var h1Block = (BlockFragment)page.Children[0];
@@ -185,7 +183,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -232,7 +230,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -270,7 +268,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.A4
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         var div = (BlockFragment)layout.Pages[0].Children[0];
@@ -297,7 +295,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.A4
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         var div = (BlockFragment)layout.Pages[0].Children[0];
@@ -316,7 +314,7 @@ public partial class LayoutIntegrationTests
 
         var layoutOptions = new LayoutBuildSettings { PageSize = PaperSizes.Letter };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBe(1);
         layout.Pages[0].Children.Count.ShouldBe(1);
@@ -340,7 +338,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.Letter
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBeGreaterThan(1);
 
@@ -378,7 +376,7 @@ public partial class LayoutIntegrationTests
             PageSize = PaperSizes.Letter
         };
 
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         layout.Pages.Count.ShouldBeGreaterThanOrEqualTo(2);
         layout.Pages[0].Children.Count.ShouldBe(1);
@@ -423,7 +421,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -451,7 +449,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert: Padding should affect horizontal spacing
         // For inline elements, padding affects the spacing around the content
@@ -479,7 +477,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -510,7 +508,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -534,7 +532,7 @@ public partial class LayoutIntegrationTests
         };
 
         // Act
-        var layout = await CreateLayoutBuilder().BuildAsync(html, layoutOptions);
+        var layout = await CreateLayoutPipeline().BuildAsync(html, layoutOptions);
 
         // Assert
         layout.Pages.Count.ShouldBe(1);
@@ -604,8 +602,8 @@ public partial class LayoutIntegrationTests
 
     private static ITextMeasurer CreateTextMeasurer() => new ConstantTextMeasurer(10f, 9f, 3f);
 
-    private static LayoutBuilder CreateLayoutBuilder() => CreateLayoutBuilder(new NoopImageMetadataResolver());
+    private static LayoutPipeline CreateLayoutPipeline() => CreateLayoutPipeline(new NoopImageMetadataResolver());
 
-    private static LayoutBuilder CreateLayoutBuilder(IImageMetadataResolver imageMetadataResolver) =>
+    private static LayoutPipeline CreateLayoutPipeline(IImageMetadataResolver imageMetadataResolver) =>
         new(CreateTextMeasurer(), imageMetadataResolver);
 }

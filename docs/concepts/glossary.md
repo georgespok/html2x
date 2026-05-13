@@ -15,7 +15,7 @@ This page defines canonical Html2x terminology and capitalization.
 | Geometry | Layout placement and sizing owned by `Html2x.LayoutEngine.Geometry`. |
 | Used geometry | Canonical block-level geometry named `UsedGeometry`. |
 | Published layout | Immutable geometry output named `PublishedLayoutTree`. |
-| Fragment projection | Conversion from `PublishedLayoutTree` to renderer-facing `FragmentTree`. |
+| Fragment tree building | Conversion from `PublishedLayoutTree` to renderer-facing `FragmentTree`. |
 | Fragment tree | Pre-pagination render model fragments named `FragmentTree`. |
 | Pagination | Page placement stage that returns `PaginationResult` and `HtmlLayout`. |
 | Render model | Pure renderer-facing documents, fragments, geometry values, style values, image facts, and font facts. |

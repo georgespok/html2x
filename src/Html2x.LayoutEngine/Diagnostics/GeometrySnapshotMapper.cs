@@ -132,7 +132,7 @@ internal static class GeometrySnapshotMapper
             DiagnosticObject.Field(LayoutSnapshotSchema.Fields.MarkerOffset, box.MarkerOffset),
             DiagnosticObject.Field(GeometrySnapshotSchema.Fields.AllowsOverflow, box.AllowsOverflow),
             DiagnosticObject.Field(GeometrySnapshotSchema.Fields.IsAnonymous, box.IsAnonymous),
-            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.IsInlineBlockContext, box.IsInlineBlockContext),
+            DiagnosticObject.Field(GeometrySnapshotSchema.Fields.EstablishesInlineBlockFormattingContext, box.EstablishesInlineBlockFormattingContext),
             DiagnosticObject.Field(
                 LayoutSnapshotSchema.Fields.DerivedColumnCount,
                 FromNullable(box.DerivedColumnCount)),
@@ -185,7 +185,7 @@ internal static class GeometrySnapshotMapper
             ColumnIndex = placement.ColumnIndex,
             ColumnSpan = placement.ColumnSpan,
             IsHeader = placement.IsHeader,
-            MetadataOwner = PublishedLayoutToFragmentProjector.MetadataOwnerName,
+            MetadataOwner = PublishedFragmentFactory.MetadataOwnerName,
             MetadataConsumer = GeometrySnapshotSchema.Metadata.PaginationConsumer
         };
 
@@ -231,13 +231,13 @@ internal static class GeometrySnapshotMapper
                 MarkerOffset = block.Geometry.MarkerOffset,
                 AllowsOverflow = block.Geometry.AllowsOverflow,
                 IsAnonymous = false,
-                IsInlineBlockContext = block.Display.FormattingContext == FormattingContextKind.InlineBlock,
+                EstablishesInlineBlockFormattingContext = block.Display.FormattingContext == FormattingContextKind.InlineBlock,
                 DerivedColumnCount = block.Table?.DerivedColumnCount,
                 RowIndex = block.Table?.RowIndex,
                 ColumnIndex = block.Table?.ColumnIndex,
                 ColumnSpan = block.Table?.ColumnSpan,
                 IsHeader = block.Table?.IsHeader,
-                MetadataOwner = GeometrySnapshotSchema.Metadata.BoxGeometryOwner,
+                MetadataOwner = GeometrySnapshotSchema.Metadata.GeometryLayoutOwner,
                 MetadataConsumer = nameof(GeometrySnapshotMapper),
                 Children = MapBoxes(block.Children)
             };

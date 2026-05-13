@@ -241,6 +241,29 @@ public sealed class LayoutSnapshotMapperTests
         snapshot.Pages[1].Fragments.ShouldHaveSingleItem().SequenceId.ShouldBe(4);
     }
 
+    [Fact]
+    public void From_UnknownFragment_UsesBoundedUnsupportedKind()
+    {
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(612, 792),
+            new(),
+            [
+                new CustomFragment
+                {
+                    Rect = new(10, 20, 30, 40)
+                }
+            ]));
+
+        var snapshot = LayoutSnapshotMapper.From(layout);
+
+        var fragment = snapshot.Pages.ShouldHaveSingleItem().Fragments.ShouldHaveSingleItem();
+        fragment.Kind.ShouldBe("unsupported");
+        fragment.X.ShouldBe(10);
+        fragment.Y.ShouldBe(20);
+        fragment.Size.ShouldBe(new SizePt(30, 40));
+    }
+
     private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
         value[fieldName].ShouldBeOfType<DiagnosticArray>();
 
@@ -259,5 +282,9 @@ public sealed class LayoutSnapshotMapperTests
         var expected = expectedKeys.OrderBy(static key => key, StringComparer.Ordinal).ToArray();
 
         actual.ShouldBe(expected);
+    }
+
+    private sealed class CustomFragment : Fragment
+    {
     }
 }

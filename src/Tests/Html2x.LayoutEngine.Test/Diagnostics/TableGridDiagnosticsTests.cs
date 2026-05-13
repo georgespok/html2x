@@ -46,8 +46,8 @@ public class TableGridDiagnosticsTests
         record.Fields["tablePath"].ShouldBe(new DiagnosticStringValue("html/body/table"));
         record.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(2));
         record.Fields["derivedColumnCount"].ShouldBe(new DiagnosticNumberValue(2));
-        record.Fields["requestedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
-        record.Fields["resolvedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
+        record.Fields["requestedContentWidth"].ShouldBe(new DiagnosticNumberValue(400f));
+        record.Fields["resolvedBorderBoxWidth"].ShouldBe(new DiagnosticNumberValue(400f));
         record.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Supported"));
         record.Fields["reason"].ShouldBeNull();
 
@@ -99,8 +99,8 @@ public class TableGridDiagnosticsTests
         record.Fields["nodePath"].ShouldBe(new DiagnosticStringValue("html/body/table"));
         record.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(2));
         record.Fields["derivedColumnCount"].ShouldBe(new DiagnosticNumberValue(2));
-        record.Fields["requestedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
-        record.Fields["resolvedWidth"].ShouldBe(new DiagnosticNumberValue(380f));
+        record.Fields["requestedContentWidth"].ShouldBe(new DiagnosticNumberValue(400f));
+        record.Fields["resolvedBorderBoxWidth"].ShouldBe(new DiagnosticNumberValue(380f));
         record.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Supported"));
 
         var columns = record.Fields["columns"].ShouldBeOfType<DiagnosticArray>();
@@ -141,8 +141,8 @@ public class TableGridDiagnosticsTests
         table.Fields["tablePath"].ShouldBe(new DiagnosticStringValue("html/body/table"));
         table.Fields["rowCount"].ShouldBe(new DiagnosticNumberValue(1));
         table.Fields["derivedColumnCount"].ShouldBeNull();
-        table.Fields["requestedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
-        table.Fields["resolvedWidth"].ShouldBe(new DiagnosticNumberValue(400f));
+        table.Fields["requestedContentWidth"].ShouldBe(new DiagnosticNumberValue(400f));
+        table.Fields["resolvedBorderBoxWidth"].ShouldBe(new DiagnosticNumberValue(400f));
         table.Fields["outcome"].ShouldBe(new DiagnosticStringValue("Unsupported"));
         table.Fields["reason"].ShouldBe(new DiagnosticStringValue("rowspan is not supported"));
     }

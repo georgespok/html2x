@@ -7,7 +7,7 @@ namespace Html2x.RenderModel.Fragments;
 /// <summary>
 ///     Base renderable fragment carrying page geometry, paint metadata, and validation at immutable boundaries.
 /// </summary>
-public abstract class Fragment
+internal abstract class Fragment
 {
     private readonly RectPt _rect;
 

@@ -1,9 +1,9 @@
-using System.Globalization;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.RenderModel.Fragments;
+using Html2x.LayoutEngine.Geometry.Primitives;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Resources;
 using Html2x.RenderModel.Styles;
+using System.Globalization;
 
 namespace Html2x.LayoutEngine.Geometry.Images;
 
@@ -15,25 +15,19 @@ internal sealed class ImageSizingRules(LayoutGeometryRequest? request = null)
     private readonly IImageMetadataResolver _imageMetadataResolver =
         request?.ImageMetadataResolver ?? new NullImageMetadataResolver();
 
-    private readonly long _maxImageSizeBytes = request?.MaxImageSizeBytes ?? 10 * 1024 * 1024;
-
-    private readonly string _resourceBaseDirectory = string.IsNullOrWhiteSpace(request?.ResourceBaseDirectory)
-        ? AppContext.BaseDirectory
-        : request.ResourceBaseDirectory;
-
-    public ImageLayoutResolution Resolve(ImageBox imageBox, float availableWidth)
+    public ImageLayoutResolution ResolveImageLayout(ImageBox imageBox, float availableWidth)
     {
         ArgumentNullException.ThrowIfNull(imageBox);
 
-        var src = imageBox.Element?.GetAttribute(HtmlCssConstants.HtmlAttributes.Src) ?? imageBox.Src;
+        var src = imageBox.Element?.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Src) ?? imageBox.Src;
         var htmlAuthoredSize = new SizePx(
-            ParsePxAttr(imageBox.Element, HtmlCssConstants.HtmlAttributes.Width),
-            ParsePxAttr(imageBox.Element, HtmlCssConstants.HtmlAttributes.Height));
+            ParsePxAttr(imageBox.Element, HtmlCssVocabulary.HtmlAttributes.Width),
+            ParsePxAttr(imageBox.Element, HtmlCssVocabulary.HtmlAttributes.Height));
         var authoredSize = ResolveAuthoredMetadataSize(imageBox, htmlAuthoredSize);
         var padding = imageBox.Style.Padding.Safe();
         var border = Spacing.FromBorderEdges(imageBox.Style.Borders).Safe();
         var authoredLayoutSize = ResolveAuthoredLayoutSize(imageBox, htmlAuthoredSize);
-        var loadResult = _imageMetadataResolver.Resolve(src, _resourceBaseDirectory, _maxImageSizeBytes);
+        var loadResult = _imageMetadataResolver.Resolve(src);
         var loadStatus = loadResult.Status;
         var intrinsicLayoutSize = ToLayoutSize(loadResult.IntrinsicSizePx);
         var contentSize = ResolveLayoutSize(authoredLayoutSize, intrinsicLayoutSize)
@@ -152,7 +146,7 @@ internal sealed class ImageSizingRules(LayoutGeometryRequest? request = null)
     /// </summary>
     private sealed class NullImageMetadataResolver : IImageMetadataResolver
     {
-        public ImageMetadataResult Resolve(string src, string baseDirectory, long maxBytes) =>
+        public ImageMetadataResult Resolve(string src) =>
             new()
             {
                 Src = src,

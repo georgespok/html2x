@@ -13,7 +13,7 @@ public sealed class SkiaFontCacheTests
     [Fact]
     public void Build_SkipsNonFontFilesAndDisposesNonDefaultTypefaces()
     {
-        var fileDirectory = new TestFileDirectory()
+        var fileDirectory = new TestFileSystemReader()
             .AddDirectory("fonts")
             .AddEnumeration(
                 "fonts",
@@ -39,7 +39,7 @@ public sealed class SkiaFontCacheTests
         var faces = FontDirectoryIndex.Build(fileDirectory, typefaceFactory, "fonts");
 
         faces.Count.ShouldBe(3);
-        faces.Select(face => face.Path).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], true);
+        faces.Select(face => face.FilePath).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], true);
         fileDirectory.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
         fileDirectory.EnumerateFilesCalls.ShouldBe([new("fonts", "*.*", true)]);
         typefaceFactory.FromFileCalls.ShouldBe(["fonts\\a.ttf", "fonts\\b.otf"]);
@@ -151,7 +151,7 @@ public sealed class SkiaFontCacheTests
         var best = FontDirectoryIndex.FindBestMatch((FontFaceEntry[])candidates, key);
 
         best.ShouldNotBeNull();
-        best.Path.ShouldBe(expectedPath);
+        best.FilePath.ShouldBe(expectedPath);
         best.FaceIndex.ShouldBe(expectedFaceIndex);
     }
 
@@ -177,7 +177,7 @@ public sealed class SkiaFontCacheTests
             3f,
             ResolvedFont: resolved);
 
-        var fileDirectory = new TestFileDirectory()
+        var fileDirectory = new TestFileSystemReader()
             .AddFile(resolvedPath);
 
         var typefaceFactory = new TestSkiaTypefaceFactory()
@@ -207,7 +207,7 @@ public sealed class SkiaFontCacheTests
             24f,
             9f,
             3f);
-        var fileDirectory = new TestFileDirectory();
+        var fileDirectory = new TestFileSystemReader();
         var typefaceFactory = new TestSkiaTypefaceFactory();
         using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
 

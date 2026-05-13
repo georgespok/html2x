@@ -26,14 +26,14 @@ namespace Html2x.Renderers.Pdf.Drawing;
 /// </remarks>
 internal sealed class SkiaFontCache : IDisposable
 {
-    private readonly IFileDirectory _fileDirectory;
+    private readonly IFileSystemReader _fileDirectory;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
     private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId =
         new(StringComparer.OrdinalIgnoreCase);
 
     internal SkiaFontCache(
-        IFileDirectory fileDirectory,
+        IFileSystemReader fileDirectory,
         ISkiaTypefaceFactory typefaceFactory)
     {
         _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));

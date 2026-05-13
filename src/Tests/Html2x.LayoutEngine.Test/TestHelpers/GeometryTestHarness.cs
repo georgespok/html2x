@@ -30,16 +30,14 @@ internal static class GeometryTestHarness
         var textMeasurer = CreateTextMeasurer();
         var imageMetadataResolver = new NoopImageMetadataResolver();
         var styleTreeBuilder = new StyleTreeBuilder();
-        var layoutGeometryBuilder = new LayoutGeometryBuilder(textMeasurer);
-        var fragmentBuilder = new FragmentBuilder();
+        var layoutGeometryBuilder = new LayoutGeometryConstruction(textMeasurer);
+        var fragmentBuilder = new FragmentTreeBuilder();
 
         var styleTree = await styleTreeBuilder.BuildAsync(html, options.Style, diagnosticsSink: diagnosticsSink);
         var geometryRequest = new LayoutGeometryRequest
         {
             PageSize = options.PageSize,
-            ImageMetadataResolver = imageMetadataResolver,
-            ResourceBaseDirectory = Directory.GetCurrentDirectory(),
-            MaxImageSizeBytes = 10 * 1024 * 1024
+            ImageMetadataResolver = imageMetadataResolver
         };
         var publishedLayout = layoutGeometryBuilder.Build(
             styleTree,
@@ -117,7 +115,7 @@ internal static class GeometryTestHarness
         {
             $"marker={FormatFloat(box.MarkerOffset)}",
             $"anonymous={box.IsAnonymous.ToString().ToLowerInvariant()}",
-            $"inlineBlock={box.IsInlineBlockContext.ToString().ToLowerInvariant()}"
+            $"inlineBlock={box.EstablishesInlineBlockFormattingContext.ToString().ToLowerInvariant()}"
         };
 
         if (box.DerivedColumnCount.HasValue)

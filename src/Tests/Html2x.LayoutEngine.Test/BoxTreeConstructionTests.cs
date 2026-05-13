@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Box;
+using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Style;
 using Shouldly;
 
@@ -15,7 +15,7 @@ public class BoxTreeConstructionTests
         var root = new BoxTreeConstruction().Build(styleTree);
 
         var divBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        divBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Div).ShouldBeTrue();
+        divBlock.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Div).ShouldBeTrue();
         divBlock.Children.Count.ShouldBe(1);
 
         var textInline = divBlock.Children[0].ShouldBeOfType<InlineBox>();
@@ -31,11 +31,11 @@ public class BoxTreeConstructionTests
         var root = new BoxTreeConstruction().Build(styleTree);
 
         var ulBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        ulBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Ul).ShouldBeTrue();
+        ulBlock.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Ul).ShouldBeTrue();
         ulBlock.Children.Count.ShouldBe(1);
 
         var liBlock = ulBlock.Children[0].ShouldBeOfType<BlockBox>();
-        liBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Li).ShouldBeTrue();
+        liBlock.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Li).ShouldBeTrue();
         liBlock.Children.Count.ShouldBe(2);
 
         var markerInline = liBlock.Children[0].ShouldBeOfType<InlineBox>();
@@ -61,9 +61,9 @@ public class BoxTreeConstructionTests
         firstInline.TextContent.ShouldBe("first line");
 
         var lineBreak = paragraphBlock.Children[1].ShouldBeOfType<InlineBox>();
-        lineBreak.Element!.IsTag(HtmlCssConstants.HtmlTags.Br).ShouldBeTrue();
+        lineBreak.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Br).ShouldBeTrue();
         lineBreak.SourceIdentity.NodeId.ShouldBe(
-            FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Br).Identity.NodeId);
+            FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssVocabulary.HtmlTags.Br).Identity.NodeId);
 
         var secondInline = paragraphBlock.Children[2].ShouldBeOfType<InlineBox>();
         secondInline.TextContent.ShouldBe("second line with spacing");
@@ -140,7 +140,7 @@ public class BoxTreeConstructionTests
         var root = new BoxTreeConstruction().Build(styleTree);
 
         var olBlock = root.Children[0].ShouldBeOfType<BlockBox>();
-        olBlock.Element!.IsTag(HtmlCssConstants.HtmlTags.Ol).ShouldBeTrue();
+        olBlock.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Ol).ShouldBeTrue();
         olBlock.Children.Count.ShouldBe(3);
 
         olBlock.Children[0].Children[0].ShouldBeOfType<InlineBox>().TextContent.ShouldBe("1. ");
@@ -163,11 +163,11 @@ public class BoxTreeConstructionTests
 
         var tableBox = root.Children[0].ShouldBeOfType<TableBox>();
         var sectionBox = tableBox.Children.ShouldHaveSingleItem().ShouldBeOfType<TableSectionBox>();
-        sectionBox.Element!.IsTag(HtmlCssConstants.HtmlTags.Tbody).ShouldBeTrue();
+        sectionBox.Element!.IsTag(HtmlCssVocabulary.HtmlTags.Tbody).ShouldBeTrue();
         sectionBox.Role.ShouldBe(BoxRole.TableSection);
         sectionBox.Children.ShouldHaveSingleItem()
             .ShouldBeOfType<TableRowBox>()
-            .Element!.IsTag(HtmlCssConstants.HtmlTags.Tr).ShouldBeTrue();
+            .Element!.IsTag(HtmlCssVocabulary.HtmlTags.Tr).ShouldBeTrue();
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class BoxTreeConstructionTests
         var root = new BoxTreeConstruction().Build(styleTree);
 
         var floatBox = root.Children.ShouldHaveSingleItem().ShouldBeOfType<FloatBox>();
-        floatBox.FloatDirection.ShouldBe(HtmlCssConstants.CssValues.Right);
+        floatBox.FloatDirection.ShouldBe(HtmlCssVocabulary.CssValues.Right);
     }
 
     [Fact]
@@ -193,8 +193,8 @@ public class BoxTreeConstructionTests
         var inlineImage = root.Children.ShouldHaveSingleItem().ShouldBeOfType<InlineBox>();
         var imageBox = inlineImage.Children.ShouldHaveSingleItem().ShouldBeOfType<ImageBox>();
         imageBox.Src.ShouldBe("hero.png");
-        imageBox.Element!.GetAttribute(HtmlCssConstants.HtmlAttributes.Width).ShouldBe("200");
-        imageBox.Element.GetAttribute(HtmlCssConstants.HtmlAttributes.Height).ShouldBe("100");
+        imageBox.Element!.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Width).ShouldBe("200");
+        imageBox.Element.GetAttribute(HtmlCssVocabulary.HtmlAttributes.Height).ShouldBe("100");
     }
 
     [Fact]
@@ -214,8 +214,8 @@ public class BoxTreeConstructionTests
         const string html = "<html><body><div id='main' class='alpha'><span>Text</span></div></body></html>";
         var styleTree = await BuildStyleTree(html);
         var rootStyle = styleTree.Root.ShouldNotBeNull();
-        var divStyle = FindFirst(rootStyle, HtmlCssConstants.HtmlTags.Div);
-        var spanStyle = FindFirst(rootStyle, HtmlCssConstants.HtmlTags.Span);
+        var divStyle = FindFirst(rootStyle, HtmlCssVocabulary.HtmlTags.Div);
+        var spanStyle = FindFirst(rootStyle, HtmlCssVocabulary.HtmlTags.Span);
 
         var root = new BoxTreeConstruction().Build(styleTree);
 
@@ -231,7 +231,7 @@ public class BoxTreeConstructionTests
     {
         const string html = "<html><body><p>alpha</p></body></html>";
         var styleTree = await BuildStyleTree(html);
-        var paragraphStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.P);
+        var paragraphStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssVocabulary.HtmlTags.P);
         var textContent = paragraphStyle.Content.ShouldHaveSingleItem();
         textContent.Kind.ShouldBe(StyleContentNodeKind.Text);
 
@@ -254,7 +254,7 @@ public class BoxTreeConstructionTests
     {
         const string html = "<html><body><span style='display: inline-block;'>inside</span></body></html>";
         var styleTree = await BuildStyleTree(html);
-        var spanStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Span);
+        var spanStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssVocabulary.HtmlTags.Span);
 
         var root = new BoxTreeConstruction().Build(styleTree);
 
@@ -273,7 +273,7 @@ public class BoxTreeConstructionTests
     {
         const string html = "<html><body><ul><li>item</li></ul></body></html>";
         var styleTree = await BuildStyleTree(html);
-        var listItemStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssConstants.HtmlTags.Li);
+        var listItemStyle = FindFirst(styleTree.Root.ShouldNotBeNull(), HtmlCssVocabulary.HtmlTags.Li);
 
         var root = new BoxTreeConstruction().Build(styleTree);
 

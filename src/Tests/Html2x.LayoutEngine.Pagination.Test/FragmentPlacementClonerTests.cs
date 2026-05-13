@@ -3,6 +3,7 @@ using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.RenderModel.Text;
 using Shouldly;
+using Html2x.RenderModel.Resources;
 
 namespace Html2x.LayoutEngine.Pagination.Test;
 
@@ -77,7 +78,28 @@ public sealed class FragmentPlacementClonerTests
         moved.IntrinsicSizePx.ShouldBe(source.IntrinsicSizePx);
         moved.Status.ShouldBe(ImageLoadStatus.OutOfScope);
         moved.IsMissing.ShouldBeTrue();
-        moved.IsOversize.ShouldBeFalse();
+        moved.IsOversized.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CloneWithPlacement_RuleFragment_OffsetsRect()
+    {
+        var source = new RuleFragment
+        {
+            FragmentId = 7,
+            PageNumber = 1,
+            Rect = new(10f, 20f, 80f, 2f),
+            Style = new(Borders: BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid)))
+        };
+
+        var moved = CreateCloner().CloneWithPlacement(source, 2, 5f, 8f)
+            .ShouldBeOfType<RuleFragment>();
+
+        moved.ShouldNotBeSameAs(source);
+        moved.FragmentId.ShouldBe(source.FragmentId);
+        moved.PageNumber.ShouldBe(2);
+        moved.Rect.ShouldBe(new(5f, 8f, 80f, 2f));
+        moved.Style.ShouldBe(source.Style);
     }
 
     [Fact]

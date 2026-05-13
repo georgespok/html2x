@@ -20,10 +20,10 @@ public sealed class LayoutGeometryProjectGraphTests
             .ShouldContainSet([
                 AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>(),
-                AssemblyName<FragmentBuilder>(),
+                AssemblyName<FragmentTreeBuilder>(),
                 AssemblyName<LayoutPaginator>(),
                 TestAssemblyNameFor<LayoutPaginator>(),
-                TestAssemblyNameFor<FragmentBuilder>(),
+                TestAssemblyNameFor<FragmentTreeBuilder>(),
                 TestAssemblyNameFor<StyleTreeBuilder>()
             ]);
     }
@@ -31,16 +31,16 @@ public sealed class LayoutGeometryProjectGraphTests
     [Fact]
     public void ProductionProjectGraph_FollowsOwnedModuleDirection()
     {
-        ProjectFor<LayoutBuilder>()
+        ProjectFor<LayoutPipeline>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
-                AssemblyName<FragmentBuilder>(), AssemblyName<LayoutGeometryBuilder>(), AssemblyName<LayoutPaginator>(),
+                AssemblyName<FragmentTreeBuilder>(), AssemblyName<LayoutGeometryConstruction>(), AssemblyName<LayoutPaginator>(),
                 AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
         ProjectFor<StyleTreeBuilder>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>());
         ProjectFor<StyleTreeBuilder>()
             .ShouldReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
-        ProjectFor<LayoutGeometryBuilder>()
+        ProjectFor<LayoutGeometryConstruction>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
         ProjectFor<LayoutPaginator>()
@@ -56,7 +56,7 @@ public sealed class LayoutGeometryProjectGraphTests
             .ShouldHaveNoProjectReferences();
         ProjectFor<HtmlLayout>()
             .ShouldHaveNoPackageReferences();
-        ProjectFor<FragmentBuilder>()
+        ProjectFor<FragmentTreeBuilder>()
             .ShouldReferenceProjects(AssemblyName<StyleNode>(), AssemblyName<HtmlLayout>());
         ProjectFor<ITextMeasurer>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>());
@@ -72,10 +72,10 @@ public sealed class LayoutGeometryProjectGraphTests
         renderer.ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>(),
             ResourcesAssemblyName, AssemblyName<ITextMeasurer>());
         renderer.ShouldNotReferenceProjects(
-            AssemblyName<LayoutBuilder>(),
+            AssemblyName<LayoutPipeline>(),
             AssemblyName<StyleNode>(),
-            AssemblyName<FragmentBuilder>(),
-            AssemblyName<LayoutGeometryBuilder>(),
+            AssemblyName<FragmentTreeBuilder>(),
+            AssemblyName<LayoutGeometryConstruction>(),
             AssemblyName<StyleTreeBuilder>());
     }
 
@@ -89,26 +89,26 @@ public sealed class LayoutGeometryProjectGraphTests
         Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(),
                 TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
             .ShouldNotReferenceProjects(
-                AssemblyName<LayoutBuilder>(),
-                AssemblyName<FragmentBuilder>(),
-                AssemblyName<LayoutGeometryBuilder>(),
+                AssemblyName<LayoutPipeline>(),
+                AssemblyName<FragmentTreeBuilder>(),
+                AssemblyName<LayoutGeometryConstruction>(),
                 AssemblyName<StyleTreeBuilder>(),
                 PdfRendererAssemblyName,
                 AssemblyName<ITextMeasurer>());
         Project("src", "Tests", TestAssemblyNameFor<StyleTreeBuilder>(),
                 TestAssemblyNameFor<StyleTreeBuilder>() + ".csproj")
-            .ShouldNotReferenceProjects(AssemblyName<LayoutBuilder>(), AssemblyName<LayoutGeometryBuilder>());
-        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryBuilder>(),
-                TestAssemblyNameFor<LayoutGeometryBuilder>() + ".csproj")
+            .ShouldNotReferenceProjects(AssemblyName<LayoutPipeline>(), AssemblyName<LayoutGeometryConstruction>());
+        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryConstruction>(),
+                TestAssemblyNameFor<LayoutGeometryConstruction>() + ".csproj")
             .ShouldNotReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
     }
 
     [Fact]
     public void RemovedCompatibilityFolders_AreAbsent()
     {
-        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Pagination"))
+        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutPipeline>(), "Pagination"))
             .ShouldBeFalse("pagination compatibility shims should not remain in the composition project.");
-        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutBuilder>(), "Fragment"))
+        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutPipeline>(), "Fragment"))
             .ShouldBeFalse("fragment compatibility shims should not remain in the composition project.");
     }
 }

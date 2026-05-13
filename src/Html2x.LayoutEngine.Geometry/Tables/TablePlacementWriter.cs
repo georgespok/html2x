@@ -1,12 +1,12 @@
-using Html2x.LayoutEngine.Geometry.Box;
-using Html2x.LayoutEngine.Geometry.Models;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
+using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Tables;
 
 /// <summary>
-///     Writes table layout results back to table, row, and cell boxes before fragment projection.
+///     Writes table layout results back to table, row, and cell boxes before fragment tree building.
 /// </summary>
 internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
 {
@@ -24,7 +24,7 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
         float x,
         float y,
         Spacing margin,
-        Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
+        Func<BlockChildLayoutRequest, float> layoutChildBlocks)
     {
         ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(result);
@@ -35,7 +35,7 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
         var tableGeometry = UsedGeometryRules.FromBorderBoxWithContentHeight(
             x,
             y,
-            result.ResolvedWidth,
+            result.ResolvedBorderBoxWidth,
             result.ContentHeight,
             padding,
             border,
@@ -83,7 +83,7 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
         TableLayoutRowResult rowResult,
         float tableX,
         float tableY,
-        Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
+        Func<BlockChildLayoutRequest, float> layoutChildBlocks)
     {
         var rowBlock = rowResult.SourceRow;
         _stateWriter.ApplyTableRowLayout(
@@ -101,7 +101,7 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
         TableLayoutCellPlacement placement,
         float tableX,
         float tableY,
-        Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
+        Func<BlockChildLayoutRequest, float> layoutChildBlocks)
     {
         var cellBlock = placement.SourceCell;
         _stateWriter.ApplyTableCellLayout(
@@ -116,7 +116,7 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
 
     private void LayoutTableCellContent(
         TableCellBox cell,
-        Func<BlockBox, float, float, float, float, float> layoutChildBlocks)
+        Func<BlockChildLayoutRequest, float> layoutChildBlocks)
     {
         var geometry = cell.UsedGeometry ?? throw new InvalidOperationException(
             "Table cell content layout requires UsedGeometry to be applied before child placement.");
@@ -125,11 +125,11 @@ internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
         var contentY = contentArea.Y;
         var contentWidth = contentArea.Width;
 
-        layoutChildBlocks(
+        layoutChildBlocks(new(
             cell,
             contentX,
             contentY,
             contentWidth,
-            contentY);
+            contentY));
     }
 }
