@@ -298,8 +298,6 @@ public sealed class LayoutGeometryTests
 
         layoutGeometryConstruction.ShouldUseIdentifier(nameof(BoxTreeConstruction));
         layoutGeometryConstruction.ShouldConstructType(nameof(BoxTreeLayout));
-        layoutGeometryConstruction.ShouldUseIdentifier(nameof(DefaultFontMetricsMeasurer));
-        layoutGeometryConstruction.ShouldUseIdentifier(nameof(LineHeightRules));
         boxTreeLayout.ShouldUseIdentifier(nameof(BlockBoxLayout));
         boxTreeLayout.ShouldUseIdentifier(nameof(PageContentArea));
         boxTreeLayout.ShouldUseIdentifier(nameof(PublishedLayoutTree));
@@ -312,7 +310,6 @@ public sealed class LayoutGeometryTests
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockSizingRules));
         blockBoxLayout.ShouldUseIdentifier(nameof(TableGridLayout));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PageContentArea));
-        blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter.WriteRuleResult));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PublishedBlockFacts));
         blockBoxLayout.ShouldNotConstructType(nameof(PublishedChildBlockItem));
         blockBoxLayout.ShouldNotConstructType(nameof(PublishedInlineFlowSegmentItem));
@@ -324,7 +321,6 @@ public sealed class LayoutGeometryTests
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedBlock));
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedInlineLayout));
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedBlockFlowItem));
-        blockFlow.ShouldInvoke(nameof(LayoutBoxStateWriter.ApplyInlineLayout));
         blockFlow.ShouldNotAssignToMember(nameof(BlockBox.InlineLayout));
         blockFlow.ShouldNotUseIdentifiers(
             nameof(StandardBlockLayoutRule),
@@ -340,9 +336,6 @@ public sealed class LayoutGeometryTests
             rule.ShouldNotUseIdentifier(nameof(PublishedBlockFlowItem));
         }
 
-        publishedLayoutWriter.ShouldContainMethodInType(
-            nameof(PublishedLayoutWriter),
-            nameof(PublishedLayoutWriter.WriteRuleResult));
         publishedLayoutWriter.ShouldUseIdentifier(nameof(PublishedBlockFacts));
         publishedLayoutWriter.ShouldConstructType(nameof(PublishedChildBlockItem));
         publishedLayoutWriter.ShouldConstructType(nameof(PublishedInlineFlowSegmentItem));

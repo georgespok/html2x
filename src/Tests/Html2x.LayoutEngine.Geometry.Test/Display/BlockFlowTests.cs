@@ -1,9 +1,5 @@
 using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Construction;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.InlineFlow;
-using Html2x.LayoutEngine.Geometry.Measurement;
-using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
@@ -472,16 +468,10 @@ public class BlockFlowTests
     public void BlockMeasurementAndLayout_ShareCollapsedMarginDiagnostics()
     {
         var diagnosticsSink = new RecordingDiagnosticsSink();
-        var formattingContext = new BlockFormattingMetricsMeasurement();
-        var sizingRules = new BlockSizingRules(formattingContext.MarginCollapseRules);
-        var imageSizingRules = new ImageSizingRules();
-        var inlineFlowLayout = new InlineFlowLayout(
-            new DefaultFontMetricsMeasurer(),
+        var harness = new PublishedLayoutTestHarness(
             CreateLinearMeasurer(10f),
-            new LineHeightRules(),
-            formattingContext,
-            imageSizingRules);
-        var tableGridLayout = new TableGridLayout(inlineFlowLayout, imageSizingRules);
+            diagnosticsSink);
+        var sizingRules = harness.BlockSizingRules;
 
         var container = new BlockBox(BoxRole.Block)
         {
@@ -517,14 +507,7 @@ public class BlockFlowTests
         };
         root.AddChild(container);
 
-        var engine = new BlockBoxLayout(
-            inlineFlowLayout,
-            tableGridLayout,
-            formattingContext,
-            imageSizingRules,
-            diagnosticsSink);
-
-        _ = PublishedLayoutTestRunner.Run(engine, root, new()
+        _ = harness.Layout(root, new()
         {
             Margin = new(),
             Size = new(400f, 400f)

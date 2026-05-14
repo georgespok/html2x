@@ -1,8 +1,4 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.BlockFlow;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.InlineFlow;
-using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
 using Shouldly;
@@ -311,29 +307,10 @@ public class BlockBoxLayoutTableTests
             .ShouldBeTrue();
     }
 
-    private BlockBoxLayout CreateBlockBoxLayout(IDiagnosticsSink? diagnosticsSink = null)
-    {
-        var formattingContext = new BlockFormattingMetricsMeasurement();
-        var imageSizingRules = new ImageSizingRules();
-        var inlineFlowLayout = new InlineFlowLayout(
-            new DefaultFontMetricsMeasurer(),
-            _textMeasurer,
-            new LineHeightRules(),
-            formattingContext,
-            imageSizingRules,
-            diagnosticsSink);
-        return new(
-            inlineFlowLayout,
-            new(inlineFlowLayout, imageSizingRules),
-            formattingContext,
-            imageSizingRules,
-            diagnosticsSink);
-    }
-
     private IReadOnlyList<BlockBox> LayoutMutableBlocks(BoxNode root, IDiagnosticsSink? diagnosticsSink = null)
     {
         var page = DefaultPage();
-        _ = PublishedLayoutTestRunner.Run(CreateBlockBoxLayout(diagnosticsSink), root, page);
+        _ = new PublishedLayoutTestHarness(_textMeasurer, diagnosticsSink).Layout(root, page);
 
         if (root is TableBox tableRoot)
         {

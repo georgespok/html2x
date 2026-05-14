@@ -1,9 +1,5 @@
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry.BlockFlow;
-using Html2x.LayoutEngine.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.InlineFlow;
-using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
@@ -227,26 +223,8 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         AssertPublishedFragments(published, fragments);
     }
 
-    private BlockBoxLayout CreateEngine()
-    {
-        var formattingContext = new BlockFormattingMetricsMeasurement();
-        var imageSizingRules = new ImageSizingRules();
-        var inlineFlowLayout = new InlineFlowLayout(
-            new DefaultFontMetricsMeasurer(),
-            _textMeasurer,
-            new LineHeightRules(),
-            formattingContext,
-            imageSizingRules);
-
-        return new(
-            inlineFlowLayout,
-            new(inlineFlowLayout, imageSizingRules),
-            formattingContext,
-            imageSizingRules);
-    }
-
     private PublishedLayoutTree ResolvePublished(BoxNode root, PageBox page) =>
-        PublishedLayoutTestRunner.Run(CreateEngine(), root, page);
+        new PublishedLayoutTestHarness(_textMeasurer).Layout(root, page);
 
     private PublishedBlock ResolveSingleBlock(BlockBox block) =>
         ResolvePublished(block.Parent.ShouldBeOfType<BlockBox>(), DefaultBlockPage())

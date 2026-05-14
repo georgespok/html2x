@@ -1,5 +1,4 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
-using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
@@ -28,20 +27,13 @@ public sealed class GeometryContractTests
                 WidthPt = 40f
             }
         };
-        var inlineFlowLayout = new InlineFlowLayout();
-        var imageSizingRules = new ImageSizingRules();
-        var layoutEngine = new BlockBoxLayout(
-            inlineFlowLayout,
-            new(inlineFlowLayout, imageSizingRules),
-            new(),
-            imageSizingRules);
         var page = new PageBox
         {
             Size = new(100f, 200f),
             Margin = new(0f, 0f, 0f, 10f)
         };
 
-        _ = PublishedLayoutTestRunner.Run(layoutEngine, table, page);
+        _ = new PublishedLayoutTestHarness().Layout(table, page);
 
         table.UsedGeometry.ShouldNotBeNull();
         table.UsedGeometry.Value.BorderBoxRect.ShouldBe(new(10f, 0f, 40f, 0f));
@@ -309,13 +301,6 @@ public sealed class GeometryContractTests
             Style = new()
         };
         root.AddChild(block);
-        var inlineFlowLayout = new InlineFlowLayout();
-        var imageSizingRules = new ImageSizingRules();
-        var layoutEngine = new BlockBoxLayout(
-            inlineFlowLayout,
-            new(inlineFlowLayout, imageSizingRules),
-            new(),
-            imageSizingRules);
         var page = new PageBox
         {
             Size = new(100f, 200f),
@@ -323,7 +308,7 @@ public sealed class GeometryContractTests
         };
 
         var exception = Should.Throw<ArgumentOutOfRangeException>(() =>
-            PublishedLayoutTestRunner.Run(layoutEngine, root, page));
+            new PublishedLayoutTestHarness().Layout(root, page));
 
         exception.ParamName.ShouldBe("margin");
     }
