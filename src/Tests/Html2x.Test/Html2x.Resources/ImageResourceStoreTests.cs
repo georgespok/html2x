@@ -143,4 +143,29 @@ public sealed class ImageResourceStoreTests
         Assert.Equal(ImageLoadStatus.InvalidDataUri, resource.Status);
         Assert.Null(resource.Bytes);
     }
+
+    [Theory]
+    [InlineData("data:text/plain,%")]
+    [InlineData("data:text/plain,%zz")]
+    public void Load_MalformedTextDataUriPercentEncoding_ReturnsInvalidDataUri(string src)
+    {
+        var store = new ImageResourceStore(null, 1024);
+
+        var resource = store.Load(src);
+
+        Assert.Equal(ImageLoadStatus.InvalidDataUri, resource.Status);
+        Assert.Null(resource.Bytes);
+    }
+
+    [Fact]
+    public void Load_MalformedTextDataUriSurrogate_ReturnsInvalidDataUri()
+    {
+        var store = new ImageResourceStore(null, 1024);
+        var src = "data:text/plain," + '\uD800';
+
+        var resource = store.Load(src);
+
+        Assert.Equal(ImageLoadStatus.InvalidDataUri, resource.Status);
+        Assert.Null(resource.Bytes);
+    }
 }

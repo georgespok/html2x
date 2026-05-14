@@ -63,6 +63,14 @@ option validation happens earlier and throws without diagnostics attachment.
 
 The layout start record includes `htmlLength`. Raw HTML is omitted by default. Consumers can opt in through `DiagnosticsOptions.IncludeRawHtml`; `DiagnosticsOptions.MaxRawHtmlLength` caps the captured value.
 
+Image render diagnostics use a bounded display source in the `src` field and
+structural path. Data URI payloads are omitted from that display value, and
+rooted or parent-traversal paths are reduced to a path display with the file
+name. Raw image source context is omitted by default. When
+`DiagnosticsOptions.IncludeRawHtml` is enabled, the renderer may capture the
+raw image source in `DiagnosticContext.RawUserInput`, capped by
+`DiagnosticsOptions.MaxRawHtmlLength`.
+
 ## Ownership
 
 Generic diagnostics contracts that cross project boundaries belong in
@@ -161,5 +169,8 @@ Emitters should include useful context when available:
 - Raw style declaration or value.
 - Structural path through DOM, style tree, box tree, fragments, table, or pagination.
 - Raw input when diagnostics are explicitly enabled and the value is needed for reproduction.
+
+Large or sensitive producer inputs should use bounded display fields by
+default and reserve raw context for explicit opt-in diagnostics.
 
 Missing context should not make the event unreadable.

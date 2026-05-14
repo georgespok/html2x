@@ -83,7 +83,9 @@ Coarse failure policy:
   are reported as `OutOfScope`.
 - Files and data URIs that exceed the configured byte limit are reported as
   `Oversized` before image decoding.
-- Malformed data URIs are reported as `InvalidDataUri`.
+- Malformed data URIs are reported as `InvalidDataUri`, including invalid
+  base64 payloads, malformed percent-encoded text payloads, and invalid text
+  surrogate input.
 - Byte payloads that load but cannot be decoded as an image are reported as
   `DecodeFailed`.
 
@@ -92,6 +94,9 @@ Coarse failure policy:
 Image rendering uses `image/render`. Recoverable image failures are warnings.
 Successful image rendering is informational.
 
-Payloads should include status, rendered size, border metadata, source context,
-and raw image source when diagnostics are enabled and configured to include raw
-input.
+Payloads include status, rendered size, border metadata, and source context.
+The `src` field and structural path use a bounded display source. Data URI
+payloads are omitted from that display value, and rooted or parent-traversal
+paths are reduced to a path display with the file name. Raw image source
+context is omitted by default and is captured only when diagnostics are
+configured to include raw input, capped by `MaxRawHtmlLength`.

@@ -15,9 +15,13 @@ namespace Html2x.Renderers.Pdf;
 /// </summary>
 internal sealed class ImageRenderer
 {
+    private const int MaxDiagnosticDisplaySourceLength = 256;
+
+    private readonly bool _includeRawImageSources;
     private readonly IDiagnosticsSink? _diagnosticsSink;
     private readonly IImageResourceReader? _imageResources;
     private readonly long _maxImageSizeBytes;
+    private readonly int _maxRawImageSourceLength;
     private readonly string _resourceBaseDirectory;
 
     public ImageRenderer(
@@ -28,6 +32,8 @@ internal sealed class ImageRenderer
 
         _resourceBaseDirectory = ImageResourceLoader.ResolveBaseDirectory(settings.ResourceBaseDirectory);
         _maxImageSizeBytes = settings.MaxImageSizeBytes;
+        _includeRawImageSources = settings.IncludeRawImageSources;
+        _maxRawImageSourceLength = settings.MaxRawImageSourceLength;
         _imageResources = settings.ImageResources;
         _diagnosticsSink = diagnosticsSink;
     }
@@ -124,12 +130,15 @@ internal sealed class ImageRenderer
         var severity = status == ImageLoadStatus.Ok
             ? DiagnosticSeverity.Info
             : DiagnosticSeverity.Warning;
+        var diagnosticSource = CreateDiagnosticSource(command.Src);
         var context = new DiagnosticContext(
             null,
             ImageRenderDiagnosticNames.ContextValues.ImageElement,
             null,
-            $"image:{command.Src}",
-            command.Src);
+            $"image:{diagnosticSource}",
+            _includeRawImageSources
+                ? TruncateRaw(command.Src, _maxRawImageSourceLength)
+                : null);
 
         _diagnosticsSink?.Emit(new(
             ImageRenderDiagnosticNames.Stages.Render,
@@ -138,12 +147,86 @@ internal sealed class ImageRenderer
             status == ImageLoadStatus.Ok ? null : $"Image render status: {status}.",
             context,
             DiagnosticFields.Create(
-                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Src, command.Src),
+                DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Src, diagnosticSource),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Status, DiagnosticValue.FromEnum(status)),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedWidth, width),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.RenderedHeight, height),
                 DiagnosticFields.Field(ImageRenderDiagnosticNames.Fields.Borders, MapBorders(command.Style.Borders)))));
     }
+
+    private static string CreateDiagnosticSource(string src)
+    {
+        if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return CreateDataUriDiagnosticSource(src);
+        }
+
+        if (IsSensitivePath(src))
+        {
+            var fileName = GetPathDisplayFileName(src);
+            return string.IsNullOrWhiteSpace(fileName)
+                ? "[path]"
+                : TruncateDisplay($"[path]/{fileName}", MaxDiagnosticDisplaySourceLength);
+        }
+
+        return TruncateDisplay(src, MaxDiagnosticDisplaySourceLength);
+    }
+
+    private static string CreateDataUriDiagnosticSource(string src)
+    {
+        var commaIndex = src.IndexOf(',', StringComparison.Ordinal);
+        var metadata = commaIndex < 0
+            ? "data:"
+            : src[..commaIndex];
+
+        return TruncateDisplay($"{metadata},[omitted]", MaxDiagnosticDisplaySourceLength);
+    }
+
+    private static bool IsSensitivePath(string src) =>
+        Path.IsPathRooted(src) ||
+        HasWindowsDriveRoot(src) ||
+        HasParentPathSegment(src);
+
+    private static bool HasWindowsDriveRoot(string src) =>
+        src.Length >= 3 &&
+        char.IsAsciiLetter(src[0]) &&
+        src[1] == ':' &&
+        src[2] is '\\' or '/';
+
+    private static bool HasParentPathSegment(string src)
+    {
+        var segments = src.Split(
+            ['/', '\\'],
+            StringSplitOptions.RemoveEmptyEntries);
+        return segments.Contains("..", StringComparer.Ordinal);
+    }
+
+    private static string GetPathDisplayFileName(string src)
+    {
+        var normalized = src.Replace('\\', '/');
+        var separatorIndex = normalized.LastIndexOf('/');
+        return separatorIndex < 0
+            ? normalized
+            : normalized[(separatorIndex + 1)..];
+    }
+
+    private static string TruncateDisplay(string value, int maxLength)
+    {
+        if (maxLength <= 0 || value.Length <= maxLength)
+        {
+            return value;
+        }
+
+        const string marker = "...";
+        return maxLength <= marker.Length
+            ? value[..maxLength]
+            : string.Concat(value.AsSpan(0, maxLength - marker.Length), marker);
+    }
+
+    private static string TruncateRaw(string value, int maxLength) =>
+        maxLength <= 0 || value.Length <= maxLength
+            ? value
+            : value[..maxLength];
 
     private static DiagnosticObject MapBorders(BorderEdges? borders)
     {

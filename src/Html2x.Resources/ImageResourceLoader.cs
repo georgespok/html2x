@@ -118,7 +118,12 @@ internal static class ImageResourceLoader
         var estimatedBytes = isBase64
             ? EstimateBase64DecodedLength(payload)
             : EstimateTextDataUriByteCount(payload);
-        if (estimatedBytes > maxBytes)
+        if (estimatedBytes is null)
+        {
+            return ImageBytesResult.Failed(ImageLoadStatus.InvalidDataUri);
+        }
+
+        if (estimatedBytes.Value > maxBytes)
         {
             return ImageBytesResult.Failed(ImageLoadStatus.Oversized);
         }

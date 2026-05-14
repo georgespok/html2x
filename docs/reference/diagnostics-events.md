@@ -151,6 +151,13 @@ block-boundary only.
 
 Recoverable image failures are warnings. Successful image rendering is informational.
 
+The `src` field is a bounded diagnostic display source, not guaranteed to be
+the exact authored source. Data URI payloads are omitted from `src`; rooted or
+parent-traversal paths may be reduced to a path display with the file name.
+Raw image source context is omitted by default. When
+`DiagnosticsOptions.IncludeRawHtml` is enabled, `context.rawUserInput` may
+contain the raw image source capped by `DiagnosticsOptions.MaxRawHtmlLength`.
+
 Known status values:
 
 - `Ok`

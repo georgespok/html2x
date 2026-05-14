@@ -49,6 +49,14 @@ internal sealed class PdfRenderer
                 settings.MaxImageSizeBytes,
                 "PdfRenderSettings.MaxImageSizeBytes must be greater than zero.");
         }
+
+        if (settings.IncludeRawImageSources && settings.MaxRawImageSourceLength <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(PdfRenderSettings.MaxRawImageSourceLength),
+                settings.MaxRawImageSourceLength,
+                "PdfRenderSettings.MaxRawImageSourceLength must be greater than zero.");
+        }
     }
 
     private byte[] RenderWithSkia(
@@ -74,11 +82,10 @@ internal sealed class PdfRenderer
         {
             cancellationToken.ThrowIfCancellationRequested();
             var size = page.PageSize;
-            using var canvas = document.BeginPage(size.Width, size.Height);
-            if (canvas is null)
-            {
-                continue;
-            }
+            ValidatePageSize(page);
+            using var canvas = document.BeginPage(size.Width, size.Height)
+                ?? throw new InvalidOperationException(
+                    $"Failed to create Skia PDF page {page.PageNumber} ({size.Width}x{size.Height}).");
 
             var commands = paintOrder.Resolve(page);
             drawer.Draw(canvas, commands);
@@ -88,5 +95,20 @@ internal sealed class PdfRenderer
         document.Close();
 
         return stream.ToArray();
+    }
+
+    private static void ValidatePageSize(LayoutPage page)
+    {
+        var size = page.PageSize;
+        if (float.IsFinite(size.Width) &&
+            float.IsFinite(size.Height) &&
+            size.Width > 0f &&
+            size.Height > 0f)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Cannot render PDF page {page.PageNumber}: page size must have finite positive width and height.");
     }
 }

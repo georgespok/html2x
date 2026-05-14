@@ -34,6 +34,8 @@ internal static class HtmlConverterSettingsMapper
         {
             ResourceBaseDirectory = baseDirectory,
             MaxImageSizeBytes = options.Resources.MaxImageSizeBytes,
+            IncludeRawImageSources = options.Diagnostics.IncludeRawHtml,
+            MaxRawImageSourceLength = options.Diagnostics.MaxRawHtmlLength,
             ImageResources = imageResources
         };
     }

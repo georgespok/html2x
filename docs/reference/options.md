@@ -94,7 +94,9 @@ as converter configuration before layout begins.
 records. `DiagnosticsOptions.IncludeRawHtml` controls raw HTML capture, and
 `DiagnosticsOptions.MaxRawHtmlLength` caps captured payload length.
 
-Raw HTML is omitted by default.
+Raw HTML is omitted by default. The same opt-in also allows renderer image
+diagnostics to include capped raw image source context. Without the opt-in,
+image diagnostics use bounded display source values only.
 
 ## Internal Mapping
 

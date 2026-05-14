@@ -26,7 +26,7 @@ public class SkiaDiagnosticsTests
         var record = sink.Records.Single(static x => x.Name == "image/render");
         record.Stage.ShouldBe("stage/render");
         record.Severity.ShouldBe(DiagnosticSeverity.Warning);
-        record.Context.ShouldNotBeNull().RawUserInput.ShouldBe("missing.png");
+        record.Context.ShouldNotBeNull().RawUserInput.ShouldBeNull();
         record.Fields["src"].ShouldBe(new DiagnosticStringValue("missing.png"));
         record.Fields["status"].ShouldBe(new DiagnosticStringValue("Missing"));
         record.Fields["renderedWidth"].ShouldBe(new DiagnosticNumberValue(50f));

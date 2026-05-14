@@ -98,7 +98,9 @@ diagnostics JSON.
 
 Raw HTML is omitted from diagnostics by default. To include it for local
 troubleshooting, set `DiagnosticsOptions.IncludeRawHtml = true`. The captured
-payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
+payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`. The same opt-in
+allows renderer image diagnostics to include capped raw image source context;
+otherwise image diagnostics expose only a bounded display source.
 
 ## Result
 

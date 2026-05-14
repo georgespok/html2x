@@ -145,6 +145,41 @@ public class PdfRendererTests
         exception.ParamName.ShouldBe("MaxImageSizeBytes");
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Render_InvalidMaxRawImageSourceLength_Throws(int maxRawImageSourceLength)
+    {
+        var renderer = new PdfRenderer();
+        var settings = new PdfRenderSettings
+        {
+            IncludeRawImageSources = true,
+            MaxRawImageSourceLength = maxRawImageSourceLength
+        };
+
+        var exception =
+            Should.Throw<ArgumentOutOfRangeException>(() =>
+                renderer.Render(CreateSimpleLayout(), settings));
+
+        exception.Message.ShouldContain("PdfRenderSettings.MaxRawImageSourceLength must be greater than zero.");
+        exception.ParamName.ShouldBe("MaxRawImageSourceLength");
+    }
+
+    [Theory]
+    [InlineData(0f, 792f)]
+    [InlineData(612f, 0f)]
+    [InlineData(float.NaN, 792f)]
+    [InlineData(612f, float.PositiveInfinity)]
+    public void Render_InvalidPageSize_ThrowsInsteadOfSkippingPage(float width, float height)
+    {
+        var renderer = new PdfRenderer();
+        var layout = CreateLayoutWithPageSize(width, height);
+
+        var exception = Should.Throw<InvalidOperationException>(() => renderer.Render(layout, new()));
+
+        exception.Message.ShouldBe("Cannot render PDF page 1: page size must have finite positive width and height.");
+    }
+
     private static HtmlLayout CreateSimpleLayout()
     {
         var layout = new HtmlLayout();
@@ -158,6 +193,18 @@ public class PdfRendererTests
         );
 
         layout.AddPage(page);
+        return layout;
+    }
+
+    private static HtmlLayout CreateLayoutWithPageSize(float width, float height)
+    {
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(width, height),
+            new(0, 0, 0, 0),
+            CreateSimpleContent(),
+            1,
+            new ColorRgba(255, 255, 255, 255)));
         return layout;
     }
 

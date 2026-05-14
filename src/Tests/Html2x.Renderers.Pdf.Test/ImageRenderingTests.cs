@@ -77,11 +77,82 @@ public class ImageRenderingTests
         evt.Context.ShouldNotBeNull();
         evt.Context!.ElementIdentity.ShouldBe("img");
         evt.Context.StructuralPath.ShouldBe("image:missing.png");
-        evt.Context.RawUserInput.ShouldBe("missing.png");
+        evt.Context.RawUserInput.ShouldBeNull();
         evt.Fields["src"].ShouldBe(new DiagnosticStringValue("missing.png"));
         evt.Fields["status"].ShouldBe(new DiagnosticStringValue("Missing"));
         GetNumber(evt, "renderedWidth").ShouldBe(120d, 1d);
         GetNumber(evt, "renderedHeight").ShouldBe(80d, 1d);
+    }
+
+    [Fact]
+    public void Render_ImageDiagnostics_BoundLargeDataUriWhenRawInputDisabled()
+    {
+        var largeDataUri = "data:image/png;base64," + new string('A', 1024);
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
+            new List<Fragment>
+            {
+                CreateImageFragment(24, 60, 120, 80, ImageLoadStatus.InvalidDataUri, src: largeDataUri)
+            }));
+
+        var (_, diagnostics) = RenderLayout(layout);
+
+        var evt = diagnostics.ShouldHaveSingleItem();
+        evt.Context.ShouldNotBeNull();
+        evt.Context!.RawUserInput.ShouldBeNull();
+        evt.Context.StructuralPath.ShouldBe("image:data:image/png;base64,[omitted]");
+        evt.Fields["src"].ShouldBe(new DiagnosticStringValue("data:image/png;base64,[omitted]"));
+    }
+
+    [Theory]
+    [InlineData("../private/outside.png")]
+    [InlineData(@"C:\Users\alice\private\outside.png")]
+    public void Render_ImageDiagnostics_HideSensitivePathWhenRawInputDisabled(string src)
+    {
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
+            new List<Fragment>
+            {
+                CreateImageFragment(24, 60, 120, 80, ImageLoadStatus.OutOfScope, src: src)
+            }));
+
+        var (_, diagnostics) = RenderLayout(layout);
+
+        var evt = diagnostics.ShouldHaveSingleItem();
+        evt.Context.ShouldNotBeNull();
+        evt.Context!.RawUserInput.ShouldBeNull();
+        evt.Context.StructuralPath.ShouldBe("image:[path]/outside.png");
+        evt.Fields["src"].ShouldBe(new DiagnosticStringValue("[path]/outside.png"));
+    }
+
+    [Fact]
+    public void Render_ImageDiagnostics_CapturesCappedRawInputWhenEnabled()
+    {
+        const string src = "images/private/missing-file.png";
+        var layout = new HtmlLayout();
+        layout.AddPage(new(
+            new(612, 792),
+            new(24, 24, 24, 24),
+            new List<Fragment>
+            {
+                CreateImageFragment(24, 60, 120, 80, ImageLoadStatus.Missing, src: src)
+            }));
+        var settings = new PdfRenderSettings
+        {
+            IncludeRawImageSources = true,
+            MaxRawImageSourceLength = 12
+        };
+
+        var (_, diagnostics) = RenderLayout(layout, settings);
+
+        var evt = diagnostics.ShouldHaveSingleItem();
+        evt.Context.ShouldNotBeNull();
+        evt.Context!.RawUserInput.ShouldBe(src[..12]);
+        evt.Fields["src"].ShouldBe(new DiagnosticStringValue(src));
     }
 
     [Theory]

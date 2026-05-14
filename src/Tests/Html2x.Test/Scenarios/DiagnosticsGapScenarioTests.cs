@@ -82,7 +82,7 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
         var imageEvent = diagnostics.Records.Single(static e => e.Name == "image/render");
         imageEvent.Severity.ShouldBe(DiagnosticSeverity.Warning);
         imageEvent.Context.ShouldNotBeNull();
-        imageEvent.Context!.RawUserInput.ShouldBe("missing-diagnostics-image.png");
+        imageEvent.Context!.RawUserInput.ShouldBeNull();
         StringField(imageEvent, "status").ShouldBe("Missing");
         NumberField(imageEvent, "renderedWidth").ShouldBeGreaterThan(0);
 

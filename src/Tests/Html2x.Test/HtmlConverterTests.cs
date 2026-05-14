@@ -713,6 +713,58 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     }
 
     [Fact]
+    public async Task ToPdfAsync_ImageDiagnosticsRawInputDisabled_OmitsRawSource()
+    {
+        const string html = """
+                            <html>
+                              <body>
+                                <img src="../private/missing.png" width="16" height="16" />
+                              </body>
+                            </html>
+                            """;
+
+        var result = await _htmlConverter.ToPdfAsync(html, CreateDiagnosticsOptions());
+
+        var imageRecord = SingleImageRecord(result);
+        Assert.NotNull(imageRecord.Context);
+        Assert.Null(imageRecord.Context.RawUserInput);
+        Assert.Equal("[path]/missing.png", StringField(imageRecord, "src"));
+    }
+
+    [Fact]
+    public async Task ToPdfAsync_ImageDiagnosticsRawInputEnabled_CapsRawSource()
+    {
+        const string src = "images/private/missing-diagnostics-image.png";
+        const string html = $"""
+                             <html>
+                               <body>
+                                 <img src="{src}" width="16" height="16" />
+                               </body>
+                             </html>
+                             """;
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new()
+            {
+                FontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Inter-Regular.ttf")
+            },
+            Diagnostics = new()
+            {
+                EnableDiagnostics = true,
+                IncludeRawHtml = true,
+                MaxRawHtmlLength = 14
+            }
+        };
+
+        var result = await _htmlConverter.ToPdfAsync(html, options);
+
+        var imageRecord = SingleImageRecord(result);
+        Assert.NotNull(imageRecord.Context);
+        Assert.Equal(src[..14], imageRecord.Context.RawUserInput);
+        Assert.Equal(src, StringField(imageRecord, "src"));
+    }
+
+    [Fact]
     public async Task ToPdfAsync_PdfRenderFailure_AttachesDiagnosticsAfterLayoutSuccess()
     {
         const string html = "<html><body><p>Renderer font failure</p></body></html>";

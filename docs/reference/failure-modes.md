@@ -44,7 +44,8 @@ unsupported image features.
 
 Contract violations should fail close to the stage that introduced invalid
 state. Examples include non-finite published geometry, negative renderable
-sizes, or missing required renderer facts.
+sizes, invalid renderer page sizes, failed PDF page creation, or missing
+required renderer facts.
 
 ## Cancellation
 

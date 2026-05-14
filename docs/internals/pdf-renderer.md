@@ -31,11 +31,15 @@ in the layout or fragment contract.
 ```text
 HtmlLayout
   -> page iteration
+  -> page size and Skia page creation validation
   -> fragment dispatch
   -> paint command resolution
   -> Skia PDF canvas drawing
   -> PDF bytes
 ```
+
+The renderer fails if a page has a non-finite or non-positive size, or if
+SkiaSharp cannot begin a PDF page. It must not silently skip a requested page.
 
 ## Paint Ordering
 
