@@ -9,6 +9,7 @@ The main public entry point is `HtmlConverter`.
 
 ```csharp
 using Html2x;
+using Html2x.Options;
 
 var converter = new HtmlConverter();
 
@@ -110,7 +111,7 @@ payload is capped by `DiagnosticsOptions.MaxRawHtmlLength`.
 ## Public Surface
 
 The supported consumer facade is `HtmlConverter`, `HtmlConverterDependencies`,
-`HtmlConverterOptions`, and `HtmlToPdfResult`.
+`HtmlToPdfResult`, and option types under `Html2x.Options`.
 
 Public contract classification:
 

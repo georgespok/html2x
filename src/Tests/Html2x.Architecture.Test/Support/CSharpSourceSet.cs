@@ -1,6 +1,6 @@
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
 internal sealed class CSharpSourceSet
 {
@@ -13,9 +13,9 @@ internal sealed class CSharpSourceSet
 
     public static CSharpSourceSet FromDirectory(params string[] pathSegments)
     {
-        var directory = ArchitecturePaths.PathFromRoot(pathSegments);
-        var files = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !ArchitecturePaths.IsBuildOutputPath(Path.GetRelativePath(directory, file)))
+        var directory = Paths.PathFromRoot(pathSegments);
+        var files = Directory.GetFiles(directory, RepositoryLayout.CSharpFilePattern, SearchOption.AllDirectories)
+            .Where(file => !Paths.IsBuildOutputPath(Path.GetRelativePath(directory, file)))
             .Select(CSharpSourceFile.Load)
             .ToArray();
 

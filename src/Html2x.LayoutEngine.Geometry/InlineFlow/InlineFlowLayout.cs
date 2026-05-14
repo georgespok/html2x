@@ -125,10 +125,10 @@ internal sealed class InlineFlowLayout
             segment.AvailableWidth,
             segment.BlockContext.TextAlign);
 
-    private sealed class FallbackTextMeasurer(IFontMetricsMeasurer metricsProvider) : ITextMeasurer
+    private sealed class FallbackTextMeasurer(IFontMetricsMeasurer metricsMeasurer) : ITextMeasurer
     {
-        private readonly IFontMetricsMeasurer _metricsProvider =
-            metricsProvider ?? throw new ArgumentNullException(nameof(metricsProvider));
+        private readonly IFontMetricsMeasurer _metricsMeasurer =
+            metricsMeasurer ?? throw new ArgumentNullException(nameof(metricsMeasurer));
 
         public TextMeasurement Measure(FontKey font, float sizePt, string text)
         {
@@ -138,9 +138,9 @@ internal sealed class InlineFlowLayout
         }
 
         private float MeasureWidth(FontKey font, float sizePt, string text) =>
-            _metricsProvider.MeasureTextWidth(font, sizePt, text);
+            _metricsMeasurer.MeasureTextWidth(font, sizePt, text);
 
         private (float Ascent, float Descent) GetMetrics(FontKey font, float sizePt) =>
-            _metricsProvider.GetMetrics(font, sizePt);
+            _metricsMeasurer.GetMetrics(font, sizePt);
     }
 }

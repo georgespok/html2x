@@ -29,12 +29,12 @@ public class InlineRunConstructionTests
         });
         inlineBlock.AddChild(contentBlock);
 
-        var factory = new InlineRunConstruction(new FakeMetricsProvider());
+        var factory = new InlineRunConstruction(new FakeMetricsMeasurer());
 
         factory.BuildInlineBlockRun(inlineBlock, 1, null).ShouldBeNull();
     }
 
-    private sealed class FakeMetricsProvider : IFontMetricsMeasurer
+    private sealed class FakeMetricsMeasurer : IFontMetricsMeasurer
     {
         public FontKey GetFontKey(ComputedStyle style) => new("Test", FontWeight.W400, FontStyle.Normal);
 

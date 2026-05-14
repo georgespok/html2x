@@ -55,6 +55,20 @@ Lifecycle states:
 - `Succeeded`
 - `Failed`
 - `Skipped`
+- `Canceled`
+
+Facade lifecycle fields:
+
+- `LayoutBuild` `stage/started`: `htmlLength`, plus `html` and
+  `htmlTruncated` only when raw HTML diagnostics are enabled.
+- `LayoutBuild` `stage/succeeded`: `snapshot`.
+- `PdfRender` `stage/succeeded`: `pdfSize` and `pageCount`.
+
+If configuration fails after diagnostics collection starts, `Configuration`
+emits `stage/failed`, while `LayoutBuild` and `PdfRender` emit
+`stage/skipped`. If `LayoutBuild` fails or is canceled, `PdfRender` is skipped.
+If `PdfRender` fails or is canceled after it starts, the report is attached to
+the thrown exception and no downstream stage is emitted.
 
 ## Style
 

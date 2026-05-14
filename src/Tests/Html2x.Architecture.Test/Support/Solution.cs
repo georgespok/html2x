@@ -1,18 +1,18 @@
 using System.Text.RegularExpressions;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal sealed class ArchitectureSolution
+internal sealed class Solution
 {
     private readonly string _path;
 
-    private ArchitectureSolution(string path)
+    private Solution(string path)
     {
         _path = path;
     }
 
-    public static ArchitectureSolution Load(params string[] pathSegments) =>
-        new(ArchitecturePaths.PathFromRoot(pathSegments));
+    public static Solution Load(params string[] pathSegments) =>
+        new(Paths.PathFromRoot(pathSegments));
 
     public IReadOnlyList<string> ProjectNames()
     {

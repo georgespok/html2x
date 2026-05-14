@@ -127,6 +127,46 @@ public sealed class FragmentTreeBuilderTests
     }
 
     [Fact]
+    public void Build_PassesReserveBlockIdsBeforeFlowAndSpecialFragments()
+    {
+        var childSegment = PublishedLayoutFragmentTestBuilder.Segment(
+            PublishedLayoutFragmentTestBuilder.TextItem(0, "child"));
+        var child = PublishedLayoutFragmentTestBuilder.Block(
+            "body/div/p",
+            1,
+            inlineLayout: PublishedLayoutFragmentTestBuilder.InlineLayout(childSegment),
+            flow:
+            [
+                new PublishedInlineFlowSegmentItem(0, childSegment)
+            ]);
+        var rootSegment = PublishedLayoutFragmentTestBuilder.Segment(
+            PublishedLayoutFragmentTestBuilder.TextItem(0, "root"));
+        var root = PublishedLayoutFragmentTestBuilder.Block(
+            inlineLayout: PublishedLayoutFragmentTestBuilder.InlineLayout(rootSegment),
+            children: [child],
+            rule: new(),
+            flow:
+            [
+                new PublishedInlineFlowSegmentItem(0, rootSegment),
+                new PublishedChildBlockItem(1, child)
+            ]);
+
+        var fragments = Build(PublishedLayoutFragmentTestBuilder.Tree(root));
+
+        var rootFragment = fragments.Blocks.ShouldHaveSingleItem();
+        var rootLine = rootFragment.Children[0].ShouldBeOfType<LineBoxFragment>();
+        var childFragment = rootFragment.Children[1].ShouldBeOfType<BlockFragment>();
+        var rootRule = rootFragment.Children[2].ShouldBeOfType<RuleFragment>();
+        var childLine = childFragment.Children.ShouldHaveSingleItem().ShouldBeOfType<LineBoxFragment>();
+
+        rootFragment.FragmentId.ShouldBe(1);
+        childFragment.FragmentId.ShouldBe(2);
+        rootLine.FragmentId.ShouldBe(3);
+        childLine.FragmentId.ShouldBe(4);
+        rootRule.FragmentId.ShouldBe(5);
+    }
+
+    [Fact]
     public void Build_TextRuns_PreservesResolvedFontFromPublishedLayout()
     {
         var font = new FontKey("Inter", FontWeight.W700, FontStyle.Italic);

@@ -10,7 +10,7 @@ namespace Html2x.Text;
 /// </summary>
 public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 {
-    private readonly IFileSystemReader _fileDirectory;
+    private readonly IFileSystemReader _fileSystemReader;
     private readonly IFontSource _fontSource;
 
     private readonly ConcurrentDictionary<MetricKey, (float Ascent, float Descent)> _metricsBySourceAndSize = new();
@@ -30,11 +30,11 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     {
     }
 
-    internal SkiaTextMeasurer(IFontSource fontSource, IFileSystemReader fileDirectory,
+    internal SkiaTextMeasurer(IFontSource fontSource, IFileSystemReader fileSystemReader,
         ISkiaTypefaceFactory typefaceFactory)
     {
         _fontSource = fontSource ?? throw new ArgumentNullException(nameof(fontSource));
-        _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+        _fileSystemReader = fileSystemReader ?? throw new ArgumentNullException(nameof(fileSystemReader));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
     }
 
@@ -107,12 +107,12 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
     private string? GetExistingResolvedPath(ResolvedFont resolved)
     {
         if (!string.IsNullOrWhiteSpace(resolved.FilePath) &&
-            _fileDirectory.FileExists(resolved.FilePath))
+            _fileSystemReader.FileExists(resolved.FilePath))
         {
             return resolved.FilePath;
         }
 
-        if (_fileDirectory.FileExists(resolved.SourceId))
+        if (_fileSystemReader.FileExists(resolved.SourceId))
         {
             return resolved.SourceId;
         }

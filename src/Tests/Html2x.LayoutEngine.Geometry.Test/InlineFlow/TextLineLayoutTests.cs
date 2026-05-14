@@ -89,6 +89,20 @@ public class TextLineLayoutTests
     }
 
     [Fact]
+    public void Layout_LongToken_PreservesMultiCodePointGraphemes()
+    {
+        var engine = new TextLineLayout(new FakeTextMeasurer(10f, 9f, 3f));
+        const string grapheme = "e\u0301";
+        var input = BuildInput(20f, 12f, Run(1, grapheme + grapheme));
+
+        var result = engine.Layout(input);
+
+        result.Lines.Count.ShouldBe(2);
+        result.Lines.SelectMany(static line => line.Runs).Select(static run => run.Text)
+            .ShouldBe([grapheme, grapheme]);
+    }
+
+    [Fact]
     public void Layout_ZeroWidth_DoesNotTreatTextAsUnbounded()
     {
         var engine = new TextLineLayout(new FakeTextMeasurer(10f, 9f, 3f));

@@ -3,24 +3,27 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal sealed class ArchitectureSemanticProject
+internal sealed class SemanticProject
 {
     private readonly CSharpCompilation _compilation;
 
-    private ArchitectureSemanticProject(CSharpCompilation compilation)
+    private SemanticProject(CSharpCompilation compilation)
     {
         _compilation = compilation;
     }
 
-    public static ArchitectureSemanticProject Load(params string[] projectPathSegments)
+    public static SemanticProject Load(params string[] projectPathSegments)
     {
-        var projectPath = ArchitecturePaths.PathFromRoot(projectPathSegments);
+        var projectPath = Paths.PathFromRoot(projectPathSegments);
         var projectDirectory = Path.GetDirectoryName(projectPath)
                                ?? throw new InvalidOperationException($"Project path has no directory: {projectPath}");
-        var syntaxTrees = Directory.GetFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !ArchitecturePaths.IsBuildOutputPath(Path.GetRelativePath(projectDirectory, file)))
+        var syntaxTrees = Directory.GetFiles(
+                projectDirectory,
+                RepositoryLayout.CSharpFilePattern,
+                SearchOption.AllDirectories)
+            .Where(file => !Paths.IsBuildOutputPath(Path.GetRelativePath(projectDirectory, file)))
             .Select(file => CSharpSyntaxTree.ParseText(File.ReadAllText(file), path: file))
             .ToArray();
         var references = MetadataReferences();
@@ -54,6 +57,29 @@ internal sealed class ArchitectureSemanticProject
                                  string.Join("\n", references.Select(static reference => reference.ToString())));
     }
 
+    public void ShouldNotReferenceTypes(params Type[] forbiddenTypes) =>
+        ShouldNotReferenceTypes(forbiddenTypes.Select(SourceFullName).ToArray());
+
+    public void ShouldNotReferenceNamespacesOf(params Type[] namespaceAnchors) =>
+        ShouldNotReferenceNamespaces(namespaceAnchors.Select(NamespaceOf).ToArray());
+
+    public CSharpSourceFile SourceFileForType<T>() => SourceFileForType(typeof(T));
+
+    public CSharpSourceFile SourceFileForType(Type type)
+    {
+        var symbol = RequiredDeclaredTypeSymbol(type);
+        var paths = symbol.DeclaringSyntaxReferences
+            .Select(static reference => reference.SyntaxTree.FilePath)
+            .Where(static path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        paths.ShouldNotBeEmpty($"{SourceFullName(type)} should have a source location.");
+        paths.Length.ShouldBe(1, $"{SourceFullName(type)} should have one source location.");
+
+        return CSharpSourceFile.Load(paths[0]);
+    }
+
     public IReadOnlyList<string> PublicTypeNames()
     {
         return DeclaredTypeSymbols()
@@ -61,6 +87,19 @@ internal sealed class ArchitectureSemanticProject
             .Select(static symbol => symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat))
             .OrderBy(static value => value, StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private INamedTypeSymbol RequiredDeclaredTypeSymbol(Type type)
+    {
+        var expectedFullName = SourceFullName(type);
+        var matches = DeclaredTypeSymbols()
+            .Where(symbol => SymbolFullName(symbol).Equals(expectedFullName, StringComparison.Ordinal))
+            .ToArray();
+
+        matches.ShouldNotBeEmpty($"{expectedFullName} should be declared by the semantic project.");
+        matches.Length.ShouldBe(1, $"{expectedFullName} should resolve to one declared symbol.");
+
+        return matches[0];
     }
 
     public IReadOnlyList<string> ExternallyVisibleTypeNames()
@@ -147,6 +186,16 @@ internal sealed class ArchitectureSemanticProject
         return true;
     }
 
+    private static string SourceFullName(Type type) =>
+        (type.FullName ?? throw new InvalidOperationException($"{type.Name} has no full name."))
+        .Replace("+", ".", StringComparison.Ordinal);
+
+    private static string SymbolFullName(INamedTypeSymbol symbol) =>
+        symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat);
+
+    private static string NamespaceOf(Type type) =>
+        type.Namespace ?? throw new InvalidOperationException($"{type.Name} has no namespace.");
+
     private static ISymbol? SymbolForNode(SemanticModel model, SyntaxNode node)
     {
         return node switch
@@ -169,9 +218,12 @@ internal sealed class ArchitectureSemanticProject
             referencePaths.Add(assembly);
         }
 
-        var repoRoot = ArchitecturePaths.RepoRoot();
-        foreach (var assembly in Directory.GetFiles(repoRoot, "*.dll", SearchOption.AllDirectories)
-                     .Where(path => path.Contains(Path.Combine("bin", "Release", "net8.0"),
+        var repoRoot = Paths.RepoRoot();
+        foreach (var assembly in Directory.GetFiles(
+                         repoRoot,
+                         RepositoryLayout.DllFilePattern,
+                         SearchOption.AllDirectories)
+                     .Where(path => path.Contains(RepositoryLayout.ReleaseOutputPath(),
                          StringComparison.OrdinalIgnoreCase)))
         {
             referencePaths.Add(assembly);
@@ -195,7 +247,7 @@ internal sealed class ArchitectureSemanticProject
             var fullPath = tree.FilePath;
 
             return new(
-                Path.GetRelativePath(ArchitecturePaths.RepoRoot(), fullPath),
+                Path.GetRelativePath(Paths.RepoRoot(), fullPath),
                 lineSpan.StartLinePosition.Line + 1,
                 type.ContainingNamespace.ToDisplayString(),
                 type.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat));

@@ -10,9 +10,8 @@ internal static class GeometrySourceKindNames
     public const string InlineSegment = "inline-segment";
     public const string Generated = "generated";
 
-    public static string Resolve(GeometryGeneratedSourceKind generatedKind)
-    {
-        return generatedKind switch
+    public static string Resolve(GeometryGeneratedSourceKind generatedKind) =>
+        generatedKind switch
         {
             GeometryGeneratedSourceKind.AnonymousText => AnonymousText,
             GeometryGeneratedSourceKind.ListMarker => ListMarker,
@@ -22,5 +21,4 @@ internal static class GeometrySourceKindNames
             GeometryGeneratedSourceKind.InlineSegment => InlineSegment,
             _ => Generated
         };
-    }
 }

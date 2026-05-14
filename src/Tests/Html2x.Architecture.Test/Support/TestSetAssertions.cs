@@ -1,8 +1,8 @@
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal static class ArchitectureTestSetAssertions
+internal static class TestSetAssertions
 {
     public static void ShouldBeSet(this IEnumerable<string> actual, IEnumerable<string> expected)
     {

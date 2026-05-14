@@ -1,13 +1,16 @@
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal static class ArchitecturePaths
+internal static class Paths
 {
     public static string RepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "src", "Html2x.sln")))
+            if (File.Exists(Path.Combine(
+                    directory.FullName,
+                    RepositoryLayout.SourceRoot,
+                    RepositoryLayout.SolutionFileName)))
             {
                 return directory.FullName;
             }
@@ -26,7 +29,7 @@ internal static class ArchitecturePaths
         var segments = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         return segments.Length > 0 &&
-               (segments[0].Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                segments[0].Equals("obj", StringComparison.OrdinalIgnoreCase));
+               (segments[0].Equals(RepositoryLayout.BinDirectory, StringComparison.OrdinalIgnoreCase) ||
+                segments[0].Equals(RepositoryLayout.ObjDirectory, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("Html2x.LayoutEngine.Style")]
 [assembly: InternalsVisibleTo("Html2x.LayoutEngine.Style.Test")]
 [assembly: InternalsVisibleTo("Html2x.LayoutEngine.Test")]
+[assembly: InternalsVisibleTo("Html2x.Architecture.Test")]
 [assembly: InternalsVisibleTo("Html2x.Renderers.Pdf")]
 [assembly: InternalsVisibleTo("Html2x.Renderers.Pdf.Test")]
 [assembly: InternalsVisibleTo("Html2x.Resources")]

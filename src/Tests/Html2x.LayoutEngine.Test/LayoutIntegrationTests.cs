@@ -85,8 +85,8 @@ public partial class LayoutIntegrationTests
 
         var styleTreeBuilder = new StyleTreeBuilder();
         var textMeasurer = CreateTextMeasurer();
-        var layoutGeometryBuilder = new LayoutGeometryConstruction(textMeasurer);
-        var fragmentBuilder = new FragmentTreeBuilder();
+        var layoutGeometryConstruction = new LayoutGeometryConstruction(textMeasurer);
+        var fragmentTreeBuilder = new FragmentTreeBuilder();
         var builder = CreateLayoutPipeline();
         var layoutOptions = new LayoutBuildSettings
         {
@@ -94,14 +94,14 @@ public partial class LayoutIntegrationTests
         };
 
         var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions.Style);
-        var publishedLayout = layoutGeometryBuilder.Build(
+        var publishedLayout = layoutGeometryConstruction.Build(
             styleTree,
             new()
             {
                 PageSize = layoutOptions.PageSize,
                 ImageMetadataResolver = new NoopImageMetadataResolver()
             });
-        var fragmentTree = fragmentBuilder.Build(publishedLayout);
+        var fragmentTree = fragmentTreeBuilder.Build(publishedLayout);
         var layout = await builder.BuildAsync(html, layoutOptions);
 
         var textRuns = CollectTextRuns(fragmentTree.Blocks).ToList();

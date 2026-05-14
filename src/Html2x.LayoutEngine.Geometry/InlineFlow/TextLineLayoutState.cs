@@ -7,13 +7,9 @@ namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 /// </summary>
 internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInput input, float availableWidth)
 {
-    private readonly float _availableWidth = availableWidth;
-    private readonly List<TextLineRunBuffer> _currentLine = [];
-    private readonly TextLayoutInput _input = input ?? throw new ArgumentNullException(nameof(input));
-    private readonly TextLineMeasurement _lineMeasurement = new(measurer);
+    private readonly TextLineBuffer _line =
+        new(measurer, (input ?? throw new ArgumentNullException(nameof(input))).LineHeight, availableWidth);
     private readonly List<TextLayoutLine> _lines = [];
-    private readonly ITextMeasurer _measurer = measurer ?? throw new ArgumentNullException(nameof(measurer));
-    private float _currentWidth;
 
     public IReadOnlyList<TextLayoutLine> Lines => _lines;
 
@@ -73,22 +69,11 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
 
     public void FlushLine(bool forceWhenEmpty = false)
     {
-        if (_currentLine.Count == 0)
+        var line = _line.Flush(forceWhenEmpty);
+        if (line is not null)
         {
-            if (forceWhenEmpty)
-            {
-                _lines.Add(new([], 0f, _input.LineHeight));
-            }
-
-            return;
+            _lines.Add(line);
         }
-
-        TrimLineEnd(_currentLine);
-
-        _lines.Add(_lineMeasurement.Measure(_currentLine, _input.LineHeight));
-
-        _currentLine.Clear();
-        _currentWidth = 0f;
     }
 
     private void ProcessLogicalLine(TextRunInput run, string rawLine)
@@ -107,19 +92,22 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
 
     private void AppendAtomicToken(TextRunInput run, string token)
     {
-        if (string.IsNullOrWhiteSpace(token) && _currentLine.Count == 0)
+        if (string.IsNullOrWhiteSpace(token) && !_line.HasContent)
         {
             return;
         }
 
-        var tokenWidth = MeasureWidth(run, token);
-        var additionalSpacing = GetAdditionalSpacing(run);
-        if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
+        if (_line.TryAppendText(run, token))
+        {
+            return;
+        }
+
+        if (_line.HasContent)
         {
             FlushLine();
         }
 
-        AppendToken(run, token, tokenWidth);
+        _line.AppendText(run, token);
     }
 
     private void AppendInlineBox(TextRunInput run)
@@ -129,14 +117,17 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
             return;
         }
 
-        var tokenWidth = run.InlineBox.BorderBoxWidth;
-        var additionalSpacing = GetAdditionalSpacing(run);
-        if (!Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth) && _currentLine.Count > 0)
+        if (_line.TryAppendInlineBox(run))
+        {
+            return;
+        }
+
+        if (_line.HasContent)
         {
             FlushLine();
         }
 
-        AppendInlineBox(run, tokenWidth);
+        _line.AppendInlineBox(run);
     }
 
     private void ProcessTokenByGrapheme(TextRunInput run, string token)
@@ -149,115 +140,18 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
             }
 
             FlushLine();
-            AppendToken(run, element, MeasureWidth(run, element));
+            _line.AppendText(run, element);
         }
     }
 
     private bool TryAppendToken(TextRunInput run, string token)
     {
-        var tokenWidth = MeasureWidth(run, token);
-        var additionalSpacing = GetAdditionalSpacing(run);
-        if (Fits(_currentWidth + tokenWidth + additionalSpacing, _availableWidth))
+        if (_line.TryAppendText(run, token))
         {
-            AppendToken(run, token, tokenWidth);
             return true;
         }
 
         return false;
-    }
-
-    private void AppendToken(TextRunInput run, string token, float tokenWidth)
-    {
-        var buffer = GetOrCreateTextBuffer(run);
-        buffer.Append(token);
-        _currentWidth += tokenWidth;
-    }
-
-    private TextLineRunBuffer GetOrCreateTextBuffer(TextRunInput run)
-    {
-        if (_currentLine.Count > 0 && _currentLine[^1].Source.RunId == run.RunId)
-        {
-            return _currentLine[^1];
-        }
-
-        var buffer = new TextLineRunBuffer(run);
-        _currentLine.Add(buffer);
-        _currentWidth += buffer.LeftSpacing + buffer.RightSpacing;
-        return buffer;
-    }
-
-    private void AppendInlineBox(TextRunInput run, float tokenWidth)
-    {
-        var buffer = new TextLineRunBuffer(run, run.InlineBox);
-        _currentLine.Add(buffer);
-        _currentWidth += buffer.LeftSpacing + tokenWidth + buffer.RightSpacing;
-    }
-
-    private float MeasureWidth(TextRunInput run, string text) => _measurer.Measure(run.Font, run.FontSizePt, text).Width;
-
-    private float GetAdditionalSpacing(TextRunInput run)
-    {
-        if (_currentLine.Count == 0)
-        {
-            return run.PaddingLeft + run.MarginLeft + run.PaddingRight + run.MarginRight;
-        }
-
-        var buffer = _currentLine[^1];
-        if (buffer.Source.RunId == run.RunId)
-        {
-            return 0f;
-        }
-
-        return run.PaddingLeft + run.MarginLeft + run.PaddingRight + run.MarginRight;
-    }
-
-    private static bool Fits(float width, float maxWidth)
-    {
-        if (float.IsPositiveInfinity(maxWidth))
-        {
-            return true;
-        }
-
-        if (maxWidth <= 0f)
-        {
-            return false;
-        }
-
-        return width <= maxWidth;
-    }
-
-    private static void TrimLineEnd(List<TextLineRunBuffer> runs)
-    {
-        for (var i = runs.Count - 1; i >= 0; i--)
-        {
-            var buffer = runs[i];
-            if (buffer.InlineBox is not null)
-            {
-                return;
-            }
-
-            if (buffer.Text.Length == 0)
-            {
-                runs.RemoveAt(i);
-                continue;
-            }
-
-            var trimmed = buffer.Text.ToString().TrimEnd();
-            if (trimmed.Length == buffer.Text.Length)
-            {
-                return;
-            }
-
-            buffer.Text.Clear();
-            buffer.Text.Append(trimmed);
-
-            if (buffer.Text.Length == 0)
-            {
-                runs.RemoveAt(i);
-            }
-
-            return;
-        }
     }
 
     /// <summary>
@@ -296,6 +190,6 @@ internal sealed class TextLineLayoutState(ITextMeasurer measurer, TextLayoutInpu
             _state.ProcessTokenByGrapheme(_run, _token);
         }
 
-        private bool IsLeadingWhitespace() => string.IsNullOrWhiteSpace(_token) && _state._currentLine.Count == 0;
+        private bool IsLeadingWhitespace() => string.IsNullOrWhiteSpace(_token) && !_state._line.HasContent;
     }
 }

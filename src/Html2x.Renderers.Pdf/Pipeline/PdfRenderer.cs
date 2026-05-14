@@ -13,7 +13,7 @@ namespace Html2x.Renderers.Pdf.Pipeline;
 /// </summary>
 internal sealed class PdfRenderer
 {
-    private readonly IFileSystemReader _fileDirectory;
+    private readonly IFileSystemReader _fileSystemReader;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
     internal PdfRenderer()
@@ -21,9 +21,9 @@ internal sealed class PdfRenderer
     {
     }
 
-    internal PdfRenderer(IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal PdfRenderer(IFileSystemReader fileSystemReader, ISkiaTypefaceFactory typefaceFactory)
     {
-        _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+        _fileSystemReader = fileSystemReader ?? throw new ArgumentNullException(nameof(fileSystemReader));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
     }
 
@@ -66,7 +66,7 @@ internal sealed class PdfRenderer
             throw new InvalidOperationException("Failed to create Skia PDF document.");
         }
 
-        using var fontCache = new SkiaFontCache(_fileDirectory, _typefaceFactory);
+        using var fontCache = new SkiaFontCache(_fileSystemReader, _typefaceFactory);
         var paintOrder = new PaintCommandPlanner();
         var drawer = new SkiaPaintCommandDrawer(settings, fontCache, diagnosticsSink);
 

@@ -28,6 +28,10 @@ Image failures are usually recoverable. Missing, oversized, invalid data URI,
 decode failure, and out-of-scope images produce `ImageLoadStatus` outcomes and
 `image/render` diagnostics when diagnostics are enabled.
 
+The `Missing` image status is intentionally coarse. It covers absent image
+sources as well as unreadable file IO or unauthorized access failures so
+resource fallback behavior stays deterministic across environments.
+
 ## Unsupported Input
 
 Unsupported CSS or structures should use deterministic fallback behavior when

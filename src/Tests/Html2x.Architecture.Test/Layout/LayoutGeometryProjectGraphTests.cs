@@ -1,21 +1,24 @@
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
+using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.Resources;
 using Html2x.Text;
-using Shouldly;
-using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
+using Html2x.Architecture.Test.Support;
+using static Html2x.Architecture.Test.Support.TestSupport;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Layout;
 
 public sealed class LayoutGeometryProjectGraphTests
 {
     [Fact]
-    public void Solution_ContainsArchitectureProjects()
+    public void Solution_ContainsGuardrailProjects()
     {
-        ArchitectureSolution.Load("src", "Html2x.sln")
+        Solution.Load("src", "Html2x.sln")
             .ProjectNames()
             .ShouldContainSet([
                 AssemblyName<StyleNode>(),
@@ -24,7 +27,8 @@ public sealed class LayoutGeometryProjectGraphTests
                 AssemblyName<LayoutPaginator>(),
                 TestAssemblyNameFor<LayoutPaginator>(),
                 TestAssemblyNameFor<FragmentTreeBuilder>(),
-                TestAssemblyNameFor<StyleTreeBuilder>()
+                TestAssemblyNameFor<StyleTreeBuilder>(),
+                CurrentAssemblyName()
             ]);
     }
 
@@ -39,7 +43,7 @@ public sealed class LayoutGeometryProjectGraphTests
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>());
         ProjectFor<StyleTreeBuilder>()
-            .ShouldReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
+            .ShouldReferencePackages(ExternalPackageIds.AngleSharp, ExternalPackageIds.AngleSharpCss);
         ProjectFor<LayoutGeometryConstruction>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
@@ -61,16 +65,16 @@ public sealed class LayoutGeometryProjectGraphTests
         ProjectFor<ITextMeasurer>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>());
         ProjectFor<ITextMeasurer>()
-            .ShouldReferencePackages(SkiaSharpPackageName, SkiaSharpPackageName + ".HarfBuzz");
+            .ShouldReferencePackages(ExternalPackageIds.SkiaSharp, ExternalPackageIds.SkiaSharpHarfBuzz);
     }
 
     [Fact]
     public void RendererProjectGraph_StaysIndependentFromLayoutStages()
     {
-        var renderer = Project("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj");
+        var renderer = ProjectFor<PdfRenderer>();
 
         renderer.ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<HtmlLayout>(),
-            ResourcesAssemblyName, AssemblyName<ITextMeasurer>());
+            AssemblyName<ImageResourceStore>(), AssemblyName<ITextMeasurer>());
         renderer.ShouldNotReferenceProjects(
             AssemblyName<LayoutPipeline>(),
             AssemblyName<StyleNode>(),
@@ -82,33 +86,20 @@ public sealed class LayoutGeometryProjectGraphTests
     [Fact]
     public void FocusedTestProjects_StayInOwningModules()
     {
-        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(),
-                TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
+        TestProjectFor<LayoutPaginator>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<LayoutPaginator>(),
                 AssemblyName<HtmlLayout>());
-        Project("src", "Tests", TestAssemblyNameFor<LayoutPaginator>(),
-                TestAssemblyNameFor<LayoutPaginator>() + ".csproj")
+        TestProjectFor<LayoutPaginator>()
             .ShouldNotReferenceProjects(
                 AssemblyName<LayoutPipeline>(),
                 AssemblyName<FragmentTreeBuilder>(),
                 AssemblyName<LayoutGeometryConstruction>(),
                 AssemblyName<StyleTreeBuilder>(),
-                PdfRendererAssemblyName,
+                AssemblyName<PdfRenderer>(),
                 AssemblyName<ITextMeasurer>());
-        Project("src", "Tests", TestAssemblyNameFor<StyleTreeBuilder>(),
-                TestAssemblyNameFor<StyleTreeBuilder>() + ".csproj")
+        TestProjectFor<StyleTreeBuilder>()
             .ShouldNotReferenceProjects(AssemblyName<LayoutPipeline>(), AssemblyName<LayoutGeometryConstruction>());
-        Project("src", "Tests", TestAssemblyNameFor<LayoutGeometryConstruction>(),
-                TestAssemblyNameFor<LayoutGeometryConstruction>() + ".csproj")
-            .ShouldNotReferencePackages(ParserPackageName(), ParserPackageName() + ".Css");
-    }
-
-    [Fact]
-    public void RemovedCompatibilityFolders_AreAbsent()
-    {
-        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutPipeline>(), "Pagination"))
-            .ShouldBeFalse("pagination compatibility shims should not remain in the composition project.");
-        Directory.Exists(PathFromRoot("src", AssemblyName<LayoutPipeline>(), "Fragment"))
-            .ShouldBeFalse("fragment compatibility shims should not remain in the composition project.");
+        TestProjectFor<LayoutGeometryConstruction>()
+            .ShouldNotReferencePackages(ExternalPackageIds.AngleSharp, ExternalPackageIds.AngleSharpCss);
     }
 }

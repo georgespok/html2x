@@ -12,11 +12,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_ExplicitWidthAndTwoCells_ResolvesRequestedTableWidth()
     {
-        var table = CreateTable(
-            400f,
-            CreateRow(
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(400f, 2);
 
         var result = Layout(table, 500f);
 
@@ -27,15 +23,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_WidestRowDefinesDerivedColumnCount()
     {
-        var table = CreateTable(
-            400f,
-            CreateRow(
-                CreateCell(),
-                CreateCell()),
-            CreateRow(
-                CreateCell(),
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(400f, 2, 3);
 
         var result = Layout(table, 500f);
 
@@ -46,11 +34,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_EqualWidthDistribution_SplitsResolvedBorderBoxWidthAcrossDerivedColumns()
     {
-        var table = CreateTable(
-            400f,
-            CreateRow(
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(400f, 2);
 
         var result = Layout(table, 500f);
 
@@ -61,18 +45,14 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_TablePaddingAndBorder_SplitsContentWidthAcrossDerivedColumns()
     {
-        var table = new TableBox(BoxRole.Table)
-        {
-            Style = new()
+        var table = TableBoxTree.CreateWithStyle(
+            new()
             {
                 WidthPt = 120f,
                 Padding = new(0f, 10f, 0f, 10f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        table.AddChild(CreateRow(
-            CreateCell(),
-            CreateCell()));
+            },
+            2);
 
         var result = Layout(table, 200f);
 
@@ -86,21 +66,17 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_TableSizing_UsesBlockMeasurementPolicy()
     {
-        var table = new TableBox(BoxRole.Table)
-        {
-            MarkerOffset = 7f,
-            Style = new()
+        var table = TableBoxTree.CreateWithStyle(
+            new()
             {
                 Margin = new(0f, 20f, 0f, 10f),
                 MinWidthPt = 120f,
                 MaxWidthPt = 150f,
                 Padding = new(0f, 5f, 0f, 5f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        table.AddChild(CreateRow(
-            CreateCell(),
-            CreateCell()));
+            },
+            2);
+        table.MarkerOffset = 7f;
 
         var result = Layout(table, 100f);
 
@@ -112,11 +88,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_TableExplicitWidth_ClampsToMaxWidth()
     {
-        var table = CreateTable(
-            220f,
-            CreateRow(
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(220f, 2);
         table.Style = table.Style with
         {
             MaxWidthPt = 150f
@@ -131,24 +103,15 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_RowPaddingAndBorder_PlacesCellsInsideRowContentBox()
     {
-        var row = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
+        var table = TableBoxTree.Create(120f);
+        TableBoxTree.AddRow(
+            table,
+            1,
+            new()
             {
                 Padding = new(3f, 0f, 0f, 6f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        row.AddChild(CreateCell());
-
-        var table = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        table.AddChild(row);
+            });
 
         var result = Layout(table, 200f);
 
@@ -165,12 +128,13 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_CellPaddingAndBorder_ExposesContentBoxInsideCellPlacement()
     {
-        var cell = CreateCell(new()
+        var table = TableBoxTree.Create(120f);
+        var row = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(row, new()
         {
             Padding = new(3f, 4f, 5f, 6f),
             Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
         });
-        var table = CreateTable(120f, CreateRow(cell));
 
         var result = Layout(table, 200f);
 
@@ -187,7 +151,10 @@ public class TableGridLayoutTests
     [Fact]
     public void TableLayoutCellPlacement_StoresCanonicalGeometry()
     {
-        var cell = CreateCell();
+        var cell = new TableCellBox(BoxRole.TableCell)
+        {
+            Style = new()
+        };
 
         var placement = new TableLayoutCellPlacement(
             cell,
@@ -206,14 +173,9 @@ public class TableGridLayoutTests
     [Fact]
     public void WriteSupported_TranslatesRowAndCellGeometryThroughGeometryOwner()
     {
-        var row = new TableRowBox(BoxRole.TableRow);
-        var cell = CreateCell();
-        row.AddChild(cell);
-        var table = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-        };
-        table.AddChild(row);
+        var table = TableBoxTree.Create();
+        var row = TableBoxTree.AddRow(table);
+        var cell = TableBoxTree.AddCell(row);
         var rowGeometry = UsedGeometryRules.FromBorderBox(
             0f,
             1f,
@@ -274,15 +236,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_ShorterRows_DoNotChangeSharedColumnGrid()
     {
-        var table = CreateTable(
-            300f,
-            CreateRow(
-                CreateCell(),
-                CreateCell(),
-                CreateCell()),
-            CreateRow(
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(300f, 3, 2);
 
         var result = Layout(table, 500f);
 
@@ -294,13 +248,12 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_ColspanContributesToDerivedColumnCountAndCellWidth()
     {
-        var spannedCell = CreateCell(element: CreateElement("TD", (HtmlCssVocabulary.HtmlAttributes.Colspan, "2")));
-        var leftCell = CreateCell();
-        var rightCell = CreateCell();
-        var table = CreateTable(
-            240f,
-            CreateRow(spannedCell),
-            CreateRow(leftCell, rightCell));
+        var table = TableBoxTree.Create(240f);
+        var spannedRow = TableBoxTree.AddRow(table);
+        var spannedCell = TableBoxTree.AddCell(spannedRow, colspan: "2");
+        var bodyRow = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(bodyRow);
+        TableBoxTree.AddCell(bodyRow);
 
         var result = Layout(table, 300f);
 
@@ -322,11 +275,10 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_HeaderColspan_PreservesHeaderIdentityAndSpan()
     {
-        var headerCell = CreateCell(element: CreateElement("TH", (HtmlCssVocabulary.HtmlAttributes.Colspan, "3")));
-        var table = CreateTable(
-            300f,
-            CreateRow(headerCell),
-            CreateRow(CreateCell(), CreateCell(), CreateCell()));
+        var table = TableBoxTree.Create(300f);
+        var headerRow = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(headerRow, isHeader: true, colspan: "3");
+        TableBoxTree.AddRow(table, 3);
 
         var result = Layout(table, 400f);
 
@@ -340,15 +292,7 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_SharedColumnGrid_DrivesEveryRowPlacement()
     {
-        var table = CreateTable(
-            300f,
-            CreateRow(
-                CreateCell(),
-                CreateCell(),
-                CreateCell()),
-            CreateRow(
-                CreateCell(),
-                CreateCell()));
+        var table = TableBoxTree.Create(300f, 3, 2);
 
         var result = Layout(table, 500f);
 
@@ -366,10 +310,13 @@ public class TableGridLayoutTests
     [InlineData(HtmlCssVocabulary.HtmlAttributes.Rowspan)]
     public void Layout_SpanOne_RemainsSupportedAndUsesCurrentGridFacts(string attributeName)
     {
-        var cell = CreateCell(element: CreateElement("TD", (attributeName, "1")));
-        var table = CreateTable(
-            120f,
-            CreateRow(cell, CreateCell()));
+        var table = TableBoxTree.Create(120f);
+        var row = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(
+            row,
+            colspan: attributeName == HtmlCssVocabulary.HtmlAttributes.Colspan ? "1" : null,
+            rowspan: attributeName == HtmlCssVocabulary.HtmlAttributes.Rowspan ? "1" : null);
+        TableBoxTree.AddCell(row);
 
         var result = Layout(table, 200f);
 
@@ -386,10 +333,12 @@ public class TableGridLayoutTests
     [InlineData(HtmlCssVocabulary.HtmlAttributes.Rowspan, "0")]
     public void Layout_UnsupportedSpans_StopBeforeGridFacts(string attributeName, string value)
     {
-        var cell = CreateCell(element: CreateElement("TD", (attributeName, value)));
-        var table = CreateTable(
-            120f,
-            CreateRow(cell));
+        var table = TableBoxTree.Create(120f);
+        var row = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(
+            row,
+            colspan: attributeName == HtmlCssVocabulary.HtmlAttributes.Colspan ? value : null,
+            rowspan: attributeName == HtmlCssVocabulary.HtmlAttributes.Rowspan ? value : null);
 
         var result = Layout(table, 200f);
 
@@ -406,12 +355,10 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_HeaderCells_PreserveHeaderIdentityInCellPlacements()
     {
-        var headerCell = CreateCell(element: CreateElement("TH"));
-        var bodyCell = CreateCell(element: CreateElement("TD"));
-        var table = CreateTable(
-            200f,
-            CreateRow(headerCell),
-            CreateRow(bodyCell));
+        var table = TableBoxTree.Create(200f);
+        var headerRow = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(headerRow, isHeader: true);
+        TableBoxTree.AddRow(table, 1);
 
         var result = Layout(table, 300f);
 
@@ -423,18 +370,20 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_GenericContainerInsideTable_ReturnsUnsupportedResult()
     {
-        var section = new InlineBox(BoxRole.Inline);
-        section.AddChild(CreateRow(
-            CreateCell(),
-            CreateCell()));
-
-        var table = new TableBox(BoxRole.Table)
+        var table = TableBoxTree.Create(400f);
+        var section = new InlineBox(BoxRole.Inline)
         {
+            Parent = table,
             Style = new()
-            {
-                WidthPt = 400f
-            }
         };
+        var row = new TableRowBox(BoxRole.TableRow)
+        {
+            Parent = section,
+            Style = new()
+        };
+        row.AddChild(new TableCellBox(BoxRole.TableCell) { Parent = row, Style = new() });
+        row.AddChild(new TableCellBox(BoxRole.TableCell) { Parent = row, Style = new() });
+        section.AddChild(row);
         table.AddChild(section);
 
         var result = Layout(table, 500f);
@@ -449,24 +398,10 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_SectionedTable_PreservesRowOrderAndSequentialOffsets()
     {
-        var firstRow = CreateRow(
-            CreateCell(),
-            CreateCell());
-        var secondRow = CreateRow(
-            CreateCell(),
-            CreateCell());
-        var section = new TableSectionBox(BoxRole.TableSection);
-        section.AddChild(firstRow);
-        section.AddChild(secondRow);
-
-        var table = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 400f
-            }
-        };
-        table.AddChild(section);
+        var table = TableBoxTree.Create(400f);
+        var section = TableBoxTree.AddSection(table);
+        var firstRow = TableBoxTree.AddRow(section, 2);
+        var secondRow = TableBoxTree.AddRow(section, 2);
 
         var result = Layout(table, 500f);
 
@@ -482,18 +417,11 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_NestedTableInsideCell_DoesNotLeakInnerRowsIntoOuterGrid()
     {
-        var innerTable = CreateTable(
-            120f,
-            CreateRow(CreateCell()));
-
-        var outerCell = CreateCell();
-        outerCell.AddChild(innerTable);
-
-        var outerTable = CreateTable(
-            300f,
-            CreateRow(
-                outerCell,
-                CreateCell()));
+        var outerTable = TableBoxTree.Create(300f);
+        var outerRow = TableBoxTree.AddRow(outerTable);
+        var outerCell = TableBoxTree.AddCell(outerRow);
+        TableBoxTree.AddTable(outerCell, 120f, 1);
+        TableBoxTree.AddCell(outerRow);
 
         var result = Layout(outerTable, 500f);
 
@@ -506,10 +434,9 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_UnsupportedRowspan_ReturnsUnsupportedBeforeGeometry()
     {
-        var cell = CreateCell(element: CreateElement("TD", (HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")));
-        var table = CreateTable(
-            120f,
-            CreateRow(cell));
+        var table = TableBoxTree.Create(120f);
+        var row = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(row, rowspan: "2");
 
         var result = Layout(table, 200f);
         var diagnosticsSink = new RecordingDiagnosticsSink();
@@ -540,20 +467,15 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_SectionContainingNestedSection_ReturnsUnsupportedResult()
     {
-        var innerSection = new TableSectionBox(BoxRole.TableSection);
-        innerSection.AddChild(CreateRow(CreateCell()));
-
-        var outerSection = new TableSectionBox(BoxRole.TableSection);
-        outerSection.AddChild(innerSection);
-
-        var table = new TableBox(BoxRole.Table)
+        var table = TableBoxTree.Create(120f);
+        var outerSection = TableBoxTree.AddSection(table);
+        var innerSection = new TableSectionBox(BoxRole.TableSection)
         {
+            Parent = outerSection,
             Style = new()
-            {
-                WidthPt = 120f
-            }
         };
-        table.AddChild(outerSection);
+        TableBoxTree.AddRow(innerSection, 1);
+        outerSection.AddChild(innerSection);
 
         var result = Layout(table, 200f);
 
@@ -566,29 +488,17 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_TallestCellOwnsRowHeightAndCellPlacements()
     {
-        var paddedCell = CreateCell(new()
+        var table = TableBoxTree.Create(120f);
+        var sourceRow = TableBoxTree.AddRow(table);
+        var paddedCell = TableBoxTree.AddCell(sourceRow, new()
         {
             Padding = new(7.5f, 7.5f, 7.5f, 7.5f),
             Borders = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Solid))
         });
-        paddedCell.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            TextContent = "A",
-            Style = paddedCell.Style,
-            Parent = paddedCell
-        });
+        TableBoxTree.AddInline(paddedCell, "A");
 
-        var defaultCell = CreateCell();
-        defaultCell.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            TextContent = "B",
-            Style = defaultCell.Style,
-            Parent = defaultCell
-        });
-
-        var table = CreateTable(
-            120f,
-            CreateRow(paddedCell, defaultCell));
+        var defaultCell = TableBoxTree.AddCell(sourceRow);
+        TableBoxTree.AddInline(defaultCell, "B");
 
         var result = Layout(table, 200f);
 
@@ -612,24 +522,19 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_CellWithStackedBlockChildren_UsesSharedCollapsedMarginHeight()
     {
-        var cell = CreateCell();
-        cell.AddChild(new BlockBox(BoxRole.Block)
+        var table = TableBoxTree.Create(120f);
+        var sourceRow = TableBoxTree.AddRow(table);
+        var cell = TableBoxTree.AddCell(sourceRow);
+        TableBoxTree.AddBlock(cell, new()
         {
-            Style = new()
-            {
-                HeightPt = 10f,
-                Margin = new(0f, 0f, 12f, 0f)
-            }
+            HeightPt = 10f,
+            Margin = new(0f, 0f, 12f, 0f)
         });
-        cell.AddChild(new BlockBox(BoxRole.Block)
+        TableBoxTree.AddBlock(cell, new()
         {
-            Style = new()
-            {
-                HeightPt = 8f,
-                Margin = new(4f, 0f, 0f, 0f)
-            }
+            HeightPt = 8f,
+            Margin = new(4f, 0f, 0f, 0f)
         });
-        var table = CreateTable(120f, CreateRow(cell));
 
         var result = Layout(table, 200f);
 
@@ -642,20 +547,18 @@ public class TableGridLayoutTests
     [Fact]
     public void Layout_CellWithNestedPaddedTable_UsesNestedTableBorderBoxHeight()
     {
-        var innerTable = new TableBox(BoxRole.Table)
-        {
-            Style = new()
+        var outerTable = TableBoxTree.Create(120f);
+        var outerRow = TableBoxTree.AddRow(outerTable);
+        var outerCell = TableBoxTree.AddCell(outerRow);
+        TableBoxTree.AddTableWithStyle(
+            outerCell,
+            new()
             {
                 WidthPt = 80f,
                 Padding = new(5f, 0f, 7f, 0f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        innerTable.AddChild(CreateRow(CreateCell()));
-
-        var outerCell = CreateCell();
-        outerCell.AddChild(innerTable);
-        var outerTable = CreateTable(120f, CreateRow(outerCell));
+            },
+            1);
 
         var result = Layout(outerTable, 200f);
 
@@ -667,44 +570,4 @@ public class TableGridLayoutTests
 
     private static TableLayoutResult Layout(TableBox table, float availableWidth) =>
         new TableGridLayout().Layout(table, availableWidth);
-
-    private static TableBox CreateTable(float? widthPt = null, params TableRowBox[] rows)
-    {
-        var table = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = widthPt
-            }
-        };
-
-        foreach (var row in rows)
-        {
-            table.AddChild(row);
-        }
-
-        return table;
-    }
-
-    private static TableRowBox CreateRow(params TableCellBox[] cells)
-    {
-        var row = new TableRowBox(BoxRole.TableRow);
-
-        foreach (var cell in cells)
-        {
-            row.AddChild(cell);
-        }
-
-        return row;
-    }
-
-    private static TableCellBox CreateCell(ComputedStyle? style = null, StyledElementFacts? element = null) =>
-        new(BoxRole.TableCell)
-        {
-            Style = style ?? new ComputedStyle(),
-            Element = element
-        };
-
-    private static StyledElementFacts CreateElement(string tagName, params (string Name, string Value)[] attributes) =>
-        StyledElementFacts.Create(tagName, attributes);
 }

@@ -266,6 +266,41 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     }
 
     [Fact]
+    public async Task ToPdfAsync_LayoutBuildFailure_AttachesDiagnosticsAndSkipsPdfRender()
+    {
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () => new NullTextMeasurer()
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            converter.ToPdfAsync("<html><body><p>Invalid measurement</p></body></html>", options));
+
+        var diagnostics = Assert.IsType<DiagnosticsReport>(
+            exception.Data[nameof(HtmlToPdfResult.DiagnosticsReport)]);
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/started");
+        Assert.Contains(diagnostics.Records, record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/failed" &&
+            record.Severity == DiagnosticSeverity.Error &&
+            record.Message == exception.Message);
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/skipped" &&
+            record.Message == "Skipped because LayoutBuild failed.");
+        Assert.DoesNotContain(diagnostics.Records, static record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/started");
+    }
+
+    [Fact]
     public async Task ToPdfAsync_DependencyTextMeasurerReturnsInvalidMeasurement_ThrowsOutOfRange()
     {
         var converter = new HtmlConverter(new()
@@ -678,6 +713,42 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     }
 
     [Fact]
+    public async Task ToPdfAsync_PdfRenderFailure_AttachesDiagnosticsAfterLayoutSuccess()
+    {
+        const string html = "<html><body><p>Renderer font failure</p></body></html>";
+        var missingFontPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.ttf");
+        var converter = new HtmlConverter(new()
+        {
+            TextMeasurerFactory = () => new MissingResolvedFontFileTextMeasurer(missingFontPath)
+        });
+        var options = new HtmlConverterOptions
+        {
+            Fonts = new() { FontPath = null },
+            Diagnostics = new() { EnableDiagnostics = true }
+        };
+
+        var exception = await Assert.ThrowsAsync<FontResolutionException>(() =>
+            converter.ToPdfAsync(html, options));
+
+        var diagnostics = Assert.IsType<DiagnosticsReport>(
+            exception.Data[nameof(HtmlToPdfResult.DiagnosticsReport)]);
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/succeeded");
+        Assert.Contains(diagnostics.Records, static record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/started");
+        Assert.Contains(diagnostics.Records, record =>
+            record.Stage == "PdfRender" &&
+            record.Name == "stage/failed" &&
+            record.Severity == DiagnosticSeverity.Error &&
+            record.Message == exception.Message);
+        Assert.DoesNotContain(diagnostics.Records, static record =>
+            record.Stage == "LayoutBuild" &&
+            record.Name == "stage/failed");
+    }
+
+    [Fact]
     public async Task ToPdfAsync_CancellationRequested_EmitsCancellationLifecycle()
     {
         const string html = "<html><body><p>cancel me</p></body></html>";
@@ -900,6 +971,23 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
     private sealed class NullTextMeasurer : ITextMeasurer
     {
         public TextMeasurement Measure(FontKey font, float sizePt, string text) => null!;
+    }
+
+    private sealed class MissingResolvedFontFileTextMeasurer(string fontPath) : ITextMeasurer
+    {
+        public TextMeasurement Measure(FontKey font, float sizePt, string text) =>
+            new(
+                string.IsNullOrEmpty(text) ? 0f : text.Length * 5f,
+                8f,
+                3f,
+                new(
+                    font.Family,
+                    font.Weight,
+                    font.Style,
+                    fontPath,
+                    fontPath,
+                    0,
+                    fontPath));
     }
 
     private sealed class InvalidTextMeasurer : ITextMeasurer

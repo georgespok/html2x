@@ -75,6 +75,18 @@ Known statuses:
 - `DecodeFailed`
 - `OutOfScope`
 
+Coarse failure policy:
+
+- Empty or whitespace image sources, absent files, file IO failures, and
+  unauthorized file access are reported as `Missing`.
+- Relative paths that resolve outside the configured resource base directory
+  are reported as `OutOfScope`.
+- Files and data URIs that exceed the configured byte limit are reported as
+  `Oversized` before image decoding.
+- Malformed data URIs are reported as `InvalidDataUri`.
+- Byte payloads that load but cannot be decoded as an image are reported as
+  `DecodeFailed`.
+
 ## Diagnostics
 
 Image rendering uses `image/render`. Recoverable image failures are warnings.

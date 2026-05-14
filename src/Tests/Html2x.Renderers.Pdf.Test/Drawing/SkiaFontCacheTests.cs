@@ -13,7 +13,7 @@ public sealed class SkiaFontCacheTests
     [Fact]
     public void Build_SkipsNonFontFilesAndDisposesNonDefaultTypefaces()
     {
-        var fileDirectory = new TestFileSystemReader()
+        var fileSystemReader = new TestFileSystemReader()
             .AddDirectory("fonts")
             .AddEnumeration(
                 "fonts",
@@ -36,12 +36,12 @@ public sealed class SkiaFontCacheTests
             .AddFileTypeface("fonts\\c.ttc", 0, cTypeface)
             .AddFileTypeface("fonts\\c.ttc", 1, null);
 
-        var faces = FontDirectoryIndex.Build(fileDirectory, typefaceFactory, "fonts");
+        var faces = FontDirectoryIndex.Build(fileSystemReader, typefaceFactory, "fonts");
 
         faces.Count.ShouldBe(3);
         faces.Select(face => face.FilePath).ShouldBe(["fonts\\a.ttf", "fonts\\b.otf", "fonts\\c.ttc"], true);
-        fileDirectory.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
-        fileDirectory.EnumerateFilesCalls.ShouldBe([new("fonts", "*.*", true)]);
+        fileSystemReader.DirectoryExistsCalls.ShouldBe(["fonts", "fonts"]);
+        fileSystemReader.EnumerateFilesCalls.ShouldBe([new("fonts", "*.*", true)]);
         typefaceFactory.FromFileCalls.ShouldBe(["fonts\\a.ttf", "fonts\\b.otf"]);
         typefaceFactory.FromFileWithFaceIndexCalls.ShouldBe(
         [
@@ -177,20 +177,20 @@ public sealed class SkiaFontCacheTests
             3f,
             ResolvedFont: resolved);
 
-        var fileDirectory = new TestFileSystemReader()
+        var fileSystemReader = new TestFileSystemReader()
             .AddFile(resolvedPath);
 
         var typefaceFactory = new TestSkiaTypefaceFactory()
             .AddFileTypeface(resolvedPath, SKTypeface.Default);
 
-        using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
+        using var cache = new SkiaFontCache(fileSystemReader, typefaceFactory);
 
         var first = cache.GetTypeface(run);
         var second = cache.GetTypeface(run);
 
         first.ShouldBeSameAs(SKTypeface.Default);
         second.ShouldBeSameAs(first);
-        fileDirectory.FileExistsCalls.ShouldBe([resolvedPath]);
+        fileSystemReader.FileExistsCalls.ShouldBe([resolvedPath]);
         typefaceFactory.FromFileCalls.ShouldBe([resolvedPath]);
         typefaceFactory.FromFamilyNameCalls.ShouldBeEmpty();
     }
@@ -207,9 +207,9 @@ public sealed class SkiaFontCacheTests
             24f,
             9f,
             3f);
-        var fileDirectory = new TestFileSystemReader();
+        var fileSystemReader = new TestFileSystemReader();
         var typefaceFactory = new TestSkiaTypefaceFactory();
-        using var cache = new SkiaFontCache(fileDirectory, typefaceFactory);
+        using var cache = new SkiaFontCache(fileSystemReader, typefaceFactory);
 
         var exception = Should.Throw<FontResolutionException>(() => cache.GetTypeface(run));
 
@@ -219,8 +219,8 @@ public sealed class SkiaFontCacheTests
         typefaceFactory.FromFileCalls.ShouldBeEmpty();
         typefaceFactory.FromFileWithFaceIndexCalls.ShouldBeEmpty();
         typefaceFactory.FromFamilyNameCalls.ShouldBeEmpty();
-        fileDirectory.FileExistsCalls.ShouldBeEmpty();
-        fileDirectory.DirectoryExistsCalls.ShouldBeEmpty();
-        fileDirectory.EnumerateFilesCalls.ShouldBeEmpty();
+        fileSystemReader.FileExistsCalls.ShouldBeEmpty();
+        fileSystemReader.DirectoryExistsCalls.ShouldBeEmpty();
+        fileSystemReader.EnumerateFilesCalls.ShouldBeEmpty();
     }
 }

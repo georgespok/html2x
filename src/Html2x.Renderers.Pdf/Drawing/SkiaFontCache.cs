@@ -26,17 +26,17 @@ namespace Html2x.Renderers.Pdf.Drawing;
 /// </remarks>
 internal sealed class SkiaFontCache : IDisposable
 {
-    private readonly IFileSystemReader _fileDirectory;
+    private readonly IFileSystemReader _fileSystemReader;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
     private readonly ConcurrentDictionary<string, SKTypeface> _typefacesBySourceId =
         new(StringComparer.OrdinalIgnoreCase);
 
     internal SkiaFontCache(
-        IFileSystemReader fileDirectory,
+        IFileSystemReader fileSystemReader,
         ISkiaTypefaceFactory typefaceFactory)
     {
-        _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+        _fileSystemReader = fileSystemReader ?? throw new ArgumentNullException(nameof(fileSystemReader));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
     }
 
@@ -61,7 +61,7 @@ internal sealed class SkiaFontCache : IDisposable
     private SKTypeface LoadResolvedTypeface(FontKey key, ResolvedFont resolved)
     {
         var path = resolved.FilePath;
-        if (string.IsNullOrWhiteSpace(path) || !_fileDirectory.FileExists(path))
+        if (string.IsNullOrWhiteSpace(path) || !_fileSystemReader.FileExists(path))
         {
             throw CreateFontResolutionException(
                 "Resolved font did not provide a usable file path.",

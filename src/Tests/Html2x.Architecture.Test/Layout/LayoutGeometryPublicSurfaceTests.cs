@@ -1,3 +1,6 @@
+using System.Globalization;
+using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
@@ -13,11 +16,15 @@ using Html2x.LayoutEngine.Style.Computation;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
+using Html2x.Renderers.Pdf;
+using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.Resources;
 using Html2x.Text;
 using Shouldly;
-using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
+using Html2x.Architecture.Test.Support;
+using static Html2x.Architecture.Test.Support.TestSupport;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Layout;
 
 public sealed class LayoutGeometryPublicSurfaceTests
 {
@@ -26,44 +33,54 @@ public sealed class LayoutGeometryPublicSurfaceTests
     {
         var fontPathSource = SourceFileFor<FontPathSource>();
         var textMeasurer = SourceFileFor<SkiaTextMeasurer>();
-        var dependencies = CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverterDependencies.cs");
-        var renderer = CSharpSourceFile.Load("src", PdfRendererAssemblyName, "Pipeline", "PdfRenderer.cs");
+        var dependencies = SourceFileFor<HtmlConverterDependencies>();
+        var renderer = SourceFileFor<PdfRenderer>();
 
-        dependencies.ShouldContainPropertyInType("HtmlConverterDependencies", "FontSourceFactory", "Func<IFontSource>?",
+        dependencies.ShouldContainPropertyInType(
+            nameof(HtmlConverterDependencies),
+            nameof(HtmlConverterDependencies.FontSourceFactory),
+            NullableFuncTypeName<IFontSource>(),
             PublicAccessibility);
-        dependencies.ShouldContainPropertyInType("HtmlConverterDependencies", "TextMeasurerFactory", "Func<ITextMeasurer>?",
+        dependencies.ShouldContainPropertyInType(
+            nameof(HtmlConverterDependencies),
+            nameof(HtmlConverterDependencies.TextMeasurerFactory),
+            NullableFuncTypeName<ITextMeasurer>(),
             PublicAccessibility);
-        dependencies.ShouldNotContainPropertyInType("HtmlConverterDependencies", "FontSource");
-        dependencies.ShouldNotContainPropertyInType("HtmlConverterDependencies", "TextMeasurer");
-        fontPathSource.ShouldContainConstructor(nameof(FontPathSource), PublicAccessibility);
-        fontPathSource.ShouldNotHavePublicConstructorParameter("FontPathSource", "IFileSystemReader");
-        fontPathSource.ShouldNotHavePublicConstructorParameter("FontPathSource", "ISkiaTypefaceFactory");
-        textMeasurer.ShouldContainConstructor(nameof(SkiaTextMeasurer), PublicAccessibility);
-        textMeasurer.ShouldNotHavePublicConstructorParameter("SkiaTextMeasurer", "IFileSystemReader");
-        textMeasurer.ShouldNotHavePublicConstructorParameter("SkiaTextMeasurer", "ISkiaTypefaceFactory");
-        renderer.ShouldContainType("PdfRenderer", InternalAccessibility, true);
-        renderer.ShouldContainConstructor("PdfRenderer", InternalAccessibility);
-        renderer.ShouldNotHavePublicConstructorParameter("PdfRenderer", "IFileSystemReader");
-        renderer.ShouldNotHavePublicConstructorParameter("PdfRenderer", "ISkiaTypefaceFactory");
+        dependencies.ShouldNotContainPropertyInType(
+            nameof(HtmlConverterDependencies),
+            DirectDependencyPropertyName(nameof(HtmlConverterDependencies.FontSourceFactory)));
+        dependencies.ShouldNotContainPropertyInType(
+            nameof(HtmlConverterDependencies),
+            DirectDependencyPropertyName(nameof(HtmlConverterDependencies.TextMeasurerFactory)));
+        fontPathSource.ShouldContainConstructor<FontPathSource>(PublicAccessibility);
+        fontPathSource.ShouldNotHavePublicConstructorParameter<FontPathSource, IFileSystemReader>();
+        fontPathSource.ShouldNotHavePublicConstructorParameter<FontPathSource, ISkiaTypefaceFactory>();
+        textMeasurer.ShouldContainConstructor<SkiaTextMeasurer>(PublicAccessibility);
+        textMeasurer.ShouldNotHavePublicConstructorParameter<SkiaTextMeasurer, IFileSystemReader>();
+        textMeasurer.ShouldNotHavePublicConstructorParameter<SkiaTextMeasurer, ISkiaTypefaceFactory>();
+        renderer.ShouldContainType<PdfRenderer>(InternalAccessibility, true);
+        renderer.ShouldContainConstructor<PdfRenderer>(InternalAccessibility);
+        renderer.ShouldNotHavePublicConstructorParameter<PdfRenderer, IFileSystemReader>();
+        renderer.ShouldNotHavePublicConstructorParameter<PdfRenderer, ISkiaTypefaceFactory>();
     }
 
     [Fact]
     public void TextImplementationHelpers_AreNotPublicSurface()
     {
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FontDirectoryIndex.cs")
-            .ShouldContainType("FontDirectoryIndex", "internal");
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FontFaceEntry.cs")
-            .ShouldContainType("FontFaceEntry", "internal");
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "FileSystemReader.cs")
-            .ShouldContainType("FileSystemReader", "internal", true);
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "IFileSystemReader.cs")
-            .ShouldContainType("IFileSystemReader", "internal");
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "SkiaTypefaceFactory.cs")
-            .ShouldContainType("SkiaTypefaceFactory", "internal", true);
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "ISkiaTypefaceFactory.cs")
-            .ShouldContainType("ISkiaTypefaceFactory", "internal");
-        CSharpSourceFile.Load("src", AssemblyName<FontPathSource>(), "DiagnosticsFontSource.cs")
-            .ShouldContainType("DiagnosticsFontSource", "internal", true);
+        SourceFileFor(typeof(FontDirectoryIndex))
+            .ShouldContainType(typeof(FontDirectoryIndex), InternalAccessibility);
+        SourceFileFor(typeof(FontFaceEntry))
+            .ShouldContainType(typeof(FontFaceEntry), InternalAccessibility);
+        SourceFileFor<FileSystemReader>()
+            .ShouldContainType<FileSystemReader>(InternalAccessibility, true);
+        SourceFileFor(typeof(IFileSystemReader))
+            .ShouldContainType(typeof(IFileSystemReader), InternalAccessibility);
+        SourceFileFor<SkiaTypefaceFactory>()
+            .ShouldContainType<SkiaTypefaceFactory>(InternalAccessibility, true);
+        SourceFileFor(typeof(ISkiaTypefaceFactory))
+            .ShouldContainType(typeof(ISkiaTypefaceFactory), InternalAccessibility);
+        SourceFileFor<DiagnosticsFontSource>()
+            .ShouldContainType<DiagnosticsFontSource>(InternalAccessibility, true);
     }
 
     [Fact]
@@ -81,7 +98,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
             .ExternallyVisibleTypeNames();
         var geometryPublic = SemanticProjectFor<LayoutGeometryConstruction>()
             .ExternallyVisibleTypeNames();
-        var rendererPublic = ArchitectureSemanticProject.Load("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj")
+        var rendererPublic = SemanticProjectFor<PdfRenderer>()
             .ExternallyVisibleTypeNames();
 
         layoutEnginePublic.ShouldBeEmpty();
@@ -95,10 +112,9 @@ public sealed class LayoutGeometryPublicSurfaceTests
         stylePublic.ShouldNotContain(FullTypeName<StyleTreeBuilder>());
         stylePublic.ShouldNotContain(FullTypeName<CssStyleComputer>());
         fragmentsPublic.ShouldNotContain(FullTypeName<FragmentTreeBuilder>());
-        fragmentsPublic.ShouldNotContain("Html2x.LayoutEngine.Fragments.StyleConverter");
         paginationPublic.ShouldBeEmpty();
-        rendererPublic.ShouldNotContain("Html2x.Renderers.Pdf.Pipeline.PdfRenderer");
-        rendererPublic.ShouldNotContain("Html2x.Renderers.Pdf.PdfRenderSettings");
+        rendererPublic.ShouldNotContain(FullTypeName<PdfRenderer>());
+        rendererPublic.ShouldNotContain(FullTypeName<PdfRenderSettings>());
         geometryPublic.ShouldNotContain(FullTypeName<BlockBox>());
         geometryPublic.ShouldNotContain(FullTypeName<InlineBox>());
         geometryPublic.ShouldNotContain(FullTypeName<BlockBoxLayout>());
@@ -132,55 +148,53 @@ public sealed class LayoutGeometryPublicSurfaceTests
         SourceSetFor<LayoutGeometryConstruction>()
             .ShouldNotContainPublicTypes(nameof(BlockBox), nameof(InlineBox));
 
-        var blockBoxLayout = SourceFileFor<BlockBoxLayout>("BlockFlow");
+        var blockBoxLayout = SourceFileFor<BlockBoxLayout>();
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockFlowLayout));
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
         blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
-        blockBoxLayout.ShouldNotUseIdentifier("BuildTableRowFacts");
-        blockBoxLayout.ShouldNotUseIdentifier("BuildTableCellFacts");
 
-        var BlockSizingRules = SourceFileFor<BlockSizingRules>("BlockFlow");
-        BlockSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
+        var blockSizingRules = SourceFileFor<BlockSizingRules>();
+        blockSizingRules.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
 
-        var blockContentMeasurement = SourceFileFor<BlockFormattingMetricsMeasurement>("Measurement");
+        var blockContentMeasurement = SourceFileFor<BlockFormattingMetricsMeasurement>();
         blockContentMeasurement.ShouldUseIdentifier(nameof(BlockFlowMeasurement));
     }
 
     [Fact]
     public void PublishedGeometryFacts_AvoidMutableBoxImplementationNamespace()
     {
-        CSharpSourceSet.FromDirectory("src", AssemblyName<PublishedLayoutTree>(), "Published")
+        SourceSetForNamespaceOf<PublishedLayoutTree>()
             .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockBoxLayout>());
         SourceSetFor<HtmlLayout>()
             .ShouldNotUseNamespaces(NamespaceOf<BlockBox>(), NamespaceOf<BlockBoxLayout>());
-        SourceFileFor(typeof(GeometrySnapshotMapper), "Diagnostics")
-            .ShouldNotUseIdentifier("BoxTree");
+        SourceFileFor(typeof(GeometrySnapshotMapper))
+            .ShouldNotUseIdentifier(nameof(BoxTreeConstruction).Replace("Construction", string.Empty,
+                StringComparison.Ordinal));
     }
 
     [Fact]
     public void HtmlLayoutPages_AreReadOnlyAtRendererBoundary()
     {
-        var htmlLayout = SourceFileFor<HtmlLayout>("Documents");
+        var htmlLayout = SourceFileFor<HtmlLayout>();
         var paginator = SourceFileFor<LayoutPaginator>();
 
-        htmlLayout.ShouldContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages),
+        htmlLayout.ShouldContainPropertyInType<HtmlLayout>(nameof(HtmlLayout.Pages),
             ReadOnlyListTypeName<LayoutPage>(), PublicAccessibility);
-        htmlLayout.ShouldContainMethodInType(nameof(HtmlLayout), nameof(HtmlLayout.AddPage), VoidTypeName,
+        htmlLayout.ShouldContainMethodInType<HtmlLayout>(nameof(HtmlLayout.AddPage), VoidTypeName,
             PublicAccessibility);
-        htmlLayout.ShouldNotContainPropertyInType(nameof(HtmlLayout), nameof(HtmlLayout.Pages),
-            "IList<" + TypeName<LayoutPage>() + ">", PublicAccessibility);
+        htmlLayout.ShouldNotContainPropertyInType<HtmlLayout>(nameof(HtmlLayout.Pages),
+            InterfaceListTypeName<LayoutPage>(), PublicAccessibility);
         paginator.ShouldInvoke(nameof(HtmlLayout.AddPage));
     }
 
     [Fact]
     public void RenderModelColorFacts_DoNotOwnCssParsing()
     {
-        var color = SourceFileFor<ColorRgba>("Styles");
-        var styleComputer = SourceFileFor<CssStyleComputer>("Computation");
-        var borderMapper = SourceFileFor<BorderStyleMapper>("Computation");
+        var color = SourceFileFor<ColorRgba>();
+        var styleComputer = SourceFileFor<CssStyleComputer>();
+        var borderMapper = SourceFileFor<BorderStyleMapper>();
 
-        color.ShouldNotUseIdentifier("FromCss");
-        color.ShouldNotUseNamespace("System.Globalization");
+        color.ShouldNotUseNamespace(NamespaceOf<CultureInfo>());
         styleComputer.ShouldUseIdentifier(nameof(CssColorParser));
         borderMapper.ShouldUseIdentifier(nameof(CssColorParser));
     }
@@ -188,17 +202,17 @@ public sealed class LayoutGeometryPublicSurfaceTests
     [Fact]
     public void SourceIdentity_AssignmentAndSnapshotBoundaries_AreExplicit()
     {
-        var styleTraversal = SourceFileFor<StyleTraversal>("Computation");
-        var boxTreeConstruction = SourceFileFor<BoxTreeConstruction>("Construction");
+        var styleTraversal = SourceFileFor<StyleTraversal>();
+        var boxTreeConstruction = SourceFileFor<BoxTreeConstruction>();
         var snapshots = new[]
         {
-            SourceFileFor<LayoutSnapshot>("Diagnostics"),
-            SourceFileFor<LayoutPageSnapshot>("Diagnostics"),
-            SourceFileFor<FragmentSnapshot>("Diagnostics"),
-            SourceFileFor<GeometrySnapshot>("Diagnostics"),
-            SourceFileFor<BoxGeometrySnapshot>("Diagnostics"),
-            SourceFileFor<PaginationPageSnapshot>("Diagnostics"),
-            SourceFileFor<PaginationPlacementSnapshot>("Diagnostics")
+            SourceFileFor<LayoutSnapshot>(),
+            SourceFileFor<LayoutPageSnapshot>(),
+            SourceFileFor<FragmentSnapshot>(),
+            SourceFileFor<GeometrySnapshot>(),
+            SourceFileFor<BoxGeometrySnapshot>(),
+            SourceFileFor<PaginationPageSnapshot>(),
+            SourceFileFor<PaginationPlacementSnapshot>()
         };
         var boxGeometrySnapshot = snapshots[4];
 
@@ -217,21 +231,19 @@ public sealed class LayoutGeometryPublicSurfaceTests
             snapshot.ShouldNotUseNamespaces(NamespaceOf<StyleTreeBuilder>(), NamespaceOf<LayoutGeometryConstruction>());
         }
 
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.SourceNodeId), NullableCSharpTypeName<int>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.SourceContentId), NullableCSharpTypeName<int>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.SourcePath), NullableCSharpTypeName<string>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.SourceOrder), NullableCSharpTypeName<int>(), PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(
-            nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.SourceElementIdentity),
             NullableCSharpTypeName<string>(),
             PublicAccessibility);
-        boxGeometrySnapshot.ShouldContainPropertyInType(
-            nameof(BoxGeometrySnapshot),
+        boxGeometrySnapshot.ShouldContainPropertyInType<BoxGeometrySnapshot>(
             nameof(BoxGeometrySnapshot.GeneratedSourceKind),
             NullableCSharpTypeName<string>(),
             PublicAccessibility);
@@ -240,36 +252,43 @@ public sealed class LayoutGeometryPublicSurfaceTests
     [Fact]
     public void SupportedHtmlVocabulary_HasSingleStyleContractOwner()
     {
-        var styleTraversal = SourceFileFor<StyleTraversal>("Computation");
-        var constants = SourceFileFor(typeof(HtmlCssVocabulary), "Style");
+        var styleTraversal = SourceFileFor<StyleTraversal>();
+        var constants = SourceFileFor(typeof(HtmlCssVocabulary));
 
         constants.ShouldContainPropertyInType(
             nameof(HtmlCssVocabulary),
             nameof(HtmlCssVocabulary.SupportedElementTags),
-            "IReadOnlySet<string>",
+            ReadOnlySetTypeName<string>(),
             PublicAccessibility);
         styleTraversal.ShouldUseIdentifier(nameof(HtmlCssVocabulary.SupportedElementTags));
-        styleTraversal.ShouldNotUseIdentifier("SupportedTags");
     }
 
     [Fact]
     public void FriendAssemblies_AreExplicitAndLimited()
     {
-        CSharpSourceFile.Load("src", AssemblyName<LayoutGeometryConstruction>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(AssemblyName<LayoutPipeline>(), TestAssemblyNameFor<LayoutGeometryConstruction>(),
+        CompiledAssembly.For<HtmlConverter>()
+            .ShouldHaveFriendAssemblies(CurrentAssemblyName());
+        CompiledAssembly.For<IDiagnosticsSink>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<LayoutPipeline>(),
+                AssemblyName<StyleTreeBuilder>(),
                 CurrentAssemblyName());
-        CSharpSourceFile.Load("src", AssemblyName<LayoutPipeline>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(FacadeAssemblyName, TestAssemblyNameFor<LayoutGeometryConstruction>(),
-                CurrentAssemblyName());
-        CSharpSourceFile.Load("src", AssemblyName<FragmentTreeBuilder>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(
+        CompiledAssembly.For<LayoutGeometryConstruction>()
+            .ShouldHaveFriendAssemblies(AssemblyName<LayoutPipeline>(), TestAssemblyNameFor<LayoutGeometryConstruction>(),
+                TestAssemblyNameFor<LayoutPipeline>(), CurrentAssemblyName());
+        CompiledAssembly.For<LayoutPipeline>()
+            .ShouldHaveFriendAssemblies(AssemblyName<HtmlConverter>(), TestAssemblyNameFor<LayoutGeometryConstruction>(),
+                TestAssemblyNameFor<LayoutPipeline>(), CurrentAssemblyName());
+        CompiledAssembly.For<FragmentTreeBuilder>()
+            .ShouldHaveFriendAssemblies(
                 AssemblyName<LayoutPipeline>(),
                 TestAssemblyNameFor<FragmentTreeBuilder>(),
                 TestAssemblyNameFor<LayoutGeometryConstruction>(),
+                TestAssemblyNameFor<LayoutPipeline>(),
                 CurrentAssemblyName());
-        CSharpSourceFile.Load("src", AssemblyName<LayoutGeometryRequest>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(
-                FacadeAssemblyName,
+        CompiledAssembly.For<LayoutGeometryRequest>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<HtmlConverter>(),
                 AssemblyName<LayoutPipeline>(),
                 AssemblyName<FragmentTreeBuilder>(),
                 TestAssemblyNameFor<FragmentTreeBuilder>(),
@@ -278,12 +297,35 @@ public sealed class LayoutGeometryPublicSurfaceTests
                 AssemblyName<LayoutPaginator>(),
                 AssemblyName<StyleTreeBuilder>(),
                 TestAssemblyNameFor<StyleTreeBuilder>(),
+                TestAssemblyNameFor<LayoutPipeline>(),
                 CurrentAssemblyName());
-        CSharpSourceFile.Load("src", AssemblyName<LayoutPaginator>(), "Properties", "InternalsVisibleTo.cs")
-            .ShouldContainFriendAssemblies(
+        CompiledAssembly.For<LayoutPaginator>()
+            .ShouldHaveFriendAssemblies(
                 AssemblyName<LayoutPipeline>(),
                 TestAssemblyNameFor<LayoutGeometryConstruction>(),
                 TestAssemblyNameFor<LayoutPaginator>(),
+                TestAssemblyNameFor<LayoutPipeline>(),
+                CurrentAssemblyName());
+        CompiledAssembly.For<PdfRenderer>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<HtmlConverter>(),
+                TestAssemblyNameFor<PdfRenderer>(),
+                CurrentAssemblyName());
+        CompiledAssembly.For<FontPathSource>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<HtmlConverter>(),
+                AssemblyName<PdfRenderer>(),
+                TestAssemblyNameFor<PdfRenderer>(),
+                CurrentAssemblyName());
+        CompiledAssembly.For<ImageResourceStore>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<HtmlConverter>(),
+                TestAssemblyNameFor<HtmlConverter>(),
+                AssemblyName<PdfRenderer>(),
+                TestAssemblyNameFor<PdfRenderer>(),
                 CurrentAssemblyName());
     }
+
+    private static string DirectDependencyPropertyName(string factoryPropertyName) =>
+        factoryPropertyName.Replace("Factory", string.Empty, StringComparison.Ordinal);
 }

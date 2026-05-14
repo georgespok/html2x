@@ -12,17 +12,8 @@ internal sealed class InlineFlowMeasurement(
     IFontMetricsMeasurer metrics,
     ILineHeightStrategy lineHeightStrategy)
 {
-    private readonly ILineHeightStrategy _lineHeightStrategy =
-        lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
-
-    private readonly IFontMetricsMeasurer _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
-
-    private readonly InlineRunConstruction _runConstruction =
-        runConstruction ?? throw new ArgumentNullException(nameof(runConstruction));
-
-    private readonly TextLineLayout _textLayout = new(textMeasurer);
-
-    private readonly ITextMeasurer _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+    private readonly InlineTextLayoutMeasurement _inlineTextMeasurement =
+        new(runConstruction, textMeasurer, metrics, lineHeightStrategy);
 
     public InlineFlowMeasurementResult Measure(BlockBox block, InlineLayoutRequest request)
     {
@@ -156,38 +147,12 @@ internal sealed class InlineFlowMeasurement(
         BlockBox blockContext,
         IReadOnlyList<BoxNode> inlineChildren,
         float availableWidth,
-        bool includeSyntheticListMarker)
-    {
-        var runs = CollectInlineRuns(blockContext, inlineChildren, availableWidth, includeSyntheticListMarker);
-        if (runs.Count == 0)
-        {
-            return null;
-        }
-
-        var font = _metrics.GetFontKey(blockContext.Style);
-        var fontSize = _metrics.GetFontSize(blockContext.Style);
-        var fontMeasurement = _textMeasurer.Measure(font, fontSize, string.Empty);
-        var metrics = (fontMeasurement.Ascent, fontMeasurement.Descent);
-        var lineHeight = _lineHeightStrategy.GetLineHeight(blockContext.Style, font, fontSize, metrics);
-        return _textLayout.Layout(new(runs, availableWidth, lineHeight));
-    }
-
-    private IReadOnlyList<TextRunInput> CollectInlineRuns(
-        BlockBox blockContext,
-        IReadOnlyList<BoxNode> inlineChildren,
-        float availableWidth,
-        bool includeSyntheticListMarker)
-    {
-        var collection = new InlineRunCollector(
-            _runConstruction,
-            _textMeasurer,
-            _lineHeightStrategy);
-        return collection.CollectInlineFlow(
+        bool includeSyntheticListMarker) =>
+        _inlineTextMeasurement.MeasureInlineFlow(
             blockContext,
             inlineChildren,
             availableWidth,
             includeSyntheticListMarker);
-    }
 
     private readonly record struct InlineFlowState(
         float CurrentY,

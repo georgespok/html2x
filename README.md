@@ -41,6 +41,7 @@ HTML/CSS, diagnostics, and troubleshooting, start with the
 
 ```csharp
 using Html2x;
+using Html2x.Options;
 
 var converter = new HtmlConverter();
 

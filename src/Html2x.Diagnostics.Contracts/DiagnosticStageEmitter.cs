@@ -2,11 +2,11 @@ namespace Html2x.Diagnostics.Contracts;
 
 public static class DiagnosticStageEmitter
 {
-    private const string StartedEvent = "stage/started";
-    private const string SucceededEvent = "stage/succeeded";
-    private const string FailedEvent = "stage/failed";
-    private const string SkippedEvent = "stage/skipped";
-    private const string CanceledEvent = "stage/canceled";
+    internal const string StartedEvent = "stage/started";
+    internal const string SucceededEvent = "stage/succeeded";
+    internal const string FailedEvent = "stage/failed";
+    internal const string SkippedEvent = "stage/skipped";
+    internal const string CanceledEvent = "stage/canceled";
 
     public static void Started(
         IDiagnosticsSink? diagnosticsSink,

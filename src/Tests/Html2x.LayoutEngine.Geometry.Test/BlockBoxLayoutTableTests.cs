@@ -22,25 +22,12 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TableNode_ProducesNestedTableRowAndCellBlocks()
     {
-        var firstRowSource = new TableRowBox(BoxRole.TableRow) { Style = new() };
-        var firstCellSource = new TableCellBox(BoxRole.TableCell) { Parent = firstRowSource, Style = new() };
-        var secondCellSource = new TableCellBox(BoxRole.TableCell) { Parent = firstRowSource, Style = new() };
-        firstRowSource.AddChild(firstCellSource);
-        firstRowSource.AddChild(secondCellSource);
-
-        var secondRowSource = new TableRowBox(BoxRole.TableRow) { Style = new() };
-        var thirdCellSource = new TableCellBox(BoxRole.TableCell) { Parent = secondRowSource, Style = new() };
-        secondRowSource.AddChild(thirdCellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        root.AddChild(firstRowSource);
-        root.AddChild(secondRowSource);
+        var root = TableBoxTree.Create(120f);
+        var firstRowSource = TableBoxTree.AddRow(root);
+        var firstCellSource = TableBoxTree.AddCell(firstRowSource);
+        var secondCellSource = TableBoxTree.AddCell(firstRowSource);
+        var secondRowSource = TableBoxTree.AddRow(root);
+        var thirdCellSource = TableBoxTree.AddCell(secondRowSource);
 
         var result = LayoutMutableBlocks(root);
 
@@ -79,31 +66,19 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TableMaterialization_PopulatesRowAndCellGeometry()
     {
-        var rowSource = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
+        var root = TableBoxTree.Create(120f);
+        var rowSource = TableBoxTree.AddRow(
+            root,
+            style: new()
             {
                 Padding = new(1f, 2f, 3f, 4f)
-            }
-        };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new()
+            });
+        TableBoxTree.AddCell(
+            rowSource,
+            new()
             {
                 Padding = new(2f, 4f, 6f, 8f)
-            }
-        };
-        rowSource.AddChild(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        root.AddChild(rowSource);
+            });
 
         var result = LayoutMutableBlocks(root);
 
@@ -132,27 +107,14 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TablePaddingAndBorder_PlacesCellsInContentBox()
     {
-        var rowSource = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
-        };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new()
-        };
-        rowSource.AddChild(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
+        var root = TableBoxTree.CreateWithStyle(
+            new()
             {
                 WidthPt = 104f,
                 Padding = new(4f, 5f, 6f, 7f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        root.AddChild(rowSource);
+            });
+        TableBoxTree.AddRow(root, 1);
 
         var result = LayoutMutableBlocks(root);
 
@@ -170,38 +132,21 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TableCellContent_PlacesNestedBlockAtCellContentBox()
     {
-        var sourceRow = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
-        };
-        var sourceCell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = sourceRow,
-            Style = new()
+        var root = TableBoxTree.Create(120f);
+        var sourceRow = TableBoxTree.AddRow(root);
+        var sourceCell = TableBoxTree.AddCell(
+            sourceRow,
+            new()
             {
                 Padding = new(3f, 4f, 5f, 6f),
                 Borders = BorderEdges.Uniform(new(2f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        var nestedBlock = new BlockBox(BoxRole.Block)
-        {
-            Parent = sourceCell,
-            Style = new()
+            });
+        var nestedBlock = TableBoxTree.AddBlock(
+            sourceCell,
+            new()
             {
                 HeightPt = 7f
-            }
-        };
-        sourceCell.AddChild(nestedBlock);
-        sourceRow.AddChild(sourceCell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        root.AddChild(sourceRow);
+            });
 
         var result = LayoutMutableBlocks(root);
 
@@ -222,21 +167,6 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_BlockContainerWithNestedTable_PreservesTableInChildFlow()
     {
-        var tableRow = new TableRowBox(BoxRole.TableRow) { Style = new() };
-        var leftCell = new TableCellBox(BoxRole.TableCell) { Parent = tableRow, Style = new() };
-        var rightCell = new TableCellBox(BoxRole.TableCell) { Parent = tableRow, Style = new() };
-        tableRow.AddChild(leftCell);
-        tableRow.AddChild(rightCell);
-
-        leftCell.AddChild(new BlockBox(BoxRole.Block)
-        {
-            Parent = leftCell,
-            Style = new()
-            {
-                HeightPt = 40f
-            }
-        });
-
         var section = new BlockBox(BoxRole.Block)
         {
             Style = new()
@@ -257,17 +187,17 @@ public class BlockBoxLayoutTableTests
             TextContent = "Heading"
         });
         section.AddChild(headingSource);
-        section.AddChild(new TableBox(BoxRole.Table)
-        {
-            Parent = section,
-            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Table),
-            Style = new()
+
+        var table = TableBoxTree.AddTable(section, 120f);
+        var tableRow = TableBoxTree.AddRow(table);
+        var leftCell = TableBoxTree.AddCell(tableRow);
+        TableBoxTree.AddCell(tableRow);
+        TableBoxTree.AddBlock(
+            leftCell,
+            new()
             {
-                WidthPt = 120f
-            }
-        });
-        var table = (TableBox)section.Children[1];
-        table.AddChild(tableRow);
+                HeightPt = 40f
+            });
 
         var root = new BlockBox(BoxRole.Block)
         {
@@ -297,33 +227,20 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TableGeometry_MaterializesWithoutRecalculation()
     {
-        var rowSource = new TableRowBox(BoxRole.TableRow) { Style = new() };
-        var cellSource = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = rowSource,
-            Style = new()
+        var root = TableBoxTree.Create(120f);
+        var rowSource = TableBoxTree.AddRow(root);
+        var cellSource = TableBoxTree.AddCell(
+            rowSource,
+            new()
             {
                 Padding = new(7.5f, 7.5f, 7.5f, 7.5f)
-            }
-        };
-        cellSource.AddChild(new BlockBox(BoxRole.Block)
-        {
-            Parent = cellSource,
-            Style = new()
+            });
+        TableBoxTree.AddBlock(
+            cellSource,
+            new()
             {
                 HeightPt = 14.5f
-            }
-        });
-        rowSource.AddChild(cellSource);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        root.AddChild(rowSource);
+            });
 
         var result = LayoutMutableBlocks(root);
 
@@ -339,44 +256,13 @@ public class BlockBoxLayoutTableTests
     [Fact]
     public void Layout_TableCellContent_IsMappedIntoMaterializedCellTree()
     {
-        var sourceRow = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
-        };
-        var sourceCell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = sourceRow,
-            Style = new()
-        };
-        sourceCell.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            Parent = sourceCell,
-            TextContent = "alpha",
-            Style = new()
-        });
+        var root = TableBoxTree.Create(120f);
+        var sourceRow = TableBoxTree.AddRow(root);
+        var sourceCell = TableBoxTree.AddCell(sourceRow);
+        TableBoxTree.AddInline(sourceCell, "alpha", new());
 
-        var nestedBlock = new BlockBox(BoxRole.Block)
-        {
-            Parent = sourceCell,
-            Style = new()
-        };
-        nestedBlock.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            Parent = nestedBlock,
-            TextContent = "beta",
-            Style = new()
-        });
-        sourceCell.AddChild(nestedBlock);
-        sourceRow.AddChild(sourceCell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        root.AddChild(sourceRow);
+        var nestedBlock = TableBoxTree.AddBlock(sourceCell);
+        TableBoxTree.AddInline(nestedBlock, "beta", new());
 
         var result = LayoutMutableBlocks(root);
 
@@ -402,29 +288,9 @@ public class BlockBoxLayoutTableTests
     public void Layout_UnsupportedTable_EmitsDiagnosticsAndSkipsRows()
     {
         var diagnosticsSink = new RecordingDiagnosticsSink();
-        var row = new TableRowBox(BoxRole.TableRow)
-        {
-            Style = new()
-        };
-        var cell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = row,
-            Element = StyledElementFacts.Create(
-                HtmlCssVocabulary.HtmlTags.Td,
-                (HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")),
-            Style = new()
-        };
-        row.AddChild(cell);
-
-        var root = new TableBox(BoxRole.Table)
-        {
-            Element = StyledElementFacts.Create(HtmlCssVocabulary.HtmlTags.Table),
-            Style = new()
-            {
-                WidthPt = 150f
-            }
-        };
-        root.AddChild(row);
+        var root = TableBoxTree.Create(150f);
+        var row = TableBoxTree.AddRow(root);
+        TableBoxTree.AddCell(row, rowspan: "2");
 
         var result = LayoutMutableBlocks(root, diagnosticsSink);
 

@@ -49,6 +49,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.LayoutEngine.Paginat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.Resources", "Html2x.Resources\Html2x.Resources.csproj", "{23EAAB03-FC07-4CD3-B2E7-77933A65FE76}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Html2x.Architecture.Test", "Tests\Html2x.Architecture.Test\Html2x.Architecture.Test.csproj", "{7257C399-3B51-4249-9F97-6CC972131BB1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -323,6 +325,18 @@ Global
 		{23EAAB03-FC07-4CD3-B2E7-77933A65FE76}.Release|x64.Build.0 = Release|Any CPU
 		{23EAAB03-FC07-4CD3-B2E7-77933A65FE76}.Release|x86.ActiveCfg = Release|Any CPU
 		{23EAAB03-FC07-4CD3-B2E7-77933A65FE76}.Release|x86.Build.0 = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|x64.Build.0 = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Debug|x86.Build.0 = Debug|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|x64.ActiveCfg = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|x64.Build.0 = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|x86.ActiveCfg = Release|Any CPU
+		{7257C399-3B51-4249-9F97-6CC972131BB1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -337,6 +351,7 @@ Global
 		{513A9B8A-B44B-4DA2-9726-9AA173682E43} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{9B081C36-414B-41A7-9CC8-B337C8E4C57B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{7F69F00E-20A9-42E4-8060-167F7028FF8E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{7257C399-3B51-4249-9F97-6CC972131BB1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AB57D9EB-26DA-495D-9ED2-1DAF843549DA}

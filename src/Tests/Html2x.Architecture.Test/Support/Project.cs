@@ -1,33 +1,33 @@
 using System.Xml.Linq;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal sealed class ArchitectureProject
+internal sealed class Project
 {
     private readonly XDocument _document;
     private readonly string _path;
 
-    private ArchitectureProject(string path)
+    private Project(string path)
     {
         _path = path;
         _document = XDocument.Load(path);
     }
 
-    public static ArchitectureProject Load(params string[] pathSegments) =>
-        new(ArchitecturePaths.PathFromRoot(pathSegments));
+    public static Project Load(params string[] pathSegments) =>
+        new(Paths.PathFromRoot(pathSegments));
 
     public IReadOnlyList<string> ProjectReferences() =>
-        _document.Descendants("ProjectReference")
-            .Select(static element => element.Attribute("Include")?.Value)
+        _document.Descendants(ProjectFileVocabulary.ProjectReferenceElement)
+            .Select(static element => element.Attribute(ProjectFileVocabulary.IncludeAttribute)?.Value)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => Path.GetFileNameWithoutExtension(value!))
             .OrderBy(static value => value, StringComparer.Ordinal)
             .ToArray();
 
     public IReadOnlyList<string> PackageReferences() =>
-        _document.Descendants("PackageReference")
-            .Select(static element => element.Attribute("Include")?.Value)
+        _document.Descendants(ProjectFileVocabulary.PackageReferenceElement)
+            .Select(static element => element.Attribute(ProjectFileVocabulary.IncludeAttribute)?.Value)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value!)
             .OrderBy(static value => value, StringComparer.Ordinal)
@@ -58,8 +58,8 @@ internal sealed class ArchitectureProject
     }
 
     public IReadOnlyList<string> TargetFrameworks() =>
-        _document.Descendants("TargetFramework")
-            .Concat(_document.Descendants("TargetFrameworks"))
+        _document.Descendants(ProjectFileVocabulary.TargetFrameworkElement)
+            .Concat(_document.Descendants(ProjectFileVocabulary.TargetFrameworksElement))
             .Select(static element => element.Value)
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .SelectMany(static value =>

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
 internal sealed class CSharpSourceFile
 {
@@ -22,7 +22,7 @@ internal sealed class CSharpSourceFile
     public CompilationUnitSyntax Root { get; }
 
     public static CSharpSourceFile Load(params string[] pathSegments) =>
-        Load(ArchitecturePaths.PathFromRoot(pathSegments));
+        Load(Paths.PathFromRoot(pathSegments));
 
     public static CSharpSourceFile Load(string path)
     {
@@ -81,6 +81,12 @@ internal sealed class CSharpSourceFile
         }
     }
 
+    public void ShouldContainType<T>(string accessibility, bool? isSealed = null) =>
+        ShouldContainType(typeof(T), accessibility, isSealed);
+
+    public void ShouldContainType(Type type, string accessibility, bool? isSealed = null) =>
+        ShouldContainType(type.Name, accessibility, isSealed);
+
     public void ShouldNotContainPublicType(string typeName)
     {
         var declaration = TypeDeclarations()
@@ -106,6 +112,9 @@ internal sealed class CSharpSourceFile
         AccessibilityOf(declaration).ShouldBe(accessibility, $"{typeName} should be {accessibility}.");
     }
 
+    public void ShouldContainRecordStruct<T>(string accessibility) =>
+        ShouldContainRecordStruct(typeof(T).Name, accessibility);
+
     public void ShouldContainEnum(string typeName, string accessibility)
     {
         var declaration = Root.DescendantNodes()
@@ -115,6 +124,9 @@ internal sealed class CSharpSourceFile
         declaration.ShouldNotBeNull($"{RelativePath()} should declare enum {typeName}.");
         AccessibilityOf(declaration).ShouldBe(accessibility, $"{typeName} should be {accessibility}.");
     }
+
+    public void ShouldContainEnum<T>(string accessibility) =>
+        ShouldContainEnum(typeof(T).Name, accessibility);
 
     public void ShouldContainEnumMembers(string enumName, params string[] memberNames)
     {
@@ -132,6 +144,9 @@ internal sealed class CSharpSourceFile
             actualMembers.ShouldContain(memberName, $"{enumName} should contain enum member {memberName}.");
         }
     }
+
+    public void ShouldContainEnumMembers<T>(params string[] memberNames) =>
+        ShouldContainEnumMembers(typeof(T).Name, memberNames);
 
     public void ShouldContainProperty(string propertyName, string? propertyType = null, string? accessibility = null)
     {
@@ -157,6 +172,12 @@ internal sealed class CSharpSourceFile
         declaration.ShouldNotBeNull($"{RelativePath()} should declare property {typeName}.{propertyName}.");
         AssertPropertyShape(declaration, $"{typeName}.{propertyName}", propertyType, accessibility);
     }
+
+    public void ShouldContainPropertyInType<T>(
+        string propertyName,
+        string? propertyType = null,
+        string? accessibility = null) =>
+        ShouldContainPropertyInType(typeof(T).Name, propertyName, propertyType, accessibility);
 
     private void AssertPropertyShape(
         PropertyDeclarationSyntax declaration,
@@ -205,6 +226,12 @@ internal sealed class CSharpSourceFile
         matches.ShouldBeEmpty($"{typeName} should not declare matching property {propertyName}.");
     }
 
+    public void ShouldNotContainPropertyInType<T>(
+        string propertyName,
+        string? propertyType = null,
+        string? accessibility = null) =>
+        ShouldNotContainPropertyInType(typeof(T).Name, propertyName, propertyType, accessibility);
+
     public void ShouldContainMethod(string methodName, string? returnType = null, string? accessibility = null)
     {
         var declaration = Root.DescendantNodes()
@@ -229,6 +256,12 @@ internal sealed class CSharpSourceFile
         declaration.ShouldNotBeNull($"{RelativePath()} should declare method {typeName}.{methodName}.");
         AssertMethodShape(declaration, $"{typeName}.{methodName}", returnType, accessibility);
     }
+
+    public void ShouldContainMethodInType<T>(
+        string methodName,
+        string? returnType = null,
+        string? accessibility = null) =>
+        ShouldContainMethodInType(typeof(T).Name, methodName, returnType, accessibility);
 
     private void AssertMethodShape(
         MethodDeclarationSyntax declaration,
@@ -259,6 +292,9 @@ internal sealed class CSharpSourceFile
         AccessibilityOf(declaration).ShouldBe(accessibility, $"{typeName} constructor should be {accessibility}.");
     }
 
+    public void ShouldContainConstructor<T>(string accessibility) =>
+        ShouldContainConstructor(typeof(T).Name, accessibility);
+
     public void ShouldHaveParameter(string methodOrConstructorName, string parameterName, string parameterType)
     {
         var parameter = Root.DescendantNodes()
@@ -287,6 +323,9 @@ internal sealed class CSharpSourceFile
 
         matches.ShouldBeEmpty($"{typeName} should not expose public constructor parameter type {parameterType}.");
     }
+
+    public void ShouldNotHavePublicConstructorParameter<TDeclaring, TParameter>() =>
+        ShouldNotHavePublicConstructorParameter(typeof(TDeclaring).Name, typeof(TParameter).Name);
 
     public void ShouldUseIdentifier(string identifier)
     {
@@ -374,6 +413,28 @@ internal sealed class CSharpSourceFile
     public void ShouldContainFriendAssemblies(params string[] expectedAssemblies) =>
         FriendAssemblies().ShouldBeSet(expectedAssemblies);
 
+    public string RequiredNamespace()
+    {
+        var namespaces = Namespaces()
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        namespaces.Length.ShouldBe(1, $"{RelativePath()} should declare one namespace.");
+        return namespaces[0];
+    }
+
+    public string RequiredTypeName()
+    {
+        var fileName = System.IO.Path.GetFileNameWithoutExtension(Path);
+        var declaration = TypeDeclarations()
+            .FirstOrDefault(type => type.Identifier.ValueText.Equals(fileName, StringComparison.Ordinal));
+
+        declaration.ShouldNotBeNull($"{RelativePath()} should declare type {fileName}.");
+        return declaration.Identifier.ValueText;
+    }
+
+    public string RequiredFullTypeName() => RequiredNamespace() + "." + RequiredTypeName();
+
     public IReadOnlyList<string> FriendAssemblies()
     {
         return Root.DescendantNodes()
@@ -452,7 +513,7 @@ internal sealed class CSharpSourceFile
             .ToArray();
 
     private string RelativePath() =>
-        System.IO.Path.GetRelativePath(ArchitecturePaths.RepoRoot(), Path);
+        System.IO.Path.GetRelativePath(Paths.RepoRoot(), Path);
 
     private int LineNumber(SyntaxNode node) =>
         Tree.GetLineSpan(node.Span).StartLinePosition.Line + 1;

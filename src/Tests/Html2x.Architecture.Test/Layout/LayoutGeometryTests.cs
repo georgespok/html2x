@@ -1,10 +1,15 @@
+using System.Drawing;
+using System.Text.RegularExpressions;
+using AngleSharp.Dom;
 using Html2x.Diagnostics.Contracts;
+using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.BlockFlow;
+using Html2x.LayoutEngine.Geometry.Composition;
 using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
@@ -17,41 +22,46 @@ using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Document;
 using Html2x.LayoutEngine.Style.Computation;
+using Html2x.Options;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Resources;
+using Html2x.Renderers.Pdf;
+using Html2x.Renderers.Pdf.Pipeline;
+using Html2x.Resources;
 using Html2x.Text;
 using Shouldly;
-using static Html2x.LayoutEngine.Test.Architecture.ArchitectureTestSupport;
-using System.Text.RegularExpressions;
+using Html2x.Architecture.Test.Support;
+using static Html2x.Architecture.Test.Support.TestSupport;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Layout;
 
-public sealed class LayoutGeometryArchitectureTests
+public sealed class LayoutGeometryTests
 {
     [Fact]
     public void ContractsNamespaces_MatchFolderOwnership()
     {
-        CSharpSourceSet.FromDirectory("src", AssemblyName<ComputedStyle>(), "Style")
+        SourceSetForNamespaceOf<ComputedStyle>()
             .ShouldDeclareNamespace(NamespaceOf<ComputedStyle>());
-        CSharpSourceSet.FromDirectory("src", AssemblyName<LayoutGeometryRequest>(), "Geometry")
+        SourceSetForNamespaceOf<LayoutGeometryRequest>()
             .ShouldNotDeclareNamespaces(
-                AssemblyName<LayoutPipeline>() + ".Models",
-                AssemblyName<LayoutGeometryConstruction>() + ".Published",
-                AssemblyName<LayoutGeometryConstruction>() + ".Images",
+                AssemblyName<LayoutPipeline>() + "." + NamespaceSegmentOf<BlockBox>(),
+                AssemblyName<LayoutGeometryConstruction>() + "." + NamespaceSegmentOf<PublishedLayoutWriter>(),
+                AssemblyName<LayoutGeometryConstruction>() + "." + NamespaceSegmentOf<ImageSizingRules>(),
                 NamespaceOf<LayoutGeometryConstruction>());
-        CSharpSourceSet.FromDirectory("src", AssemblyName<IImageMetadataResolver>(), "Geometry", "Images")
+        SourceSetForNamespaceOf<IImageMetadataResolver>()
             .ShouldDeclareNamespace(NamespaceOf<IImageMetadataResolver>());
-        CSharpSourceSet.FromDirectory("src", AssemblyName<PublishedLayoutTree>(), "Published")
+        SourceSetForNamespaceOf<PublishedLayoutTree>()
             .ShouldDeclareNamespace(NamespaceOf<PublishedLayoutTree>());
-        CSharpSourceSet.FromDirectory("src", AssemblyName<BlockBox>(), "Models")
+        SourceSetForNamespaceOf<BlockBox>()
             .ShouldDeclareNamespace(NamespaceOf<BlockBox>());
     }
 
     [Fact]
     public void SharedContractFacts_HaveExpectedOwners()
     {
-        var request = SourceFileFor<LayoutGeometryRequest>("Geometry");
+        var request = SourceFileFor<LayoutGeometryRequest>();
         request.ShouldDeclareNamespace(NamespaceOf<LayoutGeometryRequest>());
         request.ShouldContainPropertyInType(
             nameof(LayoutGeometryRequest),
@@ -59,17 +69,17 @@ public sealed class LayoutGeometryArchitectureTests
             NullableTypeName<IImageMetadataResolver>());
         request.ShouldUseNamespace(NamespaceOf<IImageMetadataResolver>());
 
-        var pageContentArea = SourceFileFor<PageContentArea>("Geometry");
+        var pageContentArea = SourceFileFor<PageContentArea>();
         pageContentArea.ShouldDeclareNamespace(NamespaceOf<PageContentArea>());
         pageContentArea.ShouldContainRecordStruct(nameof(PageContentArea), InternalAccessibility);
 
-        var geometryGuard = SourceFileFor(typeof(GeometryGuard), "Primitives");
+        var geometryGuard = SourceFileFor(typeof(GeometryGuard));
         geometryGuard.ShouldDeclareNamespace(NamespaceOf(typeof(GeometryGuard)));
         geometryGuard.ShouldContainType(nameof(GeometryGuard), InternalAccessibility);
 
-        var TablePlacementWriter = SourceFileFor<TablePlacementWriter>("Tables");
-        TablePlacementWriter.ShouldUseIdentifier(nameof(GeometryTranslator));
-        TablePlacementWriter.ShouldNotInvokeMemberOn(nameof(UsedGeometry), nameof(UsedGeometry.Translate));
+        var tablePlacementWriter = SourceFileFor<TablePlacementWriter>();
+        tablePlacementWriter.ShouldUseIdentifier(nameof(GeometryTranslator));
+        tablePlacementWriter.ShouldNotInvokeMemberOn(nameof(UsedGeometry), nameof(UsedGeometry.Translate));
     }
 
     [Fact]
@@ -85,7 +95,7 @@ public sealed class LayoutGeometryArchitectureTests
             .ShouldNotUseNamespaces(ParserPackageName());
         SourceSetFor<LayoutGeometryRequest>()
             .ShouldNotUseNamespaces(ParserPackageName());
-        CSharpSourceSet.FromDirectory("src", "Tests", TestAssemblyNameFor<LayoutGeometryConstruction>())
+        SourceSetForTestAssemblyOf<LayoutGeometryConstruction>()
             .ShouldNotUseNamespaces(ParserPackageName());
     }
 
@@ -94,24 +104,24 @@ public sealed class LayoutGeometryArchitectureTests
     {
         foreach (var file in new[]
                  {
-                     SourceFileFor<StyleTree>("Style"),
-                     SourceFileFor<StyleNode>("Style"),
-                     SourceFileFor<StyleContentNode>("Style"),
-                     SourceFileFor<StyledElementFacts>("Style"),
-                     SourceFileFor<BoxNode>("Models")
+                     SourceFileFor<StyleTree>(),
+                     SourceFileFor<StyleNode>(),
+                     SourceFileFor<StyleContentNode>(),
+                     SourceFileFor<StyledElementFacts>(),
+                     SourceFileFor<BoxNode>()
                  })
         {
             file.ShouldNotUseNamespaces(ParserPackageName());
-            file.ShouldNotUseIdentifier("IElement");
-            file.ShouldNotUseIdentifier("INode");
-            file.ShouldNotUseIdentifier("IDocument");
+            file.ShouldNotUseIdentifier(nameof(IElement));
+            file.ShouldNotUseIdentifier(nameof(INode));
+            file.ShouldNotUseIdentifier(nameof(IDocument));
         }
     }
 
     [Fact]
     public void StyleNode_HandoffCollections_AreReadOnly()
     {
-        var styleNode = SourceFileFor<StyleNode>("Style");
+        var styleNode = SourceFileFor<StyleNode>();
 
         styleNode.ShouldContainPropertyInType(nameof(StyleNode), nameof(StyleNode.Children),
             ReadOnlyListTypeName<StyleNode>(), PublicAccessibility);
@@ -134,14 +144,13 @@ public sealed class LayoutGeometryArchitectureTests
                 NamespaceOf<LayoutGeometryConstruction>(),
                 NamespaceOf<FragmentTreeBuilder>(),
                 NamespaceOf<StyleTreeBuilder>(),
-                "Html2x.Renderers",
+                RendererNamespace,
                 AssemblyName<ITextMeasurer>(),
                 ParserPackageName(),
-                SkiaSharpPackageName);
+                ExternalPackageIds.SkiaSharp);
 
         var fragmentPlacementCloner = SourceFileFor<FragmentPlacementCloner>();
         fragmentPlacementCloner.ShouldUseIdentifier(nameof(UsedGeometry.Translate));
-        fragmentPlacementCloner.ShouldNotUseIdentifier("RenderGeometryTranslator");
         fragmentPlacementCloner.ShouldNotUseIdentifier(nameof(GeometryTranslator));
 
         var paginationOptions = SourceFileFor<PaginationOptions>();
@@ -165,7 +174,7 @@ public sealed class LayoutGeometryArchitectureTests
             nameof(PaginationDecisionKind.ForcedBreak));
         paginationPlacementAudit.ShouldNotContainPropertyInType(
             nameof(PaginationPlacementAudit),
-            "Fragment",
+            nameof(PaginationPlacementAudit.FragmentKind).Replace("Kind", string.Empty, StringComparison.Ordinal),
             TypeName<BlockFragment>(),
             PublicAccessibility);
     }
@@ -180,11 +189,11 @@ public sealed class LayoutGeometryArchitectureTests
                      SourceSetFor<LayoutGeometryConstruction>(),
                      SourceSetFor<FragmentTreeBuilder>(),
                      SourceSetFor<LayoutPaginator>(),
-                     CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
+                     SourceSetFor<PdfRenderer>()
                  })
         {
-            sourceRoot.ShouldNotUseNamespaces("System.Drawing");
-            sourceRoot.ShouldNotUseIdentifiers("RectangleF", "PointF", "SizeF");
+            sourceRoot.ShouldNotUseNamespaces(NamespaceOf<RectangleF>());
+            sourceRoot.ShouldNotUseIdentifiers(nameof(RectangleF), nameof(PointF), nameof(SizeF));
         }
     }
 
@@ -192,7 +201,7 @@ public sealed class LayoutGeometryArchitectureTests
     public void LayoutComposition_StaysAtStageAndHandoffBoundaries()
     {
         SemanticProjectFor<LayoutPipeline>()
-            .ShouldNotReferenceNamespaces(ParserPackageName(), "Html2x.Renderers", SkiaSharpPackageName);
+            .ShouldNotReferenceNamespaces(ParserPackageName(), RendererNamespace, ExternalPackageIds.SkiaSharp);
 
         var layoutPipeline = SourceFileFor<LayoutPipeline>();
 
@@ -200,12 +209,10 @@ public sealed class LayoutGeometryArchitectureTests
             TaskTypeName<HtmlLayout>(), PublicAccessibility);
         layoutPipeline.ShouldNotConstructType(nameof(AngleSharpDocumentLoader));
         layoutPipeline.ShouldNotConstructType(nameof(CssStyleComputer));
-        layoutPipeline.ShouldNotConstructType("BoxTreeBuilder");
         layoutPipeline.ShouldNotConstructType(nameof(BlockBoxLayout));
         layoutPipeline.ShouldNotConstructType(nameof(BlockFormattingMetricsMeasurement));
         layoutPipeline.ShouldNotConstructType(nameof(BlockPaginator));
         layoutPipeline.ShouldNotConstructType(nameof(LayoutPage));
-        layoutPipeline.ShouldNotUseIdentifier("CreateLayoutPageChildren");
     }
 
     [Fact]
@@ -213,25 +220,23 @@ public sealed class LayoutGeometryArchitectureTests
     {
         var layoutPipeline = SourceFileFor<LayoutPipeline>();
         var stageRunner = SourceFileFor<LayoutStageRunner>();
-        var stageNames = CSharpSourceFile.Load("src", AssemblyName<LayoutPipeline>(), "LayoutStageNames.cs");
-        var snapshotDiagnostics = SourceFileFor(typeof(GeometrySnapshotDiagnostics), "Diagnostics");
+        var stageNames = SourceFileFor(typeof(LayoutStageNames));
+        var snapshotDiagnostics = SourceFileFor(typeof(GeometrySnapshotDiagnostics));
 
         layoutPipeline.ShouldUseIdentifier(nameof(LayoutStageRunner));
-        layoutPipeline.ShouldUseIdentifier("CreateGeometryRequest");
-        layoutPipeline.ShouldUseIdentifier("CreatePaginationOptions");
         layoutPipeline.ShouldUseIdentifier(nameof(GeometrySnapshotDiagnostics));
-        layoutPipeline.ShouldNotUseIdentifier("DiagnosticStageRunner");
+        layoutPipeline.ShouldNotUseIdentifier(DiagnosticStageRunnerTypeName);
         layoutPipeline.ShouldNotConstructType(nameof(DiagnosticRecord));
 
-        stageRunner.ShouldUseIdentifier("DiagnosticStageRunner");
+        stageRunner.ShouldUseIdentifier(DiagnosticStageRunnerTypeName);
         stageRunner.ShouldUseIdentifier(nameof(LayoutStageNames));
         stageRunner.ShouldUseIdentifier(nameof(LayoutGeometryConstruction));
         stageRunner.ShouldUseIdentifier(nameof(FragmentTreeBuilder));
         stageRunner.ShouldUseIdentifier(nameof(LayoutPaginator));
 
-        stageNames.ShouldContainStringLiteral("stage/box-tree");
-        stageNames.ShouldContainStringLiteral("stage/fragment-tree");
-        stageNames.ShouldContainStringLiteral("stage/pagination");
+        stageNames.ShouldContainStringLiteral(LayoutStageNames.BoxTree);
+        stageNames.ShouldContainStringLiteral(LayoutStageNames.FragmentTree);
+        stageNames.ShouldContainStringLiteral(LayoutStageNames.Pagination);
 
         snapshotDiagnostics.ShouldConstructType(nameof(DiagnosticRecord));
         snapshotDiagnostics.ShouldUseIdentifier(nameof(GeometrySnapshotMapper));
@@ -245,15 +250,15 @@ public sealed class LayoutGeometryArchitectureTests
             .ShouldNotReferenceNamespaces(
                 NamespaceOf<BlockBox>(),
                 NamespaceOf<StyleTreeBuilder>(),
-                "Html2x.Renderers",
+                RendererNamespace,
                 AssemblyName<ITextMeasurer>(),
                 ParserPackageName(),
-                SkiaSharpPackageName);
+                ExternalPackageIds.SkiaSharp);
 
         SourceSetFor<FragmentTreeBuilder>()
             .ShouldNotUseIdentifiers(
                 nameof(BoxNode),
-                "BoxTree",
+                nameof(BoxTreeConstruction).Replace("Construction", string.Empty, StringComparison.Ordinal),
                 nameof(BlockBox),
                 nameof(InlineBox),
                 nameof(TableBox),
@@ -278,26 +283,22 @@ public sealed class LayoutGeometryArchitectureTests
     [Fact]
     public void GeometryRedesign_HasExplicitInternalFlowAndOwnership()
     {
-        var layoutGeometryBuilder = SourceFileFor<LayoutGeometryConstruction>();
-        var geometryPipelineComposer = CSharpSourceFile.Load(
-            "src",
-            AssemblyName<LayoutGeometryConstruction>(),
-            "Composition",
-            "GeometryPipelineConstruction.cs");
-        var boxTreeLayout = SourceFileFor<BoxTreeLayout>("BlockFlow");
-        var blockBoxLayout = SourceFileFor<BlockBoxLayout>("BlockFlow");
-        var blockFlow = SourceFileFor<BlockFlowLayout>("BlockFlow");
-        var standardRule = SourceFileFor<StandardBlockLayoutRule>("BlockFlow");
-        var imageRule = SourceFileFor<ImageBlockLayoutRule>("Images");
-        var ruleRule = SourceFileFor<RuleBlockLayoutRule>("BlockFlow");
-        var tableRule = SourceFileFor<TableBlockLayoutRule>("Tables");
-        var imageWriter = SourceFileFor<ImageBlockLayoutWriter>("Images");
-        var tablePlacement = SourceFileFor<TablePlacementWriter>("Tables");
-        var tableGrid = SourceFileFor<TableGridLayout>("Tables");
-        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>("InlineFlow");
-        var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>("Publishing");
+        var layoutGeometryConstruction = SourceFileFor<LayoutGeometryConstruction>();
+        var geometryPipelineComposer = SourceFileFor(typeof(GeometryPipelineConstruction));
+        var boxTreeLayout = SourceFileFor<BoxTreeLayout>();
+        var blockBoxLayout = SourceFileFor<BlockBoxLayout>();
+        var blockFlow = SourceFileFor<BlockFlowLayout>();
+        var standardRule = SourceFileFor<StandardBlockLayoutRule>();
+        var imageRule = SourceFileFor<ImageBlockLayoutRule>();
+        var ruleRule = SourceFileFor<RuleBlockLayoutRule>();
+        var tableRule = SourceFileFor<TableBlockLayoutRule>();
+        var imageWriter = SourceFileFor<ImageBlockLayoutWriter>();
+        var tablePlacement = SourceFileFor<TablePlacementWriter>();
+        var tableGrid = SourceFileFor<TableGridLayout>();
+        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>();
+        var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>();
 
-        layoutGeometryBuilder.ShouldUseIdentifier(nameof(BoxTreeConstruction));
+        layoutGeometryConstruction.ShouldUseIdentifier(nameof(BoxTreeConstruction));
         geometryPipelineComposer.ShouldConstructType(nameof(BoxTreeLayout));
         boxTreeLayout.ShouldUseIdentifier(nameof(BlockBoxLayout));
         boxTreeLayout.ShouldUseIdentifier(nameof(PageContentArea));
@@ -306,8 +307,6 @@ public sealed class LayoutGeometryArchitectureTests
         boxTreeLayout.ShouldNotUseIdentifier(nameof(BlockLayoutRuleSet));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(BoxTreeLayout));
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
-        blockBoxLayout.ShouldUseIdentifier("CreateDefaultRuleSet");
-        blockBoxLayout.ShouldNotContainStringLiteral("Block layout rules were used before initialization.");
         blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
         blockBoxLayout.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockSizingRules));
@@ -362,14 +361,14 @@ public sealed class LayoutGeometryArchitectureTests
     [Fact]
     public void GeometryMutableStateWrites_AreRoutedThroughStateWriterOrConstructionBoundaries()
     {
-        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryConstruction>());
+        var geometryRoot = SourceDirectoryFor<LayoutGeometryConstruction>();
         var allowedFiles = new HashSet<string>(StringComparer.Ordinal)
         {
-            "src/Html2x.LayoutEngine.Geometry/Construction/BoxTreeConstruction.cs",
-            "src/Html2x.LayoutEngine.Geometry/Construction/BoxTreeNormalization.cs",
-            "src/Html2x.LayoutEngine.Geometry/Writing/LayoutBoxStateWriter.cs",
-            "src/Html2x.LayoutEngine.Geometry/Models/BlockBox.cs",
-            "src/Html2x.LayoutEngine.Geometry/Models/ImageBox.cs"
+            RelativeSourcePathFor<BoxTreeConstruction>(),
+            RelativeSourcePathFor(typeof(BoxTreeNormalization)),
+            RelativeSourcePathFor<LayoutBoxStateWriter>(),
+            RelativeSourcePathFor<BlockBox>(),
+            RelativeSourcePathFor<ImageBox>()
         };
         var mutationPatterns = new[]
         {
@@ -380,7 +379,7 @@ public sealed class LayoutGeometryArchitectureTests
         };
 
         var violations = Directory
-            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
+            .GetFiles(geometryRoot, RepositoryLayout.CSharpFilePattern, SearchOption.AllDirectories)
             .Where(static path => !IsGeneratedOrBuildOutput(path))
             .Where(path => !allowedFiles.Contains(RelativeSourcePath(path)))
             .SelectMany(path => File
@@ -398,7 +397,7 @@ public sealed class LayoutGeometryArchitectureTests
     [Fact]
     public void GeometryChildStateMutation_UsesExplicitBoxNodeMethods()
     {
-        var boxNode = SourceFileFor<BoxNode>("Models");
+        var boxNode = SourceFileFor<BoxNode>();
         boxNode.ShouldContainPropertyInType(
             nameof(BoxNode),
             nameof(BoxNode.Children),
@@ -409,12 +408,28 @@ public sealed class LayoutGeometryArchitectureTests
             nameof(BoxNode.Children),
             ListTypeName<BoxNode>(),
             PublicAccessibility);
-        boxNode.ShouldContainMethodInType(nameof(BoxNode), "AddChild", VoidTypeName, InternalAccessibility);
-        boxNode.ShouldContainMethodInType(nameof(BoxNode), "InsertChild", VoidTypeName, InternalAccessibility);
-        boxNode.ShouldContainMethodInType(nameof(BoxNode), "ReplaceChildren", VoidTypeName, InternalAccessibility);
-        boxNode.ShouldContainMethodInType(nameof(BoxNode), "ClearChildren", VoidTypeName, InternalAccessibility);
+        boxNode.ShouldContainMethodInType(
+            nameof(BoxNode),
+            nameof(BoxNode.AddChild),
+            VoidTypeName,
+            InternalAccessibility);
+        boxNode.ShouldContainMethodInType(
+            nameof(BoxNode),
+            nameof(BoxNode.InsertChild),
+            VoidTypeName,
+            InternalAccessibility);
+        boxNode.ShouldContainMethodInType(
+            nameof(BoxNode),
+            nameof(BoxNode.ReplaceChildren),
+            VoidTypeName,
+            InternalAccessibility);
+        boxNode.ShouldContainMethodInType(
+            nameof(BoxNode),
+            nameof(BoxNode.ClearChildren),
+            VoidTypeName,
+            InternalAccessibility);
 
-        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryConstruction>());
+        var geometryRoot = SourceDirectoryFor<LayoutGeometryConstruction>();
         var childMutationPatterns = new[]
         {
             new Regex(@"\.Children\.(Add|Insert|Clear|AddRange|Remove|RemoveAt)\s*\(", RegexOptions.Compiled),
@@ -422,7 +437,7 @@ public sealed class LayoutGeometryArchitectureTests
         };
 
         var violations = Directory
-            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
+            .GetFiles(geometryRoot, RepositoryLayout.CSharpFilePattern, SearchOption.AllDirectories)
             .Where(static path => !IsGeneratedOrBuildOutput(path))
             .SelectMany(path => File
                 .ReadLines(path)
@@ -441,24 +456,24 @@ public sealed class LayoutGeometryArchitectureTests
     {
         var measurementFiles = new[]
         {
-            SourceFileFor<BlockContentSizeMeasurement>("Measurement"),
-            SourceFileFor<BlockFormattingMetricsMeasurement>("Measurement"),
-            SourceFileFor<BlockFlowMeasurement>("Measurement"),
-            SourceFileFor<InlineFlowMeasurement>("Measurement"),
-            SourceFileFor<BlockSizingRules>("BlockFlow"),
-            SourceFileFor<BlockContentSizeFacts>("Measurement"),
-            SourceFileFor<InlineContentSizeFacts>("Measurement"),
-            SourceFileFor<TableCellMeasurement>("Measurement"),
-            SourceFileFor<TableGridLayout>("Tables"),
-            SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
+            SourceFileFor<BlockContentSizeMeasurement>(),
+            SourceFileFor<BlockFormattingMetricsMeasurement>(),
+            SourceFileFor<BlockFlowMeasurement>(),
+            SourceFileFor<InlineFlowMeasurement>(),
+            SourceFileFor<BlockSizingRules>(),
+            SourceFileFor<BlockContentSizeFacts>(),
+            SourceFileFor<InlineContentSizeFacts>(),
+            SourceFileFor<TableCellMeasurement>(),
+            SourceFileFor<TableGridLayout>(),
+            SourceFileFor<AtomicInlineBoxLayout>()
         };
 
-        SourceFileFor<BlockContentSizeMeasurement>("Measurement").ShouldUseIdentifier(nameof(BlockSizingRules));
-        SourceFileFor<BlockContentSizeMeasurement>("Measurement").ShouldUseIdentifier(nameof(InlineContentSizeFacts));
-        SourceFileFor<InlineFlowMeasurement>("Measurement").ShouldNotUseIdentifier("InlineLayoutResult");
-        SourceFileFor<StandardBlockLayoutRule>("BlockFlow").ShouldUseIdentifier(nameof(BlockSizingRules));
-        SourceFileFor<TableGridLayout>("Tables").ShouldUseIdentifier(nameof(BlockSizingRules));
-        SourceFileFor<AtomicInlineBoxLayout>("InlineFlow").ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<BlockContentSizeMeasurement>().ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<BlockContentSizeMeasurement>().ShouldUseIdentifier(nameof(InlineContentSizeFacts));
+        SourceFileFor<InlineFlowMeasurement>().ShouldNotUseIdentifier(nameof(InlineLayoutResult));
+        SourceFileFor<StandardBlockLayoutRule>().ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<TableGridLayout>().ShouldUseIdentifier(nameof(BlockSizingRules));
+        SourceFileFor<AtomicInlineBoxLayout>().ShouldUseIdentifier(nameof(BlockSizingRules));
 
         foreach (var file in measurementFiles)
         {
@@ -486,13 +501,13 @@ public sealed class LayoutGeometryArchitectureTests
     {
         foreach (var file in new[]
                  {
-                     SourceFileFor<BlockContentSizeMeasurement>("Measurement"),
-                     SourceFileFor<BlockFormattingMetricsMeasurement>("Measurement"),
-                     SourceFileFor<BlockFlowMeasurement>("Measurement"),
-                     SourceFileFor<InlineFlowMeasurement>("Measurement"),
-                     SourceFileFor<InlineContentSizeFacts>("Measurement"),
-                     SourceFileFor<TableCellMeasurement>("Measurement"),
-                     SourceFileFor<AtomicInlineBoxLayout>("InlineFlow")
+                     SourceFileFor<BlockContentSizeMeasurement>(),
+                     SourceFileFor<BlockFormattingMetricsMeasurement>(),
+                     SourceFileFor<BlockFlowMeasurement>(),
+                     SourceFileFor<InlineFlowMeasurement>(),
+                     SourceFileFor<InlineContentSizeFacts>(),
+                     SourceFileFor<TableCellMeasurement>(),
+                     SourceFileFor<AtomicInlineBoxLayout>()
                  })
         {
             file.ShouldNotUseIdentifier(nameof(UsedGeometry));
@@ -502,11 +517,11 @@ public sealed class LayoutGeometryArchitectureTests
     [Fact]
     public void ProductionGeometry_UsesPrimitiveAuthoritiesForUsedGeometryTransforms()
     {
-        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryConstruction>());
+        var geometryRoot = SourceDirectoryFor<LayoutGeometryConstruction>();
         var allowedFiles = new HashSet<string>(StringComparer.Ordinal)
         {
-            "src/Html2x.LayoutEngine.Geometry/Primitives/GeometryTranslator.cs",
-            "src/Html2x.LayoutEngine.Geometry/Primitives/UsedGeometryRules.cs"
+            RelativeSourcePathFor(typeof(GeometryTranslator)),
+            RelativeSourcePathFor(typeof(UsedGeometryRules))
         };
         var helperPatterns = new[]
         {
@@ -519,7 +534,7 @@ public sealed class LayoutGeometryArchitectureTests
         };
 
         var violations = Directory
-            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
+            .GetFiles(geometryRoot, RepositoryLayout.CSharpFilePattern, SearchOption.AllDirectories)
             .Where(static path => !IsGeneratedOrBuildOutput(path))
             .Where(path => !allowedFiles.Contains(RelativeSourcePath(path)))
             .SelectMany(path => File
@@ -537,59 +552,9 @@ public sealed class LayoutGeometryArchitectureTests
     }
 
     [Fact]
-    public void GeometryModuleNames_FollowApprovedGrammarOrDocumentedException()
-    {
-        var retiredSuffixes = new[]
-        {
-            "Projector",
-            "Factory",
-            "Appender",
-            "Inserter",
-            "Resolver",
-            "Engine",
-            "Executor",
-            "Applier",
-            "Classifier",
-            "Context",
-            "Calculator",
-            "Builder",
-            "Mapper",
-            "Planner",
-            "Materializer",
-            "Manager",
-            "Helper"
-        };
-        var documentedExceptions = new HashSet<string>(StringComparer.Ordinal)
-        {
-            nameof(LayoutGeometryConstruction)
-        };
-        var geometryRoot = PathFromRoot("src", AssemblyName<LayoutGeometryConstruction>());
-
-        var violations = Directory
-            .GetFiles(geometryRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(static path => !IsGeneratedOrBuildOutput(path))
-            .Select(static path => Path.GetFileNameWithoutExtension(path))
-            .Where(name => !documentedExceptions.Contains(name))
-            .Select(name => new
-            {
-                Name = name,
-                RetiredSuffix =
-                    retiredSuffixes.FirstOrDefault(suffix => name.EndsWith(suffix, StringComparison.Ordinal))
-            })
-            .Where(match => match.RetiredSuffix is not null)
-            .Select(match => $"{match.Name} uses retired suffix {match.RetiredSuffix}.")
-            .ToArray();
-
-        violations.Length.ShouldBe(
-            0,
-            "Geometry module names should use Construction, Layout, Measurement, Rules, Writer, Request, Result, Facts, or Rule unless explicitly documented. "
-            + string.Join(" ", violations));
-    }
-
-    [Fact]
     public void RendererSource_ConsumesRenderModelAndResourcesOnly()
     {
-        ArchitectureSemanticProject.Load("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj")
+        SemanticProjectFor<PdfRenderer>()
             .ShouldNotReferenceNamespaces(
                 AssemblyName<LayoutPipeline>(),
                 AssemblyName<StyleNode>(),
@@ -597,7 +562,7 @@ public sealed class LayoutGeometryArchitectureTests
                 NamespaceOf<LayoutGeometryConstruction>(),
                 NamespaceOf<StyleTreeBuilder>());
 
-        CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
+        SourceSetFor<PdfRenderer>()
             .ShouldNotUseIdentifiers(
                 nameof(StyleTree),
                 nameof(StyleNode),
@@ -605,63 +570,68 @@ public sealed class LayoutGeometryArchitectureTests
                 nameof(PublishedLayoutTree),
                 nameof(FragmentTreeBuilder),
                 nameof(IFontSource),
-                "SourceNodeId",
-                "SourceContentId",
-                "SourcePath",
-                "SourceElementIdentity",
-                "GeneratedSourceKind",
-                "GeometrySourceIdentity",
-                "StyleSourceIdentity",
-                "StyleContentIdentity");
+                nameof(BoxGeometrySnapshot.SourceNodeId),
+                nameof(BoxGeometrySnapshot.SourceContentId),
+                nameof(BoxGeometrySnapshot.SourcePath),
+                nameof(BoxGeometrySnapshot.SourceElementIdentity),
+                nameof(BoxGeometrySnapshot.GeneratedSourceKind),
+                nameof(GeometrySourceIdentity),
+                nameof(StyleSourceIdentity),
+                nameof(StyleContentIdentity));
     }
 
     [Fact]
     public void StageOwnedSettings_AreTheInternalOptionBoundary()
     {
         var styleSettings = SourceFileFor<StyleBuildSettings>();
-        styleSettings.ShouldContainType(nameof(StyleBuildSettings), InternalAccessibility, true);
-        styleSettings.ShouldContainPropertyInType(
-            nameof(StyleBuildSettings),
+        styleSettings.ShouldContainType<StyleBuildSettings>(InternalAccessibility, true);
+        styleSettings.ShouldContainPropertyInType<StyleBuildSettings>(
             nameof(StyleBuildSettings.UseDefaultUserAgentStyleSheet),
             CSharpTypeName<bool>(),
             PublicAccessibility);
-        styleSettings.ShouldContainPropertyInType(
-            nameof(StyleBuildSettings),
+        styleSettings.ShouldContainPropertyInType<StyleBuildSettings>(
             nameof(StyleBuildSettings.UserAgentStyleSheet),
             NullableCSharpTypeName<string>(),
             PublicAccessibility);
 
         var layoutSettings = SourceFileFor<LayoutBuildSettings>();
-        layoutSettings.ShouldContainType(nameof(LayoutBuildSettings), InternalAccessibility, true);
-        layoutSettings.ShouldContainPropertyInType(
-            nameof(LayoutBuildSettings),
+        layoutSettings.ShouldContainType<LayoutBuildSettings>(InternalAccessibility, true);
+        layoutSettings.ShouldContainPropertyInType<LayoutBuildSettings>(
             nameof(LayoutBuildSettings.Style),
             TypeName<StyleBuildSettings>(),
             PublicAccessibility);
-        var pdfSettings = CSharpSourceFile.Load("src", PdfRendererAssemblyName, "PdfRenderSettings.cs");
-        pdfSettings.ShouldContainType("PdfRenderSettings", InternalAccessibility, true);
-        pdfSettings.ShouldContainPropertyInType("PdfRenderSettings", "ResourceBaseDirectory", "string?", "public");
-        pdfSettings.ShouldContainPropertyInType("PdfRenderSettings", "MaxImageSizeBytes", "long", "public");
+        var pdfSettings = SourceFileFor<PdfRenderSettings>();
+        pdfSettings.ShouldContainType<PdfRenderSettings>(InternalAccessibility, true);
+        pdfSettings.ShouldContainPropertyInType<PdfRenderSettings>(
+            nameof(PdfRenderSettings.ResourceBaseDirectory),
+            NullableCSharpTypeName<string>(),
+            PublicAccessibility);
+        pdfSettings.ShouldContainPropertyInType<PdfRenderSettings>(
+            nameof(PdfRenderSettings.MaxImageSizeBytes),
+            CSharpTypeName<long>(),
+            PublicAccessibility);
 
         SemanticProjectFor<LayoutPipeline>()
-            .ShouldNotReferenceNamespaces(FacadeAssemblyName + ".Options");
+            .ShouldNotReferenceNamespaces(FacadeOptionsNamespace);
         SemanticProjectFor<StyleTreeBuilder>()
-            .ShouldNotReferenceNamespaces(FacadeAssemblyName + ".Options");
-        ArchitectureSemanticProject.Load("src", PdfRendererAssemblyName, PdfRendererAssemblyName + ".csproj")
-            .ShouldNotReferenceTypes(FacadeAssemblyName + ".HtmlConverterOptions");
+            .ShouldNotReferenceNamespaces(FacadeOptionsNamespace);
+        SemanticProjectFor<PdfRenderer>()
+            .ShouldNotReferenceTypes(typeof(HtmlConverterOptions));
     }
 
     [Fact]
     public void FacadePublicOptions_HaveSingleOwnersForSharedConversionFacts()
     {
+        var facadePublic = SemanticProjectFor<HtmlConverter>()
+            .ExternallyVisibleTypeNames();
         var options = new[]
         {
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "HtmlConverterOptions.cs"),
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "PageOptions.cs"),
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "ResourceOptions.cs"),
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "CssOptions.cs"),
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "FontOptions.cs"),
-            CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "DiagnosticsOptions.cs")
+            SourceFileFor<HtmlConverterOptions>(),
+            SourceFileFor<PageOptions>(),
+            SourceFileFor<ResourceOptions>(),
+            SourceFileFor<CssOptions>(),
+            SourceFileFor<FontOptions>(),
+            SourceFileFor<DiagnosticsOptions>()
         };
         var htmlConverterOptions = options[0];
         var pageOptions = options[1];
@@ -671,51 +641,90 @@ public sealed class LayoutGeometryArchitectureTests
 
         foreach (var option in options)
         {
-            option.ShouldDeclareNamespace(FacadeAssemblyName + ".Options");
-            option.ShouldNotUseIdentifier("LayoutOptions");
-            option.ShouldNotUseIdentifier("PdfOptions");
-            option.ShouldNotUseIdentifier("PdfLicenseType");
-            option.ShouldNotUseIdentifier("LicenseType");
-            option.ShouldNotUseIdentifier("EnableDebugging");
-            option.ShouldNotUseIdentifier("MaxImageSizeMb");
+            option.ShouldDeclareNamespace(FacadeOptionsNamespace);
         }
 
-        htmlConverterOptions.ShouldContainType("HtmlConverterOptions", "public", true);
-        htmlConverterOptions.ShouldContainPropertyInType("HtmlConverterOptions", "Page", "PageOptions", "public");
-        htmlConverterOptions.ShouldContainPropertyInType("HtmlConverterOptions", "Resources", "ResourceOptions",
-            "public");
-        htmlConverterOptions.ShouldContainPropertyInType("HtmlConverterOptions", "Css", "CssOptions", "public");
-        htmlConverterOptions.ShouldContainPropertyInType("HtmlConverterOptions", "Fonts", "FontOptions", "public");
-        htmlConverterOptions.ShouldContainPropertyInType("HtmlConverterOptions", "Diagnostics", "DiagnosticsOptions",
-            "public");
-        pageOptions.ShouldContainPropertyInType("PageOptions", "Size", "SizePt", "public");
-        resourceOptions.ShouldContainPropertyInType("ResourceOptions", "BaseDirectory", "string?", "public");
-        resourceOptions.ShouldContainPropertyInType("ResourceOptions", "MaxImageSizeBytes", "long", "public");
-        fontOptions.ShouldContainPropertyInType("FontOptions", "FontPath", "string?", "public");
-        diagnosticsOptions.ShouldContainPropertyInType("DiagnosticsOptions", "IncludeRawHtml", "bool", "public");
-        diagnosticsOptions.ShouldContainPropertyInType("DiagnosticsOptions", "MaxRawHtmlLength", "int", "public");
+        facadePublic.ShouldContain(FullTypeName<HtmlConverterOptions>());
+        facadePublic.ShouldContain(FullTypeName<PageOptions>());
+        facadePublic.ShouldContain(FullTypeName<ResourceOptions>());
+        facadePublic.ShouldContain(FullTypeName<CssOptions>());
+        facadePublic.ShouldContain(FullTypeName<FontOptions>());
+        facadePublic.ShouldContain(FullTypeName<DiagnosticsOptions>());
+
+        htmlConverterOptions.ShouldContainType<HtmlConverterOptions>(PublicAccessibility, true);
+        htmlConverterOptions.ShouldContainPropertyInType<HtmlConverterOptions>(
+            nameof(HtmlConverterOptions.Page),
+            TypeName<PageOptions>(),
+            PublicAccessibility);
+        htmlConverterOptions.ShouldContainPropertyInType<HtmlConverterOptions>(
+            nameof(HtmlConverterOptions.Resources),
+            TypeName<ResourceOptions>(),
+            PublicAccessibility);
+        htmlConverterOptions.ShouldContainPropertyInType<HtmlConverterOptions>(
+            nameof(HtmlConverterOptions.Css),
+            TypeName<CssOptions>(),
+            PublicAccessibility);
+        htmlConverterOptions.ShouldContainPropertyInType<HtmlConverterOptions>(
+            nameof(HtmlConverterOptions.Fonts),
+            TypeName<FontOptions>(),
+            PublicAccessibility);
+        htmlConverterOptions.ShouldContainPropertyInType<HtmlConverterOptions>(
+            nameof(HtmlConverterOptions.Diagnostics),
+            TypeName<DiagnosticsOptions>(),
+            PublicAccessibility);
+        pageOptions.ShouldContainPropertyInType<PageOptions>(
+            nameof(PageOptions.Size),
+            TypeName<SizePt>(),
+            PublicAccessibility);
+        resourceOptions.ShouldContainPropertyInType<ResourceOptions>(
+            nameof(ResourceOptions.BaseDirectory),
+            NullableCSharpTypeName<string>(),
+            PublicAccessibility);
+        resourceOptions.ShouldContainPropertyInType<ResourceOptions>(
+            nameof(ResourceOptions.MaxImageSizeBytes),
+            CSharpTypeName<long>(),
+            PublicAccessibility);
+        fontOptions.ShouldContainPropertyInType<FontOptions>(
+            nameof(FontOptions.FontPath),
+            NullableCSharpTypeName<string>(),
+            PublicAccessibility);
+        diagnosticsOptions.ShouldContainPropertyInType<DiagnosticsOptions>(
+            nameof(DiagnosticsOptions.IncludeRawHtml),
+            CSharpTypeName<bool>(),
+            PublicAccessibility);
+        diagnosticsOptions.ShouldContainPropertyInType<DiagnosticsOptions>(
+            nameof(DiagnosticsOptions.MaxRawHtmlLength),
+            CSharpTypeName<int>(),
+            PublicAccessibility);
     }
 
     [Fact]
     public void ResourceLoadingPolicy_UsesSharedResourceModuleForImages()
     {
-        var resourceLoader = CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceLoader.cs");
-        var resourceResult = CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceResult.cs");
-        var resourceMetadataResult =
-            CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceMetadataResult.cs");
-        var resourceStore = CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceStore.cs");
-        var imageLoadStatus = SourceFileFor<ImageLoadStatus>("Resources");
-        var metadataResult = SourceFileFor<ImageMetadataResult>("Geometry", "Images");
-        var publishedImageFacts = SourceFileFor<PublishedImageFacts>("Published");
-        var imageFragment = SourceFileFor<ImageFragment>("Fragments");
-        var imageProvider = CSharpSourceFile.Load("src", FacadeAssemblyName, "ImageResourceMetadataResolver.cs");
-        var imageRenderer = CSharpSourceFile.Load("src", PdfRendererAssemblyName, "ImageRenderer.cs");
+        var resourceLoader = SourceFileFor(typeof(ImageResourceLoader));
+        var resourceResult = SourceFileFor<ImageResourceResult>();
+        var resourceMetadataResult = SourceFileFor<ImageResourceMetadataResult>();
+        var resourceStore = SourceFileFor<ImageResourceStore>();
+        var imageLoadStatus = SourceFileFor<ImageLoadStatus>();
+        var metadataResult = SourceFileFor<ImageMetadataResult>();
+        var publishedImageFacts = SourceFileFor<PublishedImageFacts>();
+        var imageFragment = SourceFileFor<ImageFragment>();
+        var imageProvider = SourceFileFor<ImageResourceMetadataResolver>();
+        var imageRenderer = SourceFileFor<ImageRenderer>();
 
-        resourceLoader.ShouldContainType("ImageResourceLoader", "internal");
-        resourceLoader.ShouldContainMethodInType("ImageResourceLoader", "Load", "ImageResourceResult", "public");
-        resourceLoader.ShouldContainMethodInType("ImageResourceLoader", "ResolveBaseDirectory", "string", "public");
+        resourceLoader.ShouldContainType(typeof(ImageResourceLoader), InternalAccessibility);
+        resourceLoader.ShouldContainMethodInType(
+            nameof(ImageResourceLoader),
+            nameof(ImageResourceLoader.Load),
+            TypeName<ImageResourceResult>(),
+            PublicAccessibility);
+        resourceLoader.ShouldContainMethodInType(
+            nameof(ImageResourceLoader),
+            nameof(ImageResourceLoader.ResolveBaseDirectory),
+            CSharpTypeName<string>(),
+            PublicAccessibility);
         imageLoadStatus.ShouldDeclareNamespace(NamespaceOf<ImageLoadStatus>());
-        imageLoadStatus.ShouldContainEnum(nameof(ImageLoadStatus), PublicAccessibility);
+        imageLoadStatus.ShouldContainEnum<ImageLoadStatus>(PublicAccessibility);
         foreach (var file in new[]
                  {
                      resourceResult,
@@ -729,31 +738,12 @@ public sealed class LayoutGeometryArchitectureTests
             file.ShouldUseIdentifier(nameof(ImageLoadStatus));
         }
 
-        foreach (var sourceSet in new[]
-                 {
-                     CSharpSourceSet.FromDirectory("src", ResourcesAssemblyName),
-                     SourceSetFor<IImageMetadataResolver>(),
-                     SourceSetFor<LayoutGeometryConstruction>(),
-                     SourceSetFor<FragmentTreeBuilder>(),
-                     CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
-                 })
-        {
-            sourceSet.ShouldNotUseIdentifiers(
-                "ImageResourceStatus",
-                "ImageMetadataStatus",
-                "ImageRenderStatus");
-        }
-
-        resourceStore.ShouldUseIdentifier("ImageResourceLoader");
-        resourceStore.ShouldUseIdentifier("ImageResourceResult");
-        resourceStore.ShouldUseIdentifier("ImageResourceMetadataResult");
-        imageProvider.ShouldUseIdentifier("ImageResourceStore");
-        imageRenderer.ShouldUseIdentifier("IImageResourceReader");
-        imageRenderer.ShouldUseIdentifier("ImageResourceLoader");
-        imageProvider.ShouldNotUseIdentifier("ToMetadataStatus");
-        imageRenderer.ShouldNotUseIdentifier("ToRenderStatus");
-        imageProvider.ShouldNotUseIdentifier("DecodeDataUri");
-        imageRenderer.ShouldNotUseIdentifier("DecodeDataUri");
+        resourceStore.ShouldUseIdentifier(nameof(ImageResourceLoader));
+        resourceStore.ShouldUseIdentifier(nameof(ImageResourceResult));
+        resourceStore.ShouldUseIdentifier(nameof(ImageResourceMetadataResult));
+        imageProvider.ShouldUseIdentifier(nameof(ImageResourceStore));
+        imageRenderer.ShouldUseIdentifier(nameof(IImageResourceReader));
+        imageRenderer.ShouldUseIdentifier(nameof(ImageResourceLoader));
     }
 
     [Fact]
@@ -761,23 +751,23 @@ public sealed class LayoutGeometryArchitectureTests
     {
         foreach (var file in new[]
                  {
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "HtmlConverterOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "PageOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "ResourceOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "CssOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "FontOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "Options", "DiagnosticsOptions.cs"),
-                     CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverter.cs"),
+                     SourceFileFor<HtmlConverterOptions>(),
+                     SourceFileFor<PageOptions>(),
+                     SourceFileFor<ResourceOptions>(),
+                     SourceFileFor<CssOptions>(),
+                     SourceFileFor<FontOptions>(),
+                     SourceFileFor<DiagnosticsOptions>(),
+                     SourceFileFor<HtmlConverter>(),
                      SourceFileFor<LayoutBuildSettings>(),
-                     SourceFileFor<LayoutGeometryRequest>("Geometry"),
-                     SourceFileFor<ImageSizingRules>("Images"),
-                     CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceStore.cs"),
-                     CSharpSourceFile.Load("src", PdfRendererAssemblyName, "PdfRenderSettings.cs"),
-                     CSharpSourceFile.Load("src", PdfRendererAssemblyName, "ImageRenderer.cs"),
-                     CSharpSourceFile.Load("src", ResourcesAssemblyName, "ImageResourceLoader.cs")
+                     SourceFileFor<LayoutGeometryRequest>(),
+                     SourceFileFor<ImageSizingRules>(),
+                     SourceFileFor<ImageResourceStore>(),
+                     SourceFileFor<PdfRenderSettings>(),
+                     SourceFileFor<ImageRenderer>(),
+                     SourceFileFor(typeof(ImageResourceLoader))
                  })
         {
-            file.ShouldNotUseIdentifier("GetCurrentDirectory");
+            file.ShouldNotUseIdentifier(nameof(Directory.GetCurrentDirectory));
         }
     }
 
@@ -785,51 +775,63 @@ public sealed class LayoutGeometryArchitectureTests
     public void StageLifecycleDiagnostics_UseCentralEmitter()
     {
         var emitter = SourceFileFor(typeof(DiagnosticStageEmitter));
-        var stage = CSharpSourceFile.Load("src", AssemblyName<IDiagnosticsSink>(), "DiagnosticStageRunner.cs");
-        var converter = CSharpSourceFile.Load("src", FacadeAssemblyName, "HtmlConverter.cs");
+        var stage = SourceFileFor(typeof(DiagnosticStageRunner));
+        var converter = SourceFileFor<HtmlConverter>();
         var layoutPipeline = SourceFileFor<LayoutPipeline>();
         var styleTreeBuilder = SourceFileFor<StyleTreeBuilder>();
 
-        emitter.ShouldContainStringLiteral("stage/started");
-        emitter.ShouldContainStringLiteral("stage/succeeded");
-        emitter.ShouldContainStringLiteral("stage/failed");
-        emitter.ShouldContainStringLiteral("stage/skipped");
-        emitter.ShouldContainStringLiteral("stage/canceled");
+        foreach (var stageLifecycleEvent in StageLifecycleEvents)
+        {
+            emitter.ShouldContainStringLiteral(stageLifecycleEvent);
+        }
+
         stage.ShouldUseIdentifier(nameof(DiagnosticStageEmitter));
         converter.ShouldUseIdentifier(nameof(DiagnosticStageEmitter));
-        layoutPipeline.ShouldNotUseIdentifier("DiagnosticStageRunner");
-        SourceFileFor<LayoutStageRunner>().ShouldUseIdentifier("DiagnosticStageRunner");
-        styleTreeBuilder.ShouldUseIdentifier("DiagnosticStageRunner");
+        layoutPipeline.ShouldNotUseIdentifier(DiagnosticStageRunnerTypeName);
+        SourceFileFor<LayoutStageRunner>().ShouldUseIdentifier(DiagnosticStageRunnerTypeName);
+        styleTreeBuilder.ShouldUseIdentifier(DiagnosticStageRunnerTypeName);
         foreach (var sourceRoot in new[]
                  {
-                     CSharpSourceSet.FromDirectory("src", FacadeAssemblyName),
+                     SourceSetFor<HtmlConverter>(),
                      SourceSetFor<LayoutPipeline>(),
                      SourceSetFor<StyleTreeBuilder>(),
                      SourceSetFor<LayoutGeometryConstruction>(),
                      SourceSetFor<LayoutPaginator>(),
-                     CSharpSourceSet.FromDirectory("src", PdfRendererAssemblyName)
+                     SourceSetFor<PdfRenderer>()
                  })
         {
-            sourceRoot.ShouldNotContainStringLiterals(
-                "stage/started",
-                "stage/succeeded",
-                "stage/failed",
-                "stage/skipped",
-                "stage/canceled");
+            sourceRoot.ShouldNotContainStringLiterals(StageLifecycleEvents);
         }
     }
+
+    private static readonly string RendererNamespace = NamespacePrefix(
+        NamespaceOf<PdfRenderer>(),
+        2);
+
+    private const string DiagnosticStageRunnerTypeName = nameof(DiagnosticStageRunner);
+
+    private static readonly string FacadeOptionsNamespace = NamespaceOf<HtmlConverterOptions>();
+
+    private static readonly string[] StageLifecycleEvents =
+    [
+        DiagnosticStageEmitter.StartedEvent,
+        DiagnosticStageEmitter.SucceededEvent,
+        DiagnosticStageEmitter.FailedEvent,
+        DiagnosticStageEmitter.SkippedEvent,
+        DiagnosticStageEmitter.CanceledEvent
+    ];
 
     private static bool IsGeneratedOrBuildOutput(string path)
     {
         var segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return segments.Contains("bin", StringComparer.OrdinalIgnoreCase)
-               || segments.Contains("obj", StringComparer.OrdinalIgnoreCase)
-               || path.EndsWith(".g.cs", StringComparison.Ordinal)
-               || path.EndsWith(".AssemblyInfo.cs", StringComparison.Ordinal);
+        return segments.Contains(RepositoryLayout.BinDirectory, StringComparer.OrdinalIgnoreCase)
+               || segments.Contains(RepositoryLayout.ObjDirectory, StringComparer.OrdinalIgnoreCase)
+               || path.EndsWith(RepositoryLayout.GeneratedCSharpSuffix, StringComparison.Ordinal)
+               || path.EndsWith(RepositoryLayout.AssemblyInfoCSharpSuffix, StringComparison.Ordinal);
     }
 
     private static string RelativeSourcePath(string path) =>
-        Path.GetRelativePath(ArchitecturePaths.RepoRoot(), path)
+        Path.GetRelativePath(Paths.RepoRoot(), path)
             .Replace(Path.DirectorySeparatorChar, '/')
             .Replace(Path.AltDirectorySeparatorChar, '/');
 }

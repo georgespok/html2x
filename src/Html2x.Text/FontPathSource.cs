@@ -6,7 +6,7 @@ namespace Html2x.Text;
 public sealed class FontPathSource : IFontSource
 {
     private readonly Lazy<IReadOnlyList<FontFaceEntry>> _directoryFaces;
-    private readonly IFileSystemReader _fileDirectory;
+    private readonly IFileSystemReader _fileSystemReader;
     private readonly string _fontPath;
     private readonly Lazy<bool> _singleFileValidated;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
@@ -16,12 +16,12 @@ public sealed class FontPathSource : IFontSource
     {
     }
 
-    internal FontPathSource(string fontPath, IFileSystemReader fileDirectory)
-        : this(fontPath, fileDirectory, new SkiaTypefaceFactory())
+    internal FontPathSource(string fontPath, IFileSystemReader fileSystemReader)
+        : this(fontPath, fileSystemReader, new SkiaTypefaceFactory())
     {
     }
 
-    internal FontPathSource(string fontPath, IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory)
+    internal FontPathSource(string fontPath, IFileSystemReader fileSystemReader, ISkiaTypefaceFactory typefaceFactory)
     {
         if (string.IsNullOrWhiteSpace(fontPath))
         {
@@ -29,14 +29,14 @@ public sealed class FontPathSource : IFontSource
         }
 
         _fontPath = fontPath;
-        _fileDirectory = fileDirectory ?? throw new ArgumentNullException(nameof(fileDirectory));
+        _fileSystemReader = fileSystemReader ?? throw new ArgumentNullException(nameof(fileSystemReader));
         _typefaceFactory = typefaceFactory ?? throw new ArgumentNullException(nameof(typefaceFactory));
         _directoryFaces = new(
-            () => FontDirectoryIndex.Build(_fileDirectory, _typefaceFactory, _fontPath),
+            () => FontDirectoryIndex.Build(_fileSystemReader, _typefaceFactory, _fontPath),
             LazyThreadSafetyMode.ExecutionAndPublication);
         _singleFileValidated = new(EnsureSingleFileFontCanLoad, LazyThreadSafetyMode.ExecutionAndPublication);
 
-        if (!_fileDirectory.FileExists(_fontPath) && !_fileDirectory.DirectoryExists(_fontPath))
+        if (!_fileSystemReader.FileExists(_fontPath) && !_fileSystemReader.DirectoryExists(_fontPath))
         {
             throw CreateFontResolutionException(
                 $"Configured font path '{_fontPath}' does not exist.",
@@ -50,7 +50,7 @@ public sealed class FontPathSource : IFontSource
         ArgumentNullException.ThrowIfNull(requested);
         ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
 
-        if (_fileDirectory.FileExists(_fontPath))
+        if (_fileSystemReader.FileExists(_fontPath))
         {
             _ = _singleFileValidated.Value;
             return new(
@@ -63,7 +63,7 @@ public sealed class FontPathSource : IFontSource
                 _fontPath);
         }
 
-        if (_fileDirectory.DirectoryExists(_fontPath))
+        if (_fileSystemReader.DirectoryExists(_fontPath))
         {
             var best = FontDirectoryIndex.FindBestMatch(_directoryFaces.Value, requested);
             if (best is null)

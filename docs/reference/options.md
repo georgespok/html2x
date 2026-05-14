@@ -18,6 +18,7 @@ how options map into internal stage settings.
 
 ```csharp
 using Html2x;
+using Html2x.Options;
 using Html2x.RenderModel.Measurements.Units;
 
 var options = new HtmlConverterOptions

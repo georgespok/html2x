@@ -30,8 +30,8 @@ internal static class GeometryTestHarness
         var textMeasurer = CreateTextMeasurer();
         var imageMetadataResolver = new NoopImageMetadataResolver();
         var styleTreeBuilder = new StyleTreeBuilder();
-        var layoutGeometryBuilder = new LayoutGeometryConstruction(textMeasurer);
-        var fragmentBuilder = new FragmentTreeBuilder();
+        var layoutGeometryConstruction = new LayoutGeometryConstruction(textMeasurer);
+        var fragmentTreeBuilder = new FragmentTreeBuilder();
 
         var styleTree = await styleTreeBuilder.BuildAsync(html, options.Style, diagnosticsSink: diagnosticsSink);
         var geometryRequest = new LayoutGeometryRequest
@@ -39,11 +39,11 @@ internal static class GeometryTestHarness
             PageSize = options.PageSize,
             ImageMetadataResolver = imageMetadataResolver
         };
-        var publishedLayout = layoutGeometryBuilder.Build(
+        var publishedLayout = layoutGeometryConstruction.Build(
             styleTree,
             geometryRequest,
             diagnosticsSink);
-        var fragments = fragmentBuilder.Build(publishedLayout);
+        var fragments = fragmentTreeBuilder.Build(publishedLayout);
         var pagination = new LayoutPaginator().Paginate(
             fragments.Blocks,
             new()

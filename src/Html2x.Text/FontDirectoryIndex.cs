@@ -10,18 +10,20 @@ internal static class FontDirectoryIndex
 {
     private static readonly string[] FontExtensions = [".ttf", ".otf", ".ttc"];
 
-    public static IReadOnlyList<FontFaceEntry> Build(IFileSystemReader fileDirectory, ISkiaTypefaceFactory typefaceFactory,
+    public static IReadOnlyList<FontFaceEntry> Build(
+        IFileSystemReader fileSystemReader,
+        ISkiaTypefaceFactory typefaceFactory,
         string directory)
     {
-        ArgumentNullException.ThrowIfNull(fileDirectory);
+        ArgumentNullException.ThrowIfNull(fileSystemReader);
         ArgumentNullException.ThrowIfNull(typefaceFactory);
 
-        if (string.IsNullOrWhiteSpace(directory) || !fileDirectory.DirectoryExists(directory))
+        if (string.IsNullOrWhiteSpace(directory) || !fileSystemReader.DirectoryExists(directory))
         {
             return [];
         }
 
-        var files = ListFontFiles(fileDirectory, directory);
+        var files = ListFontFiles(fileSystemReader, directory);
         if (files.Count == 0)
         {
             return [];
@@ -55,15 +57,17 @@ internal static class FontDirectoryIndex
         return SelectBestMatch(candidates, wantsItalic, requestedWeight);
     }
 
-    private static IReadOnlyList<string> ListFontFiles(IFileSystemReader fileDirectory, string directory)
+    private static IReadOnlyList<string> ListFontFiles(IFileSystemReader fileSystemReader, string directory)
     {
-        if (!fileDirectory.DirectoryExists(directory))
+        if (!fileSystemReader.DirectoryExists(directory))
         {
             return [];
         }
 
-        return fileDirectory.EnumerateFiles(directory, "*.*", true)
-            .Where(path => FontExtensions.Contains(fileDirectory.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+        return fileSystemReader.EnumerateFiles(directory, "*.*", true)
+            .Where(path => FontExtensions.Contains(
+                fileSystemReader.GetExtension(path),
+                StringComparer.OrdinalIgnoreCase))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

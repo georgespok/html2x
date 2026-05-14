@@ -99,6 +99,12 @@ public class LineBoxFragmentTests
 
         line.Runs.Count.ShouldBeGreaterThan(4);
         string.Concat(line.Runs.Select(r => r.Text)).ShouldBe("This is underlined text struck and spanned.");
+        line.Runs.Single(static run => run.Text.Contains("underlined", StringComparison.Ordinal))
+            .Decorations.ShouldBe(TextDecorations.Underline);
+        line.Runs.Single(static run => run.Text.Contains("struck", StringComparison.Ordinal))
+            .Decorations.ShouldBe(TextDecorations.LineThrough);
+        line.Runs.Single(static run => run.Text.Contains("spanned", StringComparison.Ordinal))
+            .Decorations.ShouldBe(TextDecorations.None);
     }
 
     [Fact]

@@ -25,35 +25,79 @@ internal abstract class BoxNode(BoxRole role)
 
     internal void AddChild(BoxNode child)
     {
-        ArgumentNullException.ThrowIfNull(child);
+        ValidateChildForAdd(child, nameof(child));
 
         _children.Add(child);
     }
 
     internal void InsertChild(int index, BoxNode child)
     {
-        ArgumentNullException.ThrowIfNull(child);
+        if ((uint)index > (uint)_children.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        ValidateChildForAdd(child, nameof(child));
 
         _children.Insert(index, child);
     }
 
     internal void AddChildren(IEnumerable<BoxNode> children)
     {
-        ArgumentNullException.ThrowIfNull(children);
+        var validatedChildren = ValidateChildrenForAdd(children);
 
-        foreach (var child in children)
+        foreach (var child in validatedChildren)
         {
-            AddChild(child);
+            _children.Add(child);
         }
     }
 
     internal void ReplaceChildren(IEnumerable<BoxNode> children)
     {
+        var validatedChildren = ValidateChildrenForAdd(children);
+
         _children.Clear();
-        AddChildren(children);
+        _children.AddRange(validatedChildren);
     }
 
     internal void ClearChildren() => _children.Clear();
 
     protected abstract BoxNode CloneShallowForParent(BoxNode parent);
+
+    private void ValidateChildForAdd(BoxNode? child, string parameterName)
+    {
+        ArgumentNullException.ThrowIfNull(child, parameterName);
+
+        if (child.Parent is not null && !ReferenceEquals(child.Parent, this))
+        {
+            throw new ArgumentException(
+                "Child already belongs to a different parent.",
+                parameterName);
+        }
+    }
+
+    private BoxNode[] ValidateChildrenForAdd(IEnumerable<BoxNode> children)
+    {
+        ArgumentNullException.ThrowIfNull(children);
+
+        var validatedChildren = children as BoxNode[] ?? children.ToArray();
+        foreach (var child in validatedChildren)
+        {
+            if (child is null)
+            {
+                throw new ArgumentException(
+                    "Child collection cannot contain null entries.",
+                    nameof(children));
+            }
+
+            if (child.Parent is not null && !ReferenceEquals(child.Parent, this))
+            {
+                throw new ArgumentException(
+                    "Child collection contains a child that already belongs to a different parent.",
+                    nameof(children));
+            }
+        }
+
+        return validatedChildren;
+    }
 }

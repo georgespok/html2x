@@ -6,7 +6,7 @@ namespace Html2x.LayoutEngine.Diagnostics;
 
 internal static class GeometrySnapshotDiagnostics
 {
-    private const string EventName = "layout/geometry-snapshot";
+    internal const string EventName = "layout/geometry-snapshot";
 
     private const string SnapshotFieldName = "snapshot";
 

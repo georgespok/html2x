@@ -1,21 +1,21 @@
 using System.Text.RegularExpressions;
 using Shouldly;
 
-namespace Html2x.LayoutEngine.Test.Architecture;
+namespace Html2x.Architecture.Test.Support;
 
-internal sealed class ArchitectureDocument
+internal sealed class Document
 {
     private readonly string _content;
     private readonly string _path;
 
-    private ArchitectureDocument(string path)
+    private Document(string path)
     {
         _path = path;
         _content = File.ReadAllText(path);
     }
 
-    public static ArchitectureDocument Load(params string[] pathSegments) =>
-        new(ArchitecturePaths.PathFromRoot(pathSegments));
+    public static Document Load(params string[] pathSegments) =>
+        new(Paths.PathFromRoot(pathSegments));
 
     public void ShouldMention(params string[] topics)
     {
@@ -35,13 +35,15 @@ internal sealed class ArchitectureDocument
         }
     }
 
-    public void ShouldMentionTopicsInSection(string heading, params string[] topics)
+    public void ShouldMentionTopicsInSection(
+        MarkdownHeading heading,
+        params DocumentTopic[] topics)
     {
-        var sectionContent = SectionContent(heading);
+        var sectionContent = SectionContent(heading.Value);
         foreach (var topic in topics)
         {
-            sectionContent.Contains(topic, StringComparison.Ordinal)
-                .ShouldBeTrue($"{_path} section '{heading}' should mention {topic}.");
+            sectionContent.Contains(topic.Value, StringComparison.Ordinal)
+                .ShouldBeTrue($"{_path} section '{heading.Value}' should mention {topic.Value}.");
         }
     }
 

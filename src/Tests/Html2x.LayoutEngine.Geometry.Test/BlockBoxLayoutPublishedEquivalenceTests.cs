@@ -390,8 +390,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private static BlockBox CreateSupportedTableRoot()
     {
         var root = CreateRoot();
-        var table = CreateSupportedTable(root);
-        root.AddChild(table);
+        CreateSupportedTable(root);
 
         return root;
     }
@@ -399,80 +398,35 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private static BlockBox CreateUnsupportedTableRoot()
     {
         var root = CreateRoot();
-        var table = CreateUnsupportedTable(root);
-        root.AddChild(table);
+        CreateUnsupportedTable(root);
 
         return root;
     }
 
     private static TableBox CreateSupportedTable(BlockBox? parent = null)
     {
-        var table = new TableBox(BoxRole.Table)
-        {
-            Parent = parent,
-            Element = CreateElement("table"),
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        var row = new TableRowBox(BoxRole.TableRow)
-        {
-            Parent = table,
-            Element = CreateElement("tr"),
-            Style = new()
-        };
-        var header = CreateTableCell(row, "th", "head");
-        var cell = CreateTableCell(row, "td", "body");
+        var table = parent is null
+            ? TableBoxTree.Create(120f)
+            : TableBoxTree.AddTable(parent, 120f);
 
-        row.AddChild(header);
-        row.AddChild(cell);
-        table.AddChild(row);
+        var row = TableBoxTree.AddRow(table);
+        var header = TableBoxTree.AddCell(row, isHeader: true);
+        TableBoxTree.AddInline(header, "head");
+        var cell = TableBoxTree.AddCell(row);
+        TableBoxTree.AddInline(cell, "body");
 
         return table;
     }
 
     private static TableBox CreateUnsupportedTable(BlockBox? parent = null)
     {
-        var table = new TableBox(BoxRole.Table)
-        {
-            Parent = parent,
-            Element = CreateElement("table"),
-            Style = new()
-            {
-                WidthPt = 120f
-            }
-        };
-        var row = new TableRowBox(BoxRole.TableRow)
-        {
-            Parent = table,
-            Element = CreateElement("tr"),
-            Style = new()
-        };
-        var cell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = row,
-            Element = CreateElement("td", (HtmlCssVocabulary.HtmlAttributes.Rowspan, "2")),
-            Style = new()
-        };
-
-        row.AddChild(cell);
-        table.AddChild(row);
+        var table = parent is null
+            ? TableBoxTree.Create(120f)
+            : TableBoxTree.AddTable(parent, 120f);
+        var row = TableBoxTree.AddRow(table);
+        TableBoxTree.AddCell(row, rowspan: "2");
 
         return table;
-    }
-
-    private static TableCellBox CreateTableCell(TableRowBox row, string tagName, string text)
-    {
-        var cell = new TableCellBox(BoxRole.TableCell)
-        {
-            Parent = row,
-            Element = CreateElement(tagName),
-            Style = new()
-        };
-        cell.AddChild(CreateInline(cell, text));
-
-        return cell;
     }
 
     private static BlockBox CreateRoot() =>

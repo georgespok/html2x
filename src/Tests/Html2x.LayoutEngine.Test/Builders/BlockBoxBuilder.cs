@@ -4,7 +4,7 @@ using Html2x.RenderModel.Styles;
 namespace Html2x.LayoutEngine.Test.Builders;
 
 /// <summary>
-///     Fluent builder for BlockBox graphs with explicit navigation.
+///     Fluent builder for BlockBox trees with explicit navigation.
 ///     Use Block/Inline to descend; Up() to go back; BuildRoot() to materialize the root.
 /// </summary>
 internal sealed class BlockBoxBuilder
@@ -52,6 +52,7 @@ internal sealed class BlockBoxBuilder
     {
         _block.AddChild(new InlineBox(BoxRole.Inline)
         {
+            Parent = _block,
             TextContent = textContent,
             Style = style ?? new ComputedStyle()
         });

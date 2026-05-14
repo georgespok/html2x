@@ -35,12 +35,7 @@ public sealed class AtomicInlineBoxLayoutTests
                 Padding = new(2f, 2f, 2f, 2f)
             }
         });
-        var layout = new AtomicInlineBoxLayout(
-            textMeasurer,
-            new DefaultFontMetricsMeasurer(),
-            new DefaultLineHeightStrategy(),
-            new(),
-            imageSizingRules);
+        var layout = CreateLayout(textMeasurer, imageSizingRules);
 
         var result = layout.MeasureInlineBlock(inlineBlock, 100f);
 
@@ -84,12 +79,7 @@ public sealed class AtomicInlineBoxLayoutTests
             TextContent = "alpha beta"
         });
         inlineBlock.AddChild(contentBox);
-        var layout = new AtomicInlineBoxLayout(
-            textMeasurer,
-            new DefaultFontMetricsMeasurer(),
-            new DefaultLineHeightStrategy(),
-            new(),
-            new ImageSizingRules());
+        var layout = CreateLayout(textMeasurer);
 
         var result = layout.MeasureInlineBlock(inlineBlock, 100f);
 
@@ -104,6 +94,63 @@ public sealed class AtomicInlineBoxLayoutTests
         contentBox.UsedGeometry.ShouldBeNull();
         contentBox.InlineLayout.ShouldBeNull();
     }
+
+    [Fact]
+    public void MeasureInlineBlock_BlockDescendants_DoNotMutateBlocks()
+    {
+        var textMeasurer = new CountingTextMeasurer();
+        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
+        {
+            Style = new()
+        };
+        var contentBox = new BlockBox(BoxRole.Block)
+        {
+            Parent = inlineBlock,
+            EstablishesInlineBlockFormattingContext = true,
+            Style = new()
+            {
+                WidthPt = 42f
+            }
+        };
+        contentBox.AddChild(new InlineBox(BoxRole.Inline)
+        {
+            Parent = contentBox,
+            Style = contentBox.Style,
+            TextContent = "alpha"
+        });
+        var nestedBlock = new BlockBox(BoxRole.Block)
+        {
+            Parent = contentBox,
+            Style = new()
+            {
+                HeightPt = 30f,
+                WidthPt = 20f
+            }
+        };
+        contentBox.AddChild(nestedBlock);
+        inlineBlock.AddChild(contentBox);
+        var layout = CreateLayout(textMeasurer);
+
+        var result = layout.MeasureInlineBlock(inlineBlock, 100f);
+
+        result.ShouldNotBeNull();
+        result.ContentHeight.ShouldBe(30f);
+        result.TextLayout.Lines.ShouldNotBeEmpty();
+        contentBox.UsedGeometry.ShouldBeNull();
+        contentBox.InlineLayout.ShouldBeNull();
+        nestedBlock.UsedGeometry.ShouldBeNull();
+        nestedBlock.InlineLayout.ShouldBeNull();
+    }
+
+    private static AtomicInlineBoxLayout CreateLayout(
+        ITextMeasurer textMeasurer,
+        ImageSizingRules? imageSizingRules = null) =>
+        new(
+            textMeasurer,
+            new DefaultFontMetricsMeasurer(),
+            new DefaultLineHeightStrategy(),
+            new(),
+            imageSizingRules ?? new ImageSizingRules());
 
     private sealed class FixedImageMetadataResolver(SizePx intrinsicSize) : IImageMetadataResolver
     {

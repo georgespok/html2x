@@ -10,21 +10,21 @@ namespace Html2x.LayoutEngine;
 
 internal sealed class LayoutStageRunner
 {
-    private readonly FragmentTreeBuilder _fragmentBuilder;
-    private readonly LayoutGeometryConstruction _layoutGeometryBuilder;
+    private readonly FragmentTreeBuilder _fragmentTreeBuilder;
+    private readonly LayoutGeometryConstruction _layoutGeometryConstruction;
     private readonly LayoutPaginator _layoutPaginator;
 
     public LayoutStageRunner(
-        LayoutGeometryConstruction layoutGeometryBuilder,
-        FragmentTreeBuilder fragmentBuilder,
+        LayoutGeometryConstruction layoutGeometryConstruction,
+        FragmentTreeBuilder fragmentTreeBuilder,
         LayoutPaginator layoutPaginator)
     {
-        ArgumentNullException.ThrowIfNull(layoutGeometryBuilder);
-        ArgumentNullException.ThrowIfNull(fragmentBuilder);
+        ArgumentNullException.ThrowIfNull(layoutGeometryConstruction);
+        ArgumentNullException.ThrowIfNull(fragmentTreeBuilder);
         ArgumentNullException.ThrowIfNull(layoutPaginator);
 
-        _layoutGeometryBuilder = layoutGeometryBuilder;
-        _fragmentBuilder = fragmentBuilder;
+        _layoutGeometryConstruction = layoutGeometryConstruction;
+        _fragmentTreeBuilder = fragmentTreeBuilder;
         _layoutPaginator = layoutPaginator;
     }
 
@@ -37,7 +37,7 @@ internal sealed class LayoutStageRunner
         return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.BoxTree,
-            () => _layoutGeometryBuilder.Build(styleTree, request, diagnosticsSink),
+            () => _layoutGeometryConstruction.Build(styleTree, request, diagnosticsSink),
             cancellationToken);
     }
 
@@ -49,7 +49,7 @@ internal sealed class LayoutStageRunner
         return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.FragmentTree,
-            () => _fragmentBuilder.Build(publishedLayout),
+            () => _fragmentTreeBuilder.Build(publishedLayout),
             cancellationToken);
     }
 
