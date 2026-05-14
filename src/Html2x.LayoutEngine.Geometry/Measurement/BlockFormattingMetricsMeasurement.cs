@@ -1,4 +1,4 @@
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.RenderModel.Fragments;
 
 namespace Html2x.LayoutEngine.Geometry.Measurement;

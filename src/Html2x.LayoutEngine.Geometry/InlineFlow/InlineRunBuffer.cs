@@ -7,12 +7,12 @@ internal sealed class InlineRunBuffer(
     float availableWidth,
     InlineRunConstruction runConstruction,
     ITextMeasurer textMeasurer,
-    ILineHeightStrategy lineHeightStrategy)
+    LineHeightRules lineHeightRules)
 {
     private readonly ComputedStyle _blockStyle = blockStyle ?? throw new ArgumentNullException(nameof(blockStyle));
 
-    private readonly ILineHeightStrategy _lineHeightStrategy =
-        lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+    private readonly LineHeightRules _lineHeightRules =
+        lineHeightRules ?? throw new ArgumentNullException(nameof(lineHeightRules));
 
     private readonly InlineRunConstruction _runConstruction =
         runConstruction ?? throw new ArgumentNullException(nameof(runConstruction));
@@ -38,7 +38,7 @@ internal sealed class InlineRunBuffer(
             inline,
             availableWidth,
             _textMeasurer,
-            _lineHeightStrategy);
+            _lineHeightRules);
         var inlineRun = _runConstruction.BuildInlineBlockRun(inline, _nextRunId, inlineLayout);
         if (inlineRun is null)
         {

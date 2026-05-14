@@ -9,10 +9,10 @@ internal sealed class InlineTextLayoutMeasurement(
     InlineRunConstruction runConstruction,
     ITextMeasurer textMeasurer,
     IFontMetricsMeasurer metrics,
-    ILineHeightStrategy lineHeightStrategy)
+    LineHeightRules lineHeightRules)
 {
-    private readonly ILineHeightStrategy _lineHeightStrategy =
-        lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+    private readonly LineHeightRules _lineHeightRules =
+        lineHeightRules ?? throw new ArgumentNullException(nameof(lineHeightRules));
 
     private readonly IFontMetricsMeasurer _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
 
@@ -47,7 +47,7 @@ internal sealed class InlineTextLayoutMeasurement(
         var fontSize = _metrics.GetFontSize(blockContext.Style);
         var fontMeasurement = _textMeasurer.Measure(font, fontSize, string.Empty);
         var metrics = (fontMeasurement.Ascent, fontMeasurement.Descent);
-        return _lineHeightStrategy.GetLineHeight(blockContext.Style, font, fontSize, metrics);
+        return _lineHeightRules.GetLineHeight(blockContext.Style, font, fontSize, metrics);
     }
 
     private TextLayoutResult LayoutRuns(
@@ -80,5 +80,5 @@ internal sealed class InlineTextLayoutMeasurement(
         new(
             _runConstruction,
             _textMeasurer,
-            _lineHeightStrategy);
+            _lineHeightRules);
 }

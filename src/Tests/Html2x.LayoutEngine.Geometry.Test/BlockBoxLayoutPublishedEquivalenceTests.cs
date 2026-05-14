@@ -28,11 +28,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutImageBlock_PublishesImageFacts()
+    public void ResolvePublished_WithImageBlock_PublishesImageFacts()
     {
-        var image = CreateImageBlock();
+        var root = CreateRoot();
+        var image = CreateImageBlock(parent: root);
+        root.AddChild(image);
 
-        var published = CreateEngine().LayoutImageBlock(image, DefaultRequest());
+        var published = ResolveSingleBlock(image);
 
         var facts = published.Image.ShouldNotBeNull();
         facts.Src.ShouldBe("images/logo.png");
@@ -45,11 +47,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutImageBlock_AppliesImageState()
+    public void ResolvePublished_WithImageBlock_AppliesImageState()
     {
-        var image = CreateImageBlock();
+        var root = CreateRoot();
+        var image = CreateImageBlock(parent: root);
+        root.AddChild(image);
 
-        _ = CreateEngine().LayoutImageBlock(image, DefaultRequest());
+        _ = ResolveSingleBlock(image);
 
         image.Src.ShouldBe("images/logo.png");
         image.AuthoredSizePx.Width.HasValue.ShouldBeTrue();
@@ -60,11 +64,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutRuleBlock_PublishesRuleFacts()
+    public void ResolvePublished_WithRuleBlock_PublishesRuleFacts()
     {
-        var rule = CreateRuleBlock(new(1f, 0f, 1f, 0f));
+        var root = CreateRoot();
+        var rule = CreateRuleBlock(new(1f, 0f, 1f, 0f), root);
+        root.AddChild(rule);
 
-        var published = CreateEngine().LayoutRuleBlock(rule, DefaultRequest());
+        var published = ResolveSingleBlock(rule);
 
         published.Rule.ShouldNotBeNull();
         published.Image.ShouldBeNull();
@@ -73,11 +79,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutRuleBlock_AppliesBoxGeometry()
+    public void ResolvePublished_WithRuleBlock_AppliesBoxGeometry()
     {
-        var rule = CreateRuleBlock(new(2f, 0f, 3f, 0f));
+        var root = CreateRoot();
+        var rule = CreateRuleBlock(new(2f, 0f, 3f, 0f), root);
+        root.AddChild(rule);
 
-        _ = CreateEngine().LayoutRuleBlock(rule, DefaultRequest());
+        _ = ResolveSingleBlock(rule);
 
         rule.UsedGeometry.ShouldNotBeNull();
         rule.UsedGeometry.Value.Height.ShouldBe(5f);
@@ -172,11 +180,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutTableBlock_PublishesTableFacts()
+    public void ResolvePublished_WithTableBlock_PublishesTableFacts()
     {
         var table = CreateSupportedTable();
 
-        var published = CreateEngine().LayoutTableBlock(table, DefaultRequest());
+        var published = ResolvePublished(table, DefaultBlockPage())
+            .Blocks
+            .ShouldHaveSingleItem();
 
         published.Table.ShouldNotBeNull().DerivedColumnCount.ShouldBe(2);
         var row = published.Children.ShouldHaveSingleItem();
@@ -189,11 +199,13 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     }
 
     [Fact]
-    public void LayoutTableBlock_WithUnsupportedStructure_PublishesPlaceholderGeometry()
+    public void ResolvePublished_WithUnsupportedTable_PublishesPlaceholderGeometry()
     {
         var table = CreateUnsupportedTable();
 
-        var published = CreateEngine().LayoutTableBlock(table, DefaultRequest());
+        var published = ResolvePublished(table, DefaultBlockPage())
+            .Blocks
+            .ShouldHaveSingleItem();
 
         published.Table.ShouldNotBeNull().DerivedColumnCount.ShouldBe(0);
         published.Geometry.Height.ShouldBe(0f);
@@ -222,7 +234,7 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
         var inlineFlowLayout = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             formattingContext,
             imageSizingRules);
 
@@ -236,19 +248,22 @@ public sealed class BlockBoxLayoutPublishedEquivalenceTests
     private PublishedLayoutTree ResolvePublished(BoxNode root, PageBox page) =>
         PublishedLayoutTestRunner.Run(CreateEngine(), root, page);
 
+    private PublishedBlock ResolveSingleBlock(BlockBox block) =>
+        ResolvePublished(block.Parent.ShouldBeOfType<BlockBox>(), DefaultBlockPage())
+            .Blocks
+            .ShouldHaveSingleItem();
+
     private static PageBox DefaultPage() => new()
     {
         Margin = new(0f, 0f, 0f, 0f),
         Size = new(200f, 400f)
     };
 
-    private static BlockLayoutRequest DefaultRequest() => new(
-        0f,
-        0f,
-        160f,
-        0f,
-        0f,
-        0f);
+    private static PageBox DefaultBlockPage() => new()
+    {
+        Margin = new(0f, 0f, 0f, 0f),
+        Size = new(160f, 400f)
+    };
 
     private static ImageBox CreateImageBlock(
         float widthPt = 30f,

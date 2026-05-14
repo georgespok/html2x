@@ -1,4 +1,5 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
+using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Images;
@@ -198,15 +199,7 @@ public sealed class BlockContentSizeMeasurementTests
         var measured = CreateMeasurer().Measure(createBlock(), 120f, MeasureTable);
 
         var layoutBlock = createBlock();
-        var published = CreateBlockBoxLayout().LayoutStandardBlock(
-            layoutBlock,
-            new(
-                0f,
-                0f,
-                120f,
-                0f,
-                0f,
-                0f));
+        var published = PublishSingleBlock(layoutBlock, 120f);
 
         measured.BorderBoxHeight.ShouldBe(published.Geometry.Height, 0.01f);
     }
@@ -231,6 +224,26 @@ public sealed class BlockContentSizeMeasurementTests
             imageSizingRules);
     }
 
+    private PublishedBlock PublishSingleBlock(BlockBox block, float contentWidth)
+    {
+        var root = new BlockBox(BoxRole.Block)
+        {
+            Style = new()
+        };
+        root.AddChild(block.CloneForParent(root));
+
+        return new BoxTreeLayout(CreateBlockBoxLayout())
+            .Layout(
+                root,
+                new()
+                {
+                    Margin = new(0f, 0f, 0f, 0f),
+                    Size = new(contentWidth, 400f)
+                })
+            .Blocks
+            .ShouldHaveSingleItem();
+    }
+
     private TableGridLayout CreateTableGridLayout(IImageMetadataResolver? imageMetadataResolver = null)
     {
         var imageSizingRules = CreateImageSizingRules(imageMetadataResolver);
@@ -241,7 +254,7 @@ public sealed class BlockContentSizeMeasurementTests
         new(
             new DefaultFontMetricsMeasurer(),
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             new(),
             imageSizingRules);
 

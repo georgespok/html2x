@@ -148,7 +148,7 @@ public sealed class AtomicInlineBoxLayoutTests
         new(
             textMeasurer,
             new DefaultFontMetricsMeasurer(),
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             new(),
             imageSizingRules ?? new ImageSizingRules());
 

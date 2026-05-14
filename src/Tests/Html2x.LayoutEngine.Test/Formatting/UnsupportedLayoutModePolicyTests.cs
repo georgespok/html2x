@@ -1,5 +1,5 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test.Formatting;

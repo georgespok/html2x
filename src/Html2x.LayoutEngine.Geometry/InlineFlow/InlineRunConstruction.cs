@@ -56,12 +56,12 @@ internal sealed class InlineRunConstruction
         InlineBox inline,
         float availableWidth,
         ITextMeasurer measurer,
-        ILineHeightStrategy lineHeightStrategy)
+        LineHeightRules lineHeightRules)
     {
         var layout = new AtomicInlineBoxLayout(
             measurer,
             _metrics,
-            lineHeightStrategy,
+            lineHeightRules,
             _blockContentMeasurement,
             _imageSizingRules,
             _diagnosticsSink);

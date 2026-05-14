@@ -1,6 +1,6 @@
 using Html2x.RenderModel.Text;
 
-namespace Html2x.LayoutEngine.Geometry;
+namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 
 /// <summary>
 ///     Default heuristic font metrics measurer. Replace with a real font engine when available.

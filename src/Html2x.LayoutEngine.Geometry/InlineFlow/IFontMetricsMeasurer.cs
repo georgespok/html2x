@@ -1,6 +1,6 @@
 using Html2x.RenderModel.Text;
 
-namespace Html2x.LayoutEngine.Geometry;
+namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 
 /// <summary>
 ///     Provides font metrics and crude width estimation for layout calculations.

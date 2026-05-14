@@ -2,7 +2,6 @@ using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.BlockFlow;
-using Html2x.LayoutEngine.Geometry.Composition;
 using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Images;
@@ -16,6 +15,7 @@ using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.Renderers.Pdf.Pipeline;
 using Html2x.Resources;
+using Shouldly;
 using Html2x.Architecture.Test.Support;
 using static Html2x.Architecture.Test.Support.TestSupport;
 
@@ -43,6 +43,32 @@ public sealed class LayoutGeometryOwnerTests
     }
 
     [Fact]
+    public void GeometrySourceDirectories_UseAcceptedOwnerNames()
+    {
+        Directory.GetDirectories(SourceDirectoryFor<LayoutGeometryConstruction>())
+            .Select(Path.GetFileName)
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Where(static name => name is not RepositoryLayout.BinDirectory
+                and not RepositoryLayout.ObjDirectory
+                and not "Properties")
+            .OrderBy(static name => name, StringComparer.Ordinal)
+            .ShouldBe([
+                "BlockFlow",
+                "Construction",
+                "Diagnostics",
+                "Images",
+                "InlineFlow",
+                "Measurement",
+                "Models",
+                "Primitives",
+                "Publishing",
+                "Style",
+                "Tables",
+                "Writing"
+            ]);
+    }
+
+    [Fact]
     public void ConstructionOwner_HasExpectedNamespaceAndForbiddenDependencies()
     {
         var construction = SourceSetForNamespaceOf<BoxTreeConstruction>();
@@ -65,11 +91,9 @@ public sealed class LayoutGeometryOwnerTests
             NamespaceOf<LayoutPaginator>(),
             RendererNamespace,
             AssemblyName(typeof(ImageResourceLoader)),
-            ParserPackageName(),
-            NamespaceOf(typeof(GeometryPipelineConstruction)));
+            ParserPackageName());
         construction.ShouldNotUseIdentifiers(
             nameof(LayoutGeometryConstruction),
-            nameof(GeometryPipelineConstruction),
             nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(PublishedLayoutWriter),
@@ -97,11 +121,9 @@ public sealed class LayoutGeometryOwnerTests
             NamespaceOf<LayoutPaginator>(),
             RendererNamespace,
             AssemblyName(typeof(ImageResourceLoader)),
-            ParserPackageName(),
-            NamespaceOf(typeof(GeometryPipelineConstruction)));
+            ParserPackageName());
         images.ShouldNotUseIdentifiers(
             nameof(LayoutGeometryConstruction),
-            nameof(GeometryPipelineConstruction),
             nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(PublishedLayoutWriter),
@@ -140,11 +162,9 @@ public sealed class LayoutGeometryOwnerTests
             NamespaceOf<LayoutPaginator>(),
             RendererNamespace,
             AssemblyName(typeof(ImageResourceLoader)),
-            ParserPackageName(),
-            NamespaceOf(typeof(GeometryPipelineConstruction)));
+            ParserPackageName());
         publishing.ShouldNotUseIdentifiers(
             nameof(LayoutGeometryConstruction),
-            nameof(GeometryPipelineConstruction),
             nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(ImageResourceLoader));
@@ -165,11 +185,9 @@ public sealed class LayoutGeometryOwnerTests
             NamespaceOf<LayoutPaginator>(),
             RendererNamespace,
             AssemblyName(typeof(ImageResourceLoader)),
-            ParserPackageName(),
-            NamespaceOf(typeof(GeometryPipelineConstruction)));
+            ParserPackageName());
         measurement.ShouldNotUseIdentifiers(
             nameof(LayoutGeometryConstruction),
-            nameof(GeometryPipelineConstruction),
             nameof(FragmentTreeBuilder),
             nameof(LayoutPaginator),
             nameof(PublishedLayoutWriter),
@@ -248,11 +266,9 @@ public sealed class LayoutGeometryOwnerTests
                 NamespaceOf<LayoutPaginator>(),
                 RendererNamespace,
                 AssemblyName(typeof(ImageResourceLoader)),
-                ParserPackageName(),
-                NamespaceOf(typeof(GeometryPipelineConstruction)));
+                ParserPackageName());
             table.Source.ShouldNotUseIdentifiers(
                 nameof(LayoutGeometryConstruction),
-                nameof(GeometryPipelineConstruction),
                 nameof(FragmentTreeBuilder),
                 nameof(LayoutPaginator),
                 nameof(PublishedLayoutWriter),

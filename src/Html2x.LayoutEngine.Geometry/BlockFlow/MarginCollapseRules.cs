@@ -2,7 +2,7 @@ using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Geometry.Formatting;
+namespace Html2x.LayoutEngine.Geometry.BlockFlow;
 
 /// <summary>
 ///     Owns vertical margin collapse policy and diagnostics.

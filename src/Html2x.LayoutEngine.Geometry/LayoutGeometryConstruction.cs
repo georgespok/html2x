@@ -1,9 +1,10 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
-using Html2x.LayoutEngine.Geometry.Composition;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.Images;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.Text;
 
@@ -83,14 +84,44 @@ internal sealed class LayoutGeometryConstruction
     {
         GeometryLayoutStructureValidator.ValidateInlineBlockStructures(initialBoxRoot, diagnosticsSink);
 
-        var pipeline = GeometryPipelineConstruction.Create(
+        var pipeline = CreatePipeline(
             styles,
             request,
-            _textMeasurer,
-            _contentMeasurement,
             diagnosticsSink);
         var layout = pipeline.BoxTreeLayout.Layout(initialBoxRoot, pipeline.Page);
         GeometryLayoutStructureValidator.ValidateInlineBlockStructures(layout, diagnosticsSink);
         return layout;
     }
+
+    private GeometryPipeline CreatePipeline(
+        StyleTree styles,
+        LayoutGeometryRequest? request,
+        IDiagnosticsSink? diagnosticsSink)
+    {
+        var geometryRequest = request ?? LayoutGeometryRequest.Default;
+        var imageSizingRules = new ImageSizingRules(geometryRequest);
+        var inlineFlowLayout = new InlineFlowLayout(
+            new DefaultFontMetricsMeasurer(),
+            _textMeasurer,
+            new LineHeightRules(),
+            _contentMeasurement,
+            imageSizingRules,
+            diagnosticsSink);
+        var blockBoxLayout = new BlockBoxLayout(
+            inlineFlowLayout,
+            new(inlineFlowLayout, imageSizingRules),
+            _contentMeasurement,
+            imageSizingRules,
+            diagnosticsSink);
+        var boxTreeLayout = new BoxTreeLayout(blockBoxLayout);
+        var page = new PageBox
+        {
+            Margin = styles.Page.Margin,
+            Size = geometryRequest.PageSize
+        };
+
+        return new(boxTreeLayout, page);
+    }
+
+    private sealed record GeometryPipeline(BoxTreeLayout BoxTreeLayout, PageBox Page);
 }

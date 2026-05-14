@@ -22,6 +22,12 @@ public class BlockBoxLayoutTests
         Size = new(200, 400)
     };
 
+    private static PageBox PageWithContentArea(float x, float y, float width) => new()
+    {
+        Margin = new(y, 0f, 0f, x),
+        Size = new(x + width, 400f)
+    };
+
     [Fact]
     public void Layout_BlockHeightIncludesPadding()
     {
@@ -78,28 +84,28 @@ public class BlockBoxLayoutTests
     }
 
     [Fact]
-    public void LayoutStandardBlock_PublishesGeometryAndDisplayFacts()
+    public void ResolvePublished_WithListItem_PublishesGeometryAndDisplayFacts()
     {
+        var root = new BlockBox(BoxRole.Block)
+        {
+            Style = new()
+        };
         var block = new BlockBox(BoxRole.ListItem)
         {
+            Parent = root,
             Style = new()
             {
                 HeightPt = 20f
             },
             MarkerOffset = 6f
         };
+        root.AddChild(block);
 
-        var published = CreateBlockBoxLayout().LayoutStandardBlock(
-            block,
-            new(
-                10f,
-                15f,
-                120f,
-                15f,
-                0f,
-                0f));
+        var published = ResolvePublished(root, PageWithContentArea(10f, 15f, 120f))
+            .Blocks
+            .ShouldHaveSingleItem();
 
-        published.Identity.NodePath.ShouldBe("listitem");
+        published.Identity.NodePath.ShouldBe("block/listitem");
         published.Identity.SourceOrder.ShouldBe(0);
         published.Display.Role.ShouldBe(FragmentDisplayRole.ListItem);
         published.Display.FormattingContext.ShouldBe(FormattingContextKind.Block);
@@ -112,26 +118,24 @@ public class BlockBoxLayoutTests
     }
 
     [Fact]
-    public void LayoutStandardBlock_AppliesBoxGeometry()
+    public void ResolvePublished_WithStandardBlock_AppliesBoxGeometry()
     {
+        var root = new BlockBox(BoxRole.Block)
+        {
+            Style = new()
+        };
         var block = new BlockBox(BoxRole.Block)
         {
+            Parent = root,
             Style = new()
             {
                 Padding = new(2f, 3f, 4f, 5f),
                 HeightPt = 12f
             }
         };
+        root.AddChild(block);
 
-        _ = CreateBlockBoxLayout().LayoutStandardBlock(
-            block,
-            new(
-                8f,
-                9f,
-                100f,
-                9f,
-                0f,
-                0f));
+        _ = ResolvePublished(root, PageWithContentArea(8f, 9f, 100f));
 
         var geometry = block.UsedGeometry.ShouldNotBeNull();
         geometry.X.ShouldBe(8f);
@@ -412,7 +416,7 @@ public class BlockBoxLayoutTests
         var inlineFlowLayout = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             formattingContext,
             imageSizingRules,
             diagnosticsSink);

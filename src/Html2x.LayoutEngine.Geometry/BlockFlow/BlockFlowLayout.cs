@@ -1,6 +1,5 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Diagnostics;
-using Html2x.LayoutEngine.Geometry.Formatting;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.RenderModel.Fragments;

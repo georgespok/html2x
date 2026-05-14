@@ -1,5 +1,5 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Formatting;
+using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.RenderModel.Fragments;
 using Shouldly;
 

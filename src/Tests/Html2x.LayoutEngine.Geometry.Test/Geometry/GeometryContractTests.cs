@@ -18,7 +18,7 @@ namespace Html2x.LayoutEngine.Geometry.Test.Geometry;
 public sealed class GeometryContractTests
 {
     [Fact]
-    public void LayoutTableBlock_NegativeLeftMargin_ClampsOrigin()
+    public void ResolvePublished_WithNegativeTableLeftMargin_ClampsOrigin()
     {
         var table = new TableBox(BoxRole.Table)
         {
@@ -139,7 +139,7 @@ public sealed class GeometryContractTests
         var engine = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             new FakeTextMeasurer(10f, 9f, 3f),
-            new DefaultLineHeightStrategy());
+            new LineHeightRules());
 
         var measured = engine.MeasureInlineFlow(block, InlineLayoutRequest.ForMeasurement(25f));
 
@@ -189,7 +189,7 @@ public sealed class GeometryContractTests
         var engine = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             new FakeTextMeasurer(10f, 9f, 3f),
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             new(),
             imageSizingRules);
 

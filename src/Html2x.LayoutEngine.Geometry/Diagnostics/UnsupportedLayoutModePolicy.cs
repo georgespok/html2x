@@ -1,8 +1,7 @@
 using Html2x.Diagnostics.Contracts;
-using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.RenderModel.Fragments;
 
-namespace Html2x.LayoutEngine.Geometry.Formatting;
+namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
 /// <summary>
 ///     Reports layout modes that are parsed today but do not have implemented formatting contexts.

@@ -6,10 +6,10 @@ namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 internal sealed class InlineRunCollector(
     InlineRunConstruction runConstruction,
     ITextMeasurer textMeasurer,
-    ILineHeightStrategy lineHeightStrategy)
+    LineHeightRules lineHeightRules)
 {
-    private readonly ILineHeightStrategy _lineHeightStrategy =
-        lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+    private readonly LineHeightRules _lineHeightRules =
+        lineHeightRules ?? throw new ArgumentNullException(nameof(lineHeightRules));
 
     private readonly InlineRunConstruction _runConstruction =
         runConstruction ?? throw new ArgumentNullException(nameof(runConstruction));
@@ -57,7 +57,7 @@ internal sealed class InlineRunCollector(
             availableWidth,
             _runConstruction,
             _textMeasurer,
-            _lineHeightStrategy);
+            _lineHeightRules);
 
     private static void TryAppendSyntheticListMarkerRun(
         BlockBox blockContext,

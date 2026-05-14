@@ -20,7 +20,7 @@ internal sealed class InlineFlowLayout
         : this(
             new DefaultFontMetricsMeasurer(),
             null,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             new(),
             diagnosticsSink: null)
     {
@@ -30,18 +30,18 @@ internal sealed class InlineFlowLayout
         : this(
             metrics,
             null,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             new(),
             diagnosticsSink: null)
     {
     }
 
     public InlineFlowLayout(IFontMetricsMeasurer metrics, ITextMeasurer? textMeasurer,
-        ILineHeightStrategy lineHeightStrategy)
+        LineHeightRules lineHeightRules)
         : this(
             metrics,
             textMeasurer,
-            lineHeightStrategy,
+            lineHeightRules,
             new(),
             diagnosticsSink: null)
     {
@@ -50,7 +50,7 @@ internal sealed class InlineFlowLayout
     internal InlineFlowLayout(
         IFontMetricsMeasurer metrics,
         ITextMeasurer? textMeasurer,
-        ILineHeightStrategy lineHeightStrategy,
+        LineHeightRules lineHeightRules,
         BlockFormattingMetricsMeasurement contentMeasurement,
         ImageSizingRules? imageSizingRules = null,
         IDiagnosticsSink? diagnosticsSink = null)
@@ -59,8 +59,8 @@ internal sealed class InlineFlowLayout
         ITextMeasurer resolvedTextMeasurer = textMeasurer is null
             ? new FallbackTextMeasurer(resolvedMetrics)
             : new ValidatedTextMeasurer(textMeasurer);
-        var resolvedLineHeightStrategy =
-            lineHeightStrategy ?? throw new ArgumentNullException(nameof(lineHeightStrategy));
+        var resolvedLineHeightRules =
+            lineHeightRules ?? throw new ArgumentNullException(nameof(lineHeightRules));
         var runConstruction = new InlineRunConstruction(
             resolvedMetrics,
             contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement)),
@@ -70,7 +70,7 @@ internal sealed class InlineFlowLayout
             runConstruction,
             resolvedTextMeasurer,
             resolvedMetrics,
-            resolvedLineHeightStrategy);
+            resolvedLineHeightRules);
         _inlineLayoutWriter = new(resolvedTextMeasurer);
         _stateWriter = new();
     }

@@ -9,7 +9,6 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.BlockFlow;
-using Html2x.LayoutEngine.Geometry.Composition;
 using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
@@ -284,7 +283,6 @@ public sealed class LayoutGeometryTests
     public void GeometryRedesign_HasExplicitInternalFlowAndOwnership()
     {
         var layoutGeometryConstruction = SourceFileFor<LayoutGeometryConstruction>();
-        var geometryPipelineComposer = SourceFileFor(typeof(GeometryPipelineConstruction));
         var boxTreeLayout = SourceFileFor<BoxTreeLayout>();
         var blockBoxLayout = SourceFileFor<BlockBoxLayout>();
         var blockFlow = SourceFileFor<BlockFlowLayout>();
@@ -299,7 +297,9 @@ public sealed class LayoutGeometryTests
         var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>();
 
         layoutGeometryConstruction.ShouldUseIdentifier(nameof(BoxTreeConstruction));
-        geometryPipelineComposer.ShouldConstructType(nameof(BoxTreeLayout));
+        layoutGeometryConstruction.ShouldConstructType(nameof(BoxTreeLayout));
+        layoutGeometryConstruction.ShouldUseIdentifier(nameof(DefaultFontMetricsMeasurer));
+        layoutGeometryConstruction.ShouldUseIdentifier(nameof(LineHeightRules));
         boxTreeLayout.ShouldUseIdentifier(nameof(BlockBoxLayout));
         boxTreeLayout.ShouldUseIdentifier(nameof(PageContentArea));
         boxTreeLayout.ShouldUseIdentifier(nameof(PublishedLayoutTree));
@@ -312,7 +312,7 @@ public sealed class LayoutGeometryTests
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockSizingRules));
         blockBoxLayout.ShouldUseIdentifier(nameof(TableGridLayout));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PageContentArea));
-        blockBoxLayout.ShouldInvoke(nameof(PublishedLayoutWriter.WriteRuleResult));
+        blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter.WriteRuleResult));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PublishedBlockFacts));
         blockBoxLayout.ShouldNotConstructType(nameof(PublishedChildBlockItem));
         blockBoxLayout.ShouldNotConstructType(nameof(PublishedInlineFlowSegmentItem));

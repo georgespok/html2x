@@ -13,6 +13,7 @@ using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Computation;
+using Html2x.Options;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
@@ -28,6 +29,24 @@ namespace Html2x.Architecture.Test.Layout;
 
 public sealed class LayoutGeometryPublicSurfaceTests
 {
+    [Fact]
+    public void FacadePublicSurface_StaysNarrowAndStable()
+    {
+        SemanticProjectFor<HtmlConverter>()
+            .ExternallyVisibleTypeNames()
+            .ShouldBe([
+                FullTypeName<HtmlConverter>(),
+                FullTypeName<HtmlConverterDependencies>(),
+                FullTypeName<HtmlToPdfResult>(),
+                FullTypeName<CssOptions>(),
+                FullTypeName<DiagnosticsOptions>(),
+                FullTypeName<FontOptions>(),
+                FullTypeName<HtmlConverterOptions>(),
+                FullTypeName<PageOptions>(),
+                FullTypeName<ResourceOptions>()
+            ]);
+    }
+
     [Fact]
     public void TextAdapterDependencies_DoNotLeakThroughPublicConstructors()
     {

@@ -478,7 +478,7 @@ public class BlockFlowTests
         var inlineFlowLayout = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             CreateLinearMeasurer(10f),
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             formattingContext,
             imageSizingRules);
         var tableGridLayout = new TableGridLayout(inlineFlowLayout, imageSizingRules);

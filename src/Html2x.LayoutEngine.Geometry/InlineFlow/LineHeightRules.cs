@@ -1,8 +1,8 @@
 using Html2x.RenderModel.Text;
 
-namespace Html2x.LayoutEngine.Geometry;
+namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 
-internal sealed class DefaultLineHeightStrategy(float minimumMultiplier = 1.2f) : ILineHeightStrategy
+internal sealed class LineHeightRules(float minimumMultiplier = 1.2f)
 {
     public float GetLineHeight(ComputedStyle style, FontKey font, float fontSizePt,
         (float ascent, float descent) metrics)

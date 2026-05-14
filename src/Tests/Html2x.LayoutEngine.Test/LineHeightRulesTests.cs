@@ -1,10 +1,10 @@
-using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.RenderModel.Text;
 using Shouldly;
 
 namespace Html2x.LayoutEngine.Test;
 
-public class DefaultLineHeightStrategyTests
+public class LineHeightRulesTests
 {
     [Theory]
     [InlineData(1.1f, 6f, 2f, 10f, 1.2f, 12f)] // multiplier below minimum -> minimum applied
@@ -20,7 +20,7 @@ public class DefaultLineHeightStrategyTests
         float expected)
     {
         var style = new ComputedStyle { LineHeightMultiplier = multiplier };
-        var sut = new DefaultLineHeightStrategy(minimumMultiplier);
+        var sut = new LineHeightRules(minimumMultiplier);
 
         var height = sut.GetLineHeight(
             style,
@@ -43,7 +43,7 @@ public class DefaultLineHeightStrategyTests
         float expected)
     {
         var style = new ComputedStyle();
-        var sut = new DefaultLineHeightStrategy(minimumMultiplier);
+        var sut = new LineHeightRules(minimumMultiplier);
 
         var height = sut.GetLineHeight(
             style,

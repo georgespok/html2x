@@ -10,10 +10,10 @@ internal sealed class InlineFlowMeasurement(
     InlineRunConstruction runConstruction,
     ITextMeasurer textMeasurer,
     IFontMetricsMeasurer metrics,
-    ILineHeightStrategy lineHeightStrategy)
+    LineHeightRules lineHeightRules)
 {
     private readonly InlineTextLayoutMeasurement _inlineTextMeasurement =
-        new(runConstruction, textMeasurer, metrics, lineHeightStrategy);
+        new(runConstruction, textMeasurer, metrics, lineHeightRules);
 
     public InlineFlowMeasurementResult Measure(BlockBox block, InlineLayoutRequest request)
     {

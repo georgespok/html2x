@@ -85,18 +85,6 @@ internal sealed class BlockBoxLayout
     private BlockLayoutRuleResult LayoutChildBlock(BlockBox block, BlockLayoutRequest request) =>
         _rules.Layout(block, request);
 
-    internal PublishedBlock LayoutStandardBlock(BlockBox node, BlockLayoutRequest request) =>
-        _publishedLayoutWriter.WriteRuleResult(_standardBlockRule.Layout(node, request));
-
-    internal PublishedBlock LayoutImageBlock(ImageBox node, BlockLayoutRequest request) =>
-        _publishedLayoutWriter.WriteRuleResult(_imageBlockRule.Layout(node, request));
-
-    internal PublishedBlock LayoutRuleBlock(RuleBox node, BlockLayoutRequest request) =>
-        _publishedLayoutWriter.WriteRuleResult(_ruleBlockRule.Layout(node, request));
-
-    internal PublishedBlock LayoutTableBlock(TableBox node, BlockLayoutRequest request) =>
-        _publishedLayoutWriter.WriteRuleResult(_tableBlockRule.Layout(node, request));
-
     private static BlockLayoutRuleSet CreateDefaultRuleSet(
         TableBlockLayoutRule tableBlockRule,
         ImageBlockLayoutRule imageBlockRule,

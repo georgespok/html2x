@@ -69,6 +69,23 @@ public sealed class LayoutGeometryProjectGraphTests
     }
 
     [Fact]
+    public void SharedContractsProject_DoesNotReferenceImplementationStages()
+    {
+        var contracts = SemanticProjectFor<StyleNode>();
+
+        ProjectFor<StyleNode>()
+            .ShouldReferenceProjects(AssemblyName<HtmlLayout>());
+        contracts.ShouldNotReferenceNamespaces(
+            NamespaceOf<StyleTreeBuilder>(),
+            NamespaceOf<LayoutGeometryConstruction>(),
+            NamespaceOf<FragmentTreeBuilder>(),
+            NamespaceOf<LayoutPaginator>(),
+            RendererNamespace,
+            ParserPackageName(),
+            ExternalPackageIds.SkiaSharp);
+    }
+
+    [Fact]
     public void RendererProjectGraph_StaysIndependentFromLayoutStages()
     {
         var renderer = ProjectFor<PdfRenderer>();
@@ -102,4 +119,8 @@ public sealed class LayoutGeometryProjectGraphTests
         TestProjectFor<LayoutGeometryConstruction>()
             .ShouldNotReferencePackages(ExternalPackageIds.AngleSharp, ExternalPackageIds.AngleSharpCss);
     }
+
+    private static readonly string RendererNamespace = NamespacePrefix(
+        NamespaceOf<PdfRenderer>(),
+        2);
 }

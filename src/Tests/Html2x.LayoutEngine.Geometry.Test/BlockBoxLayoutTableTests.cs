@@ -318,7 +318,7 @@ public class BlockBoxLayoutTableTests
         var inlineFlowLayout = new InlineFlowLayout(
             new DefaultFontMetricsMeasurer(),
             _textMeasurer,
-            new DefaultLineHeightStrategy(),
+            new LineHeightRules(),
             formattingContext,
             imageSizingRules,
             diagnosticsSink);

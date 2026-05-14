@@ -24,14 +24,14 @@ internal sealed class AtomicInlineBoxLayout
     public AtomicInlineBoxLayout(
         ITextMeasurer measurer,
         IFontMetricsMeasurer metrics,
-        ILineHeightStrategy lineHeightStrategy,
+        LineHeightRules lineHeightRules,
         BlockFormattingMetricsMeasurement contentMeasurement,
         ImageSizingRules? imageSizingRules = null,
         IDiagnosticsSink? diagnosticsSink = null)
     {
         ArgumentNullException.ThrowIfNull(measurer);
         ArgumentNullException.ThrowIfNull(metrics);
-        ArgumentNullException.ThrowIfNull(lineHeightStrategy);
+        ArgumentNullException.ThrowIfNull(lineHeightRules);
         ArgumentNullException.ThrowIfNull(contentMeasurement);
 
         _blockContentMeasurement = contentMeasurement;
@@ -48,7 +48,7 @@ internal sealed class AtomicInlineBoxLayout
             runConstruction,
             measurer,
             metrics,
-            lineHeightStrategy);
+            lineHeightRules);
     }
 
     public InlineBoxLayout? MeasureInlineBlock(InlineBox inline, float availableWidth)
