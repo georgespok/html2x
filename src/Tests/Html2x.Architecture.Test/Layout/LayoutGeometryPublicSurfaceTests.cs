@@ -144,6 +144,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
     {
         var publicTypes = SemanticProjectFor<HtmlLayout>()
             .ExternallyVisibleTypeNames();
+        var textDecorations = SourceFileFor<TextDecorations>();
 
         publicTypes.ShouldNotContain(FullTypeName<HtmlLayout>());
         publicTypes.ShouldNotContain(FullTypeName<LayoutPage>());
@@ -159,6 +160,8 @@ public sealed class LayoutGeometryPublicSurfaceTests
         publicTypes.ShouldNotContain(FullTypeName<FragmentDisplayRole>());
         publicTypes.ShouldNotContain(FullTypeName<FormattingContextKind>());
         publicTypes.ShouldNotContain(FullTypeName<TextDecorations>());
+        textDecorations.ShouldDeclareNamespace(NamespaceOf<VisualStyle>());
+        textDecorations.ShouldNotDeclareNamespace(NamespaceOf<Fragment>());
     }
 
     [Fact]
@@ -269,17 +272,21 @@ public sealed class LayoutGeometryPublicSurfaceTests
     }
 
     [Fact]
-    public void SupportedHtmlVocabulary_HasSingleStyleContractOwner()
+    public void SupportedElementTraversal_IsOwnedByStyle()
     {
         var styleTraversal = SourceFileFor<StyleTraversal>();
         var constants = SourceFileFor(typeof(HtmlCssVocabulary));
+        var supportedElementRules = SourceFileFor(typeof(SupportedElementRules));
 
-        constants.ShouldContainPropertyInType(
+        constants.ShouldNotContainPropertyInType(
             nameof(HtmlCssVocabulary),
-            nameof(HtmlCssVocabulary.SupportedElementTags),
-            ReadOnlySetTypeName<string>(),
+            "SupportedElementTags",
+            null,
             PublicAccessibility);
-        styleTraversal.ShouldUseIdentifier(nameof(HtmlCssVocabulary.SupportedElementTags));
+        supportedElementRules.ShouldDeclareNamespace(NamespaceOf<StyleTraversal>());
+        supportedElementRules.ShouldUseIdentifier(nameof(HtmlCssVocabulary.HtmlTags));
+        styleTraversal.ShouldUseIdentifier(nameof(SupportedElementRules));
+        styleTraversal.ShouldNotUseIdentifier("SupportedElementTags");
     }
 
     [Fact]

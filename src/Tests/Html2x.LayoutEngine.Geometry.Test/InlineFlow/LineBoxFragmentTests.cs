@@ -1,6 +1,7 @@
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
+using Html2x.RenderModel.Styles;
 using Html2x.Text;
 using Shouldly;
 

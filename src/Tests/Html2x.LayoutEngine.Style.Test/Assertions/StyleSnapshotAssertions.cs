@@ -1,5 +1,5 @@
 using Html2x.LayoutEngine.Contracts.Style;
-using Html2x.RenderModel.Fragments;
+using Html2x.RenderModel.Styles;
 using Shouldly;
 using Xunit.Sdk;
 

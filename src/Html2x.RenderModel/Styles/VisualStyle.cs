@@ -10,7 +10,7 @@ namespace Html2x.RenderModel.Styles;
 /// <param name="Padding">Resolved padding values in points.</param>
 /// <param name="WidthPt">Resolved content width in points when explicitly known.</param>
 /// <param name="HeightPt">Resolved content height in points when explicitly known.</param>
-/// <param name="Display">Resolved display value retained for diagnostics and custom renderers.</param>
+/// <param name="Display">Resolved display value retained for diagnostics and built-in rendering.</param>
 public sealed record VisualStyle(
     ColorRgba? BackgroundColor = null,
     BorderEdges? Borders = null,

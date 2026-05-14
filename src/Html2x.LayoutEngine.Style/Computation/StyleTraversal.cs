@@ -141,7 +141,7 @@ internal sealed class StyleTraversal
     }
 
     private static bool ShouldInclude(IElement? element) =>
-        element is not null && HtmlCssVocabulary.SupportedElementTags.Contains(element.TagName);
+        SupportedElementRules.IsSupported(element);
 
     private static bool IsLineBreak(IElement element) => string.Equals(element.TagName, HtmlCssVocabulary.HtmlTags.Br,
         StringComparison.OrdinalIgnoreCase);

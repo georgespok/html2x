@@ -1,7 +1,7 @@
-namespace Html2x.RenderModel.Fragments;
+namespace Html2x.RenderModel.Styles;
 
 /// <summary>
-///     Defines text decoration flags used when painting a text run.
+///     Defines resolved text decoration flags carried from style into text runs.
 /// </summary>
 [Flags]
 internal enum TextDecorations

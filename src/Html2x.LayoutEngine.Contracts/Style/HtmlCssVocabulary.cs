@@ -6,44 +6,6 @@ namespace Html2x.LayoutEngine.Contracts.Style;
 /// </summary>
 internal static class HtmlCssVocabulary
 {
-    public static IReadOnlySet<string> SupportedElementTags { get; } =
-        new HashSet<string>(
-            [
-                HtmlTags.Body,
-                HtmlTags.H1,
-                HtmlTags.H2,
-                HtmlTags.H3,
-                HtmlTags.H4,
-                HtmlTags.H5,
-                HtmlTags.H6,
-                HtmlTags.P,
-                HtmlTags.Span,
-                HtmlTags.Div,
-                HtmlTags.Table,
-                HtmlTags.Tbody,
-                HtmlTags.Thead,
-                HtmlTags.Tfoot,
-                HtmlTags.Tr,
-                HtmlTags.Td,
-                HtmlTags.Th,
-                HtmlTags.Img,
-                HtmlTags.Hr,
-                HtmlTags.Br,
-                HtmlTags.Ul,
-                HtmlTags.Ol,
-                HtmlTags.Li,
-                HtmlTags.Section,
-                HtmlTags.Main,
-                HtmlTags.Header,
-                HtmlTags.Footer,
-                HtmlTags.B,
-                HtmlTags.I,
-                HtmlTags.Strong,
-                HtmlTags.U,
-                HtmlTags.S
-            ],
-            StringComparer.OrdinalIgnoreCase);
-
     /// <summary>
     ///     HTML element tag names (case-insensitive in practice).
     /// </summary>
