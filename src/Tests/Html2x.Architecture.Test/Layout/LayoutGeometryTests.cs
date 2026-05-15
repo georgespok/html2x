@@ -290,10 +290,7 @@ public sealed class LayoutGeometryTests
         var imageRule = SourceFileFor<ImageBlockLayoutRule>();
         var ruleRule = SourceFileFor<RuleBlockLayoutRule>();
         var tableRule = SourceFileFor<TableBlockLayoutRule>();
-        var imageWriter = SourceFileFor<ImageBlockLayoutWriter>();
-        var tablePlacement = SourceFileFor<TablePlacementWriter>();
         var tableGrid = SourceFileFor<TableGridLayout>();
-        var atomicInlineBoxPlacementWriter = SourceFileFor<AtomicInlineBoxPlacementWriter>();
         var publishedLayoutWriter = SourceFileFor<PublishedLayoutWriter>();
 
         layoutGeometryConstruction.ShouldUseIdentifier(nameof(BoxTreeConstruction));
@@ -306,7 +303,6 @@ public sealed class LayoutGeometryTests
         blockBoxLayout.ShouldNotUseIdentifier(nameof(BoxTreeLayout));
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockLayoutRuleSet));
         blockBoxLayout.ShouldUseIdentifier(nameof(PublishedLayoutWriter));
-        blockBoxLayout.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
         blockBoxLayout.ShouldUseIdentifier(nameof(BlockSizingRules));
         blockBoxLayout.ShouldUseIdentifier(nameof(TableGridLayout));
         blockBoxLayout.ShouldNotUseIdentifier(nameof(PageContentArea));
@@ -316,7 +312,6 @@ public sealed class LayoutGeometryTests
         blockBoxLayout.ShouldNotConstructType(nameof(PublishedInlineObjectItem));
         blockFlow.ShouldNotUseIdentifier(nameof(BlockLayoutRuleSet));
         blockFlow.ShouldNotUseIdentifier(nameof(IBlockLayoutRule));
-        blockFlow.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedLayoutWriter));
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedBlock));
         blockFlow.ShouldNotUseIdentifier(nameof(PublishedInlineLayout));
@@ -341,18 +336,11 @@ public sealed class LayoutGeometryTests
         publishedLayoutWriter.ShouldConstructType(nameof(PublishedInlineFlowSegmentItem));
         publishedLayoutWriter.ShouldConstructType(nameof(PublishedInlineObjectItem));
         standardRule.ShouldNotAssignToMember(nameof(BlockBox.TextAlign));
-        imageWriter.ShouldNotInvoke(nameof(ImageBox.ApplyImageMetadata));
-        imageWriter.ShouldNotInvoke(nameof(BlockBox.ApplyLayoutGeometry));
-        tablePlacement.ShouldNotAssignToMember(nameof(BlockBox.Margin));
-        tablePlacement.ShouldNotAssignToMember(nameof(BlockBox.Padding));
-        tablePlacement.ShouldNotAssignToMember(nameof(BlockBox.TextAlign));
-        tablePlacement.ShouldNotInvoke(nameof(BlockBox.ApplyLayoutGeometry));
         tableGrid.ShouldNotUseIdentifier(nameof(LayoutBoxStateWriter));
-        atomicInlineBoxPlacementWriter.ShouldUseIdentifier(nameof(LayoutBoxStateWriter));
     }
 
     [Fact]
-    public void GeometryMutableStateWrites_AreRoutedThroughStateWriterOrConstructionBoundaries()
+    public void GeometryMutableStateWrites_StayInConstructionModelsOrOwnerWriters()
     {
         var geometryRoot = SourceDirectoryFor<LayoutGeometryConstruction>();
         var allowedFiles = new HashSet<string>(StringComparer.Ordinal)
@@ -361,12 +349,16 @@ public sealed class LayoutGeometryTests
             RelativeSourcePathFor(typeof(BoxTreeNormalization)),
             RelativeSourcePathFor<LayoutBoxStateWriter>(),
             RelativeSourcePathFor<BlockBox>(),
-            RelativeSourcePathFor<ImageBox>()
+            RelativeSourcePathFor<ImageBox>(),
+            RelativeSourcePathFor<TableBox>(),
+            RelativeSourcePathFor<TableRowBox>(),
+            RelativeSourcePathFor<TableCellBox>(),
+            RelativeSourcePathFor<InlineBlockBoundaryBox>()
         };
         var mutationPatterns = new[]
         {
             new Regex(
-                @"\.(UsedGeometry|InlineLayout|Margin|Padding|TextAlign|DerivedColumnCount|RowIndex|ColumnIndex|IsHeader)\s*=(?!=)",
+                @"\.(UsedGeometry|InlineLayout|Margin|Padding|TextAlign|DerivedColumnCount|RowIndex|ColumnIndex|ColumnSpan|IsHeader|EstablishesInlineBlockFormattingContext|Src|AuthoredSizePx|IntrinsicSizePx|Status)\s*=(?!=)",
                 RegexOptions.Compiled),
             new Regex(@"\.(ApplyLayoutGeometry|ApplyImageMetadata)\s*\(", RegexOptions.Compiled)
         };
@@ -374,7 +366,7 @@ public sealed class LayoutGeometryTests
         var violations = Directory
             .GetFiles(geometryRoot, RepositoryLayout.CSharpFilePattern, SearchOption.AllDirectories)
             .Where(static path => !IsGeneratedOrBuildOutput(path))
-            .Where(path => !allowedFiles.Contains(RelativeSourcePath(path)))
+            .Where(path => !IsAllowedMutableLayoutStateWritePath(path, allowedFiles))
             .SelectMany(path => File
                 .ReadLines(path)
                 .Select((line, index) => new { Path = path, Line = line, Number = index + 1 }))
@@ -383,7 +375,7 @@ public sealed class LayoutGeometryTests
             .ToArray();
 
         violations.ShouldBeEmpty(
-            "Mutable layout state should be assigned only by LayoutBoxStateWriter or documented construction/model copy boundaries. "
+            "Mutable layout state should be assigned only by construction, model copy, or owner writer files. "
             + string.Join(" ", violations));
     }
 
@@ -813,6 +805,25 @@ public sealed class LayoutGeometryTests
         DiagnosticStageEmitter.SkippedEvent,
         DiagnosticStageEmitter.CanceledEvent
     ];
+
+    private static readonly string[] MutableLayoutStateWriterOwnerFolders =
+    [
+        "/BlockFlow/",
+        "/Images/",
+        "/InlineFlow/",
+        "/Tables/",
+        "/Writing/"
+    ];
+
+    private static bool IsAllowedMutableLayoutStateWritePath(
+        string path,
+        IReadOnlySet<string> allowedFiles)
+    {
+        var relativePath = RelativeSourcePath(path);
+        return allowedFiles.Contains(relativePath)
+               || relativePath.EndsWith("Writer.cs", StringComparison.Ordinal)
+               && MutableLayoutStateWriterOwnerFolders.Any(relativePath.Contains);
+    }
 
     private static bool IsGeneratedOrBuildOutput(string path)
     {
