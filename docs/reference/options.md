@@ -72,9 +72,8 @@ default stylesheet before authored CSS.
 With the default converter dependencies, `FontOptions.FontPath` is required. It
 must point to an existing font file or directory before layout begins.
 
-The converter maps this path into `FontPathSource`, an internal diagnostics
-font wrapper when diagnostics are enabled, and `SkiaTextMeasurer` during
-layout.
+The converter maps this path into `FontPathSource`, a diagnostics font wrapper
+when diagnostics are enabled, and `SkiaTextMeasurer` during layout.
 
 When a caller constructs `HtmlConverter` with
 `HtmlConverterDependencies.FontSourceFactory`, the converter uses the

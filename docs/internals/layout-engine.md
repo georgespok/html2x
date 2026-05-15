@@ -7,7 +7,7 @@ not own the algorithms in those stages.
 ## Responsibilities
 
 - Call the style module to parse HTML and CSS and produce `StyleTree`.
-- Call the geometry module to produce `PublishedLayoutTree`.
+- Call Layout Geometry to produce `PublishedLayoutTree`.
 - Project published layout into fragments.
 - Paginate fragments into pages.
 - Emit layout diagnostics when diagnostics are enabled.
@@ -17,9 +17,9 @@ not own the algorithms in those stages.
 - `Html2x.LayoutEngine.Style` owns AngleSharp usage, user agent stylesheet
   application, CSS parsing, computed style construction, style diagnostics, and
   the parser-free `StyleTree` handoff.
-- `Html2x.LayoutEngine.Geometry` consumes `StyleTree` and produces published
-  layout geometry. Block flow delegates image placement, table placement, and
-  published layout publishing to smaller internal modules.
+- `Html2x.LayoutEngine.Geometry` owns Layout Geometry. It consumes `StyleTree`
+  and produces published layout geometry. Block flow delegates image placement,
+  table placement, and published layout publishing to smaller internal modules.
 - `Html2x.LayoutEngine.Pagination` consumes render model fragments and returns
   `PaginationResult` with final `HtmlLayout` plus pagination audit facts.
 - `Html2x.Renderers.Pdf` consumes `HtmlLayout` only.

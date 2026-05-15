@@ -3,6 +3,14 @@ using SkiaSharp;
 
 namespace Html2x.Text;
 
+/// <summary>
+///     Resolves requested fonts from a configured font file or font directory.
+/// </summary>
+/// <remarks>
+///     A single file is used for every request. A directory is indexed and the closest available family, weight, and
+///     style match is returned. Returned <see cref="ResolvedFont" /> values include loadable file paths for the
+///     default Skia text measurer and PDF renderer.
+/// </remarks>
 public sealed class FontPathSource : IFontSource
 {
     private readonly Lazy<IReadOnlyList<FontFaceEntry>> _directoryFaces;
@@ -11,6 +19,10 @@ public sealed class FontPathSource : IFontSource
     private readonly Lazy<bool> _singleFileValidated;
     private readonly ISkiaTypefaceFactory _typefaceFactory;
 
+    /// <summary>
+    ///     Creates a font source from an existing font file or directory.
+    /// </summary>
+    /// <param name="fontPath">Path to an existing font file or directory.</param>
     public FontPathSource(string fontPath)
         : this(fontPath, new FileSystemReader(), new SkiaTypefaceFactory())
     {
@@ -45,6 +57,7 @@ public sealed class FontPathSource : IFontSource
         }
     }
 
+    /// <inheritdoc />
     public ResolvedFont Resolve(FontKey requested, string consumer)
     {
         ArgumentNullException.ThrowIfNull(requested);

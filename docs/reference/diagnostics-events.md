@@ -64,6 +64,11 @@ Facade lifecycle fields:
 - `LayoutBuild` `stage/succeeded`: `snapshot`.
 - `PdfRender` `stage/succeeded`: `pdfSize` and `pageCount`.
 
+Internal layout lifecycle records may use compatibility stage values such as
+`stage/dom`, `stage/style`, `stage/box-tree`, `stage/fragment-tree`, and
+`stage/pagination`. These serialized values are compatibility vocabulary, not
+current implementation class names.
+
 If configuration fails after diagnostics collection starts, `Configuration`
 emits `stage/failed`, while `LayoutBuild` and `PdfRender` emit
 `stage/skipped`. If `LayoutBuild` fails or is canceled, `PdfRender` is skipped.
@@ -91,7 +96,9 @@ Geometry snapshots capture box geometry, fragment geometry, and pagination
 audit placements for drift analysis. Pagination placement entries include
 `decisionKind`, `isOversized`, placed rectangle fields, and metadata ownership
 facts. `metadataConsumer` uses the stable value `Pagination`; it does not name
-the private clone implementation. Box entries include
+the private clone implementation. `metadataOwner` may still use the stable
+value `FragmentBuilder` for fragment metadata created before pagination. Box
+entries include
 `establishesInlineBlockFormattingContext` when the box starts an inline-block
 formatting context.
 

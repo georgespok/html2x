@@ -91,10 +91,11 @@ rebuild them from parser state or CSS selectors.
 ## Layout Geometry
 
 `Html2x.LayoutEngine.Geometry` consumes contract `StyleTree` input and resolves
-layout facts. The module may read computed style values, `StyledElementFacts`,
+layout facts. Layout Geometry may read computed style values, `StyledElementFacts`,
 and ordered style content from `Html2x.LayoutEngine.Contracts`. It must not read
 DOM nodes, `IElement`, `INode`, child node collections, or AngleSharp types.
-Geometry validation helpers stay inside the geometry module.
+Geometry validation helpers stay inside Layout Geometry tests or the Layout
+Geometry implementation.
 
 `BoxTreeConstruction` builds the internal mutable box tree from styled nodes.
 It creates `BoxRole` values such as block, inline, inline-block, table, row,

@@ -14,8 +14,8 @@ namespace Html2x.LayoutEngine.Geometry;
 ///     Builds published layout geometry output from computed styles.
 /// </summary>
 /// <remarks>
-///     This is the named Interface for the layout geometry module. The Implementation may use
-///     mutable boxes while resolving layout, but callers receive only <see cref="PublishedLayoutTree" />.
+///     This is the named entry point for the Layout Geometry stage. The implementation may use mutable boxes while
+///     resolving layout, but callers receive only <see cref="PublishedLayoutTree" />.
 /// </remarks>
 internal sealed class LayoutGeometryConstruction
 {

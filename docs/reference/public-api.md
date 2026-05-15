@@ -79,6 +79,92 @@ the layout boundary. It does not validate renderer font file loadability there;
 the PDF renderer validates that `ResolvedFont.FilePath` can be loaded when it
 renders text.
 
+### Custom Font Source Example
+
+Use `FontSourceFactory` when the built-in Skia measurement is correct but the
+font should come from an in-process source instead of
+`HtmlConverterOptions.Fonts.FontPath`.
+
+```csharp
+using Html2x;
+using Html2x.RenderModel.Text;
+using Html2x.Text;
+
+var converter = new HtmlConverter(new HtmlConverterDependencies
+{
+    FontSourceFactory = () => new FixedFontSource(fontPath)
+});
+
+private sealed class FixedFontSource(string fontPath) : IFontSource
+{
+    public ResolvedFont Resolve(FontKey requested, string consumer)
+    {
+        if (!File.Exists(fontPath))
+        {
+            throw new FontResolutionException(
+                $"Font file '{fontPath}' was not found.",
+                requested,
+                configuredPath: fontPath);
+        }
+
+        return new ResolvedFont(
+            requested.Family,
+            requested.Weight,
+            requested.Style,
+            SourceId: fontPath,
+            FilePath: fontPath,
+            FaceIndex: 0,
+            ConfiguredPath: fontPath);
+    }
+}
+```
+
+### Custom Text Measurer Example
+
+Use `TextMeasurerFactory` only when the caller owns both text measurement and
+font resolution. The returned `TextMeasurement` must be complete for every
+call, including empty text. If the default PDF renderer is used, the resolved
+font must identify a loadable font file.
+
+```csharp
+using Html2x;
+using Html2x.RenderModel.Text;
+using Html2x.Text;
+
+var converter = new HtmlConverter(new HtmlConverterDependencies
+{
+    TextMeasurerFactory = () => new FixedTextMeasurer(fontPath)
+});
+
+private sealed class FixedTextMeasurer(string fontPath) : ITextMeasurer, IDisposable
+{
+    public TextMeasurement Measure(FontKey font, float sizePt, string text)
+    {
+        var width = string.IsNullOrEmpty(text)
+            ? 0f
+            : text.Length * sizePt * 0.5f;
+
+        return new TextMeasurement(
+            width,
+            Ascent: sizePt * 0.8f,
+            Descent: sizePt * 0.2f,
+            ResolvedFont: new ResolvedFont(
+                font.Family,
+                font.Weight,
+                font.Style,
+                SourceId: fontPath,
+                FilePath: fontPath,
+                FaceIndex: 0,
+                ConfiguredPath: fontPath));
+    }
+
+    public void Dispose()
+    {
+        // Release per-conversion native or cached resources here.
+    }
+}
+```
+
 ## Diagnostics
 
 ```csharp

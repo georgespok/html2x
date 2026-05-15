@@ -5,6 +5,10 @@ namespace Html2x.Text;
 /// <summary>
 ///     Carries measured text dimensions together with the font resolution used for measurement.
 /// </summary>
+/// <param name="Width">The measured advance width in points.</param>
+/// <param name="Ascent">The font ascent in points.</param>
+/// <param name="Descent">The font descent in points.</param>
+/// <param name="ResolvedFont">The resolved font used to produce the measurement.</param>
 public sealed record TextMeasurement(
     float Width,
     float Ascent,
@@ -40,6 +44,13 @@ public sealed record TextMeasurement(
         init => _resolvedFont = RequireResolvedFont(value);
     }
 
+    /// <summary>
+    ///     Creates deterministic fallback measurement facts for tests or non-rendering callers.
+    /// </summary>
+    /// <remarks>
+    ///     Fallback measurements use a synthetic resolved font source id. They are structurally valid for layout, but
+    ///     the default PDF renderer still requires a loadable resolved font file before drawing text.
+    /// </remarks>
     public static TextMeasurement CreateFallback(
         FontKey font,
         float width,

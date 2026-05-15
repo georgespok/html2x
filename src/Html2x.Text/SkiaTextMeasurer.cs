@@ -8,6 +8,11 @@ namespace Html2x.Text;
 /// <summary>
 ///     Measures text using SkiaSharp and HarfBuzz with strict font resolution.
 /// </summary>
+/// <remarks>
+///     Instances cache resolved fonts, typefaces, shapers, and measured widths for the lifetime of the measurer.
+///     When created through <see cref="HtmlConverterDependencies.TextMeasurerFactory" />, the converter disposes the
+///     measurer after the conversion if it implements <see cref="IDisposable" />.
+/// </remarks>
 public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 {
     private readonly IFileSystemReader _fileSystemReader;
@@ -25,6 +30,9 @@ public sealed class SkiaTextMeasurer : ITextMeasurer, IDisposable
 
     private readonly ConcurrentDictionary<TextWidthCacheKey, float> _textWidthCache = new();
 
+    /// <summary>
+    ///     Creates a text measurer backed by the supplied font source.
+    /// </summary>
     public SkiaTextMeasurer(IFontSource fontSource)
         : this(fontSource, new FileSystemReader(), new SkiaTypefaceFactory())
     {

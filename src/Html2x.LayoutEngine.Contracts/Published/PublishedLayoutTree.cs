@@ -1,15 +1,15 @@
 namespace Html2x.LayoutEngine.Contracts.Published;
 
 /// <summary>
-///     Defines the published output seam of the layout geometry module.
+///     Defines the published output seam of the Layout Geometry stage.
 /// </summary>
 /// <remarks>
-///     This seam sits between layout geometry and fragment tree building. It is intended
+///     This seam sits between Layout Geometry and fragment tree building. It is intended
 ///     to carry only facts that are stable after layout completes: geometry, inline
 ///     layout, display facts, image facts, rule facts, table facts, and child order.
-///     Core geometry values, published facts, and geometry guards belong to the layout
-///     geometry module. Mutable boxes, box tree construction, and box-to-published
-///     adapters belong to the layout Implementation behind this seam.
+///     Core geometry values, published facts, and geometry guards belong to Layout
+///     Geometry. Mutable boxes, box tree construction, and box-to-published adapters
+///     belong to the layout implementation behind this seam.
 ///     Published layout output must not expose mutable box nodes, parser DOM objects,
 ///     or partial measurement state. Layout algorithms may mutate internal boxes while
 ///     resolving geometry, but callers past this seam should consume immutable
