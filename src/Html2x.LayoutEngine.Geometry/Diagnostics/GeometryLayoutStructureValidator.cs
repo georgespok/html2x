@@ -1,6 +1,7 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.RenderModel.Fragments;
+using static Html2x.LayoutEngine.Geometry.Diagnostics.GeometryDiagnosticFieldMapper;
 
 namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
@@ -79,13 +80,11 @@ internal static class GeometryLayoutStructureValidator
             DiagnosticSeverity.Error,
             payload.Reason,
             null,
-            DiagnosticFields.Create(
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, payload.NodePath),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, payload.StructureKind),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, payload.Reason),
-                DiagnosticFields.Field(
-                    GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(payload.FormattingContext)))));
+            UnsupportedStructureFields(
+                payload.NodePath,
+                payload.StructureKind,
+                payload.Reason,
+                payload.FormattingContext)));
     }
 
     private static BoxNode? FindUnsupportedInlineBlockStructure(BoxNode root)

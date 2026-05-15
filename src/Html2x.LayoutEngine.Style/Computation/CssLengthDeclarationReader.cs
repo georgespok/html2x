@@ -11,6 +11,56 @@ internal sealed class CssLengthDeclarationReader(CssValueParser parser)
     public string? GetValue(ICssStyleDeclaration css, IElement element, string property) =>
         AuthoredCssDeclarationReader.GetValue(css, element, property);
 
+    public bool TryReadLengthDeclaration(
+        ICssStyleDeclaration css,
+        IElement element,
+        string property,
+        string parseFailureReason,
+        IDiagnosticsSink? diagnosticsSink,
+        out CssLengthDeclaration declaration)
+    {
+        declaration = default;
+
+        var rawValue = GetValue(css, element, property);
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return false;
+        }
+
+        return TryParseLengthDeclaration(
+            rawValue,
+            element,
+            property,
+            parseFailureReason,
+            diagnosticsSink,
+            out declaration);
+    }
+
+    public bool TryParseLengthDeclaration(
+        string rawValue,
+        IElement element,
+        string property,
+        string parseFailureReason,
+        IDiagnosticsSink? diagnosticsSink,
+        out CssLengthDeclaration declaration)
+    {
+        declaration = default;
+
+        if (!TryParseLengthToken(
+                rawValue,
+                element,
+                property,
+                parseFailureReason,
+                diagnosticsSink,
+                out var points))
+        {
+            return false;
+        }
+
+        declaration = new(rawValue.Trim(), points);
+        return true;
+    }
+
     public bool TryParseLengthToken(
         string rawValue,
         IElement element,
@@ -51,3 +101,5 @@ internal sealed class CssLengthDeclarationReader(CssValueParser parser)
         return true;
     }
 }
+
+internal readonly record struct CssLengthDeclaration(string RawValue, float Points);

@@ -104,17 +104,18 @@ internal sealed class DimensionStyleMapper(CssValueParser parser)
             return null;
         }
 
-        if (!_lengthReader.TryParseLengthToken(
+        if (!_lengthReader.TryParseLengthDeclaration(
                 trimmed,
                 element,
                 property,
                 $"Unable to parse {property} as a supported length.",
                 diagnosticsSink,
-                out var points))
+                out var declaration))
         {
             return null;
         }
 
+        var points = declaration.Points;
         if (points < 0)
         {
             StyleDiagnosticEmitter.EmitIgnoredDeclaration(

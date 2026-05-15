@@ -1,6 +1,7 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.RenderModel.Fragments;
+using static Html2x.LayoutEngine.Geometry.Diagnostics.GeometryDiagnosticFieldMapper;
 
 namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
@@ -115,13 +116,11 @@ internal static class TableGridDiagnostics
             DiagnosticSeverity.Error,
             unsupported.Reason,
             null,
-            DiagnosticFields.Create(
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, unsupported.NodePath),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, unsupported.StructureKind),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
-                DiagnosticFields.Field(
-                    GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(unsupported.FormattingContext)))));
+            UnsupportedStructureFields(
+                unsupported.NodePath,
+                unsupported.StructureKind,
+                unsupported.Reason,
+                unsupported.FormattingContext)));
     }
 
     private static DiagnosticFields MapTableFields(TableGridDiagnosticPayload table) =>
@@ -167,12 +166,6 @@ internal static class TableGridDiagnostics
         new(groups.Select(static group => DiagnosticObject.Create(
             DiagnosticObject.Field(TableGridDiagnosticNames.Fields.GroupKind, group.GroupKind),
             DiagnosticObject.Field(GeometryDiagnosticNames.Fields.RowCount, group.RowCount))));
-
-    private static DiagnosticValue? FromNullable(int? value) =>
-        value.HasValue ? DiagnosticValue.From(value.Value) : null;
-
-    private static DiagnosticValue? FromNullable(float? value) =>
-        value.HasValue ? DiagnosticValue.From(value.Value) : null;
 
     private sealed class TableGridDiagnosticPayload
     {

@@ -11,7 +11,6 @@ namespace Html2x.LayoutEngine.Style.Computation;
 /// </summary>
 internal sealed class BorderStyleMapper(CssValueParser parser)
 {
-    private readonly CssValueParser _parser = parser ?? throw new ArgumentNullException(nameof(parser));
     private readonly CssLengthDeclarationReader _lengthReader = new(parser);
 
     public void ApplyBorders(
@@ -67,14 +66,16 @@ internal sealed class BorderStyleMapper(CssValueParser parser)
         IDiagnosticsSink? diagnosticsSink)
     {
         var widthProperty = $"border-{side}-width";
-        var widthRaw = css.GetPropertyValue(widthProperty);
-        var widthPt = _parser.ParseLengthPt(widthRaw);
-        if (widthPt.HasValue)
+        if (_lengthReader.TryReadLengthDeclaration(
+                css,
+                element,
+                widthProperty,
+                $"Unable to parse {widthProperty} as a supported border width.",
+                diagnosticsSink,
+                out var width))
         {
-            setWidth(widthPt.Value);
+            setWidth(width.Points);
         }
-
-        EmitAuthoredInvalidBorderWidth(element, widthProperty, diagnosticsSink);
 
         var styleProperty = $"border-{side}-style";
         var styleRaw = css.GetPropertyValue(styleProperty);
@@ -117,26 +118,6 @@ internal sealed class BorderStyleMapper(CssValueParser parser)
         }
 
         return CssColorParser.Parse(raw.Trim(), ColorRgba.Black);
-    }
-
-    private void EmitAuthoredInvalidBorderWidth(
-        IElement element,
-        string property,
-        IDiagnosticsSink? diagnosticsSink)
-    {
-        var authored = AuthoredCssDeclarationReader.GetValue(element, property);
-        if (string.IsNullOrWhiteSpace(authored))
-        {
-            return;
-        }
-
-        _ = _lengthReader.TryParseLengthToken(
-            authored,
-            element,
-            property,
-            $"Unable to parse {property} as a supported border width.",
-            diagnosticsSink,
-            out _);
     }
 
     private static void EmitAuthoredInvalidBorderStyle(

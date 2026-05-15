@@ -215,17 +215,18 @@ internal sealed class SpacingStyleMapper(CssValueParser parser)
 
         foreach (var token in tokens)
         {
-            if (!_lengthReader.TryParseLengthToken(
+            if (!_lengthReader.TryParseLengthDeclaration(
                     token,
                     element,
                     property,
                     $"Unable to parse {property} token as a supported length.",
                     diagnosticsSink,
-                    out var points))
+                    out var declaration))
             {
                 return null;
             }
 
+            var points = declaration.Points;
             if (points < 0)
             {
                 var decision = CreateNegativeSpacingDecision(property, points);
@@ -235,7 +236,7 @@ internal sealed class SpacingStyleMapper(CssValueParser parser)
                     decision.EventName,
                     element,
                     property,
-                    token,
+                    declaration.RawValue,
                     decision.NormalizedValue,
                     decision.Decision,
                     decision.Reason);
@@ -253,26 +254,18 @@ internal sealed class SpacingStyleMapper(CssValueParser parser)
         IElement element,
         IDiagnosticsSink? diagnosticsSink)
     {
-        var rawValue = _lengthReader.GetValue(css, element, property);
-
-        if (string.IsNullOrWhiteSpace(rawValue))
-        {
-            return 0;
-        }
-
-        var trimmed = rawValue.Trim();
-
-        if (!_lengthReader.TryParseLengthToken(
-                trimmed,
+        if (!_lengthReader.TryReadLengthDeclaration(
+                css,
                 element,
                 property,
                 $"Unable to parse {property} as a supported length.",
                 diagnosticsSink,
-                out var points))
+                out var declaration))
         {
             return 0;
         }
 
+        var points = declaration.Points;
         if (points < 0)
         {
             var decision = CreateNegativeSpacingDecision(property, points);
@@ -282,7 +275,7 @@ internal sealed class SpacingStyleMapper(CssValueParser parser)
                 decision.EventName,
                 element,
                 property,
-                trimmed,
+                declaration.RawValue,
                 decision.NormalizedValue,
                 decision.Decision,
                 decision.Reason);

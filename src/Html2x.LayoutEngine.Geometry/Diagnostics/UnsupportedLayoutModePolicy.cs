@@ -1,5 +1,6 @@
 using Html2x.Diagnostics.Contracts;
 using Html2x.RenderModel.Fragments;
+using static Html2x.LayoutEngine.Geometry.Diagnostics.GeometryDiagnosticFieldMapper;
 
 namespace Html2x.LayoutEngine.Geometry.Diagnostics;
 
@@ -65,13 +66,11 @@ internal sealed class UnsupportedLayoutModePolicy
             DiagnosticSeverity.Warning,
             unsupported.Reason,
             null,
-            DiagnosticFields.Create(
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.NodePath, nodePath),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.StructureKind, unsupported.StructureKind),
-                DiagnosticFields.Field(GeometryDiagnosticNames.Fields.Reason, unsupported.Reason),
-                DiagnosticFields.Field(
-                    GeometryDiagnosticNames.Fields.FormattingContext,
-                    DiagnosticValue.FromEnum(formattingContext)))));
+            UnsupportedStructureFields(
+                nodePath,
+                unsupported.StructureKind,
+                unsupported.Reason,
+                formattingContext)));
     }
 
     private static FormattingContextKind ResolveFormattingContext(BoxNode node) =>
