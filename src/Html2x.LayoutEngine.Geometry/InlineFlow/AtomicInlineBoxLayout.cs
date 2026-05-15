@@ -78,7 +78,7 @@ internal sealed class AtomicInlineBoxLayout
     {
         var image = _imageSizingRules.ResolveImageLayout(imageBox, measurement.ContentFlowWidth);
         var resolvedLineHeight = _inlineTextMeasurement.ResolveLineHeight(imageBox);
-        var resolvedBaseline = Math.Max(resolvedLineHeight, image.BorderBoxHeight);
+        var resolvedBaseline = ResolveImageBaseline(resolvedLineHeight, image.BorderBoxHeight);
 
         return new(
             imageBox,
@@ -93,13 +93,11 @@ internal sealed class AtomicInlineBoxLayout
 
     private InlineBoxLayout BuildContentInlineBox(BlockBox contentBox, BlockMeasurementBasis measurement)
     {
-        var layoutResult = LayoutInlineContent(contentBox, measurement.ContentFlowWidth);
-        var formattingResult = MeasureBlockFormattingMetrics(contentBox, measurement.ContentFlowWidth);
-
+        var contentMeasurement = MeasureAtomicInlineContent(contentBox, measurement.ContentFlowWidth);
         var measuredContentFlowWidth =
-            ResolveMeasuredContentWidth(layoutResult, formattingResult, measurement.ContentFlowWidth);
+            ResolveMeasuredContentWidth(contentMeasurement, measurement.ContentFlowWidth);
         var measuredContentBoxWidth = measuredContentFlowWidth + contentBox.MarkerOffset;
-        var measuredContentHeight = ResolveContentHeight(contentBox, layoutResult, formattingResult);
+        var measuredContentHeight = ResolveContentHeight(contentBox, contentMeasurement);
         var totalWidth = ResolveUsedBorderWidth(contentBox.Style, measuredContentBoxWidth, measurement.Padding,
             measurement.Border);
         var contentWidth = BoxDimensionRules.ResolveContentFlowWidth(
@@ -110,17 +108,25 @@ internal sealed class AtomicInlineBoxLayout
         var contentHeight = _sizingRules.ResolveContentHeight(contentBox, measuredContentHeight);
         var totalHeight =
             UsedGeometryRules.ResolveBorderBoxHeight(contentHeight, measurement.Padding, measurement.Border);
-        var baseline = ResolveBaseline(layoutResult, measurement.Padding, measurement.Border, totalHeight);
+        var baseline = ResolveBaseline(contentMeasurement.TextLayout, measurement.Padding, measurement.Border,
+            totalHeight);
 
         return new(
             contentBox,
-            layoutResult,
+            contentMeasurement.TextLayout,
             contentWidth,
             contentHeight,
             totalWidth,
             totalHeight,
             baseline);
     }
+
+    private AtomicInlineContentMeasurement MeasureAtomicInlineContent(
+        BlockBox contentBox,
+        float availableWidth) =>
+        new(
+            LayoutInlineContent(contentBox, availableWidth),
+            MeasureBlockFormattingMetrics(contentBox, availableWidth));
 
     private TextLayoutResult LayoutInlineContent(BlockBox contentBox, float availableWidth)
     {
@@ -149,12 +155,16 @@ internal sealed class AtomicInlineBoxLayout
         return _blockContentMeasurement.Measure(unboundedRequest);
     }
 
+    private static float ResolveImageBaseline(float lineHeight, float borderBoxHeight) =>
+        Math.Max(lineHeight, borderBoxHeight);
+
     private static float ResolveMeasuredContentWidth(
-        TextLayoutResult layoutResult,
-        BlockFormattingMetricsResult formattingResult,
+        AtomicInlineContentMeasurement contentMeasurement,
         float contentAvailableWidth)
     {
-        var maxLineWidth = Math.Max(layoutResult.MaxLineWidth, formattingResult.TotalWidth);
+        var maxLineWidth = Math.Max(
+            contentMeasurement.TextLayout.MaxLineWidth,
+            contentMeasurement.BlockFormatting.TotalWidth);
         return ResolveFinalContentWidth(contentAvailableWidth, maxLineWidth);
     }
 
@@ -167,15 +177,16 @@ internal sealed class AtomicInlineBoxLayout
 
     private static float ResolveContentHeight(
         BlockBox contentBox,
-        TextLayoutResult layoutResult,
-        BlockFormattingMetricsResult formattingResult)
+        AtomicInlineContentMeasurement contentMeasurement)
     {
-        if (!HasCanonicalBlockDescendants(contentBox, formattingResult))
+        if (!HasCanonicalBlockDescendants(contentBox, contentMeasurement.BlockFormatting))
         {
-            return layoutResult.TotalHeight;
+            return contentMeasurement.TextLayout.TotalHeight;
         }
 
-        return Math.Max(layoutResult.TotalHeight, formattingResult.TotalHeight);
+        return Math.Max(
+            contentMeasurement.TextLayout.TotalHeight,
+            contentMeasurement.BlockFormatting.TotalHeight);
     }
 
     private static bool HasCanonicalBlockDescendants(
@@ -215,4 +226,8 @@ internal sealed class AtomicInlineBoxLayout
         baseline += InlineBaselineRules.ResolveLineAscent(layoutResult.Lines[^1]);
         return baseline;
     }
+
+    private readonly record struct AtomicInlineContentMeasurement(
+        TextLayoutResult TextLayout,
+        BlockFormattingMetricsResult BlockFormatting);
 }

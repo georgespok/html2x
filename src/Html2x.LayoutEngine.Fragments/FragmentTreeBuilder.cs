@@ -32,28 +32,26 @@ internal sealed class FragmentTreeBuilder
         var fragments = new FragmentTree();
         var context = new FragmentBuildState(1);
 
-        // Keep this sequence explicit: block bindings reserve deterministic ids before flow
-        // and special fragments are appended in the established post-flow order.
-        CreateBlockFragments(layout, fragments, context);
-        AppendFlowFragments(layout, context);
-        AppendSpecialFragments(context);
+        ReserveBlockFragments(layout, fragments, context);
+        AppendFlowFragmentPass(layout, context);
+        AppendSpecialFragmentPass(context);
 
         return fragments;
     }
 
-    private void CreateBlockFragments(
+    private void ReserveBlockFragments(
         PublishedLayoutTree layout,
         FragmentTree fragments,
         FragmentBuildState context)
     {
         foreach (var block in layout.Blocks)
         {
-            var fragment = CreateBlockFragmentRecursive(block, context);
+            var fragment = ReserveBlockFragmentRecursive(block, context);
             fragments.Blocks.Add(fragment);
         }
     }
 
-    private BlockFragment CreateBlockFragmentRecursive(
+    private BlockFragment ReserveBlockFragmentRecursive(
         PublishedBlock block,
         FragmentBuildState context)
     {
@@ -63,13 +61,13 @@ internal sealed class FragmentTreeBuilder
 
         foreach (var child in block.Children)
         {
-            _ = CreateBlockFragmentRecursive(child, context);
+            _ = ReserveBlockFragmentRecursive(child, context);
         }
 
         return fragment;
     }
 
-    private void AppendFlowFragments(
+    private void AppendFlowFragmentPass(
         PublishedLayoutTree layout,
         FragmentBuildState context)
     {
@@ -86,11 +84,11 @@ internal sealed class FragmentTreeBuilder
                 continue;
             }
 
-            AppendFlowFragments(block, fragment, context);
+            AppendFlowFragmentsForBlock(block, fragment, context);
         }
     }
 
-    private void AppendFlowFragments(
+    private void AppendFlowFragmentsForBlock(
         PublishedBlock block,
         BlockFragment fragment,
         FragmentBuildState context)
@@ -102,28 +100,11 @@ internal sealed class FragmentTreeBuilder
 
         foreach (var item in block.Flow.OrderBy(static item => item.Order))
         {
-            EmitFlowItem(
-                fragment,
-                item,
-                context,
-                childBlock =>
-                {
-                    var childFragment = context.FindBlockFragment(childBlock.Block);
-                    if (childFragment is null)
-                    {
-                        return;
-                    }
-
-                    fragment.AddChild(childFragment);
-                    AppendFlowFragments(
-                        childBlock.Block,
-                        childFragment,
-                        context);
-                });
+            AppendBlockFlowItem(fragment, item, context);
         }
     }
 
-    private void AppendSpecialFragments(
+    private void AppendSpecialFragmentPass(
         FragmentBuildState context)
     {
         if (context.BlockBindings.Count == 0)
@@ -133,14 +114,14 @@ internal sealed class FragmentTreeBuilder
 
         foreach (var binding in context.BlockBindings)
         {
-            AppendSpecialFragments(
+            AppendSpecialFragmentsForBlock(
                 binding.Source,
                 binding.Fragment,
                 context);
         }
     }
 
-    private void AppendSpecialFragments(
+    private void AppendSpecialFragmentsForBlock(
         PublishedBlock block,
         BlockFragment fragment,
         FragmentBuildState context)
@@ -157,7 +138,7 @@ internal sealed class FragmentTreeBuilder
             var childFragment = context.FindBlockFragment(child);
             if (childFragment is not null)
             {
-                AppendSpecialFragments(child, childFragment, context);
+                AppendSpecialFragmentsForBlock(child, childFragment, context);
             }
         }
     }
@@ -172,33 +153,24 @@ internal sealed class FragmentTreeBuilder
 
         foreach (var item in block.Flow.OrderBy(static item => item.Order))
         {
-            EmitFlowItem(
-                fragment,
-                item,
-                context,
-                childBlock => fragment.AddChild(CreateInlineObjectFragment(
-                    childBlock.Block,
-                    context)));
+            AppendInlineObjectFlowItem(fragment, item, context);
         }
 
         return fragment;
     }
 
-    private void EmitFlowItem(
+    private void AppendBlockFlowItem(
         BlockFragment fragment,
         PublishedBlockFlowItem item,
-        FragmentBuildState context,
-        Action<PublishedChildBlockItem> emitChildBlock)
+        FragmentBuildState context)
     {
-        ArgumentNullException.ThrowIfNull(emitChildBlock);
-
         switch (item)
         {
             case PublishedInlineFlowSegmentItem inlineSegment:
-                EmitSegment(fragment, inlineSegment.Segment, context);
+                AppendInlineSegmentItems(fragment, inlineSegment.Segment, context);
                 break;
             case PublishedChildBlockItem childBlock:
-                emitChildBlock(childBlock);
+                AppendChildBlockFlowItem(fragment, childBlock, context);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(
@@ -208,7 +180,46 @@ internal sealed class FragmentTreeBuilder
         }
     }
 
-    private void EmitSegment(
+    private void AppendInlineObjectFlowItem(
+        BlockFragment fragment,
+        PublishedBlockFlowItem item,
+        FragmentBuildState context)
+    {
+        switch (item)
+        {
+            case PublishedInlineFlowSegmentItem inlineSegment:
+                AppendInlineSegmentItems(fragment, inlineSegment.Segment, context);
+                break;
+            case PublishedChildBlockItem childBlock:
+                fragment.AddChild(CreateInlineObjectFragment(childBlock.Block, context));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(
+                    nameof(item),
+                    item.GetType().Name,
+                    "Unsupported published block flow item.");
+        }
+    }
+
+    private void AppendChildBlockFlowItem(
+        BlockFragment fragment,
+        PublishedChildBlockItem childBlock,
+        FragmentBuildState context)
+    {
+        var childFragment = context.FindBlockFragment(childBlock.Block);
+        if (childFragment is null)
+        {
+            return;
+        }
+
+        fragment.AddChild(childFragment);
+        AppendFlowFragmentsForBlock(
+            childBlock.Block,
+            childFragment,
+            context);
+    }
+
+    private void AppendInlineSegmentItems(
         BlockFragment parentFragment,
         PublishedInlineFlowSegment segment,
         FragmentBuildState context)
@@ -220,7 +231,7 @@ internal sealed class FragmentTreeBuilder
                 switch (item)
                 {
                     case PublishedInlineTextItem textItem:
-                        EmitTextItem(parentFragment, line, textItem, context);
+                        AppendTextLineFragment(parentFragment, line, textItem, context);
                         break;
                     case PublishedInlineObjectItem objectItem:
                         parentFragment.AddChild(
@@ -231,7 +242,7 @@ internal sealed class FragmentTreeBuilder
         }
     }
 
-    private void EmitTextItem(
+    private void AppendTextLineFragment(
         BlockFragment parentFragment,
         PublishedInlineLine line,
         PublishedInlineTextItem textItem,
