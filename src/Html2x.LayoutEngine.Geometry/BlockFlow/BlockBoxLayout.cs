@@ -39,6 +39,7 @@ internal sealed class BlockBoxLayout
             contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
         var marginCollapseRules = resolvedContentMeasurement.MarginCollapseRules;
         var stateWriter = new LayoutBoxStateWriter();
+        var tableStateWriter = new TableBoxStateWriter(stateWriter);
         var sizingRules = new BlockSizingRules(marginCollapseRules);
 
         _blockFlow = new(
@@ -61,7 +62,7 @@ internal sealed class BlockBoxLayout
         _tableBlockRule = new(
             new(
                 tableGridLayout,
-                new(stateWriter),
+                new(tableStateWriter),
                 diagnosticsSink),
             LayoutChildBlocks);
         _rules = CreateDefaultRuleSet(

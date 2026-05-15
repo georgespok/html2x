@@ -463,19 +463,15 @@ public sealed class LayoutGeometryTests
         foreach (var file in measurementFiles)
         {
             file.ShouldNotUseIdentifier(nameof(LayoutBoxStateWriter));
+            file.ShouldNotUseIdentifier(nameof(TableBoxStateWriter));
+            file.ShouldNotUseIdentifier(nameof(InlineBoxContentStateWriter));
             file.ShouldNotUseIdentifier(nameof(PublishedLayoutWriter));
             file.ShouldNotUseIdentifier(nameof(PublishedBlockFacts));
             file.ShouldNotUseIdentifier(nameof(PublishedLayoutTree));
             file.ShouldNotInvoke(nameof(BlockBox.ApplyLayoutGeometry));
             file.ShouldNotInvoke(nameof(ImageBox.ApplyImageMetadata));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyBlockLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyImageBlockLayout));
             file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyInlineLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyInlineBoxContentLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableCellLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyTableRowLayout));
-            file.ShouldNotInvoke(nameof(LayoutBoxStateWriter.ApplyUnsupportedTablePlaceholder));
             file.ShouldNotAssignToMember(nameof(BlockBox.UsedGeometry));
             file.ShouldNotAssignToMember(nameof(BlockBox.InlineLayout));
         }

@@ -8,6 +8,19 @@ internal sealed class TableCellBox(BoxRole role) : BlockBox(role)
 
     public bool IsHeader { get; set; }
 
+    internal void ApplyCellState(
+        int columnIndex,
+        int columnSpan,
+        bool isHeader)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(columnIndex);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(columnSpan);
+
+        ColumnIndex = columnIndex;
+        ColumnSpan = columnSpan;
+        IsHeader = isHeader;
+    }
+
     protected override BoxNode CloneShallowForParent(BoxNode parent) =>
         CopyBlockStateTo(new TableCellBox(Role)
         {

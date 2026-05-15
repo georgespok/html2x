@@ -1,6 +1,5 @@
 using Html2x.LayoutEngine.Geometry.BlockFlow;
 using Html2x.LayoutEngine.Geometry.Primitives;
-using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.RenderModel.Styles;
 
 namespace Html2x.LayoutEngine.Geometry.Tables;
@@ -8,9 +7,9 @@ namespace Html2x.LayoutEngine.Geometry.Tables;
 /// <summary>
 ///     Writes table layout results back to table, row, and cell boxes before fragment tree building.
 /// </summary>
-internal sealed class TablePlacementWriter(LayoutBoxStateWriter stateWriter)
+internal sealed class TablePlacementWriter(TableBoxStateWriter stateWriter)
 {
-    private readonly LayoutBoxStateWriter _stateWriter =
+    private readonly TableBoxStateWriter _stateWriter =
         stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
 
     public TablePlacementWriter()

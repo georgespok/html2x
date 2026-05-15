@@ -24,7 +24,12 @@ internal sealed class ImageBlockLayoutWriter(
         var image = _imageSizingRules.ResolveImageLayout(node, measurement.ContentFlowWidth);
         var origin = BlockOriginRules.ResolveOrigin(request, measurement.Margin);
 
-        _stateWriter.ApplyImageBlockLayout(
+        node.ApplyImageMetadata(
+            image.Src,
+            image.AuthoredSizePx,
+            image.IntrinsicSizePx,
+            image.Status);
+        _stateWriter.ApplyBlockLayout(
             node,
             measurement,
             UsedGeometryRules.FromBorderBox(
@@ -34,7 +39,6 @@ internal sealed class ImageBlockLayoutWriter(
                 image.BorderBoxHeight,
                 measurement.Padding,
                 measurement.Border,
-                markerOffset: node.MarkerOffset),
-            image);
+                markerOffset: node.MarkerOffset));
     }
 }

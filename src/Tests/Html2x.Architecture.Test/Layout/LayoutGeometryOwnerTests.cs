@@ -211,6 +211,8 @@ public sealed class LayoutGeometryOwnerTests
             .ShouldUseIdentifier(nameof(InlineLayoutWriter));
         SourceFileFor<InlineLayoutWriter>()
             .ShouldUseIdentifier(nameof(InlineBaselineRules));
+        SourceFileFor<InlineBoxContentStateWriter>()
+            .ShouldContainType<InlineBoxContentStateWriter>(InternalAccessibility, true);
         SourceFileFor<AtomicInlineBoxLayout>()
             .ShouldUseIdentifier(nameof(InlineBaselineRules));
     }
@@ -296,6 +298,7 @@ public sealed class LayoutGeometryOwnerTests
         new(typeof(TableLayoutCellPlacement)),
         new(typeof(TableLayoutResult)),
         new(typeof(TableLayoutRowResult)),
+        new(typeof(TableBoxStateWriter)),
         new(typeof(TablePlacementWriter)),
         new(typeof(TableStructure)),
         new(typeof(TableStructureResult), true),

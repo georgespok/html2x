@@ -4,6 +4,12 @@ internal sealed class TableRowBox(BoxRole role) : BlockBox(role)
 {
     public int RowIndex { get; set; } = -1;
 
+    internal void ApplyRowState(int rowIndex)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(rowIndex);
+        RowIndex = rowIndex;
+    }
+
     protected override BoxNode CloneShallowForParent(BoxNode parent) =>
         CopyBlockStateTo(new TableRowBox(Role)
         {

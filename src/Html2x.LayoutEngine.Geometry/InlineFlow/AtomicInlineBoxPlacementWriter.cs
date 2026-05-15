@@ -1,5 +1,4 @@
 using Html2x.LayoutEngine.Geometry.Primitives;
-using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.RenderModel.Geometry;
 using Html2x.RenderModel.Styles;
 
@@ -10,9 +9,9 @@ namespace Html2x.LayoutEngine.Geometry.InlineFlow;
 /// </summary>
 internal sealed class AtomicInlineBoxPlacementWriter(
     Func<BlockBox, TextLayoutResult, float, float, float, string?, InlineFlowSegmentLayout> writeSegment,
-    LayoutBoxStateWriter stateWriter)
+    InlineBoxContentStateWriter stateWriter)
 {
-    private readonly LayoutBoxStateWriter _stateWriter =
+    private readonly InlineBoxContentStateWriter _stateWriter =
         stateWriter ?? throw new ArgumentNullException(nameof(stateWriter));
 
     private readonly Func<BlockBox, TextLayoutResult, float, float, float, string?, InlineFlowSegmentLayout>

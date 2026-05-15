@@ -58,6 +58,29 @@ internal class BlockBox(BoxRole role) : BoxNode(role)
         SetUsedGeometry(geometry);
     }
 
+    internal void ApplyBlockLayoutState(
+        Spacing margin,
+        Spacing padding,
+        string textAlign,
+        UsedGeometry geometry)
+    {
+        Margin = margin;
+        Padding = padding;
+        TextAlign = textAlign;
+        SetUsedGeometry(geometry);
+    }
+
+    internal void ApplyInlineLayoutState(InlineLayoutResult inlineLayout)
+    {
+        ArgumentNullException.ThrowIfNull(inlineLayout);
+        InlineLayout = inlineLayout;
+    }
+
+    internal void ApplyTextAlignmentState(string textAlign)
+    {
+        TextAlign = textAlign;
+    }
+
     private void SetUsedGeometry(UsedGeometry? value)
     {
         _usedGeometry = value;
