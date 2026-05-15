@@ -61,15 +61,4 @@ public class SkiaDiagnosticsTests
         return layout;
     }
 
-    private sealed class RecordingDiagnosticsSink : IDiagnosticsSink
-    {
-        private readonly List<DiagnosticRecord> _records = [];
-
-        public IReadOnlyList<DiagnosticRecord> Records => _records;
-
-        public void Emit(DiagnosticRecord record)
-        {
-            _records.Add(record);
-        }
-    }
 }

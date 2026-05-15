@@ -32,6 +32,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestSupport\Diagnostics\DiagnosticFieldReader.cs" Link="TestSupport\Diagnostics\DiagnosticFieldReader.cs" />
+    <Compile Include="..\TestSupport\Diagnostics\RecordingDiagnosticsSink.cs" Link="TestSupport\Diagnostics\RecordingDiagnosticsSink.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Html2x.TestSupport" />
+    <Using Include="Html2x.TestSupport.DiagnosticFieldReader" Static="true" />
     <Using Include="Xunit" />
   </ItemGroup>
 

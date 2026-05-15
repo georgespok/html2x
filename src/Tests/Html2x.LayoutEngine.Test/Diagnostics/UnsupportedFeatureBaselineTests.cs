@@ -93,11 +93,6 @@ public sealed class UnsupportedFeatureBaselineTests
             .ShouldBeTrue();
     }
 
-    private static LineBoxFragment FindLine(IEnumerable<LineBoxFragment> lines, string text)
-    {
-        return lines.First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
-    }
-
     private static IEnumerable<string> EnumerateText(IEnumerable<LayoutFragment> fragments)
     {
         foreach (var line in EnumerateLines(fragments))
@@ -105,38 +100,6 @@ public sealed class UnsupportedFeatureBaselineTests
             foreach (var run in line.Runs)
             {
                 yield return run.Text;
-            }
-        }
-    }
-
-    private static IEnumerable<LineBoxFragment> EnumerateLines(IEnumerable<LayoutFragment> fragments)
-    {
-        foreach (var fragment in fragments)
-        {
-            foreach (var line in EnumerateLines(fragment))
-            {
-                yield return line;
-            }
-        }
-    }
-
-    private static IEnumerable<LineBoxFragment> EnumerateLines(LayoutFragment fragment)
-    {
-        if (fragment is LineBoxFragment line)
-        {
-            yield return line;
-        }
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nestedLine in EnumerateLines(child))
-            {
-                yield return nestedLine;
             }
         }
     }

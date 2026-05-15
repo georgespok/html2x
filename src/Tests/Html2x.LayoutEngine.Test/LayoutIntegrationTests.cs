@@ -8,7 +8,6 @@ using Html2x.RenderModel.Measurements.Units;
 using Html2x.RenderModel.Styles;
 using Html2x.Text;
 using Shouldly;
-using CoreFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -541,43 +540,6 @@ public partial class LayoutIntegrationTests
         var block = page.Children[0] as BlockFragment;
         block.ShouldNotBeNull();
         block.Children.OfType<LineBoxFragment>().Count().ShouldBe(2);
-    }
-
-    private static IEnumerable<string> CollectTextRuns(IEnumerable<CoreFragment> fragments)
-    {
-        foreach (var fragment in fragments)
-        {
-            foreach (var text in CollectTextRuns(fragment))
-            {
-                yield return text;
-            }
-        }
-    }
-
-    private static IEnumerable<string> CollectTextRuns(CoreFragment fragment)
-    {
-        if (fragment is LineBoxFragment line)
-        {
-            foreach (var run in line.Runs)
-            {
-                var trimmed = run.Text.Trim();
-                if (!string.IsNullOrEmpty(trimmed))
-                {
-                    yield return trimmed;
-                }
-            }
-        }
-
-        if (fragment is BlockFragment block)
-        {
-            foreach (var child in block.Children)
-            {
-                foreach (var text in CollectTextRuns(child))
-                {
-                    yield return text;
-                }
-            }
-        }
     }
 
     private static BlockFragment? FindBlockContainingText(BlockFragment block, string text)

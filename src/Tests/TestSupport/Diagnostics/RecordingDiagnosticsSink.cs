@@ -1,6 +1,6 @@
 using Html2x.Diagnostics.Contracts;
 
-namespace Html2x.LayoutEngine.Style.Test;
+namespace Html2x.TestSupport;
 
 internal sealed class RecordingDiagnosticsSink : IDiagnosticsSink
 {
@@ -8,8 +8,5 @@ internal sealed class RecordingDiagnosticsSink : IDiagnosticsSink
 
     public IReadOnlyList<DiagnosticRecord> Records => _records;
 
-    public void Emit(DiagnosticRecord record)
-    {
-        _records.Add(record);
-    }
+    public void Emit(DiagnosticRecord record) => _records.Add(record);
 }

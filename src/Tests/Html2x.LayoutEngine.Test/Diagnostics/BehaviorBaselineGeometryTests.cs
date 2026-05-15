@@ -157,32 +157,4 @@ public sealed class BehaviorBaselineGeometryTests
                 record.Fields["outcome"] == new DiagnosticStringValue("Unsupported"));
     }
 
-    private static LineBoxFragment FindLine(IEnumerable<LineBoxFragment> lines, string text)
-    {
-        return lines.First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
-    }
-
-    private static IEnumerable<LineBoxFragment> EnumerateLines(LayoutFragment fragment) =>
-        EnumerateFragments(fragment).OfType<LineBoxFragment>();
-
-    private static IEnumerable<LineBoxFragment> EnumerateLines(IEnumerable<LayoutFragment> fragments) =>
-        fragments.SelectMany(EnumerateFragments).OfType<LineBoxFragment>();
-
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
 }

@@ -431,18 +431,6 @@ public class HtmlRenderedToPdfTests(ITestOutputHelper output) : IntegrationTestB
         return new(borderObject.Values.Any(static side => side is DiagnosticObject));
     }
 
-    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static double NumberField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static string StringFieldOrEmpty(DiagnosticObject value, string fieldName) =>
-        StringFieldOrNull(value, fieldName) ?? string.Empty;
-
-    private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
-        value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
-
     private sealed class LayoutPageSnapshot
     {
         public IReadOnlyList<FragmentSnapshot> Fragments { get; init; } = [];

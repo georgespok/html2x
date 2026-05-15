@@ -360,29 +360,8 @@ public class TableRenderedToPdfTests(ITestOutputHelper output) : IntegrationTest
     private static SizePt MapSize(DiagnosticObject size) =>
         new((float)NumberField(size, "width"), (float)NumberField(size, "height"));
 
-    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static double NumberField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
-
-    private static string StringFieldOrEmpty(DiagnosticObject value, string fieldName) =>
-        StringFieldOrNull(value, fieldName) ?? string.Empty;
-
-    private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
-        value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
-
     private static int? NullableIntField(DiagnosticObject value, string fieldName) =>
         value[fieldName] is DiagnosticNumberValue number ? (int)number.Value : null;
-
-    private static bool? NullableBoolField(DiagnosticObject value, string fieldName) =>
-        value[fieldName] is DiagnosticBooleanValue boolean ? boolean.Value : null;
 
     private sealed class LayoutPageSnapshot
     {

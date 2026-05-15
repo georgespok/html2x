@@ -433,25 +433,6 @@ public sealed class GeometryContractTests
 
     private static float MeasureNoTables(TableBox table, float availableWidth) => 0f;
 
-    private static IEnumerable<Fragment> EnumerateFragments(
-        Fragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
-
     private static bool ContainsText(Fragment fragment, string expected)
     {
         return EnumerateFragments(fragment)

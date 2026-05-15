@@ -694,24 +694,6 @@ public sealed class GeometryDriftTests
         }
     }
 
-    private static IEnumerable<Fragment> EnumerateFragments(Fragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
-
     private static bool ContainsText(BlockFragment fragment, string text)
     {
         return EnumerateFragments(fragment)

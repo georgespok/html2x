@@ -156,6 +156,4 @@ public sealed class HtmlConverterDiagnosticsTests
         }
     }
 
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
 }

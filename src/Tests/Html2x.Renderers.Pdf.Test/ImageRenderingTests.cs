@@ -421,18 +421,6 @@ public class ImageRenderingTests
     private static byte[] TwoByOnePngBytes() =>
         Convert.FromBase64String(TwoByOnePngBase64);
 
-    private sealed class RecordingDiagnosticsSink : IDiagnosticsSink
-    {
-        private readonly List<DiagnosticRecord> _records = [];
-
-        public IReadOnlyList<DiagnosticRecord> Records => _records;
-
-        public void Emit(DiagnosticRecord record)
-        {
-            _records.Add(record);
-        }
-    }
-
     private sealed class FixedImageResourceReader(ImageResourceResult result) : IImageResourceReader
     {
         public ImageResourceResult Load(string src) => result;

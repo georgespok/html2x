@@ -5,7 +5,6 @@ using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
 using Shouldly;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
-using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
@@ -658,21 +657,6 @@ public class InlineBlockTests
             .ShouldBeTrue();
     }
 
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-        if (fragment is BlockFragment block)
-        {
-            foreach (var child in block.Children)
-            {
-                foreach (var nested in EnumerateFragments(child))
-                {
-                    yield return nested;
-                }
-            }
-        }
-    }
-
     private static LayoutPipeline CreateLayoutPipeline(ITextMeasurer textMeasurer) =>
         new(
             textMeasurer,
@@ -721,23 +705,6 @@ public class InlineBlockTests
         var ordered = new List<string>();
         AppendOrderedText(root, ordered);
         return ordered;
-    }
-
-    private static TextRun FindRun(BlockFragment fragment, string text)
-    {
-        return EnumerateFragments(fragment)
-            .OfType<BlockFragment>()
-            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
-            .SelectMany(line => line.Runs)
-            .First(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static LineBoxFragment FindLine(BlockFragment fragment, string text)
-    {
-        return EnumerateFragments(fragment)
-            .OfType<BlockFragment>()
-            .SelectMany(block => block.Children.OfType<LineBoxFragment>())
-            .First(line => line.Runs.Any(run => run.Text.Contains(text, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static BlockFragment FindInlineBlock(BlockFragment fragment, string text)

@@ -10,24 +10,9 @@ public class InlineRunConstructionTests
     public void BuildInlineBlockRun_DoesNotFlattenInlineBlockToText()
     {
         var style = new ComputedStyle { FontSizePt = 12 };
-        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
-        {
-            Style = style
-        };
-
-        var contentBlock = new BlockBox(BoxRole.Block)
-        {
-            Style = style,
-            Parent = inlineBlock,
-            IsAnonymous = true
-        };
-        contentBlock.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            Style = style,
-            TextContent = "Inline-block A",
-            Parent = contentBlock
-        });
-        inlineBlock.AddChild(contentBlock);
+        var inlineBlock = InlineBlockBoxTree.Create(style);
+        var contentBlock = InlineBlockBoxTree.AddContentBox(inlineBlock, style, isAnonymous: true);
+        InlineBlockBoxTree.AddInline(contentBlock, "Inline-block A", style);
 
         var factory = new InlineRunConstruction(new FakeMetricsMeasurer());
 

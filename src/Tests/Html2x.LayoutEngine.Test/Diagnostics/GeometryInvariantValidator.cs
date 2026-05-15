@@ -155,35 +155,6 @@ internal static class GeometryInvariantValidator
         }
     }
 
-    private static IEnumerable<LayoutFragment> EnumerateFragments(IEnumerable<BlockFragment> fragments)
-    {
-        foreach (var fragment in fragments)
-        {
-            foreach (var nested in EnumerateFragments(fragment))
-            {
-                yield return nested;
-            }
-        }
-    }
-
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
-
     private static IEnumerable<FragmentSnapshot> FlattenSnapshots(
         IEnumerable<FragmentSnapshot> snapshots)
     {

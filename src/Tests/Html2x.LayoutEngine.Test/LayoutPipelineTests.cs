@@ -7,7 +7,6 @@ using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test;
 
@@ -163,19 +162,4 @@ public class LayoutPipelineTests
             .Select(static run => run.Text);
     }
 
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        foreach (var nested in EnumerateFragments(child))
-        {
-            yield return nested;
-        }
-    }
 }

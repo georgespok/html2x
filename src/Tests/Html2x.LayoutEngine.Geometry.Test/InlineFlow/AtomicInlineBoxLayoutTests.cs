@@ -20,20 +20,12 @@ public sealed class AtomicInlineBoxLayoutTests
         {
             ImageMetadataResolver = new FixedImageMetadataResolver(new(32d, 16d))
         });
-        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
+        var inlineBlock = InlineBlockBoxTree.Create();
+        InlineBlockBoxTree.AddImage(inlineBlock, "image.png", new()
         {
-            Style = new()
-        };
-        inlineBlock.AddChild(new ImageBox(BoxRole.Block)
-        {
-            Parent = inlineBlock,
-            Src = "image.png",
-            Style = new()
-            {
-                WidthPt = 32f,
-                HeightPt = 16f,
-                Padding = new(2f, 2f, 2f, 2f)
-            }
+            WidthPt = 32f,
+            HeightPt = 16f,
+            Padding = new(2f, 2f, 2f, 2f)
         });
         var layout = CreateLayout(textMeasurer, imageSizingRules);
 
@@ -56,29 +48,15 @@ public sealed class AtomicInlineBoxLayoutTests
     public void MeasureInlineBlock_TextContent_UsesInlineBoxSizingWithoutMutatingContentBox()
     {
         var textMeasurer = new CountingTextMeasurer();
-        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
+        var inlineBlock = InlineBlockBoxTree.Create();
+        var contentBox = InlineBlockBoxTree.AddContentBox(inlineBlock, new()
         {
-            Style = new()
-        };
-        var contentBox = new BlockBox(BoxRole.Block)
-        {
-            Parent = inlineBlock,
-            EstablishesInlineBlockFormattingContext = true,
-            Style = new()
-            {
-                WidthPt = 42f,
-                HeightPt = 18f,
-                Padding = new(2f, 3f, 4f, 5f),
-                Borders = BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid))
-            }
-        };
-        contentBox.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            Parent = contentBox,
-            Style = contentBox.Style,
-            TextContent = "alpha beta"
+            WidthPt = 42f,
+            HeightPt = 18f,
+            Padding = new(2f, 3f, 4f, 5f),
+            Borders = BorderEdges.Uniform(new(1f, ColorRgba.Black, BorderLineStyle.Solid))
         });
-        inlineBlock.AddChild(contentBox);
+        InlineBlockBoxTree.AddInline(contentBox, "alpha beta");
         var layout = CreateLayout(textMeasurer);
 
         var result = layout.MeasureInlineBlock(inlineBlock, 100f);
@@ -99,36 +77,17 @@ public sealed class AtomicInlineBoxLayoutTests
     public void MeasureInlineBlock_BlockDescendants_DoNotMutateBlocks()
     {
         var textMeasurer = new CountingTextMeasurer();
-        var inlineBlock = new InlineBox(BoxRole.InlineBlock)
+        var inlineBlock = InlineBlockBoxTree.Create();
+        var contentBox = InlineBlockBoxTree.AddContentBox(inlineBlock, new()
         {
-            Style = new()
-        };
-        var contentBox = new BlockBox(BoxRole.Block)
-        {
-            Parent = inlineBlock,
-            EstablishesInlineBlockFormattingContext = true,
-            Style = new()
-            {
-                WidthPt = 42f
-            }
-        };
-        contentBox.AddChild(new InlineBox(BoxRole.Inline)
-        {
-            Parent = contentBox,
-            Style = contentBox.Style,
-            TextContent = "alpha"
+            WidthPt = 42f
         });
-        var nestedBlock = new BlockBox(BoxRole.Block)
+        InlineBlockBoxTree.AddInline(contentBox, "alpha");
+        var nestedBlock = InlineBlockBoxTree.AddBlock(contentBox, new()
         {
-            Parent = contentBox,
-            Style = new()
-            {
-                HeightPt = 30f,
-                WidthPt = 20f
-            }
-        };
-        contentBox.AddChild(nestedBlock);
-        inlineBlock.AddChild(contentBox);
+            HeightPt = 30f,
+            WidthPt = 20f
+        });
         var layout = CreateLayout(textMeasurer);
 
         var result = layout.MeasureInlineBlock(inlineBlock, 100f);

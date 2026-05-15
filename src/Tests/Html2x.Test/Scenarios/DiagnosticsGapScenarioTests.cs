@@ -136,15 +136,4 @@ public sealed class DiagnosticsGapScenarioTests(ITestOutputHelper output) : Inte
         }
     }
 
-    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static DiagnosticArray ArrayField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticStringValue>().Value;
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
 }

@@ -39,9 +39,15 @@
     <Compile Include="..\Html2x.LayoutEngine.Test\TestDoubles\NoopImageMetadataResolver.cs" Link="TestDoubles\NoopImageMetadataResolver.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestHelpers\GeometryTestHarness.cs" Link="TestHelpers\GeometryTestHarness.cs" />
     <Compile Include="..\Html2x.LayoutEngine.Test\TestHelpers\InlineFlowTestHelpers.cs" Link="TestHelpers\InlineFlowTestHelpers.cs" />
+    <Compile Include="..\TestSupport\Diagnostics\DiagnosticFieldReader.cs" Link="TestSupport\Diagnostics\DiagnosticFieldReader.cs" />
+    <Compile Include="..\TestSupport\Diagnostics\RecordingDiagnosticsSink.cs" Link="TestSupport\Diagnostics\RecordingDiagnosticsSink.cs" />
+    <Compile Include="..\TestSupport\Fragments\FragmentTraversal.cs" Link="TestSupport\Fragments\FragmentTraversal.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="Html2x.TestSupport" />
+    <Using Include="Html2x.TestSupport.DiagnosticFieldReader" Static="true" />
+    <Using Include="Html2x.TestSupport.FragmentTraversal" Static="true" />
     <Using Include="Xunit" />
   </ItemGroup>
 

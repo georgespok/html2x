@@ -6,7 +6,6 @@ using Html2x.RenderModel.Measurements.Units;
 using Html2x.Text;
 using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 using Shouldly;
-using static Html2x.LayoutEngine.Geometry.Test.Diagnostics.DiagnosticFieldAssertions;
 
 namespace Html2x.LayoutEngine.Geometry.Test.Display;
 
@@ -554,24 +553,6 @@ public class BlockFlowTests
             new NoopImageMetadataResolver());
 
     private static ITextMeasurer CreateLinearMeasurer(float widthPerChar) => new FakeTextMeasurer(widthPerChar, 8f, 2f);
-
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
 
     private static BlockFragment FindContainerWithTexts(BlockFragment root, string firstText, string secondText)
     {

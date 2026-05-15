@@ -729,11 +729,6 @@ public class CssStyleComputerTests
         return sink.Records.Single(record => record.Name == name);
     }
 
-    private static void AssertStringField(DiagnosticRecord record, string fieldName, string expected)
-    {
-        record.Fields[fieldName].ShouldBe(new DiagnosticStringValue(expected));
-    }
-
     public static IEnumerable<object[]> BorderCases()
     {
         var expected = BorderEdges.Uniform(new(0.75f, ColorRgba.Black, BorderLineStyle.Dashed));

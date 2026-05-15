@@ -867,15 +867,6 @@ public sealed class HtmlConverterTests(ITestOutputHelper output) : IntegrationTe
         Assert.DoesNotContain(resolvedFontEvents, static x => StringField(x, "consumer") == "SkiaFontCache");
     }
 
-    private static string StringField(DiagnosticRecord record, string fieldName) =>
-        Assert.IsType<DiagnosticStringValue>(record.Fields[fieldName]).Value;
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        Assert.IsType<DiagnosticNumberValue>(record.Fields[fieldName]).Value;
-
-    private static bool BoolField(DiagnosticRecord record, string fieldName) =>
-        Assert.IsType<DiagnosticBooleanValue>(record.Fields[fieldName]).Value;
-
     private static void AssertConfigurationFailureDiagnostics(Exception exception, string expectedMessage)
     {
         Assert.True(exception.Data.Contains(nameof(HtmlToPdfResult.DiagnosticsReport)));

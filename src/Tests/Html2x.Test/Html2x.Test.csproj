@@ -36,6 +36,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestSupport\Diagnostics\DiagnosticFieldReader.cs" Link="TestSupport\Diagnostics\DiagnosticFieldReader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Html2x.TestSupport.DiagnosticFieldReader" Static="true" />
     <Using Include="Xunit" />
   </ItemGroup>
 

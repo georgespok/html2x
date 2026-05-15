@@ -419,17 +419,8 @@ public sealed class GeometrySnapshotMapperTests
             null,
             children ?? []);
 
-    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static DiagnosticObject ObjectField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticObject>();
-
     private static DiagnosticObject ObjectItem(DiagnosticArray value, int index) =>
         value[index].ShouldBeOfType<DiagnosticObject>();
-
-    private static double NumberField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
 
     private static void KeysShouldBe(DiagnosticObject value, params string[] expectedKeys)
     {

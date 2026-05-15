@@ -138,15 +138,4 @@ public sealed class PaginationRenderedToPdfTests(ITestOutputHelper output) : Int
         }
     }
 
-    private static DiagnosticArray ArrayField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticArray>();
-
-    private static double NumberField(DiagnosticRecord record, string fieldName) =>
-        record.Fields[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static double NumberField(DiagnosticObject value, string fieldName) =>
-        value[fieldName].ShouldBeOfType<DiagnosticNumberValue>().Value;
-
-    private static string? StringFieldOrNull(DiagnosticObject value, string fieldName) =>
-        value[fieldName] is DiagnosticStringValue stringValue ? stringValue.Value : null;
 }

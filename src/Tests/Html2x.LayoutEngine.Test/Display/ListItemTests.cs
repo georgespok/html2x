@@ -1,7 +1,6 @@
 using Html2x.LayoutEngine.Test.TestHelpers;
 using Html2x.RenderModel.Fragments;
 using Shouldly;
-using LayoutFragment = Html2x.RenderModel.Fragments.Fragment;
 
 namespace Html2x.LayoutEngine.Test.Display;
 
@@ -82,20 +81,4 @@ public class ListItemTests
         lineRuns.ShouldContain(text => text.Contains("Second item", StringComparison.Ordinal));
     }
 
-    private static IEnumerable<LayoutFragment> EnumerateFragments(LayoutFragment fragment)
-    {
-        yield return fragment;
-        if (fragment is not BlockFragment block)
-        {
-            yield break;
-        }
-
-        foreach (var child in block.Children)
-        {
-            foreach (var nested in EnumerateFragments(child))
-            {
-                yield return nested;
-            }
-        }
-    }
 }
