@@ -6,6 +6,7 @@ using Html2x.LayoutEngine.Geometry.Diagnostics;
 using Html2x.LayoutEngine.Geometry.Images;
 using Html2x.LayoutEngine.Geometry.InlineFlow;
 using Html2x.LayoutEngine.Geometry.Measurement;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.Text;
 
 namespace Html2x.LayoutEngine.Geometry;
@@ -17,63 +18,21 @@ namespace Html2x.LayoutEngine.Geometry;
 ///     This is the named entry point for the Layout Geometry stage. The implementation may use mutable boxes while
 ///     resolving layout, but callers receive only <see cref="PublishedLayoutTree" />.
 /// </remarks>
-internal sealed class LayoutGeometryConstruction
+internal sealed class LayoutGeometryConstruction(ITextMeasurer textMeasurer) : ILayoutGeometryStage
 {
-    private readonly BoxTreeConstruction _boxTreeConstruction;
-    private readonly BlockFormattingMetricsMeasurement _contentMeasurement;
-    private readonly ITextMeasurer? _textMeasurer;
-    private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy;
+    private readonly BoxTreeConstruction _boxTreeConstruction = new();
+    private readonly BlockFormattingMetricsMeasurement _contentMeasurement = new();
+    private readonly ITextMeasurer _textMeasurer = textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer));
+    private readonly UnsupportedLayoutModePolicy _unsupportedLayoutModePolicy = new();
 
-    public LayoutGeometryConstruction()
-        : this(null, new())
+    public PublishedLayoutTree Build(LayoutGeometryBuildRequest request)
     {
-    }
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Styles);
 
-    public LayoutGeometryConstruction(ITextMeasurer textMeasurer)
-        : this(textMeasurer ?? throw new ArgumentNullException(nameof(textMeasurer)), new())
-    {
-    }
-
-    internal LayoutGeometryConstruction(ITextMeasurer? textMeasurer, BlockFormattingMetricsMeasurement contentMeasurement)
-        : this(
-            new(),
-            new(),
-            textMeasurer,
-            contentMeasurement)
-    {
-    }
-
-    private LayoutGeometryConstruction(
-        BoxTreeConstruction boxTreeConstruction,
-        UnsupportedLayoutModePolicy unsupportedLayoutModePolicy,
-        ITextMeasurer? textMeasurer,
-        BlockFormattingMetricsMeasurement contentMeasurement)
-    {
-        _boxTreeConstruction = boxTreeConstruction ?? throw new ArgumentNullException(nameof(boxTreeConstruction));
-        _unsupportedLayoutModePolicy = unsupportedLayoutModePolicy
-                                       ?? throw new ArgumentNullException(nameof(unsupportedLayoutModePolicy));
-        _textMeasurer = textMeasurer;
-        _contentMeasurement = contentMeasurement ?? throw new ArgumentNullException(nameof(contentMeasurement));
-    }
-
-    public PublishedLayoutTree Build(
-        StyleTree styles,
-        LayoutGeometryRequest? request = null,
-        IDiagnosticsSink? diagnosticsSink = null)
-    {
-        ArgumentNullException.ThrowIfNull(styles);
-
-        var initialBoxRoot = BuildInitialBoxes(styles, diagnosticsSink);
-        return BuildFromInitialBoxes(initialBoxRoot, styles, request, diagnosticsSink);
-    }
-
-    private BoxNode BuildInitialBoxes(
-        StyleTree styles,
-        IDiagnosticsSink? diagnosticsSink)
-    {
-        var initialBoxRoot = _boxTreeConstruction.Build(styles);
-        _unsupportedLayoutModePolicy.Report(initialBoxRoot, diagnosticsSink);
-        return initialBoxRoot;
+        var initialBoxRoot = _boxTreeConstruction.Build(request.Styles);
+        _unsupportedLayoutModePolicy.Report(initialBoxRoot, request.DiagnosticsSink);
+        return BuildFromInitialBoxes(initialBoxRoot, request.Styles, request.Geometry, request.DiagnosticsSink);
     }
 
     private PublishedLayoutTree BuildFromInitialBoxes(

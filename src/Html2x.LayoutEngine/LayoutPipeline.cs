@@ -3,6 +3,8 @@ using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Diagnostics;
+using Html2x.LayoutEngine.Fragments;
+using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
@@ -29,10 +31,10 @@ internal sealed class LayoutPipeline
 
         _imageMetadataResolver = imageMetadataResolver;
         _styleTreeBuilder = new StyleTreeBuilder();
-        _stageRunner = new(
-            new(textMeasurer),
-            new(),
-            new());
+        _stageRunner = new LayoutStageRunner(
+            new LayoutGeometryConstruction(textMeasurer),
+            new FragmentTreeBuilder(),
+            new LayoutPaginator());
     }
 
     public async Task<HtmlLayout> BuildAsync(
@@ -75,7 +77,7 @@ internal sealed class LayoutPipeline
     }
 
     private LayoutGeometryRequest CreateGeometryRequest(LayoutBuildSettings settings) =>
-        new()
+        new LayoutGeometryRequest
         {
             PageSize = settings.PageSize,
             ImageMetadataResolver = _imageMetadataResolver
@@ -84,7 +86,7 @@ internal sealed class LayoutPipeline
     private static PaginationOptions CreatePaginationOptions(
         LayoutBuildSettings settings,
         PublishedLayoutTree publishedLayout) =>
-        new()
+        new PaginationOptions
         {
             PageSize = settings.PageSize,
             Margin = publishedLayout.Page.Margin

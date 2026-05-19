@@ -297,12 +297,19 @@ internal sealed class CSharpSourceFile
 
     public void ShouldHaveParameter(string methodOrConstructorName, string parameterName, string parameterType)
     {
-        var parameter = Root.DescendantNodes()
+        var methodParameter = Root.DescendantNodes()
             .OfType<BaseMethodDeclarationSyntax>()
             .Where(method => MethodName(method).Equals(methodOrConstructorName, StringComparison.Ordinal))
             .SelectMany(method => method.ParameterList.Parameters)
             .FirstOrDefault(parameter =>
                 parameter.Identifier.ValueText.Equals(parameterName, StringComparison.Ordinal));
+        var recordParameter = Root.DescendantNodes()
+            .OfType<RecordDeclarationSyntax>()
+            .Where(record => record.Identifier.ValueText.Equals(methodOrConstructorName, StringComparison.Ordinal))
+            .SelectMany(record => record.ParameterList?.Parameters ?? [])
+            .FirstOrDefault(parameter =>
+                parameter.Identifier.ValueText.Equals(parameterName, StringComparison.Ordinal));
+        var parameter = methodParameter ?? recordParameter;
 
         parameter.ShouldNotBeNull($"{RelativePath()} should declare parameter {parameterName}.");
         NormalizeType(parameter.Type?.ToString() ?? string.Empty).ShouldBe(

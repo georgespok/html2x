@@ -13,6 +13,7 @@ internals.
 | `Html2x.Text` | Text measurement contracts, font resolution contracts, and Skia-backed text/font implementation. | Reference facade options, layout engine projects, fragment tree building, or renderers. |
 | `Html2x.Diagnostics.Contracts` | Generic diagnostics emission contracts and constrained diagnostic field values. | Reference layout, renderer, parser, or diagnostics runtime projects. |
 | `Html2x.Diagnostics` | Diagnostics collection, report model, and JSON serialization. | Own layout or renderer decisions. |
+| `Html2x.LayoutEngine.Stage.Contracts` | Composition-facing stage invocation contracts such as the Layout Geometry stage seam. | Own stage handoff facts, layout algorithms, parser state, renderer state, or diagnostics collection. |
 | `Html2x.LayoutEngine.Style` | HTML parsing, user agent stylesheet application, CSS parsing, computed style construction, style diagnostics, style-owned settings, and parser-free `StyleTree` output. | Own layout geometry, fragments, pagination, or renderer state. |
 | `Html2x.LayoutEngine.Geometry` | Geometry construction from `StyleTree` into published layout facts. | Parse HTML or CSS, reference parser objects, or expose mutable boxes as the public handoff. |
 | `Html2x.LayoutEngine.Fragments` | Fragment tree construction from published layout facts into renderer-facing fragments. | Consume mutable boxes, parser objects, pagination pages, or renderer state. |

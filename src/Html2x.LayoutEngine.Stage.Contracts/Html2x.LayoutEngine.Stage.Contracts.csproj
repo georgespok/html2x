@@ -9,9 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Html2x.Diagnostics.Contracts\Html2x.Diagnostics.Contracts.csproj" />
     <ProjectReference Include="..\Html2x.LayoutEngine.Contracts\Html2x.LayoutEngine.Contracts.csproj" />
-    <ProjectReference Include="..\Html2x.LayoutEngine.Stage.Contracts\Html2x.LayoutEngine.Stage.Contracts.csproj" />
-    <ProjectReference Include="..\Html2x.Text\Html2x.Text.csproj" />
-    <ProjectReference Include="..\Html2x.RenderModel\Html2x.RenderModel.csproj" />
   </ItemGroup>
 
 </Project>

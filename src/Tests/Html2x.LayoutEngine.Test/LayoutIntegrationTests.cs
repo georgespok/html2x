@@ -1,6 +1,7 @@
 using Html2x.LayoutEngine.Contracts.Geometry.Images;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.RenderModel.Fragments;
@@ -84,7 +85,7 @@ public partial class LayoutIntegrationTests
 
         var styleTreeBuilder = new StyleTreeBuilder();
         var textMeasurer = CreateTextMeasurer();
-        var layoutGeometryConstruction = new LayoutGeometryConstruction(textMeasurer);
+        ILayoutGeometryStage layoutGeometryStage = new LayoutGeometryConstruction(textMeasurer);
         var fragmentTreeBuilder = new FragmentTreeBuilder();
         var builder = CreateLayoutPipeline();
         var layoutOptions = new LayoutBuildSettings
@@ -93,13 +94,14 @@ public partial class LayoutIntegrationTests
         };
 
         var styleTree = await styleTreeBuilder.BuildAsync(html, layoutOptions.Style);
-        var publishedLayout = layoutGeometryConstruction.Build(
+        var publishedLayout = layoutGeometryStage.Build(new(
             styleTree,
             new()
             {
                 PageSize = layoutOptions.PageSize,
                 ImageMetadataResolver = new NoopImageMetadataResolver()
-            });
+            },
+            null));
         var fragmentTree = fragmentTreeBuilder.Build(publishedLayout);
         var layout = await builder.BuildAsync(html, layoutOptions);
 

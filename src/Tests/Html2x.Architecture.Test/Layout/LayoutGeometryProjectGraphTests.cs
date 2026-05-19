@@ -3,6 +3,7 @@ using Html2x.LayoutEngine;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
 using Html2x.Renderers.Pdf.Pipeline;
@@ -22,6 +23,7 @@ public sealed class LayoutGeometryProjectGraphTests
             .ProjectNames()
             .ShouldContainSet([
                 AssemblyName<StyleNode>(),
+                AssemblyName<ILayoutGeometryStage>(),
                 AssemblyName<HtmlLayout>(),
                 AssemblyName<FragmentTreeBuilder>(),
                 AssemblyName<LayoutPaginator>(),
@@ -38,7 +40,8 @@ public sealed class LayoutGeometryProjectGraphTests
         ProjectFor<LayoutPipeline>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<FragmentTreeBuilder>(), AssemblyName<LayoutGeometryConstruction>(), AssemblyName<LayoutPaginator>(),
-                AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+                AssemblyName<ILayoutGeometryStage>(), AssemblyName<StyleTreeBuilder>(), AssemblyName<HtmlLayout>(),
+                AssemblyName<ITextMeasurer>());
         ProjectFor<StyleTreeBuilder>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>());
@@ -46,7 +49,7 @@ public sealed class LayoutGeometryProjectGraphTests
             .ShouldReferencePackages(ExternalPackageIds.AngleSharp, ExternalPackageIds.AngleSharpCss);
         ProjectFor<LayoutGeometryConstruction>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
-                AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
+                AssemblyName<ILayoutGeometryStage>(), AssemblyName<HtmlLayout>(), AssemblyName<ITextMeasurer>());
         ProjectFor<LayoutPaginator>()
             .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>(),
                 AssemblyName<HtmlLayout>());
@@ -55,6 +58,10 @@ public sealed class LayoutGeometryProjectGraphTests
         ProjectFor<StyleNode>()
             .ShouldReferenceProjects(AssemblyName<HtmlLayout>());
         ProjectFor<StyleNode>()
+            .ShouldHaveNoPackageReferences();
+        ProjectFor<ILayoutGeometryStage>()
+            .ShouldReferenceProjects(AssemblyName<IDiagnosticsSink>(), AssemblyName<StyleNode>());
+        ProjectFor<ILayoutGeometryStage>()
             .ShouldHaveNoPackageReferences();
         ProjectFor<HtmlLayout>()
             .ShouldHaveNoProjectReferences();
@@ -72,10 +79,19 @@ public sealed class LayoutGeometryProjectGraphTests
     public void SharedContractsProject_DoesNotReferenceImplementationStages()
     {
         var contracts = SemanticProjectFor<StyleNode>();
+        var stageContracts = SemanticProjectFor<ILayoutGeometryStage>();
 
         ProjectFor<StyleNode>()
             .ShouldReferenceProjects(AssemblyName<HtmlLayout>());
         contracts.ShouldNotReferenceNamespaces(
+            NamespaceOf<StyleTreeBuilder>(),
+            NamespaceOf<LayoutGeometryConstruction>(),
+            NamespaceOf<FragmentTreeBuilder>(),
+            NamespaceOf<LayoutPaginator>(),
+            RendererNamespace,
+            ParserPackageName(),
+            ExternalPackageIds.SkiaSharp);
+        stageContracts.ShouldNotReferenceNamespaces(
             NamespaceOf<StyleTreeBuilder>(),
             NamespaceOf<LayoutGeometryConstruction>(),
             NamespaceOf<FragmentTreeBuilder>(),

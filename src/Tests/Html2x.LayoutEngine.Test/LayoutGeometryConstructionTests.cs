@@ -1,6 +1,8 @@
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Geometry;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Test.Builders;
+using Html2x.LayoutEngine.Test.TestDoubles;
 using Html2x.RenderModel.Fragments;
 using Html2x.RenderModel.Styles;
 using Shouldly;
@@ -37,6 +39,21 @@ public sealed class LayoutGeometryConstructionTests
         block.Identity.ElementIdentity.ShouldBe(HtmlCssVocabulary.HtmlTags.Div);
         block.Geometry.X.ShouldBe(5f);
         block.Geometry.Y.ShouldBe(15f);
+        PublishedText(block).ShouldBe(["Hello"]);
+    }
+
+    [Fact]
+    public void Build_ThroughStageContract_PublishesLayout()
+    {
+        var styles = BuildStyleTree()
+            .WithPageMargins(0, 0, 0, 0)
+            .AddChild(HtmlCssVocabulary.HtmlTags.Div, "Hello", 15, 5);
+        ILayoutGeometryStage stage = new LayoutGeometryConstruction(new ConstantTextMeasurer(10f, 9f, 3f));
+
+        var actual = stage.Build(new(styles, LayoutGeometryRequest.Default, null));
+
+        var block = actual.Blocks.ShouldHaveSingleItem();
+        block.Identity.ElementIdentity.ShouldBe(HtmlCssVocabulary.HtmlTags.Div);
         PublishedText(block).ShouldBe(["Hello"]);
     }
 
@@ -142,8 +159,11 @@ public sealed class LayoutGeometryConstructionTests
 
     private static StyleTreeBuilder BuildStyleTree() => new();
 
-    private static PublishedLayoutTree Build(StyleTreeBuilder styles) =>
-        new LayoutGeometryConstruction().Build(styles);
+    private static PublishedLayoutTree Build(StyleTreeBuilder styles)
+    {
+        ILayoutGeometryStage stage = new LayoutGeometryConstruction(new ConstantTextMeasurer(10f, 9f, 3f));
+        return stage.Build(new(styles, LayoutGeometryRequest.Default, null));
+    }
 
     private static IReadOnlyList<string> PublishedText(PublishedBlock block)
     {

@@ -105,6 +105,35 @@ public partial class LayoutIntegrationTests
         intrinsicImage.ContentRect.Height.ShouldBe(60f, 0.01f);
     }
 
+    [Fact]
+    public async Task Build_ImageMetadataStatus_PreservesLoadStatus()
+    {
+        const string html = @"
+            <html>
+              <body style='margin: 0;'>
+                <img src='missing.png' width='40' height='20' style='display: block;' />
+              </body>
+            </html>";
+
+        var layout = await CreateLayoutPipeline(new FixedImageMetadataResolver(
+                _ => new(80d, 40d),
+                ImageLoadStatus.Missing))
+            .BuildAsync(html, new() { PageSize = PaperSizes.Letter });
+
+        var image = layout.Pages[0]
+            .Children
+            .OfType<BlockFragment>()
+            .Select(FindFirstImageFragment)
+            .ShouldHaveSingleItem()
+            .ShouldNotBeNull();
+
+        image.Status.ShouldBe(ImageLoadStatus.Missing);
+        image.IsMissing.ShouldBeTrue();
+        image.IsOversized.ShouldBeFalse();
+        image.ContentRect.Width.ShouldBe(30f, 0.01f);
+        image.ContentRect.Height.ShouldBe(15f, 0.01f);
+    }
+
     private static ImageFragment? FindFirstImageFragment(CoreFragment fragment)
     {
         if (fragment is ImageFragment image)
@@ -145,15 +174,18 @@ public partial class LayoutIntegrationTests
         }
     }
 
-    private sealed class FixedImageMetadataResolver(Func<string, SizePx> resolveSize) : IImageMetadataResolver
+    private sealed class FixedImageMetadataResolver(
+        Func<string, SizePx> resolveSize,
+        ImageLoadStatus status = ImageLoadStatus.Ok) : IImageMetadataResolver
     {
         private readonly Func<string, SizePx> _resolveSize = resolveSize;
+        private readonly ImageLoadStatus _status = status;
 
         public ImageMetadataResult Resolve(string src) =>
             new()
             {
                 Src = src,
-                Status = ImageLoadStatus.Ok,
+                Status = _status,
                 IntrinsicSizePx = _resolveSize(src)
             };
     }

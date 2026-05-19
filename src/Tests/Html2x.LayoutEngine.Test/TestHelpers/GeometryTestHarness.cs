@@ -6,6 +6,7 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Fragments;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.RenderModel.Documents;
 using Html2x.RenderModel.Measurements.Units;
@@ -30,7 +31,7 @@ internal static class GeometryTestHarness
         var textMeasurer = CreateTextMeasurer();
         var imageMetadataResolver = new NoopImageMetadataResolver();
         var styleTreeBuilder = new StyleTreeBuilder();
-        var layoutGeometryConstruction = new LayoutGeometryConstruction(textMeasurer);
+        ILayoutGeometryStage layoutGeometryStage = new LayoutGeometryConstruction(textMeasurer);
         var fragmentTreeBuilder = new FragmentTreeBuilder();
 
         var styleTree = await styleTreeBuilder.BuildAsync(html, options.Style, diagnosticsSink: diagnosticsSink);
@@ -39,10 +40,7 @@ internal static class GeometryTestHarness
             PageSize = options.PageSize,
             ImageMetadataResolver = imageMetadataResolver
         };
-        var publishedLayout = layoutGeometryConstruction.Build(
-            styleTree,
-            geometryRequest,
-            diagnosticsSink);
+        var publishedLayout = layoutGeometryStage.Build(new(styleTree, geometryRequest, diagnosticsSink));
         var fragments = fragmentTreeBuilder.Build(publishedLayout);
         var pagination = new LayoutPaginator().Paginate(
             fragments.Blocks,

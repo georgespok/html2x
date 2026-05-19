@@ -3,27 +3,27 @@ using Html2x.LayoutEngine.Contracts.Geometry;
 using Html2x.LayoutEngine.Contracts.Published;
 using Html2x.LayoutEngine.Contracts.Style;
 using Html2x.LayoutEngine.Fragments;
-using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 
 namespace Html2x.LayoutEngine;
 
 internal sealed class LayoutStageRunner
 {
     private readonly FragmentTreeBuilder _fragmentTreeBuilder;
-    private readonly LayoutGeometryConstruction _layoutGeometryConstruction;
+    private readonly ILayoutGeometryStage _layoutGeometryStage;
     private readonly LayoutPaginator _layoutPaginator;
 
     public LayoutStageRunner(
-        LayoutGeometryConstruction layoutGeometryConstruction,
+        ILayoutGeometryStage layoutGeometryStage,
         FragmentTreeBuilder fragmentTreeBuilder,
         LayoutPaginator layoutPaginator)
     {
-        ArgumentNullException.ThrowIfNull(layoutGeometryConstruction);
+        ArgumentNullException.ThrowIfNull(layoutGeometryStage);
         ArgumentNullException.ThrowIfNull(fragmentTreeBuilder);
         ArgumentNullException.ThrowIfNull(layoutPaginator);
 
-        _layoutGeometryConstruction = layoutGeometryConstruction;
+        _layoutGeometryStage = layoutGeometryStage;
         _fragmentTreeBuilder = fragmentTreeBuilder;
         _layoutPaginator = layoutPaginator;
     }
@@ -37,7 +37,7 @@ internal sealed class LayoutStageRunner
         return DiagnosticStageRunner.Run(
             diagnosticsSink,
             LayoutStageNames.BoxTree,
-            () => _layoutGeometryConstruction.Build(styleTree, request, diagnosticsSink),
+            () => _layoutGeometryStage.Build(new(styleTree, request, diagnosticsSink)),
             cancellationToken);
     }
 

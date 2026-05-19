@@ -2,6 +2,17 @@ using Html2x.LayoutEngine.Contracts.Style;
 
 namespace Html2x.LayoutEngine.Contracts.Geometry;
 
+/// <summary>
+///     Carries source lineage from style facts into geometry-owned layout output.
+/// </summary>
+/// <remarks>
+///     Geometry uses this fact to preserve the styled node or content item that
+///     produced a laid-out box, including generated geometry such as anonymous
+///     text or inline-block content. The value is safe to publish with layout
+///     facts and diagnostics because it contains only stable source-like
+///     identifiers. It is not a layout identity, an input request, or a parser
+///     reference.
+/// </remarks>
 internal sealed record GeometrySourceIdentity
 {
     public GeometrySourceIdentity(

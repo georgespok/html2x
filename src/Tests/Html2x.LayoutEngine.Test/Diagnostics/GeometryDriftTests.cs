@@ -123,6 +123,87 @@ public sealed class GeometryDriftTests
     }
 
     [Fact]
+    public async Task Build_PublishedLayoutPreservesInterleavedFlowAndSourceIdentity()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <div id='mixed-flow' style='margin: 0;'>
+                  before
+                  <p id='child' style='margin: 0;'>child</p>
+                  after
+                </div>
+              </body>
+            </html>
+            """);
+
+        var block = result.PublishedLayout.Blocks.ShouldHaveSingleItem();
+
+        block.Identity.ElementIdentity.ShouldBe("div#mixed-flow");
+        block.Flow.Select(static item => item.GetType()).ShouldBe(
+        [
+            typeof(PublishedInlineFlowSegmentItem),
+            typeof(PublishedChildBlockItem),
+            typeof(PublishedInlineFlowSegmentItem)
+        ]);
+
+        var before = block.Flow[0].ShouldBeOfType<PublishedInlineFlowSegmentItem>();
+        var child = block.Flow[1].ShouldBeOfType<PublishedChildBlockItem>().Block;
+        var after = block.Flow[2].ShouldBeOfType<PublishedInlineFlowSegmentItem>();
+
+        AssertPublishedInlineSource(before.Segment, "before", "body[0]/div[0]/text[0]");
+        child.Identity.ElementIdentity.ShouldBe("p#child");
+        child.Identity.SourceIdentity.SourcePath.ShouldBe("body[0]/div[0]/p[0]");
+        AssertPublishedInlineSource(after.Segment, "after", "body[0]/div[0]/text[2]");
+    }
+
+    [Fact]
+    public async Task Build_TableColspanPreservesPublishedAndFragmentFacts()
+    {
+        var result = await GeometryTestHarness.BuildAsync(
+            """
+            <html>
+              <body style='margin: 0;'>
+                <table id='span-table' style='margin: 0; width: 240px;'>
+                  <tr>
+                    <th colspan='2'>Total</th>
+                  </tr>
+                  <tr>
+                    <td>A</td>
+                    <td>B</td>
+                  </tr>
+                </table>
+              </body>
+            </html>
+            """);
+
+        var publishedTable = result.PublishedLayout.Blocks.ShouldHaveSingleItem();
+        publishedTable.Table.ShouldNotBeNull().DerivedColumnCount.ShouldBe(2);
+        var publishedHeaderCell = publishedTable.Children[0]
+            .Children
+            .ShouldHaveSingleItem();
+
+        publishedHeaderCell.Table.ShouldNotBeNull().ColumnIndex.ShouldBe(0);
+        publishedHeaderCell.Table!.ColumnSpan.ShouldBe(2);
+        publishedHeaderCell.Table.IsHeader.ShouldBe(true);
+
+        var tableFragment = result.Layout.Pages
+            .SelectMany(static page => page.Children)
+            .SelectMany(EnumerateFragments)
+            .OfType<TableFragment>()
+            .ShouldHaveSingleItem();
+        var headerCell = tableFragment.Rows[0]
+            .Cells
+            .ShouldHaveSingleItem();
+
+        tableFragment.DerivedColumnCount.ShouldBe(2);
+        headerCell.ColumnIndex.ShouldBe(0);
+        headerCell.ColumnSpan.ShouldBe(2);
+        headerCell.IsHeader.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Build_GeometrySnapshotPreservesFragmentMetadataOwnerAndConsumers()
     {
         var result = await GeometryTestHarness.BuildAsync(
@@ -700,6 +781,28 @@ public sealed class GeometryDriftTests
             .OfType<LineBoxFragment>()
             .SelectMany(static line => line.Runs)
             .Any(run => run.Text.Contains(text, StringComparison.Ordinal));
+    }
+
+    private static void AssertPublishedInlineSource(
+        PublishedInlineFlowSegment segment,
+        string expectedText,
+        string expectedSourcePath)
+    {
+        var textItem = segment.Lines
+            .ShouldHaveSingleItem()
+            .Items
+            .ShouldHaveSingleItem()
+            .ShouldBeOfType<PublishedInlineTextItem>();
+
+        string.Concat(textItem.Runs.Select(static run => run.Text))
+            .ShouldContain(expectedText);
+
+        var sourceIdentity = textItem.Sources
+            .ShouldHaveSingleItem()
+            .SourceIdentity;
+
+        sourceIdentity.SourcePath.ShouldBe(expectedSourcePath);
+        sourceIdentity.GeneratedKind.ShouldBe(GeometryGeneratedSourceKind.AnonymousText);
     }
 
     private static void AssertCommonTranslation(

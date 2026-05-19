@@ -18,6 +18,7 @@ using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.LayoutEngine.Geometry.Writing;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Document;
 using Html2x.LayoutEngine.Style.Computation;
@@ -229,7 +230,7 @@ public sealed class LayoutGeometryTests
 
         stageRunner.ShouldUseIdentifier(DiagnosticStageRunnerTypeName);
         stageRunner.ShouldUseIdentifier(nameof(LayoutStageNames));
-        stageRunner.ShouldUseIdentifier(nameof(LayoutGeometryConstruction));
+        stageRunner.ShouldUseIdentifier(nameof(ILayoutGeometryStage));
         stageRunner.ShouldUseIdentifier(nameof(FragmentTreeBuilder));
         stageRunner.ShouldUseIdentifier(nameof(LayoutPaginator));
 

@@ -8,6 +8,7 @@ using Html2x.LayoutEngine.Diagnostics;
 using Html2x.LayoutEngine.Geometry;
 using Html2x.LayoutEngine.Geometry.Tables;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Computation;
 using Shouldly;
@@ -131,8 +132,8 @@ public sealed class DiagnosticsBoundaryTests
         SourceFileFor<StyleTreeBuilder>()
             .ShouldHaveParameter(nameof(StyleTreeBuilder.BuildAsync), "diagnosticsSink",
                 NullableTypeName<IDiagnosticsSink>());
-        SourceFileFor<LayoutGeometryConstruction>()
-            .ShouldHaveParameter(nameof(LayoutGeometryConstruction.Build), "diagnosticsSink",
+        SourceFileFor<LayoutGeometryBuildRequest>()
+            .ShouldHaveParameter(nameof(LayoutGeometryBuildRequest), nameof(LayoutGeometryBuildRequest.DiagnosticsSink),
                 NullableTypeName<IDiagnosticsSink>());
         SourceFileFor<LayoutPaginator>()
             .ShouldHaveParameter(nameof(LayoutPaginator.Paginate), "diagnosticsSink",
@@ -223,6 +224,7 @@ public sealed class DiagnosticsBoundaryTests
     [
         ProjectFor<StyleTreeBuilder>(),
         ProjectFor<LayoutGeometryConstruction>(),
+        ProjectFor<LayoutGeometryBuildRequest>(),
         ProjectFor<LayoutPaginator>(),
         ProjectFor<LayoutPipeline>(),
         ProjectFor<PdfRenderer>()

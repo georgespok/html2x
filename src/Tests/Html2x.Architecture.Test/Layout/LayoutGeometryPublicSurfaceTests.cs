@@ -11,6 +11,7 @@ using Html2x.LayoutEngine.Geometry.Construction;
 using Html2x.LayoutEngine.Geometry.Measurement;
 using Html2x.LayoutEngine.Geometry.Publishing;
 using Html2x.LayoutEngine.Pagination;
+using Html2x.LayoutEngine.Stage.Contracts.Geometry;
 using Html2x.LayoutEngine.Style;
 using Html2x.LayoutEngine.Style.Computation;
 using Html2x.Options;
@@ -111,6 +112,8 @@ public sealed class LayoutGeometryPublicSurfaceTests
             .ExternallyVisibleTypeNames();
         var stylePublic = SemanticProjectFor<StyleTreeBuilder>()
             .ExternallyVisibleTypeNames();
+        var stageContractsPublic = SemanticProjectFor<ILayoutGeometryStage>()
+            .ExternallyVisibleTypeNames();
         var fragmentsPublic = SemanticProjectFor<FragmentTreeBuilder>()
             .ExternallyVisibleTypeNames();
         var paginationPublic = SemanticProjectFor<LayoutPaginator>()
@@ -122,6 +125,7 @@ public sealed class LayoutGeometryPublicSurfaceTests
 
         layoutEnginePublic.ShouldBeEmpty();
         contractsPublic.ShouldBeEmpty();
+        stageContractsPublic.ShouldBeEmpty();
         layoutEnginePublic.ShouldNotContain(FullTypeName<LayoutPipeline>());
         layoutEnginePublic.ShouldNotContain(FullTypeName(typeof(LayoutSnapshotMapper)));
         contractsPublic.ShouldNotContain(FullTypeName<ComputedStyle>());
@@ -321,8 +325,16 @@ public sealed class LayoutGeometryPublicSurfaceTests
                 AssemblyName<LayoutGeometryConstruction>(),
                 TestAssemblyNameFor<LayoutGeometryConstruction>(),
                 AssemblyName<LayoutPaginator>(),
+                AssemblyName<ILayoutGeometryStage>(),
                 AssemblyName<StyleTreeBuilder>(),
                 TestAssemblyNameFor<StyleTreeBuilder>(),
+                TestAssemblyNameFor<LayoutPipeline>(),
+                CurrentAssemblyName());
+        CompiledAssembly.For<ILayoutGeometryStage>()
+            .ShouldHaveFriendAssemblies(
+                AssemblyName<LayoutPipeline>(),
+                AssemblyName<LayoutGeometryConstruction>(),
+                TestAssemblyNameFor<LayoutGeometryConstruction>(),
                 TestAssemblyNameFor<LayoutPipeline>(),
                 CurrentAssemblyName());
         CompiledAssembly.For<LayoutPaginator>()

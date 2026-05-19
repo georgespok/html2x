@@ -15,6 +15,18 @@ boundary.
 | Pagination | `PaginationResult` and `HtmlLayout` | Converter and renderer |
 | Renderer | PDF bytes | Public result |
 
+## Stage Invocation Contracts
+
+Stage handoff contracts describe facts that move between stages. Stage
+invocation contracts describe how composition calls a replaceable stage
+implementation.
+
+`Html2x.LayoutEngine.Stage.Contracts` owns execution contracts such as the
+Layout Geometry stage invocation seam. These contracts may reference
+`IDiagnosticsSink` because diagnostics sinks are per-build execution plumbing.
+They must not redefine diagnostics contracts, own handoff facts, expose mutable
+boxes, or collect diagnostics.
+
 ## Read-Only Handoff Policy
 
 Earlier stage outputs become read-only inputs after handoff. Later stages may

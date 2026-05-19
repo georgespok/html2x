@@ -20,8 +20,10 @@ flowchart LR
     Resources["Html2x.Resources<br/>resource and image loading"]
     DiagnosticsContracts["Html2x.Diagnostics.Contracts<br/>emission contracts"]
     Diagnostics["Html2x.Diagnostics<br/>collection and JSON"]
+    StageContracts["Html2x.LayoutEngine.Stage.Contracts<br/>stage invocation contracts"]
 
     RenderModel --> Contracts
+    Contracts --> StageContracts
     RenderModel --> Text
     RenderModel --> Fragments
     RenderModel --> Pagination
@@ -37,6 +39,7 @@ flowchart LR
     Text --> Pdf
     Resources --> Geometry
     Resources --> Pdf
+    DiagnosticsContracts --> StageContracts
     DiagnosticsContracts --> Style
     DiagnosticsContracts --> Geometry
     DiagnosticsContracts --> Pagination
@@ -45,6 +48,7 @@ flowchart LR
     DiagnosticsContracts --> Diagnostics
     LayoutEngine --> Facade
     Pdf --> Facade
+    StageContracts --> LayoutEngine
 ```
 
 The diagram shows allowed consumption direction, not runtime call order.
@@ -60,6 +64,7 @@ details owned by another stage.
 | Contracts | `Html2x.LayoutEngine.Contracts` | None | Internal pipeline handoff contracts and validation helpers | Parser traversal, CSS computation, mutable boxes, layout algorithms, fragments, pagination pages, renderer state |
 | Resources | `Html2x.Resources` | Resource source, base directory, byte limit | Scoped path resolution, data URI parsing, byte checks, loaded image bytes, intrinsic image size, and `ImageLoadStatus` outcomes | Layout geometry, PDF drawing, diagnostics collection, public converter options |
 | Text | `Html2x.Text` | Font requests, text measurement requests, diagnostics sink | Font path resolution, text measurement, resolved font diagnostics, and Skia-backed text adapters | Parser traversal, CSS computation, layout engine projects, fragment tree building, pagination pages, renderer state |
+| Stage Contracts | `Html2x.LayoutEngine.Stage.Contracts` | Stage handoff facts and diagnostics sink | Composition-facing invocation contracts for replaceable stages | Stage handoff fact ownership, parser traversal, CSS computation, layout algorithms, fragment tree building, pagination, renderer state, diagnostics collection |
 | Style | `Html2x.LayoutEngine.Style` | Raw HTML, `StyleBuildSettings`, optional diagnostics sink | `StyleTree`, computed styles, supported element traversal, and style diagnostics | Box hierarchy, geometry, fragments, pagination pages, renderer state |
 | Layout Geometry | `Html2x.LayoutEngine.Geometry` | `StyleTree`, `LayoutGeometryRequest`, image metadata facts, text measurer | Internal box geometry, `UsedGeometry`, `PublishedLayoutTree`, layout diagnostics, image and table layout facts | CSS parsing, DOM traversal, parser objects, resource path policy, byte-limit policy, fragments, pagination pages, renderer state |
 | Fragment | `Html2x.LayoutEngine.Fragments` | `PublishedLayoutTree` | `FragmentTree`, fragment IDs, visual style facts, and renderer-facing fragment facts | Mutable boxes, CSS, DOM, text/font adapter seams, pagination pages, renderer state |
@@ -110,6 +115,18 @@ organized by owner namespaces such as `Construction`, `BlockFlow`,
 `InlineFlow`, `Measurement`, `Tables`, `Images`, `Publishing`, `Primitives`,
 `Style`, and `Writing`. Published layout facts remain under
 `Html2x.LayoutEngine.Contracts.Published`.
+
+## Stage Contracts
+
+`Html2x.LayoutEngine.Stage.Contracts` owns composition-facing invocation
+contracts for stages that need a replaceable implementation seam. It may depend
+on `Html2x.Diagnostics.Contracts` because diagnostics sinks are per-build
+execution plumbing, not stage handoff facts.
+
+Stage invocation contracts consume existing handoff facts, such as
+`StyleTree`, `LayoutGeometryRequest`, and `PublishedLayoutTree`. They must not
+own those facts, expose mutable boxes, collect diagnostics, or implement layout
+behavior.
 
 ## Stage Rules
 

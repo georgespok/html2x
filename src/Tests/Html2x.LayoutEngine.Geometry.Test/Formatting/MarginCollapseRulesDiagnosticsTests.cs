@@ -7,6 +7,27 @@ namespace Html2x.LayoutEngine.Geometry.Test.Formatting;
 
 public sealed class MarginCollapseRulesDiagnosticsTests
 {
+    [Theory]
+    [InlineData(12f, 4f, 12f)]
+    [InlineData(-12f, -4f, -12f)]
+    [InlineData(12f, -4f, 8f)]
+    [InlineData(-12f, 4f, -8f)]
+    public void CollapseMargins_WithSignedPairs_UsesCollapseRule(
+        float previousBottomMargin,
+        float nextTopMargin,
+        float expectedCollapsedTopMargin)
+    {
+        var rules = new MarginCollapseRules();
+
+        var collapsed = rules.Collapse(
+            previousBottomMargin,
+            nextTopMargin,
+            FormattingContextKind.Block,
+            "test-consumer");
+
+        collapsed.ShouldBe(expectedCollapsedTopMargin);
+    }
+
     [Fact]
     public void CollapseMargins_DiagnosticsSink_EmitsConstrainedFieldRecord()
     {
